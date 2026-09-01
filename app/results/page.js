@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import RequireAuth from '../RequireAuth';
 
-export default function ResultsPage() {
+function ResultsPageInner() {
   const [students, setStudents] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [results, setResults] = useState([]);
@@ -120,4 +121,8 @@ export default function ResultsPage() {
       </table>
     </div>
   );
+}
+
+export default function ResultsPage() {
+  return <RequireAuth><ResultsPageInner /></RequireAuth>;
 }

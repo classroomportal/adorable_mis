@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import RequireAuth from '../RequireAuth';
 
-export default function StudentsPage() {
+function StudentsList() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,7 +40,7 @@ export default function StudentsPage() {
         </thead>
         <tbody>
           {students.map((s) => (
-            <tr key={s.student_id}>
+            <tr key={s.student_id} className="student-link" onClick={() => window.location.href = `/students/${s.student_id}`}>
               <td>{s.first_name} {s.last_name}</td>
               <td>{s.year_group}</td>
               <td>{s.form_class}</td>
@@ -52,4 +53,8 @@ export default function StudentsPage() {
       </table>
     </div>
   );
+}
+
+export default function Page() {
+  return <RequireAuth><StudentsList /></RequireAuth>;
 }

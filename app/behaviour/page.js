@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import RequireAuth from '../RequireAuth';
 
-export default function BehaviourPage() {
+function BehaviourPageInner() {
   const [students, setStudents] = useState([]);
   const [events, setEvents] = useState([]);
   const [form, setForm] = useState({
@@ -115,4 +116,8 @@ export default function BehaviourPage() {
       </table>
     </div>
   );
+}
+
+export default function BehaviourPage() {
+  return <RequireAuth><BehaviourPageInner /></RequireAuth>;
 }

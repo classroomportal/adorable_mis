@@ -1,52 +1,91 @@
+:root {
+  --navy-900: #0b1a33;
+  --navy-800: #142a4d;
+  --navy-700: #1e3a66;
+  --blue-600: #2f5fa8;
+  --blue-500: #3d74c9;
+  --blue-100: #e3ecf9;
+  --slate-50: #f7f9fc;
+  --slate-200: #dde3ee;
+  --text-dark: #12203a;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   margin: 0;
-  color: #1a1a1a;
-  background: #fafafa;
+  color: var(--text-dark);
+  background: var(--slate-50);
 }
 
 a {
-  color: #2563eb;
+  color: var(--blue-600);
   text-decoration: none;
   font-weight: 500;
+}
+
+nav {
+  background: var(--navy-900) !important;
+  color: white;
+}
+
+nav a {
+  color: #cfe0f7 !important;
+}
+
+nav a:hover {
+  color: white !important;
+}
+
+h1, h2, h3 {
+  color: var(--navy-800);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(11,26,51,0.08);
 }
 
 th, td {
   text-align: left;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #e5e5e5;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--slate-200);
 }
 
 th {
-  background: #f0f0f0;
-  font-size: 0.85rem;
+  background: var(--navy-800);
+  color: white;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+}
+
+tr:hover td {
+  background: var(--blue-100);
 }
 
 button, input, select {
   font-family: inherit;
   font-size: 0.95rem;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid #ccc;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--slate-200);
   border-radius: 6px;
 }
 
 button {
-  background: #2563eb;
+  background: var(--blue-600);
   color: white;
   border: none;
   cursor: pointer;
+  font-weight: 500;
 }
 
 button:hover {
-  background: #1d4ed8;
+  background: var(--navy-700);
 }
 
 form {
@@ -58,7 +97,8 @@ form {
   padding: 1rem;
   background: white;
   border-radius: 8px;
-  border: 1px solid #eee;
+  border: 1px solid var(--slate-200);
+  box-shadow: 0 1px 3px rgba(11,26,51,0.06);
 }
 
 label {
@@ -66,4 +106,29 @@ label {
   flex-direction: column;
   font-size: 0.85rem;
   gap: 0.25rem;
+  color: var(--navy-700);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-positive { background: #dcf5e3; color: #1a7a3d; }
+.badge-negative { background: #fbdede; color: #a3232c; }
+
+.card {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid var(--slate-200);
+  box-shadow: 0 1px 3px rgba(11,26,51,0.06);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.student-link {
+  cursor: pointer;
 }
