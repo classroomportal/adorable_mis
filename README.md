@@ -12,3 +12,7 @@ Database schema for a secondary school MIS (~250 students).
 - **subjects / staff / classes / timetable_slots / student_class** — timetable structure
 - **behaviour_events** — logged incidents, positive or negative
 - **results** — one row per student/subject/week
+
+## Front End
+A Next.js app lives in `/app` and `/lib`, connecting to Supabase for students, weekly results, and behaviour events.
+Deploy via Vercel with env vars NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.
