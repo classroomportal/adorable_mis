@@ -1,8 +1,8 @@
--- Secondary School Database Schema
+-- Secondary School Database Schema (PostgreSQL)
 -- ~250 students: core data, parents, timetable, behaviour events, weekly results
 
 CREATE TABLE students (
-    student_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id      SERIAL PRIMARY KEY,
     first_name      TEXT NOT NULL,
     last_name       TEXT NOT NULL,
     dob             DATE NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE students (
 );
 
 CREATE TABLE parents (
-    parent_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id        SERIAL PRIMARY KEY,
     first_name       TEXT NOT NULL,
     last_name        TEXT NOT NULL,
     phone            TEXT,
@@ -26,27 +26,27 @@ CREATE TABLE parents (
 );
 
 CREATE TABLE student_parent (
-    student_id        INTEGER NOT NULL REFERENCES students(student_id),
-    parent_id         INTEGER NOT NULL REFERENCES parents(parent_id),
-    is_primary_contact BOOLEAN NOT NULL DEFAULT 0,
+    student_id         INTEGER NOT NULL REFERENCES students(student_id),
+    parent_id          INTEGER NOT NULL REFERENCES parents(parent_id),
+    is_primary_contact BOOLEAN NOT NULL DEFAULT FALSE,
     PRIMARY KEY (student_id, parent_id)
 );
 
 CREATE TABLE subjects (
-    subject_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_id    SERIAL PRIMARY KEY,
     subject_name  TEXT NOT NULL,
     subject_code  TEXT UNIQUE
 );
 
 CREATE TABLE staff (
-    staff_id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    staff_id           SERIAL PRIMARY KEY,
     first_name         TEXT NOT NULL,
     last_name          TEXT NOT NULL,
     subject_specialism TEXT
 );
 
 CREATE TABLE classes (
-    class_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id    SERIAL PRIMARY KEY,
     subject_id  INTEGER NOT NULL REFERENCES subjects(subject_id),
     staff_id    INTEGER REFERENCES staff(staff_id),
     year_group  INTEGER NOT NULL,
@@ -54,12 +54,12 @@ CREATE TABLE classes (
 );
 
 CREATE TABLE timetable_slots (
-    slot_id      INTEGER PRIMARY KEY AUTOINCREMENT,
-    class_id     INTEGER NOT NULL REFERENCES classes(class_id),
-    day_of_week  TEXT NOT NULL CHECK (day_of_week IN ('Mon','Tue','Wed','Thu','Fri')),
+    slot_id       SERIAL PRIMARY KEY,
+    class_id      INTEGER NOT NULL REFERENCES classes(class_id),
+    day_of_week   TEXT NOT NULL CHECK (day_of_week IN ('Mon','Tue','Wed','Thu','Fri')),
     period_number INTEGER NOT NULL,
-    start_time   TIME NOT NULL,
-    end_time     TIME NOT NULL
+    start_time    TIME NOT NULL,
+    end_time      TIME NOT NULL
 );
 
 CREATE TABLE student_class (
@@ -69,7 +69,7 @@ CREATE TABLE student_class (
 );
 
 CREATE TABLE behaviour_events (
-    event_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id    SERIAL PRIMARY KEY,
     student_id  INTEGER NOT NULL REFERENCES students(student_id),
     staff_id    INTEGER REFERENCES staff(staff_id),
     event_date  DATE NOT NULL,
@@ -81,7 +81,7 @@ CREATE TABLE behaviour_events (
 );
 
 CREATE TABLE results (
-    result_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    result_id       SERIAL PRIMARY KEY,
     student_id      INTEGER NOT NULL REFERENCES students(student_id),
     subject_id      INTEGER NOT NULL REFERENCES subjects(subject_id),
     week_start_date DATE NOT NULL,
