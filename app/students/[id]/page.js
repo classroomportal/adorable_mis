@@ -35,6 +35,7 @@ function StudentDetail() {
   const [blockClasses, setBlockClasses] = useState({}); // block_id -> [classes]
   const [blockSelections, setBlockSelections] = useState({}); // block_id -> class_id (current + edits)
   const [blockSaveStatus, setBlockSaveStatus] = useState(null);
+  const [blocksError, setBlocksError] = useState(null);
 
   async function loadAll() {
     const { data: s, error: sErr } = await supabase
@@ -103,15 +104,22 @@ function StudentDetail() {
     setNgrt(ng || []);
 
     if (s.year_group) {
-      const { data: cb } = await supabase
+      const { data: cb, error: cbErr } = await supabase
         .from('curriculum_blocks')
-        .select('block_id, block_name, band, classes(class_id, class_code, room, subjects(subject_name), staff(first_name, last_name))')
+        .select('block_id, block_name, band, classes!classes_block_id_fkey(class_id, class_code, room, subjects(subject_name), staff(first_name, last_name))')
         .eq('year_group', s.year_group)
         .order('block_name');
-      setBlocks(cb || []);
-      const byBlock = {};
-      (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; });
-      setBlockClasses(byBlock);
+      if (cbErr) {
+        setBlocksError(cbErr.message);
+        setBlocks([]);
+        setBlockClasses({});
+      } else {
+        setBlocksError(null);
+        setBlocks(cb || []);
+        const byBlock = {};
+        (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; });
+        setBlockClasses(byBlock);
+      }
     } else {
       setBlocks([]);
       setBlockClasses({});
@@ -480,7 +488,7 @@ function StudentDetail() {
           {blockSaveStatus && <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>{blockSaveStatus}</span>}
         </div>
         {blocks.length === 0 ? (
-          <p>No curriculum blocks are set up for Year {student.year_group} yet.</p>
+          <p>{blocksError ? `Error loading blocks: ${blocksError}` : `No curriculum blocks are set up for Year ${student.year_group} yet.`}</p>
         ) : (
           <div className="table-scroll">
             <table>
