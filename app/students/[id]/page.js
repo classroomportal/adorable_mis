@@ -20,6 +20,8 @@ function StudentDetail() {
   const [behaviour, setBehaviour] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [results, setResults] = useState([]);
+  const [cat4, setCat4] = useState([]);
+  const [ngrt, setNgrt] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -88,6 +90,12 @@ function StudentDetail() {
       .eq('student_id', id)
       .order('week_start_date', { ascending: false });
     setResults(r || []);
+
+    const { data: c4 } = await supabase.from('cat4_results').select('*').eq('student_id', id).order('test_date', { ascending: false });
+    setCat4(c4 || []);
+
+    const { data: ng } = await supabase.from('ngrt_results').select('*').eq('student_id', id).order('test_date', { ascending: false });
+    setNgrt(ng || []);
 
     setLoading(false);
   }
@@ -469,6 +477,49 @@ function StudentDetail() {
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+      <div className="card">
+        <h2>Predictive Assessment Data (CAT4 / NGRT)</h2>
+        {cat4.length === 0 && ngrt.length === 0 ? <p>No assessment data recorded.</p> : (
+          <>
+            {cat4.length > 0 && (
+              <>
+                <h3 style={{ fontSize: '1rem' }}>CAT4</h3>
+                <div className="table-scroll">
+                  <table>
+                    <thead><tr><th>Date</th><th>Level</th><th>Mean SAS</th><th>Verbal</th><th>Non-verbal</th><th>Quantitative</th><th>Spatial</th></tr></thead>
+                    <tbody>
+                      {cat4.map((c) => (
+                        <tr key={c.cat4_id}>
+                          <td>{c.test_date}</td><td>{c.level}</td><td>{c.mean_sas}</td>
+                          <td>{c.verbal_sas}</td><td>{c.non_verbal_sas}</td><td>{c.quantitative_sas}</td><td>{c.spatial_sas}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+            {ngrt.length > 0 && (
+              <>
+                <h3 style={{ fontSize: '1rem', marginTop: '1rem' }}>NGRT</h3>
+                <div className="table-scroll">
+                  <table>
+                    <thead><tr><th>Date</th><th>Form</th><th>SAS</th><th>PC Stanine</th><th>SC Stanine</th><th>Overall Stanine</th><th>Reading Age</th></tr></thead>
+                    <tbody>
+                      {ngrt.map((n) => (
+                        <tr key={n.ngrt_id}>
+                          <td>{n.test_date}</td><td>{n.form}</td><td>{n.sas}</td>
+                          <td>{n.pc_stanine}</td><td>{n.sc_stanine}</td><td>{n.overall_stanine}</td><td>{n.reading_age}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </>
         )}
       </div>
     </div>
