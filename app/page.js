@@ -54,6 +54,7 @@ export default function Home() {
           <Tile href="/students/import" icon="📥" label="Import Students" />
           <Tile href="/parents/import" icon="📥" label="Import Parents" />
           <Tile href="/results/import" icon="📥" label="Import Results" />
+          <Tile href="/target-grades/import" icon="📥" label="Import Target Grades" />
           <Tile href="/assessments/import" icon="📥" label="Import CAT4/NGRT" />
         </Section>
       )}

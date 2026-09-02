@@ -20,6 +20,8 @@ function StudentDetail() {
   const [behaviour, setBehaviour] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [results, setResults] = useState([]);
+  const [targetMap, setTargetMap] = useState({}); // subject_id -> target grade
+  const [gradePoints, setGradePoints] = useState({}); // grade -> points
   const [cat4, setCat4] = useState([]);
   const [ngrt, setNgrt] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +98,11 @@ function StudentDetail() {
       .eq('student_id', id)
       .order('week_start_date', { ascending: false });
     setResults(r || []);
+
+    const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade').eq('student_id', id);
+    setTargetMap(Object.fromEntries((tg || []).map((t) => [t.subject_id, t.target_grade])));
+    const { data: gs } = await supabase.from('grade_scale').select('*');
+    setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
 
     const { data: c4 } = await supabase.from('cat4_results').select('*').eq('student_id', id).order('test_date', { ascending: false });
     setCat4(c4 || []);
@@ -578,16 +585,29 @@ function StudentDetail() {
         {results.length === 0 ? <p>No results recorded.</p> : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Week</th><th>Subject</th><th>Score</th><th>Grade</th></tr></thead>
+              <thead><tr><th>Week</th><th>Subject</th><th>Score</th><th>Grade</th><th>Target</th><th>vs Target</th></tr></thead>
               <tbody>
-                {results.map((r) => (
-                  <tr key={r.result_id}>
-                    <td>{r.week_start_date}</td>
-                    <td>{r.subjects?.subject_name}</td>
-                    <td>{r.score ?? '—'}{r.max_score ? ` / ${r.max_score}` : ''}</td>
-                    <td>{r.grade ?? '—'}</td>
-                  </tr>
-                ))}
+                {results.map((r) => {
+                  const target = targetMap[r.subject_id];
+                  const targetPts = target ? gradePoints[target] : undefined;
+                  const gotPts = r.grade ? gradePoints[r.grade.trim().toUpperCase()] : undefined;
+                  let cmp = null;
+                  if (targetPts !== undefined && gotPts !== undefined) {
+                    cmp = gotPts > targetPts ? 'above' : gotPts < targetPts ? 'below' : 'on';
+                  }
+                  const style = { above: { background: '#dcf5e3', color: '#1a7a3d' }, on: { background: '#fdecad', color: '#8a6d00' }, below: { background: '#fbdede', color: '#a3232c' } }[cmp];
+                  const label = { above: 'Above target', on: 'On target', below: 'Below target' }[cmp];
+                  return (
+                    <tr key={r.result_id}>
+                      <td>{r.week_start_date}</td>
+                      <td>{r.subjects?.subject_name}</td>
+                      <td>{r.score ?? '—'}{r.max_score ? ` / ${r.max_score}` : ''}</td>
+                      <td>{r.grade ?? '—'}</td>
+                      <td>{target ?? '—'}</td>
+                      <td>{cmp ? <span className="badge" style={style}>{label}</span> : '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

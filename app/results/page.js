@@ -8,6 +8,8 @@ function ResultsPageInner() {
   const [subjects, setSubjects] = useState([]);
   const [relps, setRelps] = useState([]);
   const [results, setResults] = useState([]);
+  const [targetMap, setTargetMap] = useState({}); // `${student_id}-${subject_id}` -> target grade
+  const [gradePoints, setGradePoints] = useState({}); // grade -> points
   const [form, setForm] = useState({
     student_id: '', subject_id: '', week_start_date: '', score: '', max_score: '', grade: '',
   });
@@ -16,7 +18,7 @@ function ResultsPageInner() {
   async function loadResults() {
     const { data } = await supabase
       .from('results')
-      .select('result_id, week_start_date, score, max_score, grade, students(first_name,last_name), subjects(subject_name)')
+      .select('result_id, student_id, subject_id, week_start_date, score, max_score, grade, students(first_name,last_name), subjects(subject_name)')
       .order('week_start_date', { ascending: false })
       .limit(20);
     setResults(data || []);
@@ -30,10 +32,33 @@ function ResultsPageInner() {
       setSubjects(sub || []);
       const { data: rl } = await supabase.from('calendar_events').select('event_id, event_date, event_name').eq('category', 'relp').order('event_date', { ascending: false });
       setRelps(rl || []);
+
+      const { data: gs } = await supabase.from('grade_scale').select('*');
+      setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
+      const { data: tg } = await supabase.from('target_grades').select('student_id, subject_id, target_grade');
+      setTargetMap(Object.fromEntries((tg || []).map((t) => [`${t.student_id}-${t.subject_id}`, t.target_grade])));
     }
     loadOptions();
     loadResults();
   }, []);
+
+  function compareToTarget(result) {
+    const target = targetMap[`${result.student_id}-${result.subject_id}`];
+    if (!target || !result.grade) return null;
+    const targetPts = gradePoints[target];
+    const gotPts = gradePoints[result.grade.trim().toUpperCase()];
+    if (targetPts === undefined || gotPts === undefined) return null;
+    if (gotPts > targetPts) return 'above';
+    if (gotPts < targetPts) return 'below';
+    return 'on';
+  }
+
+  const COMPARE_STYLE = {
+    above: { background: '#dcf5e3', color: '#1a7a3d' },
+    on: { background: '#fdecad', color: '#8a6d00' },
+    below: { background: '#fbdede', color: '#a3232c' },
+  };
+  const COMPARE_LABEL = { above: 'Above target', on: 'On target', below: 'Below target' };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -122,18 +147,28 @@ function ResultsPageInner() {
       <h2>Recent results</h2>
       <div className="table-scroll"><table>
         <thead>
-          <tr><th>Week</th><th>Student</th><th>Subject</th><th>Score</th><th>Grade</th></tr>
+          <tr><th>Week</th><th>Student</th><th>Subject</th><th>Score</th><th>Grade</th><th>Target</th><th>vs Target</th></tr>
         </thead>
         <tbody>
-          {results.map((r) => (
-            <tr key={r.result_id}>
-              <td>{r.week_start_date}</td>
-              <td>{r.students?.first_name} {r.students?.last_name}</td>
-              <td>{r.subjects?.subject_name}</td>
-              <td>{r.score ?? '—'}{r.max_score ? ` / ${r.max_score}` : ''}</td>
-              <td>{r.grade ?? '—'}</td>
-            </tr>
-          ))}
+          {results.map((r) => {
+            const target = targetMap[`${r.student_id}-${r.subject_id}`];
+            const cmp = compareToTarget(r);
+            return (
+              <tr key={r.result_id}>
+                <td>{r.week_start_date}</td>
+                <td>{r.students?.first_name} {r.students?.last_name}</td>
+                <td>{r.subjects?.subject_name}</td>
+                <td>{r.score ?? '—'}{r.max_score ? ` / ${r.max_score}` : ''}</td>
+                <td>{r.grade ?? '—'}</td>
+                <td>{target ?? '—'}</td>
+                <td>
+                  {cmp ? (
+                    <span className="badge" style={COMPARE_STYLE[cmp]}>{COMPARE_LABEL[cmp]}</span>
+                  ) : '—'}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table></div>
     </div>
