@@ -21,7 +21,7 @@ export default function NavBar() {
       <a href="/behaviour">Behaviour</a>
       <a href="/attendance">Attendance</a>
       <a href="/calendar">Calendar</a>
-      {profile?.role === 'admin' && <a href="/staff/roles">Staff &amp; Roles</a>}
+      {profile?.role === 'admin' && <a href="/staff/roles">Staff & Roles</a>}
       {session ? (
         <>
           <span style={{ color: '#ffe9c7', fontSize: '0.8rem' }}>
