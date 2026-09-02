@@ -31,6 +31,11 @@ function StudentDetail() {
   const [fullView, setFullView] = useState(false);
   const [siblings, setSiblings] = useState([]);
 
+  const [blocks, setBlocks] = useState([]); // curriculum_blocks applicable to this student's year
+  const [blockClasses, setBlockClasses] = useState({}); // block_id -> [classes]
+  const [blockSelections, setBlockSelections] = useState({}); // block_id -> class_id (current + edits)
+  const [blockSaveStatus, setBlockSaveStatus] = useState(null);
+
   async function loadAll() {
     const { data: s, error: sErr } = await supabase
       .from('students')
@@ -97,6 +102,30 @@ function StudentDetail() {
     const { data: ng } = await supabase.from('ngrt_results').select('*').eq('student_id', id).order('test_date', { ascending: false });
     setNgrt(ng || []);
 
+    if (s.year_group) {
+      const { data: cb } = await supabase
+        .from('curriculum_blocks')
+        .select('block_id, block_name, band, classes(class_id, class_code, room, subjects(subject_name), staff(first_name, last_name))')
+        .eq('year_group', s.year_group)
+        .order('block_name');
+      setBlocks(cb || []);
+      const byBlock = {};
+      (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; });
+      setBlockClasses(byBlock);
+    } else {
+      setBlocks([]);
+      setBlockClasses({});
+    }
+
+    const { data: currentLinks } = await supabase
+      .from('student_class')
+      .select('class_id, block_id')
+      .eq('student_id', id)
+      .not('block_id', 'is', null);
+    const sel = {};
+    (currentLinks || []).forEach((l) => { sel[l.block_id] = l.class_id; });
+    setBlockSelections(sel);
+
     setLoading(false);
   }
 
@@ -154,6 +183,38 @@ function StudentDetail() {
       setEditing(false);
       loadAll();
     }
+  }
+
+  async function handleBlockChange(blockId, newClassId) {
+    setBlockSaveStatus('Saving...');
+    setBlockSelections((prev) => ({ ...prev, [blockId]: newClassId || null }));
+
+    // Remove any existing link for this block, then insert the new one (if a class was chosen)
+    const { data: existing } = await supabase
+      .from('student_class')
+      .select('class_id')
+      .eq('student_id', id)
+      .eq('block_id', blockId);
+
+    if (existing && existing.length > 0) {
+      await supabase
+        .from('student_class')
+        .delete()
+        .eq('student_id', id)
+        .eq('block_id', blockId);
+    }
+
+    if (newClassId) {
+      const { error } = await supabase
+        .from('student_class')
+        .insert({ student_id: id, class_id: newClassId });
+      if (error) {
+        setBlockSaveStatus(`Error: ${error.message}`);
+        return;
+      }
+    }
+    setBlockSaveStatus('Saved.');
+    loadAll();
   }
 
   // Build a lookup: cellMap[day][period_number] = { subject, room }
@@ -411,6 +472,51 @@ function StudentDetail() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h2 style={{ margin: 0 }}>Curriculum Blocks</h2>
+          {blockSaveStatus && <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>{blockSaveStatus}</span>}
+        </div>
+        {blocks.length === 0 ? (
+          <p>No curriculum blocks are set up for Year {student.year_group} yet.</p>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Block</th><th>Class / Set</th></tr></thead>
+              <tbody>
+                {blocks.map((b) => {
+                  const options = blockClasses[b.block_id] || [];
+                  const currentClassId = blockSelections[b.block_id] || '';
+                  return (
+                    <tr key={b.block_id}>
+                      <td>{b.block_name}{b.band && b.band !== 'a' ? ` (${b.band})` : ''}</td>
+                      <td>
+                        {isAdmin ? (
+                          <select
+                            value={currentClassId}
+                            onChange={(e) => handleBlockChange(b.block_id, e.target.value || null)}
+                          >
+                            <option value="">— Not allocated —</option>
+                            {options.map((c) => (
+                              <option key={c.class_id} value={c.class_id}>
+                                {c.class_code} — {c.subjects?.subject_name || ''}
+                                {c.staff ? ` (${c.staff.first_name} ${c.staff.last_name})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          options.find((c) => String(c.class_id) === String(currentClassId))?.class_code || 'Not allocated'
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="card">
