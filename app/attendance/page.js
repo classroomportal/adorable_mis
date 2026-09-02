@@ -63,7 +63,7 @@ function AttendanceInner() {
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
 
-        <table>
+        <div className="table-scroll"><table>
           <thead><tr><th>Student</th><th>Present</th><th>Late</th><th>Authorized</th><th>Absent</th></tr></thead>
           <tbody>
             {students.map((s) => (
@@ -82,14 +82,14 @@ function AttendanceInner() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
 
         <button type="submit" style={{ marginTop: '1rem', width: 'fit-content' }}>Save register</button>
         {status && <p>{status}</p>}
       </form>
 
       <h2>Recent entries</h2>
-      <table>
+      <div className="table-scroll"><table>
         <thead><tr><th>Date</th><th>Student</th><th>Status</th></tr></thead>
         <tbody>
           {recent.map((r) => (
@@ -100,7 +100,7 @@ function AttendanceInner() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </div>
   );
 }

@@ -66,7 +66,7 @@ function StudentsList() {
 
       <p style={{ color: '#5a6b8c', fontSize: '0.9rem' }}>{filtered.length} of {students.length} students</p>
 
-      <table>
+      <div className="table-scroll"><table>
         <thead>
           <tr>
             <th>Name</th>
@@ -89,7 +89,7 @@ function StudentsList() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </div>
   );
 }

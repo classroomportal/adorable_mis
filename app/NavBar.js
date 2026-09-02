@@ -13,7 +13,7 @@ export default function NavBar() {
   }
 
   return (
-    <nav style={{ padding: '1rem 1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+    <nav>
       <a href="/" style={{ fontWeight: 700, marginRight: 'auto' }}>Adorable MIS</a>
       <a href="/">Home</a>
       <a href="/students">Students</a>
@@ -22,7 +22,7 @@ export default function NavBar() {
       <a href="/attendance">Attendance</a>
       {session ? (
         <>
-          <span style={{ color: '#cfe0f7', fontSize: '0.85rem' }}>
+          <span style={{ color: '#ffe9c7', fontSize: '0.8rem' }}>
             {profile?.role === 'admin' ? 'Admin' : 'Staff'} — {session.user.email}
           </span>
           <button onClick={handleSignOut}>Sign out</button>

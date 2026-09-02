@@ -98,7 +98,7 @@ function BehaviourPageInner() {
       {status && <p>{status}</p>}
 
       <h2>Recent events</h2>
-      <table>
+      <div className="table-scroll"><table>
         <thead>
           <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th></tr>
         </thead>
@@ -113,7 +113,7 @@ function BehaviourPageInner() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </div>
   );
 }

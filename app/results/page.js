@@ -103,7 +103,7 @@ function ResultsPageInner() {
       {status && <p>{status}</p>}
 
       <h2>Recent results</h2>
-      <table>
+      <div className="table-scroll"><table>
         <thead>
           <tr><th>Week</th><th>Student</th><th>Subject</th><th>Score</th><th>Grade</th></tr>
         </thead>
@@ -118,7 +118,7 @@ function ResultsPageInner() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </div>
   );
 }
