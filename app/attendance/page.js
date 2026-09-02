@@ -4,103 +4,184 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 
 function AttendanceInner() {
-  const [students, setStudents] = useState([]);
+  const [periods, setPeriods] = useState([]);
+  const [mentorClasses, setMentorClasses] = useState([]);
+  const [subjectClasses, setSubjectClasses] = useState([]);
+  const [codes, setCodes] = useState([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [marks, setMarks] = useState({});
+  const [periodNumber, setPeriodNumber] = useState(1); // default: Registration
+  const [classId, setClassId] = useState('');
+  const [roster, setRoster] = useState([]);
+  const [marks, setMarks] = useState({}); // student_id -> code
   const [status, setStatus] = useState(null);
-  const [recent, setRecent] = useState([]);
-
-  async function loadRecent() {
-    const { data } = await supabase
-      .from('attendance')
-      .select('attendance_id, attend_date, status, students(first_name,last_name)')
-      .order('attend_date', { ascending: false })
-      .limit(20);
-    setRecent(data || []);
-  }
+  const [loadingRoster, setLoadingRoster] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      const { data } = await supabase.from('students').select('student_id, first_name, last_name').order('last_name');
-      setStudents(data || []);
+    async function loadOptions() {
+      const { data: p } = await supabase.from('periods').select('*').order('period_number');
+      setPeriods(p || []);
+
+      const { data: c } = await supabase
+        .from('classes')
+        .select('class_id, class_code, room, subjects(subject_name), curriculum_blocks(block_name)')
+        .not('class_code', 'is', null)
+        .order('class_code');
+      const all = c || [];
+      setMentorClasses(all.filter((cl) => cl.curriculum_blocks?.block_name === 'Mentor'));
+      setSubjectClasses(all.filter((cl) => cl.curriculum_blocks?.block_name !== 'Mentor'));
+
+      const { data: cd } = await supabase.from('attendance_codes').select('*').order('code');
+      setCodes(cd || []);
     }
-    load();
-    loadRecent();
+    loadOptions();
   }, []);
 
-  function setMark(studentId, value) {
-    setMarks((m) => ({ ...m, [studentId]: value }));
+  async function loadRoster() {
+    if (!classId) {
+      setRoster([]);
+      return;
+    }
+    setLoadingRoster(true);
+    const { data: sc } = await supabase
+      .from('student_class')
+      .select('students(student_id, first_name, last_name)')
+      .eq('class_id', classId);
+    const studentList = (sc || [])
+      .map((row) => row.students)
+      .filter(Boolean)
+      .sort((a, b) => a.last_name.localeCompare(b.last_name));
+    setRoster(studentList);
+
+    const ids = studentList.map((s) => s.student_id);
+    if (ids.length > 0) {
+      const { data: existing } = await supabase
+        .from('attendance')
+        .select('student_id, code')
+        .eq('attend_date', date)
+        .eq('period_number', periodNumber)
+        .in('student_id', ids);
+      const prefill = {};
+      (existing || []).forEach((row) => { if (row.code) prefill[row.student_id] = row.code; });
+      setMarks(prefill);
+    } else {
+      setMarks({});
+    }
+    setLoadingRoster(false);
+  }
+
+  useEffect(() => { loadRoster(); }, [classId, date, periodNumber]);
+
+  function setMark(studentId, code) {
+    setMarks((m) => ({ ...m, [studentId]: code }));
+  }
+
+  function markAllPresent() {
+    const all = {};
+    roster.forEach((s) => { all[s.student_id] = '/'; });
+    setMarks(all);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setStatus('Saving...');
-    const rows = Object.entries(marks).map(([student_id, status]) => ({
-      student_id: Number(student_id),
-      attend_date: date,
-      status,
-    }));
+    const codeToStatus = Object.fromEntries(codes.map((c) => [c.code, c.status]));
+    const rows = Object.entries(marks)
+      .filter(([, code]) => code)
+      .map(([student_id, code]) => ({
+        student_id: Number(student_id),
+        attend_date: date,
+        period_number: periodNumber,
+        code,
+        status: codeToStatus[code],
+      }));
     if (rows.length === 0) {
       setStatus('Mark at least one student.');
       return;
     }
+    setStatus('Saving...');
     const { error } = await supabase.from('attendance').upsert(rows, { onConflict: 'student_id,attend_date,period_number' });
     if (error) setStatus(`Error: ${error.message}`);
-    else {
-      setStatus('Saved.');
-      setMarks({});
-      loadRecent();
-    }
+    else setStatus(`Saved ${rows.length} marks.`);
   }
 
   return (
     <div>
       <h1>Attendance</h1>
 
-      <form onSubmit={handleSubmit} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        <label>
-          Date
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </label>
+      <div className="card">
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <label>
+            Date
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
 
-        <div className="table-scroll"><table>
-          <thead><tr><th>Student</th><th>Present</th><th>Late</th><th>Authorized</th><th>Absent</th></tr></thead>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s.student_id}>
-                <td>{s.first_name} {s.last_name}</td>
-                {['present', 'late', 'authorized_absence', 'absent'].map((opt) => (
-                  <td key={opt} style={{ textAlign: 'center' }}>
-                    <input
-                      type="radio"
-                      name={`s-${s.student_id}`}
-                      checked={marks[s.student_id] === opt}
-                      onChange={() => setMark(s.student_id, opt)}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
+          <label>
+            Period
+            <select value={periodNumber} onChange={(e) => setPeriodNumber(Number(e.target.value))}>
+              {periods.map((p) => (
+                <option key={p.period_number} value={p.period_number}>{p.period_name}</option>
+              ))}
+            </select>
+          </label>
 
-        <button type="submit" style={{ marginTop: '1rem', width: 'fit-content' }}>Save register</button>
-        {status && <p>{status}</p>}
-      </form>
+          <label>
+            Class / group
+            <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <option value="">Select...</option>
+              {mentorClasses.length > 0 && (
+                <optgroup label="Mentor groups">
+                  {mentorClasses.map((c) => (
+                    <option key={c.class_id} value={c.class_id}>{c.class_code}</option>
+                  ))}
+                </optgroup>
+              )}
+              {subjectClasses.length > 0 && (
+                <optgroup label="Subject classes">
+                  {subjectClasses.map((c) => (
+                    <option key={c.class_id} value={c.class_id}>
+                      {c.class_code} — {c.subjects?.subject_name || ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </label>
+        </div>
+      </div>
 
-      <h2>Recent entries</h2>
-      <div className="table-scroll"><table>
-        <thead><tr><th>Date</th><th>Student</th><th>Status</th></tr></thead>
-        <tbody>
-          {recent.map((r) => (
-            <tr key={r.attendance_id}>
-              <td>{r.attend_date}</td>
-              <td>{r.students?.first_name} {r.students?.last_name}</td>
-              <td>{r.status}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table></div>
+      {classId && (
+        <form onSubmit={handleSubmit} className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          {loadingRoster ? <p>Loading roster...</p> : roster.length === 0 ? (
+            <p>No students are linked to this class yet.</p>
+          ) : (
+            <>
+              <button type="button" onClick={markAllPresent} className="secondary" style={{ width: 'fit-content', marginBottom: '1rem' }}>
+                Mark all present
+              </button>
+              <div className="table-scroll"><table>
+                <thead><tr><th>Student</th><th>Code</th></tr></thead>
+                <tbody>
+                  {roster.map((s) => (
+                    <tr key={s.student_id}>
+                      <td>{s.first_name} {s.last_name}</td>
+                      <td>
+                        <select value={marks[s.student_id] || ''} onChange={(e) => setMark(s.student_id, e.target.value)}>
+                          <option value="">—</option>
+                          {codes.map((c) => (
+                            <option key={c.code} value={c.code}>{c.code} — {c.description}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+
+              <button type="submit" style={{ marginTop: '1rem', width: 'fit-content' }}>Save register</button>
+            </>
+          )}
+          {status && <p>{status}</p>}
+        </form>
+      )}
     </div>
   );
 }
