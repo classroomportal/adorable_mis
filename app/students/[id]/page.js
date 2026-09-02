@@ -134,6 +134,7 @@ function StudentDetail() {
         emergency_contact_name: editForm.emergency_contact_name,
         emergency_contact_phone: editForm.emergency_contact_phone,
         medical_notes: editForm.medical_notes,
+        leaving_date: editForm.leaving_date || null,
         status: editForm.status,
       })
       .eq('student_id', id);
@@ -181,7 +182,7 @@ function StudentDetail() {
             {student.preferred_name && <p><strong>Preferred name:</strong> {student.preferred_name}</p>}
             <p><strong>DOB:</strong> {student.dob}</p>
             <p><strong>Year group:</strong> {student.year_group} &nbsp; <strong>Form:</strong> {student.form_class}</p>
-            <p><strong>Status:</strong> {student.status}</p>
+            <p><strong>Status:</strong> {student.status}{student.leaving_date ? ` (leaving date: ${student.leaving_date})` : ''}</p>
 
             {fullView && (
               <>
@@ -314,12 +315,20 @@ function StudentDetail() {
             <label>Medical notes
               <input value={editForm.medical_notes || ''} onChange={(e) => setEditForm({ ...editForm, medical_notes: e.target.value })} />
             </label>
+            <label>Leaving date
+              <input type="date" value={editForm.leaving_date || ''} onChange={(e) => setEditForm({ ...editForm, leaving_date: e.target.value })} />
+            </label>
             <label>Status
               <select value={editForm.status || 'active'} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
                 <option value="active">Active</option>
                 <option value="left">Left</option>
               </select>
             </label>
+            {editForm.leaving_date && editForm.leaving_date <= new Date().toISOString().slice(0, 10) && editForm.status === 'active' && (
+              <p style={{ color: '#a3232c', flexBasis: '100%' }}>
+                Leaving date has passed but status is still Active — consider updating status to Left.
+              </p>
+            )}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button type="submit">Save</button>
               <button type="button" className="secondary" onClick={() => { setEditing(false); setEditForm(student); }}>Cancel</button>
