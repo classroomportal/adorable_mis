@@ -107,6 +107,18 @@ function StudentDetail() {
         legal_last_name: editForm.legal_last_name,
         preferred_name: editForm.preferred_name,
         student_email: editForm.student_email,
+        upn: editForm.upn || null,
+        boarding_house: editForm.boarding_house,
+        boarding_room_number: editForm.boarding_room_number,
+        home_town: editForm.home_town,
+        lga: editForm.lga,
+        national_identity_number: editForm.national_identity_number,
+        neco_exam_number: editForm.neco_exam_number,
+        utme_pin: editForm.utme_pin,
+        utme_profile_code: editForm.utme_profile_code,
+        sports_house: editForm.sports_house,
+        state_of_origin: editForm.state_of_origin,
+        admitted_letter_date: editForm.admitted_letter_date || null,
         dob: editForm.dob,
         year_group: editForm.year_group,
         form_class: editForm.form_class,
@@ -173,13 +185,25 @@ function StudentDetail() {
 
             {fullView && (
               <>
+                <p><strong>UPN:</strong> {student.upn || '—'}</p>
                 <p><strong>Legal first name:</strong> {student.legal_first_name || '—'}</p>
                 <p><strong>Legal last name:</strong> {student.legal_last_name || '—'}</p>
                 <p><strong>Student email:</strong> {student.student_email || '—'}</p>
                 <p><strong>Admission date:</strong> {student.admission_date}</p>
+                <p><strong>Admitted/letter date:</strong> {student.admitted_letter_date || '—'}</p>
                 <p><strong>Gender:</strong> {student.gender || '—'}</p>
                 <p><strong>Nationality:</strong> {student.nationality || '—'}</p>
+                <p><strong>State of origin:</strong> {student.state_of_origin || '—'}</p>
+                <p><strong>LGA:</strong> {student.lga || '—'}</p>
+                <p><strong>Home town:</strong> {student.home_town || '—'}</p>
                 <p><strong>Religion:</strong> {student.religion || '—'}</p>
+                <p><strong>Boarding house:</strong> {student.boarding_house || '—'}</p>
+                <p><strong>Boarding room number:</strong> {student.boarding_room_number || '—'}</p>
+                <p><strong>Sports house:</strong> {student.sports_house || '—'}</p>
+                <p><strong>National identity number:</strong> {student.national_identity_number || '—'}</p>
+                <p><strong>NECO exam number:</strong> {student.neco_exam_number || '—'}</p>
+                <p><strong>UTME PIN:</strong> {student.utme_pin || '—'}</p>
+                <p><strong>UTME profile code:</strong> {student.utme_profile_code || '—'}</p>
                 <p><strong>Address:</strong> {[student.address_line1, student.address_line2, student.city, student.postcode, student.country].filter(Boolean).join(', ') || '—'}</p>
                 <p><strong>Emergency contact:</strong> {student.emergency_contact_name || '—'} {student.emergency_contact_phone ? `(${student.emergency_contact_phone})` : ''}</p>
                 <p><strong>Medical notes:</strong> {student.medical_notes || '—'}</p>
@@ -206,6 +230,9 @@ function StudentDetail() {
             <label>Legal last name
               <input value={editForm.legal_last_name || ''} onChange={(e) => setEditForm({ ...editForm, legal_last_name: e.target.value })} />
             </label>
+            <label>UPN
+              <input value={editForm.upn || ''} onChange={(e) => setEditForm({ ...editForm, upn: e.target.value })} />
+            </label>
             <label>Student email
               <input type="email" value={editForm.student_email || ''} onChange={(e) => setEditForm({ ...editForm, student_email: e.target.value })} />
             </label>
@@ -221,14 +248,47 @@ function StudentDetail() {
             <label>Admission date
               <input type="date" value={editForm.admission_date || ''} onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })} />
             </label>
+            <label>Admitted/letter date
+              <input type="date" value={editForm.admitted_letter_date || ''} onChange={(e) => setEditForm({ ...editForm, admitted_letter_date: e.target.value })} />
+            </label>
             <label>Gender
               <input value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} />
             </label>
             <label>Nationality
               <input value={editForm.nationality || ''} onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value })} />
             </label>
+            <label>State of origin
+              <input value={editForm.state_of_origin || ''} onChange={(e) => setEditForm({ ...editForm, state_of_origin: e.target.value })} />
+            </label>
+            <label>LGA
+              <input value={editForm.lga || ''} onChange={(e) => setEditForm({ ...editForm, lga: e.target.value })} />
+            </label>
+            <label>Home town
+              <input value={editForm.home_town || ''} onChange={(e) => setEditForm({ ...editForm, home_town: e.target.value })} />
+            </label>
             <label>Religion
               <input value={editForm.religion || ''} onChange={(e) => setEditForm({ ...editForm, religion: e.target.value })} />
+            </label>
+            <label>Boarding house
+              <input value={editForm.boarding_house || ''} onChange={(e) => setEditForm({ ...editForm, boarding_house: e.target.value })} />
+            </label>
+            <label>Boarding room number
+              <input value={editForm.boarding_room_number || ''} onChange={(e) => setEditForm({ ...editForm, boarding_room_number: e.target.value })} />
+            </label>
+            <label>Sports house
+              <input value={editForm.sports_house || ''} onChange={(e) => setEditForm({ ...editForm, sports_house: e.target.value })} />
+            </label>
+            <label>National identity number
+              <input value={editForm.national_identity_number || ''} onChange={(e) => setEditForm({ ...editForm, national_identity_number: e.target.value })} />
+            </label>
+            <label>NECO exam number
+              <input value={editForm.neco_exam_number || ''} onChange={(e) => setEditForm({ ...editForm, neco_exam_number: e.target.value })} />
+            </label>
+            <label>UTME PIN
+              <input value={editForm.utme_pin || ''} onChange={(e) => setEditForm({ ...editForm, utme_pin: e.target.value })} />
+            </label>
+            <label>UTME profile code
+              <input value={editForm.utme_profile_code || ''} onChange={(e) => setEditForm({ ...editForm, utme_profile_code: e.target.value })} />
             </label>
             <label>Address line 1
               <input value={editForm.address_line1 || ''} onChange={(e) => setEditForm({ ...editForm, address_line1: e.target.value })} />
