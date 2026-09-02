@@ -6,6 +6,7 @@ import RequireAuth from '../RequireAuth';
 function ResultsPageInner() {
   const [students, setStudents] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [relps, setRelps] = useState([]);
   const [results, setResults] = useState([]);
   const [form, setForm] = useState({
     student_id: '', subject_id: '', week_start_date: '', score: '', max_score: '', grade: '',
@@ -27,6 +28,8 @@ function ResultsPageInner() {
       const { data: sub } = await supabase.from('subjects').select('subject_id, subject_name').order('subject_name');
       setStudents(s || []);
       setSubjects(sub || []);
+      const { data: rl } = await supabase.from('calendar_events').select('event_id, event_date, event_name').eq('category', 'relp').order('event_date', { ascending: false });
+      setRelps(rl || []);
     }
     loadOptions();
     loadResults();
@@ -79,8 +82,21 @@ function ResultsPageInner() {
         </label>
 
         <label>
-          Week starting
-          <input type="date" value={form.week_start_date} onChange={(e) => setForm({ ...form, week_start_date: e.target.value })} required />
+          ReLP (test)
+          <select
+            value={form.week_start_date}
+            onChange={(e) => setForm({ ...form, week_start_date: e.target.value })}
+          >
+            <option value="">Select a ReLP, or type a custom date below...</option>
+            {relps.map((r) => (
+              <option key={r.event_id} value={r.event_date}>{r.event_name} — {r.event_date}</option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Or custom date
+          <input type="date" value={form.week_start_date} onChange={(e) => setForm({ ...form, week_start_date: e.target.value })} />
         </label>
 
         <label>
