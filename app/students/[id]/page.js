@@ -12,6 +12,7 @@ function StudentDetail() {
   const [timetable, setTimetable] = useState([]);
   const [periods, setPeriods] = useState([]);
   const [behaviour, setBehaviour] = useState([]);
+  const [attendance, setAttendance] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,6 +51,14 @@ function StudentDetail() {
         .eq('student_id', id)
         .order('event_date', { ascending: false });
       setBehaviour(be || []);
+
+      const { data: att } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('student_id', id)
+        .order('attend_date', { ascending: false })
+        .limit(30);
+      setAttendance(att || []);
 
       const { data: r } = await supabase
         .from('results')
@@ -126,6 +135,32 @@ function StudentDetail() {
               )}
             </tbody>
           </table>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Attendance</h2>
+        {attendance.length === 0 ? <p>No attendance recorded.</p> : (
+          <>
+            <p>
+              <strong>{attendance.filter(a => a.status === 'present').length}</strong> present, {' '}
+              <strong>{attendance.filter(a => a.status === 'late').length}</strong> late, {' '}
+              <strong>{attendance.filter(a => a.status === 'authorized_absence').length}</strong> authorized absence, {' '}
+              <strong>{attendance.filter(a => a.status === 'absent').length}</strong> unauthorized absence
+              &nbsp;(last {attendance.length} entries)
+            </p>
+            <table>
+              <thead><tr><th>Date</th><th>Status</th></tr></thead>
+              <tbody>
+                {attendance.map((a) => (
+                  <tr key={a.attendance_id}>
+                    <td>{a.attend_date}</td>
+                    <td>{a.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 

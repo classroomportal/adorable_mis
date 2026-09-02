@@ -19,6 +19,7 @@ export default function NavBar() {
       <a href="/students">Students</a>
       <a href="/results">Results</a>
       <a href="/behaviour">Behaviour</a>
+      <a href="/attendance">Attendance</a>
       {session ? (
         <>
           <span style={{ color: '#cfe0f7', fontSize: '0.85rem' }}>
