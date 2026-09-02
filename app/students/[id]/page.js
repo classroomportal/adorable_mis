@@ -97,6 +97,8 @@ function StudentDetail() {
   async function handleSave(e) {
     e.preventDefault();
     setSaveStatus('Saving...');
+    const today = new Date().toISOString().slice(0, 10);
+    const computedStatus = (editForm.leaving_date && editForm.leaving_date <= today) ? 'left' : editForm.status;
     const { error } = await supabase
       .from('students')
       .update({
@@ -135,7 +137,7 @@ function StudentDetail() {
         emergency_contact_phone: editForm.emergency_contact_phone,
         medical_notes: editForm.medical_notes,
         leaving_date: editForm.leaving_date || null,
-        status: editForm.status,
+        status: computedStatus,
       })
       .eq('student_id', id);
     if (error) setSaveStatus(`Error: ${error.message}`);
@@ -324,9 +326,9 @@ function StudentDetail() {
                 <option value="left">Left</option>
               </select>
             </label>
-            {editForm.leaving_date && editForm.leaving_date <= new Date().toISOString().slice(0, 10) && editForm.status === 'active' && (
+            {editForm.leaving_date && editForm.leaving_date <= new Date().toISOString().slice(0, 10) && (
               <p style={{ color: '#a3232c', flexBasis: '100%' }}>
-                Leaving date has passed but status is still Active — consider updating status to Left.
+                Leaving date has passed — status will be set to Left automatically on save.
               </p>
             )}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
