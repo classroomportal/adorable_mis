@@ -21,6 +21,7 @@ function StudentDetail() {
   const [attendance, setAttendance] = useState([]);
   const [results, setResults] = useState([]);
   const [targetMap, setTargetMap] = useState({}); // subject_id -> target grade
+  const [targetList, setTargetList] = useState([]); // all target grades for this student, incl. subjects with no results yet
   const [gradePoints, setGradePoints] = useState({}); // grade -> points
   const [cat4, setCat4] = useState([]);
   const [ngrt, setNgrt] = useState([]);
@@ -99,7 +100,8 @@ function StudentDetail() {
       .order('week_start_date', { ascending: false });
     setResults(r || []);
 
-    const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade').eq('student_id', id);
+    const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name)').eq('student_id', id);
+    setTargetList(tg || []);
     setTargetMap(Object.fromEntries((tg || []).map((t) => [t.subject_id, t.target_grade])));
     const { data: gs } = await supabase.from('grade_scale').select('*');
     setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
@@ -574,6 +576,38 @@ function StudentDetail() {
                     <td>{b.description}</td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Target Grades</h2>
+        {targetList.length === 0 ? <p>No target grades set for this student.</p> : (
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Subject</th><th>Target</th><th>Most recent grade</th><th>vs Target</th></tr></thead>
+              <tbody>
+                {targetList.map((t) => {
+                  const latestResult = results.find((r) => r.subject_id === t.subject_id);
+                  const targetPts = gradePoints[t.target_grade];
+                  const gotPts = latestResult?.grade ? gradePoints[latestResult.grade.trim().toUpperCase()] : undefined;
+                  let cmp = null;
+                  if (targetPts !== undefined && gotPts !== undefined) {
+                    cmp = gotPts > targetPts ? 'above' : gotPts < targetPts ? 'below' : 'on';
+                  }
+                  const style = { above: { background: '#dcf5e3', color: '#1a7a3d' }, on: { background: '#fdecad', color: '#8a6d00' }, below: { background: '#fbdede', color: '#a3232c' } }[cmp];
+                  const label = { above: 'Above target', on: 'On target', below: 'Below target' }[cmp];
+                  return (
+                    <tr key={t.subject_id}>
+                      <td>{t.subjects?.subject_name}</td>
+                      <td>{t.target_grade}</td>
+                      <td>{latestResult?.grade ?? '—'}</td>
+                      <td>{cmp ? <span className="badge" style={style}>{label}</span> : '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
