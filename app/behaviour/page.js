@@ -5,6 +5,7 @@ import RequireAuth from '../RequireAuth';
 
 function BehaviourPageInner() {
   const [students, setStudents] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
   const [form, setForm] = useState({
     student_id: '', event_date: '', type: 'positive', category: '', points: '', description: '',
@@ -24,10 +25,23 @@ function BehaviourPageInner() {
     async function loadOptions() {
       const { data: s } = await supabase.from('students').select('student_id, first_name, last_name').order('last_name');
       setStudents(s || []);
+      const { data: c } = await supabase.from('behaviour_categories').select('category_id, name, type, default_points').order('name');
+      setCategories(c || []);
     }
     loadOptions();
     loadEvents();
   }, []);
+
+  const categoriesForType = categories.filter((c) => c.type === form.type);
+
+  function handleTypeChange(newType) {
+    setForm({ ...form, type: newType, category: '', points: '' });
+  }
+
+  function handleCategoryChange(categoryName) {
+    const match = categoriesForType.find((c) => c.name === categoryName);
+    setForm({ ...form, category: categoryName, points: match?.default_points ?? form.points });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -71,7 +85,7 @@ function BehaviourPageInner() {
 
         <label>
           Type
-          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+          <select value={form.type} onChange={(e) => handleTypeChange(e.target.value)}>
             <option value="positive">Positive</option>
             <option value="negative">Negative</option>
           </select>
@@ -79,7 +93,12 @@ function BehaviourPageInner() {
 
         <label>
           Category
-          <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. excellent work" />
+          <select value={form.category} onChange={(e) => handleCategoryChange(e.target.value)}>
+            <option value="">Select...</option>
+            {categoriesForType.map((c) => (
+              <option key={c.category_id} value={c.name}>{c.name}</option>
+            ))}
+          </select>
         </label>
 
         <label>
