@@ -26,6 +26,8 @@ function StudentDetail() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [fullView, setFullView] = useState(false);
+  const [siblings, setSiblings] = useState([]);
 
   async function loadAll() {
     const { data: s, error: sErr } = await supabase
@@ -38,6 +40,17 @@ function StudentDetail() {
     setStudent(s);
     setEditForm(s);
     if (!s) { setLoading(false); return; }
+
+    if (s.family_id) {
+      const { data: sibs } = await supabase
+        .from('students')
+        .select('student_id, first_name, last_name, year_group, form_class')
+        .eq('family_id', s.family_id)
+        .neq('student_id', id);
+      setSiblings(sibs || []);
+    } else {
+      setSiblings([]);
+    }
 
     const { data: p } = await supabase
       .from('student_parent')
@@ -89,12 +102,25 @@ function StudentDetail() {
       .update({
         first_name: editForm.first_name,
         last_name: editForm.last_name,
+        middle_name: editForm.middle_name,
+        legal_first_name: editForm.legal_first_name,
+        legal_last_name: editForm.legal_last_name,
+        preferred_name: editForm.preferred_name,
+        student_email: editForm.student_email,
         dob: editForm.dob,
         year_group: editForm.year_group,
         form_class: editForm.form_class,
         admission_date: editForm.admission_date,
         gender: editForm.gender,
-        address: editForm.address,
+        address_line1: editForm.address_line1,
+        address_line2: editForm.address_line2,
+        city: editForm.city,
+        postcode: editForm.postcode,
+        country: editForm.country,
+        nationality: editForm.nationality,
+        religion: editForm.religion,
+        emergency_contact_name: editForm.emergency_contact_name,
+        emergency_contact_phone: editForm.emergency_contact_phone,
         medical_notes: editForm.medical_notes,
         status: editForm.status,
       })
@@ -127,28 +153,61 @@ function StudentDetail() {
       <h1>{student.first_name} {student.last_name}</h1>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2 style={{ margin: 0 }}>Core Data</h2>
-          {isAdmin && !editing && <button className="secondary" onClick={() => setEditing(true)}>Edit</button>}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="secondary" onClick={() => setFullView(!fullView)}>
+              {fullView ? 'Simple view' : 'Full view'}
+            </button>
+            {isAdmin && !editing && <button className="secondary" onClick={() => setEditing(true)}>Edit</button>}
+          </div>
         </div>
 
         {!editing ? (
           <>
+            <p><strong>Name:</strong> {student.first_name} {student.middle_name || ''} {student.last_name}</p>
+            {student.preferred_name && <p><strong>Preferred name:</strong> {student.preferred_name}</p>}
             <p><strong>DOB:</strong> {student.dob}</p>
             <p><strong>Year group:</strong> {student.year_group} &nbsp; <strong>Form:</strong> {student.form_class}</p>
-            <p><strong>Admission date:</strong> {student.admission_date}</p>
-            <p><strong>Gender:</strong> {student.gender || '—'}</p>
-            <p><strong>Address:</strong> {student.address || '—'}</p>
-            <p><strong>Medical notes:</strong> {student.medical_notes || '—'}</p>
             <p><strong>Status:</strong> {student.status}</p>
+
+            {fullView && (
+              <>
+                <p><strong>Legal first name:</strong> {student.legal_first_name || '—'}</p>
+                <p><strong>Legal last name:</strong> {student.legal_last_name || '—'}</p>
+                <p><strong>Student email:</strong> {student.student_email || '—'}</p>
+                <p><strong>Admission date:</strong> {student.admission_date}</p>
+                <p><strong>Gender:</strong> {student.gender || '—'}</p>
+                <p><strong>Nationality:</strong> {student.nationality || '—'}</p>
+                <p><strong>Religion:</strong> {student.religion || '—'}</p>
+                <p><strong>Address:</strong> {[student.address_line1, student.address_line2, student.city, student.postcode, student.country].filter(Boolean).join(', ') || '—'}</p>
+                <p><strong>Emergency contact:</strong> {student.emergency_contact_name || '—'} {student.emergency_contact_phone ? `(${student.emergency_contact_phone})` : ''}</p>
+                <p><strong>Medical notes:</strong> {student.medical_notes || '—'}</p>
+              </>
+            )}
           </>
         ) : (
           <form onSubmit={handleSave} style={{ marginTop: '1rem' }}>
             <label>First name
               <input value={editForm.first_name || ''} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
             </label>
+            <label>Middle name
+              <input value={editForm.middle_name || ''} onChange={(e) => setEditForm({ ...editForm, middle_name: e.target.value })} />
+            </label>
             <label>Last name
               <input value={editForm.last_name || ''} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} />
+            </label>
+            <label>Preferred/chosen name
+              <input value={editForm.preferred_name || ''} onChange={(e) => setEditForm({ ...editForm, preferred_name: e.target.value })} />
+            </label>
+            <label>Legal first name
+              <input value={editForm.legal_first_name || ''} onChange={(e) => setEditForm({ ...editForm, legal_first_name: e.target.value })} />
+            </label>
+            <label>Legal last name
+              <input value={editForm.legal_last_name || ''} onChange={(e) => setEditForm({ ...editForm, legal_last_name: e.target.value })} />
+            </label>
+            <label>Student email
+              <input type="email" value={editForm.student_email || ''} onChange={(e) => setEditForm({ ...editForm, student_email: e.target.value })} />
             </label>
             <label>DOB
               <input type="date" value={editForm.dob || ''} onChange={(e) => setEditForm({ ...editForm, dob: e.target.value })} />
@@ -165,8 +224,32 @@ function StudentDetail() {
             <label>Gender
               <input value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} />
             </label>
-            <label>Address
-              <input value={editForm.address || ''} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
+            <label>Nationality
+              <input value={editForm.nationality || ''} onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value })} />
+            </label>
+            <label>Religion
+              <input value={editForm.religion || ''} onChange={(e) => setEditForm({ ...editForm, religion: e.target.value })} />
+            </label>
+            <label>Address line 1
+              <input value={editForm.address_line1 || ''} onChange={(e) => setEditForm({ ...editForm, address_line1: e.target.value })} />
+            </label>
+            <label>Address line 2
+              <input value={editForm.address_line2 || ''} onChange={(e) => setEditForm({ ...editForm, address_line2: e.target.value })} />
+            </label>
+            <label>City
+              <input value={editForm.city || ''} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
+            </label>
+            <label>Postcode
+              <input value={editForm.postcode || ''} onChange={(e) => setEditForm({ ...editForm, postcode: e.target.value })} />
+            </label>
+            <label>Country
+              <input value={editForm.country || ''} onChange={(e) => setEditForm({ ...editForm, country: e.target.value })} />
+            </label>
+            <label>Emergency contact name
+              <input value={editForm.emergency_contact_name || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_name: e.target.value })} />
+            </label>
+            <label>Emergency contact phone
+              <input value={editForm.emergency_contact_phone || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })} />
             </label>
             <label>Medical notes
               <input value={editForm.medical_notes || ''} onChange={(e) => setEditForm({ ...editForm, medical_notes: e.target.value })} />
@@ -185,6 +268,26 @@ function StudentDetail() {
           </form>
         )}
       </div>
+
+      {siblings.length > 0 && (
+        <div className="card">
+          <h2>Siblings</h2>
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Name</th><th>Year</th><th>Form</th></tr></thead>
+              <tbody>
+                {siblings.map((sib) => (
+                  <tr key={sib.student_id} className="student-link" onClick={() => window.location.href = `/students/${sib.student_id}`}>
+                    <td>{sib.first_name} {sib.last_name}</td>
+                    <td>{sib.year_group}</td>
+                    <td>{sib.form_class}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h2>Parents / Guardians</h2>
