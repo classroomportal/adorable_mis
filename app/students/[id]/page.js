@@ -5,18 +5,29 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 
 function StudentDetail() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id;
   const [student, setStudent] = useState(null);
   const [parents, setParents] = useState([]);
   const [timetable, setTimetable] = useState([]);
+  const [periods, setPeriods] = useState([]);
   const [behaviour, setBehaviour] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function load() {
-      const { data: s } = await supabase.from('students').select('*').eq('student_id', id).single();
+      const { data: s, error: sErr } = await supabase
+        .from('students')
+        .select('*')
+        .eq('student_id', id)
+        .maybeSingle();
+
+      if (sErr) { setError(sErr.message); setLoading(false); return; }
       setStudent(s);
+
+      if (!s) { setLoading(false); return; }
 
       const { data: p } = await supabase
         .from('student_parent')
@@ -24,9 +35,12 @@ function StudentDetail() {
         .eq('student_id', id);
       setParents(p || []);
 
+      const { data: pr } = await supabase.from('periods').select('*');
+      setPeriods(pr || []);
+
       const { data: tt } = await supabase
         .from('student_class')
-        .select('classes(class_id, room, subjects(subject_name), timetable_slots(day_of_week, period_number, start_time, end_time, periods:period_number(period_name)))')
+        .select('classes(class_id, room, subjects(subject_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
         .eq('student_id', id);
       setTimetable(tt || []);
 
@@ -49,8 +63,14 @@ function StudentDetail() {
     load();
   }, [id]);
 
+  function periodName(num) {
+    const p = periods.find((x) => x.period_number === num);
+    return p ? p.period_name : `Period ${num}`;
+  }
+
   if (loading) return <p>Loading...</p>;
-  if (!student) return <p>Student not found.</p>;
+  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
+  if (!student) return <p>Student not found (id: {id}).</p>;
 
   return (
     <div>
@@ -97,7 +117,7 @@ function StudentDetail() {
                 (tc.classes?.timetable_slots || []).map((slot, j) => (
                   <tr key={`${i}-${j}`}>
                     <td>{slot.day_of_week}</td>
-                    <td>{slot.periods?.period_name || slot.period_number}</td>
+                    <td>{periodName(slot.period_number)}</td>
                     <td>{slot.start_time}–{slot.end_time}</td>
                     <td>{tc.classes?.subjects?.subject_name}</td>
                     <td>{tc.classes?.room}</td>
