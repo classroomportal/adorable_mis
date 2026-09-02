@@ -20,6 +20,7 @@ export default function NavBar() {
       <a href="/results">Results</a>
       <a href="/behaviour">Behaviour</a>
       <a href="/attendance">Attendance</a>
+      <a href="/calendar">Calendar</a>
       {session ? (
         <>
           <span style={{ color: '#ffe9c7', fontSize: '0.8rem' }}>
