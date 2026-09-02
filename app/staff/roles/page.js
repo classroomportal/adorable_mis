@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import RequireAuth from '../RequireAuth';
+import { supabase } from '../../../lib/supabaseClient';
+import RequireAuth from '../../RequireAuth';
 
 const ROLE_LABELS = {
   sysadmin: 'Sysadmin',
