@@ -7,6 +7,23 @@ import { useAuth } from '../../../lib/AuthContext';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
+function Collapsible({ title, defaultOpen = false, extra, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="card">
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', cursor: 'pointer' }}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <h2 style={{ margin: 0 }}>{open ? '▾' : '▸'} {title}</h2>
+        {extra && <span onClick={(e) => e.stopPropagation()}>{extra}</span>}
+      </div>
+      {open && <div style={{ marginTop: '0.75rem' }}>{children}</div>}
+    </div>
+  );
+}
+
+
 function StudentDetail() {
   const params = useParams();
   const id = params.id;
@@ -427,8 +444,7 @@ function StudentDetail() {
       </div>
 
       {siblings.length > 0 && (
-        <div className="card">
-          <h2>Siblings</h2>
+        <Collapsible title="Siblings">
           <div className="table-scroll">
             <table>
               <thead><tr><th>Name</th><th>Year</th><th>Form</th></tr></thead>
@@ -443,11 +459,10 @@ function StudentDetail() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Collapsible>
       )}
 
-      <div className="card">
-        <h2>Parents / Guardians</h2>
+      <Collapsible title="Parents / Guardians">
         {parents.length === 0 ? <p>None on record.</p> : (
           <div className="table-scroll">
             <table>
@@ -466,10 +481,9 @@ function StudentDetail() {
             </table>
           </div>
         )}
-      </div>
+      </Collapsible>
 
-      <div className="card">
-        <h2>Timetable</h2>
+      <Collapsible title="Timetable">
         <div className="table-scroll">
           <div className="timetable-grid">
             <div className="tt-head"></div>
@@ -489,13 +503,9 @@ function StudentDetail() {
             ))}
           </div>
         </div>
-      </div>
+      </Collapsible>
 
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h2 style={{ margin: 0 }}>Curriculum Blocks</h2>
-          {blockSaveStatus && <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>{blockSaveStatus}</span>}
-        </div>
+      <Collapsible title="Curriculum Blocks" extra={blockSaveStatus && <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>{blockSaveStatus}</span>}>
         {blocks.length === 0 ? (
           <p>{blocksError ? `Error loading blocks: ${blocksError}` : `No curriculum blocks are set up for Year ${student.year_group} yet.`}</p>
         ) : (
@@ -534,10 +544,9 @@ function StudentDetail() {
             </table>
           </div>
         )}
-      </div>
+      </Collapsible>
 
-      <div className="card">
-        <h2>Attendance</h2>
+      <Collapsible title="Attendance">
         {attendance.length === 0 ? <p>No attendance recorded.</p> : (
           <>
             <p>
@@ -558,10 +567,9 @@ function StudentDetail() {
             </div>
           </>
         )}
-      </div>
+      </Collapsible>
 
-      <div className="card">
-        <h2>Behaviour</h2>
+      <Collapsible title="Behaviour">
         {behaviour.length === 0 ? <p>No events logged.</p> : (
           <div className="table-scroll">
             <table>
@@ -580,10 +588,9 @@ function StudentDetail() {
             </table>
           </div>
         )}
-      </div>
+      </Collapsible>
 
-      <div className="card">
-        <h2>Target Grades</h2>
+      <Collapsible title="Target Grades">
         {targetList.length === 0 ? <p>No target grades set for this student.</p> : (
           <div className="table-scroll">
             <table>
@@ -612,10 +619,9 @@ function StudentDetail() {
             </table>
           </div>
         )}
-      </div>
+      </Collapsible>
 
-      <div className="card">
-        <h2>Results</h2>
+      <Collapsible title="Results">
         {results.length === 0 ? <p>No results recorded.</p> : (
           <div className="table-scroll">
             <table>
@@ -646,9 +652,9 @@ function StudentDetail() {
             </table>
           </div>
         )}
-      </div>
-      <div className="card">
-        <h2>Predictive Assessment Data (CAT4 / NGRT)</h2>
+      </Collapsible>
+
+      <Collapsible title="Predictive Assessment Data (CAT4 / NGRT)">
         {cat4.length === 0 && ngrt.length === 0 ? <p>No assessment data recorded.</p> : (
           <>
             {cat4.length > 0 && (
@@ -689,7 +695,7 @@ function StudentDetail() {
             )}
           </>
         )}
-      </div>
+      </Collapsible>
     </div>
   );
 }
