@@ -124,7 +124,20 @@ function StaffRolesInner() {
         <tbody>
           {staff.map((s) => (
             <tr key={s.staff_id}>
-              <td>{s.first_name} {s.last_name}</td>
+              <td>
+                <input
+                  value={s.first_name}
+                  style={{ width: '7rem' }}
+                  onChange={(e) => updateField(s.staff_id, 'first_name', e.target.value)}
+                  onBlur={(e) => saveField(s.staff_id, 'first_name', e.target.value)}
+                />
+                <input
+                  value={s.last_name}
+                  style={{ width: '7rem', marginLeft: '0.3rem' }}
+                  onChange={(e) => updateField(s.staff_id, 'last_name', e.target.value)}
+                  onBlur={(e) => saveField(s.staff_id, 'last_name', e.target.value)}
+                />
+              </td>
               <td>
                 <input
                   value={s.staff_code || ''}
