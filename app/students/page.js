@@ -42,6 +42,7 @@ function StudentsList() {
   return (
     <div>
       <h1>Students</h1>
+      <p><a href="/students/import">→ Bulk import students from CSV</a></p>
 
       <form onSubmit={(e) => e.preventDefault()}>
         <label>
