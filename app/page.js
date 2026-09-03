@@ -88,6 +88,7 @@ export default function Home() {
           <Tile href="/students/photos/import" icon="📥" label="Import Photos" />
           <Tile href="/assessments/import" icon="📥" label="Import CAT4/NGRT" />
           <Tile href="/admin/import-timetable" icon="📥" label="Import Timetable" />
+          <Tile href="/admin/import-classes" icon="📥" label="Import Class/Teacher/Room" />
         </Section>
       )}
     </div>
