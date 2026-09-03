@@ -40,7 +40,6 @@ async function parseTimetableFile(file) {
 // --- Component -------------------------------------------------------------
 
 export default function ImportTimetablePage() {
-  const [pairs, setPairs] = useState([]);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -56,7 +55,6 @@ export default function ImportTimetablePage() {
     setBusy(true);
     try {
       const parsed = await parseTimetableFile(file);
-      setPairs(parsed);
 
       const uniqueUpns = [...new Set(parsed.map((p) => p.upn))];
       const uniqueCodes = [...new Set(parsed.map((p) => p.class_code))];
@@ -67,26 +65,74 @@ export default function ImportTimetablePage() {
         .in("upn", uniqueUpns);
       if (sErr) throw sErr;
 
+      // Need block_id/is_compound so we can detect "student already in a
+      // different class within the same non-compound block" -> a set change,
+      // not a duplicate. See uq_student_class_block (unique on
+      // (student_id, block_id) where block_id is not null and is_compound = false).
       const { data: classes, error: cErr } = await supabase
         .from("classes")
-        .select("class_id, class_code")
+        .select("class_id, class_code, block_id, is_compound")
         .in("class_code", uniqueCodes);
       if (cErr) throw cErr;
 
       const studentMap = new Map(students.map((s) => [s.upn, s.student_id]));
-      const classMap = new Map(classes.map((c) => [c.class_code, c.class_id]));
+      const classMap = new Map(classes.map((c) => [c.class_code, c]));
 
       const matchedUpns = uniqueUpns.filter((u) => studentMap.has(u));
       const unmatchedUpns = uniqueUpns.filter((u) => !studentMap.has(u));
       const matchedCodes = uniqueCodes.filter((c) => classMap.has(c));
       const unmatchedCodes = uniqueCodes.filter((c) => !classMap.has(c));
 
-      const linksToInsert = parsed
+      const wantedLinks = parsed
         .filter((p) => studentMap.has(p.upn) && classMap.has(p.class_code))
-        .map((p) => ({
-          student_id: studentMap.get(p.upn),
-          class_id: classMap.get(p.class_code),
-        }));
+        .map((p) => {
+          const cls = classMap.get(p.class_code);
+          return {
+            student_id: studentMap.get(p.upn),
+            class_id: cls.class_id,
+            class_code: p.class_code,
+            block_id: cls.block_id,
+            is_compound: cls.is_compound,
+          };
+        });
+
+      // Fetch every existing student_class row for the affected students
+      // that sits in a non-compound block, so we can spot set changes:
+      // student already linked to a DIFFERENT class in the same block.
+      const affectedStudentIds = [...new Set(wantedLinks.map((l) => l.student_id))];
+      const { data: existingLinks, error: elErr } = await supabase
+        .from("student_class")
+        .select("student_id, class_id, block_id, is_compound")
+        .in("student_id", affectedStudentIds)
+        .not("block_id", "is", null)
+        .eq("is_compound", false);
+      if (elErr) throw elErr;
+
+      const existingByStudentBlock = new Map(
+        existingLinks.map((l) => [`${l.student_id}:${l.block_id}`, l.class_id])
+      );
+
+      const toInsert = [];   // brand new link, no conflict
+      const toSwap = [];     // student moving to a different class in same block
+      const toRemove = [];   // old class_id being replaced
+      const alreadyLinked = []; // exact match already exists, nothing to do
+
+      for (const link of wantedLinks) {
+        if (link.block_id && !link.is_compound) {
+          const key = `${link.student_id}:${link.block_id}`;
+          const currentClassId = existingByStudentBlock.get(key);
+          if (currentClassId === link.class_id) {
+            alreadyLinked.push(link);
+            continue;
+          }
+          if (currentClassId && currentClassId !== link.class_id) {
+            toSwap.push(link);
+            toRemove.push({ student_id: link.student_id, class_id: currentClassId });
+            continue;
+          }
+        }
+        toInsert.push(link);
+      }
 
       setPreview({
         totalRows: parsed.length,
@@ -96,7 +142,10 @@ export default function ImportTimetablePage() {
         uniqueClasses: uniqueCodes.length,
         matchedClasses: matchedCodes.length,
         unmatchedCodes,
-        linksToInsert,
+        toInsert,
+        toSwap,
+        toRemove,
+        alreadyLinkedCount: alreadyLinked.length,
       });
     } catch (err) {
       setError(err.message || String(err));
@@ -106,27 +155,41 @@ export default function ImportTimetablePage() {
   }
 
   async function handleImport() {
-    if (!preview?.linksToInsert?.length) return;
+    if (!preview) return;
     setBusy(true);
     setError(null);
     try {
-      // Dedup against existing links happens via upsert + ignoreDuplicates,
-      // relying on a unique constraint on (student_id, class_id) in
-      // student_class. If that constraint doesn't exist yet, add it:
-      //   alter table student_class
-      //     add constraint student_class_unique unique (student_id, class_id);
-      const { error: upErr, count } = await supabase
-        .from("student_class")
-        .upsert(preview.linksToInsert, {
-          onConflict: "student_id,class_id",
-          ignoreDuplicates: true,
-          count: "exact",
-        });
-      if (upErr) throw upErr;
+      // 1. Remove the old side of any set change first, so the unique
+      //    index on (student_id, block_id) doesn't block the new insert.
+      for (const rem of preview.toRemove) {
+        const { error: delErr } = await supabase
+          .from("student_class")
+          .delete()
+          .eq("student_id", rem.student_id)
+          .eq("class_id", rem.class_id);
+        if (delErr) throw delErr;
+      }
+
+      // 2. Insert new links (both genuinely new ones and the "new side" of swaps).
+      const rowsToInsert = [...preview.toInsert, ...preview.toSwap].map((l) => ({
+        student_id: l.student_id,
+        class_id: l.class_id,
+      }));
+
+      if (rowsToInsert.length > 0) {
+        const { error: upErr } = await supabase
+          .from("student_class")
+          .upsert(rowsToInsert, {
+            onConflict: "student_id,class_id",
+            ignoreDuplicates: true,
+          });
+        if (upErr) throw upErr;
+      }
 
       setResult({
-        attempted: preview.linksToInsert.length,
-        inserted: count ?? "unknown (check row count in table editor)",
+        inserted: preview.toInsert.length,
+        swapped: preview.toSwap.length,
+        alreadyLinked: preview.alreadyLinkedCount,
       });
     } catch (err) {
       setError(err.message || String(err));
@@ -135,13 +198,17 @@ export default function ImportTimetablePage() {
     }
   }
 
+  const totalToApply = preview ? preview.toInsert.length + preview.toSwap.length : 0;
+
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", padding: "1rem" }}>
       <h1>Import Timetable (SIMS export)</h1>
       <p style={{ color: "#555" }}>
         Upload the UPN/Class export. It'll be parsed, matched against
         existing students and classes, and previewed before anything is
-        written — existing links are never duplicated.
+        written. Existing links are never duplicated — and if a student has
+        moved to a different set within the same subject block, the old
+        link is swapped out rather than causing a conflict.
       </p>
 
       <input type="file" accept=".csv" onChange={handleFile} disabled={busy} />
@@ -163,8 +230,21 @@ export default function ImportTimetablePage() {
             <li>
               Classes matched: {preview.matchedClasses} / {preview.uniqueClasses}
             </li>
-            <li>Links ready to import: {preview.linksToInsert.length}</li>
+            <li>Already linked, no change needed: {preview.alreadyLinkedCount}</li>
+            <li>New links to add: {preview.toInsert.length}</li>
+            <li>Set changes (student moving class within a block): {preview.toSwap.length}</li>
           </ul>
+
+          {preview.toSwap.length > 0 && (
+            <details open>
+              <summary style={{ color: "#b45309" }}>
+                {preview.toSwap.length} set change(s) — review before importing
+              </summary>
+              <pre style={{ whiteSpace: "pre-wrap" }}>
+                {preview.toSwap.map((s) => `student_id ${s.student_id} -> ${s.class_code}`).join("\n")}
+              </pre>
+            </details>
+          )}
 
           {preview.unmatchedUpns.length > 0 && (
             <details>
@@ -195,18 +275,18 @@ export default function ImportTimetablePage() {
 
           <button
             onClick={handleImport}
-            disabled={busy || preview.linksToInsert.length === 0}
+            disabled={busy || totalToApply === 0}
             style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}
           >
-            Import {preview.linksToInsert.length} link(s)
+            Import {totalToApply} change(s)
           </button>
         </div>
       )}
 
       {result && (
         <div style={{ marginTop: "1rem", color: "green" }}>
-          Done. Attempted {result.attempted} links (existing links were
-          skipped automatically).
+          Done. Added {result.inserted} new link(s), applied {result.swapped} set change(s),
+          {" "}{result.alreadyLinked} row(s) already matched and needed no change.
         </div>
       )}
     </div>
