@@ -17,8 +17,11 @@ function StudentsList() {
         .from('student_summary')
         .select('*')
         .order('last_name', { ascending: true });
-      if (error) setError(error.message);
-      else setStudents(data);
+      if (error) { setError(error.message); setLoading(false); return; }
+
+      const { data: photos } = await supabase.from('students').select('student_id, photo_base64');
+      const photoMap = Object.fromEntries((photos || []).filter((p) => p.photo_base64).map((p) => [p.student_id, p.photo_base64]));
+      setStudents((data || []).map((s) => ({ ...s, photo_base64: photoMap[s.student_id] })));
       setLoading(false);
     }
     load();
@@ -42,7 +45,7 @@ function StudentsList() {
   return (
     <div>
       <h1>Students</h1>
-      <p><a href="/students/import">→ Bulk import students from CSV</a> &nbsp;|&nbsp; <a href="/assessments/import">→ Import CAT4/NGRT predictive data</a> &nbsp;|&nbsp; <a href="/parents/import">→ Import parents from CSV</a></p>
+      <p><a href="/students/import">→ Bulk import students from CSV</a> &nbsp;|&nbsp; <a href="/assessments/import">→ Import CAT4/NGRT predictive data</a> &nbsp;|&nbsp; <a href="/parents/import">→ Import parents from CSV</a> &nbsp;|&nbsp; <a href="/students/photos/import">→ Import student photos</a></p>
 
       <form onSubmit={(e) => e.preventDefault()}>
         <label>
@@ -70,6 +73,7 @@ function StudentsList() {
       <div className="table-scroll"><table>
         <thead>
           <tr>
+            <th></th>
             <th>Name</th>
             <th>Year</th>
             <th>Form</th>
@@ -81,6 +85,13 @@ function StudentsList() {
         <tbody>
           {filtered.map((s) => (
             <tr key={s.student_id} className="student-link" onClick={() => window.location.href = `/students/${s.student_id}`}>
+              <td>
+                {s.photo_base64 ? (
+                  <img src={`data:image/jpeg;base64,${s.photo_base64}`} alt="" style={{ width: 32, height: 40, objectFit: 'cover', borderRadius: 4 }} />
+                ) : (
+                  <div style={{ width: 32, height: 40, borderRadius: 4, background: 'var(--slate-200)' }} />
+                )}
+              </td>
               <td>{s.first_name} {s.last_name}</td>
               <td>{s.year_group}</td>
               <td>{s.form_class}</td>

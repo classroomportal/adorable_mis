@@ -281,6 +281,14 @@ function StudentDetail() {
           </div>
         </div>
 
+        {student.photo_base64 && (
+          <img
+            src={`data:image/jpeg;base64,${student.photo_base64}`}
+            alt={`${student.first_name} ${student.last_name}`}
+            style={{ width: 140, height: 175, objectFit: 'cover', borderRadius: 8, margin: '0.75rem 0' }}
+          />
+        )}
+
         {!editing ? (
           <>
             <p><strong>Name:</strong> {student.first_name} {student.middle_name || ''} {student.last_name}</p>
