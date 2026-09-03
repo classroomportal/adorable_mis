@@ -197,7 +197,7 @@ export default function ImportClassesPage() {
         manually, not created automatically.
       </p>
 
-      <input type="file" multiple accept=".dat,.txt" onChange={handleFiles} disabled={busy} />
+      <input type="file" multiple accept=".dat,.txt,text/plain,application/octet-stream,*/*" onChange={handleFiles} disabled={busy} />
 
       {error && <p style={{ color: "crimson", marginTop: "1rem" }}>Error: {error}</p>}
       {busy && <p>Working…</p>}
