@@ -42,6 +42,7 @@ async function parseTimetableFile(file) {
 export default function ImportTimetablePage() {
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(null); // { done, total }
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -206,23 +207,35 @@ export default function ImportTimetablePage() {
 
       let insertedCount = 0;
       const failed = [];
-      for (const row of rowsToInsert) {
-        const { error: upErr } = await supabase
-          .from("student_class")
-          .upsert(
-            {
-              student_id: row.student_id,
-              class_id: row.class_id,
-              block_id: row.block_id,
-              is_compound: row.is_compound,
-            },
-            { onConflict: "student_id,class_id", ignoreDuplicates: true }
-          );
-        if (upErr) {
-          failed.push({ ...row, error: upErr.message });
-        } else {
-          insertedCount++;
+      const CONCURRENCY = 10;
+      setProgress({ done: 0, total: rowsToInsert.length });
+
+      for (let i = 0; i < rowsToInsert.length; i += CONCURRENCY) {
+        const chunk = rowsToInsert.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(
+          chunk.map((row) =>
+            supabase
+              .from("student_class")
+              .upsert(
+                {
+                  student_id: row.student_id,
+                  class_id: row.class_id,
+                  block_id: row.block_id,
+                  is_compound: row.is_compound,
+                },
+                { onConflict: "student_id,class_id", ignoreDuplicates: true }
+              )
+              .then(({ error: upErr }) => ({ row, upErr }))
+          )
+        );
+        for (const { row, upErr } of results) {
+          if (upErr) {
+            failed.push({ ...row, error: upErr.message });
+          } else {
+            insertedCount++;
+          }
         }
+        setProgress({ done: Math.min(i + CONCURRENCY, rowsToInsert.length), total: rowsToInsert.length });
       }
 
       setResult({
@@ -235,6 +248,7 @@ export default function ImportTimetablePage() {
       setError(err.message || String(err));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -257,7 +271,12 @@ export default function ImportTimetablePage() {
         <p style={{ color: "crimson", marginTop: "1rem" }}>Error: {error}</p>
       )}
 
-      {busy && <p>Working…</p>}
+      {busy && !progress && <p>Working…</p>}
+      {progress && (
+        <p>
+          Importing… {progress.done} / {progress.total}
+        </p>
+      )}
 
       {preview && (
         <div style={{ marginTop: "1.5rem" }}>
