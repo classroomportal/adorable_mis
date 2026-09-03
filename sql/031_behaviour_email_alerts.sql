@@ -18,7 +18,29 @@ DECLARE
   recipients TEXT[];
   subject TEXT;
   body_html TEXT;
+  week_start DATE;
+  week_end DATE;
+  week_total INTEGER;
+  reason TEXT;
 BEGIN
+  -- Only escalate for a single severe event (-4 or worse) or a bad Sat-Fri week (-8 or worse total)
+  week_start := NEW.event_date - (((EXTRACT(DOW FROM NEW.event_date)::INT - 6 + 7) % 7));
+  week_end := week_start + 6;
+
+  SELECT COALESCE(SUM(points), 0) INTO week_total
+  FROM behaviour_events
+  WHERE student_id = NEW.student_id AND type = 'negative'
+    AND event_date BETWEEN week_start AND week_end;
+  -- week_total already includes NEW since this trigger runs AFTER INSERT
+
+  IF NEW.points <= -4 THEN
+    reason := 'A single severe event was logged (' || NEW.points || ' points).';
+  ELSIF week_total <= -8 THEN
+    reason := 'Their running total for the week (Sat ' || week_start || ' – Fri ' || week_end || ') has reached ' || week_total || ' points.';
+  ELSE
+    RETURN NEW; -- doesn't meet either threshold, no alert
+  END IF;
+
   SELECT decrypted_secret INTO api_key FROM vault.decrypted_secrets WHERE name = 'resend_api_key';
   IF api_key IS NULL THEN
     RETURN NEW; -- key not set up yet, skip silently rather than erroring on every behaviour entry
@@ -36,8 +58,9 @@ BEGIN
   END IF;
 
   subject := 'Behaviour alert: ' || student_name || ' — ' || COALESCE(NEW.category, 'Negative event');
-  body_html := '<p><strong>' || student_name || '</strong> received a negative behaviour event.</p>' ||
-               '<p><strong>Category:</strong> ' || COALESCE(NEW.category, '—') || '<br/>' ||
+  body_html := '<p><strong>' || student_name || '</strong> has triggered a behaviour alert.</p>' ||
+               '<p>' || reason || '</p>' ||
+               '<p><strong>Latest event — Category:</strong> ' || COALESCE(NEW.category, '—') || '<br/>' ||
                '<strong>Points:</strong> ' || COALESCE(NEW.points::text, '—') || '<br/>' ||
                '<strong>Date:</strong> ' || NEW.event_date::text || '</p>' ||
                '<p>' || COALESCE(NEW.description, '') || '</p>' ||
