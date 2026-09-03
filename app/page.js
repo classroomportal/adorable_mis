@@ -43,6 +43,8 @@ export default function Home() {
         <Tile href="/attendance" icon="✅" label="Attendance" />
         <Tile href="/results" icon="📊" label="Results" />
         <Tile href="/classes/progress" icon="📈" label="Class Progress" />
+        <Tile href="/certificates" icon="🏆" label="Certificates" />
+        <Tile href="/detention" icon="📋" label="Detention List" />
       </Section>
 
       <Section title="Whole School">

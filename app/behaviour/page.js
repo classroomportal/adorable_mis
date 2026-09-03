@@ -2,11 +2,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import { useAuth } from '../../lib/AuthContext';
 
 function BehaviourPageInner() {
+  const { isPastoralOrSmt } = useAuth();
   const [students, setStudents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [form, setForm] = useState({
     student_id: '', event_date: '', type: 'positive', category: '', points: '', description: '',
   });
@@ -21,6 +24,18 @@ function BehaviourPageInner() {
     setEvents(data || []);
   }
 
+  async function loadAlerts() {
+    const since = new Date();
+    since.setDate(since.getDate() - 7);
+    const { data } = await supabase
+      .from('behaviour_events')
+      .select('event_id, event_date, category, points, description, students(first_name,last_name)')
+      .eq('type', 'negative')
+      .gte('event_date', since.toISOString().slice(0, 10))
+      .order('event_date', { ascending: false });
+    setAlerts(data || []);
+  }
+
   useEffect(() => {
     async function loadOptions() {
       const { data: s } = await supabase.from('students').select('student_id, first_name, last_name').order('last_name');
@@ -30,6 +45,7 @@ function BehaviourPageInner() {
     }
     loadOptions();
     loadEvents();
+    loadAlerts();
   }, []);
 
   const categoriesForType = categories.filter((c) => c.type === form.type);
@@ -60,12 +76,35 @@ function BehaviourPageInner() {
       setStatus('Saved.');
       setForm({ student_id: '', event_date: '', type: 'positive', category: '', points: '', description: '' });
       loadEvents();
+      loadAlerts();
     }
   }
 
   return (
     <div>
       <h1>Behaviour Events</h1>
+
+      {isPastoralOrSmt && (
+        <div className="card">
+          <h2>Behaviour Alerts — last 7 days ({alerts.length})</h2>
+          {alerts.length === 0 ? <p>No negative events logged in the last 7 days.</p> : (
+            <div className="table-scroll"><table>
+              <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Description</th></tr></thead>
+              <tbody>
+                {alerts.map((a) => (
+                  <tr key={a.event_id}>
+                    <td>{a.event_date}</td>
+                    <td>{a.students?.first_name} {a.students?.last_name}</td>
+                    <td>{a.category ?? '—'}</td>
+                    <td>{a.points ?? '—'}</td>
+                    <td>{a.description ?? ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <label>
