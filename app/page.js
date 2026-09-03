@@ -77,7 +77,7 @@ export default function Home() {
       </Section>
 
       {isAdmin && (
-        <Section title="Staff">
+        <Section title="Admin">
           <Tile href="/staff/roles" icon="🧑‍🏫" label="Staff & Roles" />
           <Tile href="/parents" icon="👪" label="Parents" />
           <Tile href="/parents/welcome-emails" icon="✉️" label="Send Parent Welcome Emails" />

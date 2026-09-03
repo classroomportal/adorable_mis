@@ -37,13 +37,16 @@ export default function BlockAllocationPage() {
       const { data, error } = await supabase
         .from("curriculum_blocks")
         .select("block_id, block_name, year_group, band, is_compound")
-        .eq("year_group", year)
+        .eq("year_group", Number(year))
         .order("block_name");
       if (error) {
         setMessage("Error loading blocks: " + error.message);
         return;
       }
       setBlocks(data || []);
+      if (!data || data.length === 0) {
+        setMessage(`No curriculum_blocks rows found for year_group = ${year}. (Query ran without error, just returned 0 rows.)`);
+      }
     })();
   }, [year]);
 
@@ -252,6 +255,12 @@ export default function BlockAllocationPage() {
           </select>
         </label>
       </div>
+
+      {message && classes.length === 0 && (
+        <p style={{ background: "#fdecec", padding: "0.5rem 0.75rem", borderRadius: 6, fontSize: "0.85rem" }}>
+          {message}
+        </p>
+      )}
 
       {block?.is_compound && (
         <p style={{ background: "#fff7e0", padding: "0.5rem 0.75rem", borderRadius: 6, fontSize: "0.85rem" }}>
