@@ -132,10 +132,38 @@ export default function ImportTimetablePage() {
       const toSwap = [];     // student moving to a different class in same block
       const toRemove = [];   // old class_id being replaced
       const alreadyLinked = []; // exact match already exists, nothing to do
+      const ambiguous = [];  // file itself assigns a student >1 class in the same block
+
+      // Group wantedLinks by (student_id, block_id) for non-compound blocks
+      // FIRST, so we can catch a student appearing against two different
+      // classes in the same block within the file itself — that can't be
+      // resolved automatically and must not be sent to the database at all.
+      const byStudentBlock = new Map();
+      for (const link of wantedLinks) {
+        if (link.block_id && !link.is_compound) {
+          const key = `${link.student_id}:${link.block_id}`;
+          if (!byStudentBlock.has(key)) byStudentBlock.set(key, []);
+          byStudentBlock.get(key).push(link);
+        }
+      }
+
+      const ambiguousKeys = new Set();
+      for (const [key, links] of byStudentBlock) {
+        const distinctClassIds = new Set(links.map((l) => l.class_id));
+        if (distinctClassIds.size > 1) {
+          ambiguousKeys.add(key);
+          ambiguous.push({
+            student_id: links[0].student_id,
+            options: links.map((l) => l.class_code),
+          });
+        }
+      }
 
       for (const link of wantedLinks) {
         if (link.block_id && !link.is_compound) {
           const key = `${link.student_id}:${link.block_id}`;
+          if (ambiguousKeys.has(key)) continue; // handled above, skip entirely
+
           const currentClassId = existingByStudentBlock.get(key);
           if (currentClassId === link.class_id) {
             alreadyLinked.push(link);
@@ -162,6 +190,7 @@ export default function ImportTimetablePage() {
         toSwap,
         toRemove,
         alreadyLinkedCount: alreadyLinked.length,
+        ambiguous,
       });
     } catch (err) {
       setError(err.message || String(err));
@@ -292,7 +321,32 @@ export default function ImportTimetablePage() {
             <li>Already linked, no change needed: {preview.alreadyLinkedCount}</li>
             <li>New links to add: {preview.toInsert.length}</li>
             <li>Set changes (student moving class within a block): {preview.toSwap.length}</li>
+            {preview.ambiguous.length > 0 && (
+              <li style={{ color: "crimson" }}>
+                Ambiguous in file itself (excluded from import): {preview.ambiguous.length}
+              </li>
+            )}
           </ul>
+
+          {preview.ambiguous.length > 0 && (
+            <details open>
+              <summary style={{ color: "crimson" }}>
+                {preview.ambiguous.length} student(s) listed against more than
+                one class in the same block — these are skipped entirely, not guessed at
+              </summary>
+              <pre style={{ whiteSpace: "pre-wrap" }}>
+                {preview.ambiguous
+                  .map((a) => `student_id ${a.student_id}: ${a.options.join(" vs ")}`)
+                  .join("\n")}
+              </pre>
+              <p style={{ fontSize: "0.9em", color: "#555" }}>
+                This is a data issue in the source export itself, not
+                something this page can safely resolve — check these
+                students' actual set assignment in Nova-T/SIMS, fix or
+                clarify it there, then re-run this import.
+              </p>
+            </details>
+          )}
 
           {preview.toSwap.length > 0 && (
             <details open>
