@@ -322,59 +322,64 @@ function StudentDetail() {
           </div>
         </div>
 
-        {student.photo_base64 && (
-          <img
-            src={`data:image/jpeg;base64,${student.photo_base64}`}
-            alt={`${student.first_name} ${student.last_name}`}
-            style={{ width: 140, height: 175, objectFit: 'cover', borderRadius: 8, margin: '0.75rem 0' }}
-          />
-        )}
-        {isAdmin && (
-          <div style={{ margin: '0.5rem 0' }}>
-            <label className="secondary" style={{ display: 'inline-block', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.9rem' }}>
-              {student.photo_base64 ? 'Change photo' : 'Add photo'}
-              <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} style={{ display: 'none' }} />
-            </label>
-            {photoStatus && <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem' }}>{photoStatus}</span>}
-          </div>
-        )}
+        <div style={{ overflow: 'hidden' }}>
+          {(student.photo_base64 || isAdmin) && (
+            <div style={{ float: 'left', marginRight: '1.25rem', marginBottom: '0.5rem', textAlign: 'center' }}>
+              {student.photo_base64 && (
+                <img
+                  src={`data:image/jpeg;base64,${student.photo_base64}`}
+                  alt={`${student.first_name} ${student.last_name}`}
+                  style={{ width: 120, height: 150, objectFit: 'cover', borderRadius: 8, display: 'block' }}
+                />
+              )}
+              {isAdmin && (
+                <div style={{ marginTop: '0.4rem' }}>
+                  <label className="secondary" style={{ display: 'inline-block', padding: '0.3rem 0.6rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem' }}>
+                    {student.photo_base64 ? 'Change photo' : 'Add photo'}
+                    <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                  </label>
+                  {photoStatus && <div style={{ fontSize: '0.75rem', marginTop: '0.2rem' }}>{photoStatus}</div>}
+                </div>
+              )}
+            </div>
+          )}
 
-        {!editing ? (
-          <>
-            <p><strong>Name:</strong> {student.first_name} {student.middle_name || ''} {student.last_name}</p>
-            {student.preferred_name && <p><strong>Preferred name:</strong> {student.preferred_name}</p>}
-            <p><strong>DOB:</strong> {student.dob}</p>
-            <p><strong>Year group:</strong> {student.year_group} &nbsp; <strong>Form:</strong> {student.form_class}</p>
-            <p><strong>Status:</strong> {student.status}{student.leaving_date ? ` (leaving date: ${student.leaving_date})` : ''}</p>
+          {!editing ? (
+            <div className="core-data-fields">
+              <p><strong>Name:</strong> {student.first_name} {student.middle_name || ''} {student.last_name}</p>
+              {student.preferred_name && <p><strong>Preferred name:</strong> {student.preferred_name}</p>}
+              <p><strong>DOB:</strong> {student.dob}</p>
+              <p><strong>Year group:</strong> {student.year_group} &nbsp; <strong>Form:</strong> {student.form_class}</p>
+              <p><strong>Status:</strong> {student.status}{student.leaving_date ? ` (leaving date: ${student.leaving_date})` : ''}</p>
 
-            {fullView && (
-              <>
-                <p><strong>UPN:</strong> {student.upn || '—'}</p>
-                <p><strong>Legal first name:</strong> {student.legal_first_name || '—'}</p>
-                <p><strong>Legal last name:</strong> {student.legal_last_name || '—'}</p>
-                <p><strong>Student email:</strong> {student.student_email || '—'}</p>
-                <p><strong>Admission date:</strong> {student.admission_date}</p>
-                <p><strong>Admitted/letter date:</strong> {student.admitted_letter_date || '—'}</p>
-                <p><strong>Gender:</strong> {student.gender || '—'}</p>
-                <p><strong>Nationality:</strong> {student.nationality || '—'}</p>
-                <p><strong>State of origin:</strong> {student.state_of_origin || '—'}</p>
-                <p><strong>LGA:</strong> {student.lga || '—'}</p>
-                <p><strong>Home town:</strong> {student.home_town || '—'}</p>
-                <p><strong>Religion:</strong> {student.religion || '—'}</p>
-                <p><strong>Boarding house:</strong> {student.boarding_house || '—'}</p>
-                <p><strong>Boarding room number:</strong> {student.boarding_room_number || '—'}</p>
-                <p><strong>Sports house:</strong> {student.sports_house || '—'}</p>
-                <p><strong>National identity number:</strong> {student.national_identity_number || '—'}</p>
-                <p><strong>NECO exam number:</strong> {student.neco_exam_number || '—'}</p>
-                <p><strong>UTME PIN:</strong> {student.utme_pin || '—'}</p>
-                <p><strong>UTME profile code:</strong> {student.utme_profile_code || '—'}</p>
-                <p><strong>Address:</strong> {[student.address_line1, student.address_line2, student.city, student.postcode, student.country].filter(Boolean).join(', ') || '—'}</p>
-                <p><strong>Emergency contact:</strong> {student.emergency_contact_name || '—'} {student.emergency_contact_phone ? `(${student.emergency_contact_phone})` : ''}</p>
-                <p><strong>Medical notes:</strong> {student.medical_notes || '—'}</p>
-              </>
-            )}
-          </>
-        ) : (
+              {fullView && (
+                <>
+                  <p><strong>UPN:</strong> {student.upn || '—'}</p>
+                  <p><strong>Legal first name:</strong> {student.legal_first_name || '—'}</p>
+                  <p><strong>Legal last name:</strong> {student.legal_last_name || '—'}</p>
+                  <p><strong>Student email:</strong> {student.student_email || '—'}</p>
+                  <p><strong>Admission date:</strong> {student.admission_date}</p>
+                  <p><strong>Admitted/letter date:</strong> {student.admitted_letter_date || '—'}</p>
+                  <p><strong>Gender:</strong> {student.gender || '—'}</p>
+                  <p><strong>Nationality:</strong> {student.nationality || '—'}</p>
+                  <p><strong>State of origin:</strong> {student.state_of_origin || '—'}</p>
+                  <p><strong>LGA:</strong> {student.lga || '—'}</p>
+                  <p><strong>Home town:</strong> {student.home_town || '—'}</p>
+                  <p><strong>Religion:</strong> {student.religion || '—'}</p>
+                  <p><strong>Boarding house:</strong> {student.boarding_house || '—'}</p>
+                  <p><strong>Boarding room number:</strong> {student.boarding_room_number || '—'}</p>
+                  <p><strong>Sports house:</strong> {student.sports_house || '—'}</p>
+                  <p><strong>National identity number:</strong> {student.national_identity_number || '—'}</p>
+                  <p><strong>NECO exam number:</strong> {student.neco_exam_number || '—'}</p>
+                  <p><strong>UTME PIN:</strong> {student.utme_pin || '—'}</p>
+                  <p><strong>UTME profile code:</strong> {student.utme_profile_code || '—'}</p>
+                  <p><strong>Address:</strong> {[student.address_line1, student.address_line2, student.city, student.postcode, student.country].filter(Boolean).join(', ') || '—'}</p>
+                  <p><strong>Emergency contact:</strong> {student.emergency_contact_name || '—'} {student.emergency_contact_phone ? `(${student.emergency_contact_phone})` : ''}</p>
+                  <p><strong>Medical notes:</strong> {student.medical_notes || '—'}</p>
+                </>
+              )}
+            </div>
+          ) : (
           <form onSubmit={handleSave} style={{ marginTop: '1rem' }}>
             <label>First name
               <input value={editForm.first_name || ''} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
@@ -499,6 +504,7 @@ function StudentDetail() {
             {saveStatus && <p>{saveStatus}</p>}
           </form>
         )}
+        </div>
       </div>
 
       {siblings.length > 0 && (

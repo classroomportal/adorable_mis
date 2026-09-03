@@ -15,13 +15,6 @@ export default function NavBar() {
   return (
     <nav>
       <a href="/" style={{ fontWeight: 700, marginRight: 'auto' }}>Adorable MIS</a>
-      <a href="/">Home</a>
-      <a href="/students">Students</a>
-      <a href="/results">Results</a>
-      <a href="/behaviour">Behaviour</a>
-      <a href="/attendance">Attendance</a>
-      <a href="/calendar">Calendar</a>
-      {profile?.role === 'admin' && <a href="/staff/roles">Staff & Roles</a>}
       {session ? (
         <>
           <span style={{ color: '#ffe9c7', fontSize: '0.8rem' }}>

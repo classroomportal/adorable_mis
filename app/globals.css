@@ -191,7 +191,9 @@ input, select { width: 100%; }
   background: var(--yellow-100);
 }
 
+.core-data-fields p { margin: 0.3rem 0; }
 .dash-section { margin-bottom: 1.75rem; }
+
 .dash-section-title {
   font-size: 0.8rem;
   font-weight: 700;
