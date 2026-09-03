@@ -79,6 +79,8 @@ export default function Home() {
       {isAdmin && (
         <Section title="Staff">
           <Tile href="/staff/roles" icon="🧑‍🏫" label="Staff & Roles" />
+          <Tile href="/parents" icon="👪" label="Parents" />
+          <Tile href="/parents/welcome-emails" icon="✉️" label="Send Parent Welcome Emails" />
           <Tile href="/students/import" icon="📥" label="Import Students" />
           <Tile href="/parents/import" icon="📥" label="Import Parents" />
           <Tile href="/results/import" icon="📥" label="Import Results" />
