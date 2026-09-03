@@ -13,6 +13,7 @@ function AttendanceInner() {
   const [classId, setClassId] = useState('');
   const [roster, setRoster] = useState([]);
   const [marks, setMarks] = useState({}); // student_id -> code
+  const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
   const [status, setStatus] = useState(null);
   const [loadingRoster, setLoadingRoster] = useState(false);
 
@@ -63,10 +64,31 @@ function AttendanceInner() {
       const prefill = {};
       (existing || []).forEach((row) => { if (row.code) prefill[row.student_id] = row.code; });
       setMarks(prefill);
+
+      const { data: today } = await supabase
+        .from('attendance_today')
+        .select('student_id, period_number, code, status')
+        .in('student_id', ids);
+      const byStudent = {};
+      (today || [])
+        .filter((row) => row.period_number !== periodNumber) // don't repeat the current period
+        .forEach((row) => {
+          (byStudent[row.student_id] ||= []).push(row);
+        });
+      Object.values(byStudent).forEach((rows) => rows.sort((a, b) => a.period_number - b.period_number));
+      setTodaySoFar(byStudent);
     } else {
       setMarks({});
+      setTodaySoFar({});
     }
     setLoadingRoster(false);
+  }
+
+  function statusColor(status) {
+    if (status === 'present') return '#1a7f37';
+    if (status === 'late') return '#b08800';
+    if (status === 'absent') return '#c62828';
+    return '#6b6b6b'; // authorized_absence and anything else
   }
 
   useEffect(() => { loadRoster(); }, [classId, date, periodNumber]);
@@ -158,11 +180,35 @@ function AttendanceInner() {
                 Mark all present
               </button>
               <div className="table-scroll"><table>
-                <thead><tr><th>Student</th><th>Code</th></tr></thead>
+                <thead><tr><th>Student</th><th>Today so far</th><th>Code</th></tr></thead>
                 <tbody>
                   {roster.map((s) => (
                     <tr key={s.student_id}>
                       <td>{s.first_name} {s.last_name}</td>
+                      <td>
+                        {(todaySoFar[s.student_id] || []).length === 0 ? (
+                          <span style={{ color: '#999', fontSize: '0.85em' }}>—</span>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                            {todaySoFar[s.student_id].map((row) => (
+                              <span
+                                key={row.period_number}
+                                title={`Period ${row.period_number}: ${row.code}`}
+                                style={{
+                                  fontSize: '0.75em',
+                                  fontWeight: 600,
+                                  color: '#fff',
+                                  background: statusColor(row.status),
+                                  borderRadius: '4px',
+                                  padding: '1px 6px',
+                                }}
+                              >
+                                P{row.period_number}:{row.code}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
                       <td>
                         <select value={marks[s.student_id] || ''} onChange={(e) => setMark(s.student_id, e.target.value)}>
                           <option value="">—</option>
