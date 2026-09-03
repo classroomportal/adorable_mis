@@ -45,6 +45,18 @@ export default function Home() {
     );
   }
 
+  if (profile?.role === 'parent') {
+    return (
+      <div>
+        <h1>Welcome{profile.parent_id ? '' : ' — account not linked yet'}</h1>
+        <Section title="My Family">
+          <Tile href="/parent-portal" icon="👨‍👩‍👧" label="My Children" />
+          <Tile href="/change-password" icon="🔑" label="Change Password" />
+        </Section>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1>Adorable MIS</h1>

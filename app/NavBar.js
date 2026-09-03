@@ -14,7 +14,7 @@ export default function NavBar() {
 
   return (
     <nav>
-      <a href="/" style={{ fontWeight: 700, marginRight: 'auto' }}>Adorable MIS</a>
+      <a href="/" style={{ fontWeight: 800, fontSize: '1.3rem', marginRight: 'auto', padding: '0.3rem 0' }}>Adorable MIS</a>
       {session ? (
         <>
           <span style={{ color: '#ffe9c7', fontSize: '0.8rem' }}>
