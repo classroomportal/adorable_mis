@@ -20,7 +20,7 @@ function Section({ title, children }) {
 }
 
 export default function Home() {
-  const { session, profile } = useAuth();
+  const { session, profile, isPastoralOrSmt } = useAuth();
   const isAdmin = profile?.role === 'admin';
 
   if (!session) {
@@ -29,6 +29,18 @@ export default function Home() {
         <h1>Adorable MIS</h1>
         <p>School management information system for Adorable British College.</p>
         <a href="/login"><button>Sign in</button></a>
+      </div>
+    );
+  }
+
+  if (profile?.role === 'student') {
+    return (
+      <div>
+        <h1>Welcome{profile.student_id ? '' : ' — account not linked yet'}</h1>
+        <Section title="My Info">
+          <Tile href="/portal" icon="📚" label="My Grades & Behaviour" />
+          <Tile href="/change-password" icon="🔑" label="Change Password" />
+        </Section>
       </div>
     );
   }
@@ -45,6 +57,7 @@ export default function Home() {
         <Tile href="/classes/progress" icon="📈" label="Class Progress" />
         <Tile href="/certificates" icon="🏆" label="Certificates" />
         <Tile href="/detention" icon="📋" label="Detention List" />
+        {isPastoralOrSmt && <Tile href="/appeals" icon="⚖️" label="Behaviour Appeals" />}
       </Section>
 
       <Section title="Whole School">

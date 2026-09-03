@@ -18,8 +18,9 @@ export default function NavBar() {
       {session ? (
         <>
           <span style={{ color: '#ffe9c7', fontSize: '0.8rem' }}>
-            {profile?.role === 'admin' ? 'Admin' : 'Staff'} — {session.user.email}
+            {profile?.role === 'admin' ? 'Admin' : profile?.role === 'student' ? 'Student' : profile?.role === 'parent' ? 'Parent' : 'Staff'} — {session.user.email}
           </span>
+          <a href="/change-password">Change Password</a>
           <button onClick={handleSignOut}>Sign out</button>
         </>
       ) : (

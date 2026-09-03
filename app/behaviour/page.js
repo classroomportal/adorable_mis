@@ -5,7 +5,7 @@ import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
 
 function BehaviourPageInner() {
-  const { isPastoralOrSmt } = useAuth();
+  const { isPastoralOrSmt, profile } = useAuth();
   const [students, setStudents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
@@ -78,6 +78,13 @@ function BehaviourPageInner() {
       loadEvents();
       loadAlerts();
     }
+  }
+
+  async function handleDelete(eventId) {
+    if (!window.confirm('Delete this behaviour event? This cannot be undone.')) return;
+    const { error } = await supabase.from('behaviour_events').delete().eq('event_id', eventId);
+    if (error) setStatus(`Error: ${error.message}`);
+    else { loadEvents(); loadAlerts(); }
   }
 
   return (
@@ -158,7 +165,7 @@ function BehaviourPageInner() {
       <h2>Recent events</h2>
       <div className="table-scroll"><table>
         <thead>
-          <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th></tr>
+          <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th>{profile?.role === 'admin' && <th></th>}</tr>
         </thead>
         <tbody>
           {events.map((ev) => (
@@ -168,6 +175,9 @@ function BehaviourPageInner() {
               <td>{ev.type}</td>
               <td>{ev.category ?? '—'}</td>
               <td>{ev.points ?? '—'}</td>
+              {profile?.role === 'admin' && (
+                <td><button className="secondary" onClick={() => handleDelete(ev.event_id)}>Delete</button></td>
+              )}
             </tr>
           ))}
         </tbody>
