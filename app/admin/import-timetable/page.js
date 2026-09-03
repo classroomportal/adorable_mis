@@ -69,14 +69,27 @@ export default function ImportTimetablePage() {
       // different class within the same non-compound block" -> a set change,
       // not a duplicate. See uq_student_class_block (unique on
       // (student_id, block_id) where block_id is not null and is_compound = false).
+      // is_compound lives on curriculum_blocks, not classes, so fetch both.
       const { data: classes, error: cErr } = await supabase
         .from("classes")
-        .select("class_id, class_code, block_id, is_compound")
+        .select("class_id, class_code, block_id")
         .in("class_code", uniqueCodes);
       if (cErr) throw cErr;
 
+      const blockIds = [...new Set(classes.map((c) => c.block_id).filter(Boolean))];
+      const { data: blocks, error: bErr } = blockIds.length
+        ? await supabase.from("curriculum_blocks").select("block_id, is_compound").in("block_id", blockIds)
+        : { data: [], error: null };
+      if (bErr) throw bErr;
+      const compoundByBlock = new Map(blocks.map((b) => [b.block_id, b.is_compound]));
+
       const studentMap = new Map(students.map((s) => [s.upn, s.student_id]));
-      const classMap = new Map(classes.map((c) => [c.class_code, c]));
+      const classMap = new Map(
+        classes.map((c) => [
+          c.class_code,
+          { ...c, is_compound: c.block_id ? !!compoundByBlock.get(c.block_id) : false },
+        ])
+      );
 
       const matchedUpns = uniqueUpns.filter((u) => studentMap.has(u));
       const unmatchedUpns = uniqueUpns.filter((u) => !studentMap.has(u));
@@ -99,6 +112,8 @@ export default function ImportTimetablePage() {
       // Fetch every existing student_class row for the affected students
       // that sits in a non-compound block, so we can spot set changes:
       // student already linked to a DIFFERENT class in the same block.
+      // student_class does carry its own is_compound column (copied at
+      // link time), so this one's fine as-is.
       const affectedStudentIds = [...new Set(wantedLinks.map((l) => l.student_id))];
       const { data: existingLinks, error: elErr } = await supabase
         .from("student_class")
@@ -174,6 +189,8 @@ export default function ImportTimetablePage() {
       const rowsToInsert = [...preview.toInsert, ...preview.toSwap].map((l) => ({
         student_id: l.student_id,
         class_id: l.class_id,
+        block_id: l.block_id,
+        is_compound: l.is_compound,
       }));
 
       if (rowsToInsert.length > 0) {
