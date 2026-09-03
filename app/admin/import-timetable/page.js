@@ -185,28 +185,51 @@ export default function ImportTimetablePage() {
         if (delErr) throw delErr;
       }
 
-      // 2. Insert new links (both genuinely new ones and the "new side" of swaps).
+      // 2. Insert new links one at a time (both genuinely new ones and the
+      //    "new side" of swaps). We do this row-by-row rather than one big
+      //    batch: ON CONFLICT only protects against rows already in the
+      //    table, not against duplicates within the same INSERT statement.
+      //    If the source file itself contains two rows for the same student
+      //    in the same non-compound block (a data issue upstream, not
+      //    something we can safely guess our way around), a batch insert
+      //    fails outright on uq_student_class_block even though the preview
+      //    correctly found no conflict against the database. Going row by
+      //    row means only the genuinely conflicting row fails, and we can
+      //    report exactly which one.
       const rowsToInsert = [...preview.toInsert, ...preview.toSwap].map((l) => ({
         student_id: l.student_id,
         class_id: l.class_id,
+        class_code: l.class_code,
         block_id: l.block_id,
         is_compound: l.is_compound,
       }));
 
-      if (rowsToInsert.length > 0) {
+      let insertedCount = 0;
+      const failed = [];
+      for (const row of rowsToInsert) {
         const { error: upErr } = await supabase
           .from("student_class")
-          .upsert(rowsToInsert, {
-            onConflict: "student_id,class_id",
-            ignoreDuplicates: true,
-          });
-        if (upErr) throw upErr;
+          .upsert(
+            {
+              student_id: row.student_id,
+              class_id: row.class_id,
+              block_id: row.block_id,
+              is_compound: row.is_compound,
+            },
+            { onConflict: "student_id,class_id", ignoreDuplicates: true }
+          );
+        if (upErr) {
+          failed.push({ ...row, error: upErr.message });
+        } else {
+          insertedCount++;
+        }
       }
 
       setResult({
-        inserted: preview.toInsert.length,
+        inserted: insertedCount,
         swapped: preview.toSwap.length,
         alreadyLinked: preview.alreadyLinkedCount,
+        failed,
       });
     } catch (err) {
       setError(err.message || String(err));
@@ -301,9 +324,29 @@ export default function ImportTimetablePage() {
       )}
 
       {result && (
-        <div style={{ marginTop: "1rem", color: "green" }}>
-          Done. Added {result.inserted} new link(s), applied {result.swapped} set change(s),
-          {" "}{result.alreadyLinked} row(s) already matched and needed no change.
+        <div style={{ marginTop: "1rem" }}>
+          <div style={{ color: "green" }}>
+            Done. Added {result.inserted} new link(s), applied {result.swapped} set change(s),
+            {" "}{result.alreadyLinked} row(s) already matched and needed no change.
+          </div>
+          {result.failed.length > 0 && (
+            <details open style={{ marginTop: "0.5rem" }}>
+              <summary style={{ color: "crimson" }}>
+                {result.failed.length} row(s) failed — likely two classes for the
+                same student in the same block within the source file itself
+              </summary>
+              <pre style={{ whiteSpace: "pre-wrap" }}>
+                {result.failed
+                  .map((f) => `student_id ${f.student_id} -> ${f.class_code}: ${f.error}`)
+                  .join("\n")}
+              </pre>
+              <p style={{ fontSize: "0.9em", color: "#555" }}>
+                Worth checking these students in Nova-T/SIMS directly — this
+                usually means the export has conflicting set assignments for
+                them that need resolving at the source, not just skipping here.
+              </p>
+            </details>
+          )}
         </div>
       )}
     </div>
