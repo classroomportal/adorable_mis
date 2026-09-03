@@ -40,6 +40,7 @@ function StudentDetail() {
   const [targetMap, setTargetMap] = useState({}); // subject_id -> target grade
   const [targetList, setTargetList] = useState([]); // all target grades for this student, incl. subjects with no results yet
   const [gradePoints, setGradePoints] = useState({}); // grade -> points
+  const [photoStatus, setPhotoStatus] = useState(null);
   const [cat4, setCat4] = useState([]);
   const [ngrt, setNgrt] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -219,6 +220,46 @@ function StudentDetail() {
     }
   }
 
+  async function handlePhotoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPhotoStatus('Processing photo...');
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const img = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = dataUrl;
+      });
+      // Resize down to a passport-photo-ish size — plenty to recognise someone, a fraction of a raw phone photo
+      const MAX_DIM = 400;
+      const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      const base64 = resizedDataUrl.split(',')[1];
+
+      setPhotoStatus('Uploading...');
+      const { error } = await supabase.from('students').update({ photo_base64: base64 }).eq('student_id', id);
+      if (error) {
+        setPhotoStatus(`Error: ${error.message}`);
+      } else {
+        setStudent((s) => ({ ...s, photo_base64: base64 }));
+        setPhotoStatus('Photo updated.');
+      }
+    } catch {
+      setPhotoStatus('Could not process that file.');
+    }
+  }
+
   async function handleBlockChange(blockId, newClassId) {
     setBlockSaveStatus('Saving...');
     setBlockSelections((prev) => ({ ...prev, [blockId]: newClassId || null }));
@@ -287,6 +328,15 @@ function StudentDetail() {
             alt={`${student.first_name} ${student.last_name}`}
             style={{ width: 140, height: 175, objectFit: 'cover', borderRadius: 8, margin: '0.75rem 0' }}
           />
+        )}
+        {isAdmin && (
+          <div style={{ margin: '0.5rem 0' }}>
+            <label className="secondary" style={{ display: 'inline-block', padding: '0.4rem 0.8rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.9rem' }}>
+              {student.photo_base64 ? 'Change photo' : 'Add photo'}
+              <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+            </label>
+            {photoStatus && <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem' }}>{photoStatus}</span>}
+          </div>
         )}
 
         {!editing ? (
