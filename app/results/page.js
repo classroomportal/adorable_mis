@@ -83,7 +83,7 @@ function ResultsPageInner() {
   return (
     <div>
       <h1>Weekly Results</h1>
-      <p><a href="/results/import">→ Bulk import results from CSV</a></p>
+      <p><a href="/results/import-gradebook">→ Bulk import results from CSV</a></p>
 
       <form onSubmit={handleSubmit}>
         <label>
