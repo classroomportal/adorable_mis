@@ -132,7 +132,7 @@ function ClassProgressInner() {
   return (
     <div>
       <h1>Class Progress</h1>
-      <p>Each class's average grade vs the average target grade for the same students, most recent result per subject. Classes with fewer than one comparable student are hidden. Sorted worst-to-best.</p>
+      <p>Each class's average grade vs the average target grade for the same students, most recent result per subject. Classes with fewer than one comparable student are hidden. Sorted worst-to-best. (+ / ~ / - = Above / On / Below target)</p>
 
       <div className="card">
         <label>
@@ -154,7 +154,7 @@ function ClassProgressInner() {
       {loading ? <p>Loading...</p> : (
         <div className="table-scroll"><table>
           <thead>
-            <tr><th>Class</th><th>Subject</th><th>Year</th><th>Students compared</th><th>Above / On / Below</th><th>Overall</th></tr>
+            <tr><th>Class</th><th>Subject</th><th>Year</th><th>Students<br />Compared</th><th>+ / ~ / -</th><th>Overall</th></tr>
           </thead>
           <tbody>
             {filtered.map((r) => {
