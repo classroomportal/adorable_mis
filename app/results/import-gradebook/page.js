@@ -131,6 +131,15 @@ function ImportInner() {
       const name = (subjectNames[header] || '').trim();
       if (!name) { problems.push(`Column "${header}": no subject name given, skipped.`); continue; }
 
+      // Check for a permanent alias first (e.g. "Business Studies" -> Business),
+      // so a previously-merged duplicate doesn't get silently recreated.
+      const { data: alias } = await supabase
+        .from('subject_aliases')
+        .select('subject_id')
+        .eq('alias_name', name)
+        .maybeSingle();
+      if (alias) { subjectIdByHeader[header] = alias.subject_id; continue; }
+
       const { data: existing, error: findErr } = await supabase
         .from('subjects')
         .select('subject_id')

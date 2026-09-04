@@ -9,6 +9,8 @@ function ImportInner() {
   const [subjects, setSubjects] = useState([]);
   const [subjectsWithTargets, setSubjectsWithTargets] = useState(new Set());
   const [keyStagesBySubject, setKeyStagesBySubject] = useState({}); // subject_id -> Set of key stages
+  const [aliasesBySubject, setAliasesBySubject] = useState({}); // subject_id -> array of alias names
+  const [aliasInput, setAliasInput] = useState({}); // subject_id -> current text field value
   const [status, setStatus] = useState(null);
   const [filter, setFilter] = useState('');
 
@@ -47,9 +49,31 @@ function ImportInner() {
       if (!page || page.length < PAGE) break;
       from += PAGE;
     }
+    const { data: aliasRows } = await supabase.from('subject_aliases').select('alias_name, subject_id');
+    const aliasMap = {};
+    (aliasRows || []).forEach((a) => {
+      if (!aliasMap[a.subject_id]) aliasMap[a.subject_id] = [];
+      aliasMap[a.subject_id].push(a.alias_name);
+    });
+    setAliasesBySubject(aliasMap);
+
     setSubjectsWithTargets(ids);
   }
 
+  async function saveAlias(subjectId) {
+    const raw = (aliasInput[subjectId] || '').trim();
+    if (!raw) return;
+    const { error } = await supabase.from('subject_aliases').upsert([{ alias_name: raw, subject_id: subjectId }]);
+    if (error) { setStatus(`Error saving alias "${raw}": ${error.message}`); return; }
+    setAliasesBySubject((prev) => ({ ...prev, [subjectId]: [...(prev[subjectId] || []), raw] }));
+    setAliasInput((prev) => ({ ...prev, [subjectId]: '' }));
+    setStatus(`Alias "${raw}" now maps to this subject.`);
+  }
+
+  async function removeAlias(subjectId, aliasName) {
+    await supabase.from('subject_aliases').delete().eq('alias_name', aliasName);
+    setAliasesBySubject((prev) => ({ ...prev, [subjectId]: (prev[subjectId] || []).filter((a) => a !== aliasName) }));
+  }
   async function toggleKeyStage(subjectId, keyStage) {
     const current = keyStagesBySubject[subjectId] || new Set();
     const has = current.has(keyStage);
@@ -115,7 +139,7 @@ function ImportInner() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Subject (source)</th><th>Display name</th><th>Use targets from</th><th>Key stages</th><th></th></tr>
+              <tr><th>Subject (source)</th><th>Display name</th><th>Use targets from</th><th>Key stages</th><th>Aliases</th><th></th></tr>
             </thead>
             <tbody>
               {filtered.map((s) => (
@@ -152,6 +176,23 @@ function ImportInner() {
                         />{' '}{ks}
                       </label>
                     ))}
+                  </td>
+                  <td>
+                    {(aliasesBySubject[s.subject_id] || []).map((a) => (
+                      <span key={a} style={{ display: 'inline-block', marginRight: '0.4rem', whiteSpace: 'nowrap' }}>
+                        {a} <button className="secondary" onClick={() => removeAlias(s.subject_id, a)} style={{ padding: '0 0.3rem' }}>×</button>
+                      </span>
+                    ))}
+                    <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.3rem' }}>
+                      <input
+                        type="text"
+                        placeholder="Add alias (e.g. Business Studies)"
+                        value={aliasInput[s.subject_id] || ''}
+                        onChange={(e) => setAliasInput((prev) => ({ ...prev, [s.subject_id]: e.target.value }))}
+                        style={{ width: '10rem' }}
+                      />
+                      <button className="secondary" onClick={() => saveAlias(s.subject_id)}>+</button>
+                    </div>
                   </td>
                   <td><button onClick={() => saveRow(s)}>Save</button></td>
                 </tr>
