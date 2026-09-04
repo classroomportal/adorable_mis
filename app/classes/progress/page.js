@@ -24,14 +24,22 @@ function ClassProgressInner() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: classes }, { data: sc }, { data: students }, { data: targets }, { data: results }, { data: gs }] = await Promise.all([
+      const [{ data: classes }, { data: sc }, { data: students }, { data: targets }, { data: results }, { data: gs }, { data: subjMeta }] = await Promise.all([
         supabase.from('classes').select('class_id, class_code, subject_id, subjects(subject_name)').not('subject_id', 'is', null),
         supabase.from('student_class').select('student_id, class_id'),
         supabase.from('students').select('student_id, year_group'),
         supabase.from('target_grades').select('student_id, subject_id, target_grade'),
         supabase.from('results').select('student_id, subject_id, grade, week_start_date'),
         supabase.from('grade_scale').select('*'),
+        supabase.from('subjects').select('subject_id, subject_name, display_name, target_fallback_subject_id'),
       ]);
+
+      const displayName = {};
+      const fallbackFor = {};
+      (subjMeta || []).forEach((s) => {
+        displayName[s.subject_id] = s.display_name || s.subject_name;
+        if (s.target_fallback_subject_id) fallbackFor[s.subject_id] = s.target_fallback_subject_id;
+      });
 
       const points = Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)]));
       const yearByStudent = Object.fromEntries((students || []).map((s) => [s.student_id, s.year_group]));
@@ -60,8 +68,10 @@ function ClassProgressInner() {
         let yearGuess = null;
         roster.forEach((sid) => {
           yearGuess = yearGuess ?? yearByStudent[sid];
+          const targetSubjectId = fallbackFor[c.subject_id] || c.subject_id;
           const key = `${sid}-${c.subject_id}`;
-          const target = targetByKey[key];
+          const targetKey = `${sid}-${targetSubjectId}`;
+          const target = targetByKey[targetKey];
           const latest = latestGrade[key];
           if (!target || !latest?.grade) return;
           const tp = points[target];
@@ -77,7 +87,7 @@ function ClassProgressInner() {
         out.push({
           class_id: c.class_id,
           class_code: c.class_code,
-          subject: c.subjects?.subject_name,
+          subject: displayName[c.subject_id] || c.subjects?.subject_name,
           year: yearGuess,
           n, above, on, below,
           avgTarget, avgActual,
