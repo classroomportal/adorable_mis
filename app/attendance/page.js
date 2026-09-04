@@ -1,16 +1,18 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 
 function AttendanceInner() {
+  const searchParams = useSearchParams();
   const [periods, setPeriods] = useState([]);
   const [mentorClasses, setMentorClasses] = useState([]);
   const [subjectClasses, setSubjectClasses] = useState([]);
   const [codes, setCodes] = useState([]);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [periodNumber, setPeriodNumber] = useState(1); // default: Registration
-  const [classId, setClassId] = useState('');
+  const [date, setDate] = useState(searchParams.get('date') || new Date().toISOString().slice(0, 10));
+  const [periodNumber, setPeriodNumber] = useState(Number(searchParams.get('period')) || 1); // default: Registration
+  const [classId, setClassId] = useState(searchParams.get('classId') || '');
   const [roster, setRoster] = useState([]);
   const [marks, setMarks] = useState({}); // student_id -> code
   const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
@@ -233,5 +235,11 @@ function AttendanceInner() {
 }
 
 export default function AttendancePage() {
-  return <RequireAuth><AttendanceInner /></RequireAuth>;
+  return (
+    <RequireAuth>
+      <Suspense fallback={<p>Loading...</p>}>
+        <AttendanceInner />
+      </Suspense>
+    </RequireAuth>
+  );
 }

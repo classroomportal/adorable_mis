@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, Fragment } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
@@ -8,9 +9,9 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 function StaffTimetable() {
   const { profile } = useAuth();
+  const router = useRouter();
   const [staffList, setStaffList] = useState([]);
   const [selectedStaffId, setSelectedStaffId] = useState(null);
-  const [search, setSearch] = useState('');
   const [periods, setPeriods] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,7 @@ function StaffTimetable() {
       // (block clash / data issue) — keep both rather than silently
       // overwriting, since that's worth surfacing rather than hiding.
       const entry = {
+        classId: c.class_id,
         subject: c.subjects?.display_name || c.subjects?.subject_name,
         room: c.room,
         classCode: c.class_code,
@@ -65,12 +67,22 @@ function StaffTimetable() {
     });
   });
 
-  const filteredStaff = staffList.filter((s) => {
-    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
-    return name.includes(search.toLowerCase());
-  });
+  const DAY_TO_WEEKDAY = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
+  function dateForDay(dayLabel) {
+    const target = DAY_TO_WEEKDAY[dayLabel];
+    const today = new Date();
+    let diff = target - today.getDay();
+    if (diff < 0) diff += 7;
+    const d = new Date(today);
+    d.setDate(today.getDate() + diff);
+    return d.toISOString().slice(0, 10);
+  }
 
-  const selectedStaff = staffList.find((s) => s.staff_id === selectedStaffId);
+  function goToRegister(entry, dayLabel, periodNumber) {
+    const date = dateForDay(dayLabel);
+    router.push(`/attendance?classId=${entry.classId}&period=${periodNumber}&date=${date}`);
+  }
+
   const isOwnTimetable = profile?.staff_id && selectedStaffId === profile.staff_id;
 
   return (
@@ -79,34 +91,24 @@ function StaffTimetable() {
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <label style={{ display: 'block', marginBottom: '0.4rem' }}>
-          Viewing: <strong>{selectedStaff ? `${selectedStaff.first_name} ${selectedStaff.last_name}` : '—'}</strong>
-          {isOwnTimetable && <span style={{ opacity: 0.6 }}> (you)</span>}
+          Viewing timetable for:
         </label>
+        <select
+          value={selectedStaffId ?? ''}
+          onChange={(e) => setSelectedStaffId(e.target.value ? Number(e.target.value) : null)}
+          style={{ width: '100%', marginBottom: '0.4rem' }}
+        >
+          {staffList.map((s) => (
+            <option key={s.staff_id} value={s.staff_id}>
+              {s.first_name} {s.last_name}
+              {profile?.staff_id === s.staff_id ? ' (me)' : ''}
+            </option>
+          ))}
+        </select>
         {profile?.staff_id && !isOwnTimetable && (
-          <button onClick={() => setSelectedStaffId(profile.staff_id)} style={{ marginBottom: '0.6rem' }}>
+          <button onClick={() => setSelectedStaffId(profile.staff_id)}>
             ← Back to my timetable
           </button>
-        )}
-        <input
-          type="text"
-          placeholder="Search staff by name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: '100%', marginBottom: '0.4rem' }}
-        />
-        {search && (
-          <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '6px' }}>
-            {filteredStaff.length === 0 && <div style={{ padding: '0.5rem' }}>No staff match.</div>}
-            {filteredStaff.map((s) => (
-              <div
-                key={s.staff_id}
-                onClick={() => { setSelectedStaffId(s.staff_id); setSearch(''); }}
-                style={{ padding: '0.5rem', cursor: 'pointer', borderBottom: '1px solid #eee' }}
-              >
-                {s.first_name} {s.last_name}
-              </div>
-            ))}
-          </div>
         )}
       </div>
 
@@ -123,10 +125,19 @@ function StaffTimetable() {
                 {DAYS.map((d) => {
                   const entries = cellMap[`${d}-${p.period_number}`];
                   return (
-                    <div key={`${d}-${p.period_number}`} className={`tt-cell ${entries ? 'tt-filled' : ''}`}>
+                    <div
+                      key={`${d}-${p.period_number}`}
+                      className={`tt-cell ${entries ? 'tt-filled' : ''}`}
+                      style={entries ? { cursor: 'pointer' } : undefined}
+                    >
                       {entries
                         ? entries.map((e, i) => (
-                            <div key={i} style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}>
+                            <div
+                              key={i}
+                              onClick={() => goToRegister(e, d, p.period_number)}
+                              style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}
+                              title="Open register for this class"
+                            >
                               {e.subject}<br /><span style={{ opacity: 0.6 }}>{e.room}</span>
                             </div>
                           ))
