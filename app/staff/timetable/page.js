@@ -68,6 +68,12 @@ function StaffTimetable() {
   });
 
   const DAY_TO_WEEKDAY = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
+  function toLocalISO(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
   function dateForDay(dayLabel) {
     const target = DAY_TO_WEEKDAY[dayLabel];
     const today = new Date();
@@ -75,7 +81,7 @@ function StaffTimetable() {
     if (diff < 0) diff += 7;
     const d = new Date(today);
     d.setDate(today.getDate() + diff);
-    return d.toISOString().slice(0, 10);
+    return toLocalISO(d);
   }
 
   function goToRegister(entry, dayLabel, periodNumber) {
@@ -138,6 +144,7 @@ function StaffTimetable() {
                               style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}
                               title="Open register for this class"
                             >
+                              {e.classCode ? <><strong>{e.classCode}</strong><br /></> : ''}
                               {e.subject}<br /><span style={{ opacity: 0.6 }}>{e.room}</span>
                             </div>
                           ))
