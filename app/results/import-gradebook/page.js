@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
+import { buildWeekColumns } from '../../../lib/generateTranscript';
 import RequireAuth from '../../RequireAuth';
 
 // Columns that are NOT subject score columns in the weekly gradebook export.
@@ -37,10 +38,35 @@ function ImportInner() {
   const [rows, setRows] = useState([]);
   const [subjectColumns, setSubjectColumns] = useState([]); // raw header names
   const [subjectNames, setSubjectNames] = useState({}); // raw header -> editable name
-  const [weekStart, setWeekStart] = useState('');
+  const [terms, setTerms] = useState([]);
+  const [termId, setTermId] = useState('');
+  const [weekLabel, setWeekLabel] = useState('');
   const [status, setStatus] = useState(null);
   const [errors, setErrors] = useState([]);
   const [preview, setPreview] = useState([]);
+
+  useEffect(() => {
+    async function loadTerms() {
+      const { data } = await supabase
+        .from('terms')
+        .select('term_id, term_name, start_date, end_date')
+        .order('start_date', { ascending: false });
+      setTerms(data || []);
+      if (data && data.length > 0) setTermId(data[0].term_id);
+    }
+    loadTerms();
+  }, []);
+
+  const selectedTerm = terms.find((t) => t.term_id === termId);
+  const weekOptions = selectedTerm ? buildWeekColumns(selectedTerm) : [];
+  const weekStart = weekOptions.find((w) => w.label === weekLabel)?.date || '';
+
+  useEffect(() => {
+    if (weekOptions.length > 0 && !weekOptions.find((w) => w.label === weekLabel)) {
+      setWeekLabel(weekOptions[0].label);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [termId, terms]);
 
   function handleFile(e) {
     const file = e.target.files[0];
@@ -72,7 +98,7 @@ function ImportInner() {
 
   async function handleImport() {
     if (!weekStart) {
-      setStatus('Please choose the week start date first.');
+      setStatus('Please choose a term and week first.');
       return;
     }
     setStatus('Importing...');
@@ -186,8 +212,21 @@ function ImportInner() {
         <div className="card">
           <h2>Week</h2>
           <label>
-            Week start date:{' '}
-            <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} />
+            Term:{' '}
+            <select value={termId} onChange={(e) => setTermId(Number(e.target.value))}>
+              {terms.map((t) => (
+                <option key={t.term_id} value={t.term_id}>{t.term_name}</option>
+              ))}
+            </select>
+          </label>
+          {'  '}
+          <label>
+            Week:{' '}
+            <select value={weekLabel} onChange={(e) => setWeekLabel(e.target.value)}>
+              {weekOptions.map((w) => (
+                <option key={w.label} value={w.label}>{w.label} ({w.date})</option>
+              ))}
+            </select>
           </label>
         </div>
       )}
@@ -232,7 +271,7 @@ function ImportInner() {
             </table>
           </div>
           <p style={{ marginTop: '1rem' }}>{rows.length} students, {subjectColumns.length} subject columns detected. Written in batches of {BATCH_SIZE}.</p>
-          <button onClick={handleImport}>Import results for {weekStart || '(choose week first)'}</button>
+          <button onClick={handleImport}>Import results for {selectedTerm?.term_name || '(choose term)'} — {weekLabel || '(choose week)'}</button>
         </div>
       )}
 
