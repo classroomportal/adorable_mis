@@ -9,6 +9,7 @@ export default function NavBar() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+    sessionStorage.removeItem('splashShown');
     router.push('/login');
   }
 

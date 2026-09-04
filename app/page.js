@@ -1,5 +1,7 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
+import SplashScreen from './components/SplashScreen';
 
 function Tile({ href, icon, label }) {
   return (
@@ -22,6 +24,18 @@ function Section({ title, children }) {
 export default function Home() {
   const { session, profile, isPastoralOrSmt } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  const [showSplash, setShowSplash] = useState(false);
+
+  useEffect(() => {
+    if (session && !sessionStorage.getItem('splashShown')) {
+      setShowSplash(true);
+      sessionStorage.setItem('splashShown', '1');
+    }
+  }, [session]);
+
+  if (showSplash) {
+    return <SplashScreen onDone={() => setShowSplash(false)} />;
+  }
 
   if (!session) {
     return (
