@@ -30,9 +30,9 @@ function ParentPortalInner() {
   useEffect(() => {
     async function loadChildData() {
       if (!selectedId) return;
-      const { data: r } = await supabase.from('results').select('*, subjects(subject_name)').eq('student_id', selectedId).order('week_start_date', { ascending: false });
+      const { data: r } = await supabase.from('results').select('*, subjects(subject_name, display_name)').eq('student_id', selectedId).order('week_start_date', { ascending: false });
       setResults(r || []);
-      const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name)').eq('student_id', selectedId);
+      const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name, display_name)').eq('student_id', selectedId);
       setTargets(tg || []);
       const { data: b } = await supabase.from('behaviour_events').select('*').eq('student_id', selectedId).order('event_date', { ascending: false });
       setBehaviour(b || []);
@@ -73,7 +73,7 @@ function ParentPortalInner() {
                     const latest = results.find((r) => r.subject_id === t.subject_id);
                     return (
                       <tr key={t.subject_id}>
-                        <td>{t.subjects?.subject_name}</td>
+                        <td>{t.subjects?.display_name || t.subjects?.subject_name}</td>
                         <td>{t.target_grade}</td>
                         <td>{latest?.grade ?? '—'}</td>
                       </tr>

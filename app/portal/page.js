@@ -18,9 +18,9 @@ function PortalInner() {
 
   async function load() {
     if (!studentId) return;
-    const { data: r } = await supabase.from('results').select('*, subjects(subject_name)').eq('student_id', studentId).order('week_start_date', { ascending: false });
+    const { data: r } = await supabase.from('results').select('*, subjects(subject_name, display_name)').eq('student_id', studentId).order('week_start_date', { ascending: false });
     setResults(r || []);
-    const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name)').eq('student_id', studentId);
+    const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name, display_name)').eq('student_id', studentId);
     setTargets(tg || []);
     const { data: gs } = await supabase.from('grade_scale').select('*');
     setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
@@ -66,7 +66,7 @@ function PortalInner() {
                 const latest = results.find((r) => r.subject_id === t.subject_id);
                 return (
                   <tr key={t.subject_id}>
-                    <td>{t.subjects?.subject_name}</td>
+                    <td>{t.subjects?.display_name || t.subjects?.subject_name}</td>
                     <td>{t.target_grade}</td>
                     <td>{latest?.grade ?? '—'}</td>
                   </tr>

@@ -44,7 +44,7 @@ function ClassProgressInner() {
 
     async function load() {
       const [classes, sc, students, targets, results, gs, subjMeta] = await Promise.all([
-        fetchAll('classes', 'class_id, class_code, subject_id, subjects(subject_name)', (q) => q.not('subject_id', 'is', null)),
+        fetchAll('classes', 'class_id, class_code, subject_id, staff_id, subjects(subject_name), staff(first_name, last_name)', (q) => q.not('subject_id', 'is', null)),
         fetchAll('student_class', 'student_id, class_id'),
         fetchAll('students', 'student_id, year_group'),
         fetchAll('target_grades', 'student_id, subject_id, target_grade'),
@@ -107,6 +107,7 @@ function ClassProgressInner() {
           class_id: c.class_id,
           class_code: c.class_code,
           subject: displayName[c.subject_id] || c.subjects?.subject_name,
+          teacher: c.staff ? `${c.staff.first_name} ${c.staff.last_name}` : '—',
           year: yearGuess,
           n, above, on, below,
           avgTarget, avgActual,
@@ -154,7 +155,7 @@ function ClassProgressInner() {
       {loading ? <p>Loading...</p> : (
         <div className="table-scroll"><table>
           <thead>
-            <tr><th>Class</th><th>Subject</th><th>Year</th><th>Students<br />Compared</th><th>+ / ~ / -</th><th>Overall</th></tr>
+            <tr><th>Class</th><th>Subject</th><th>Teacher</th><th>Year</th><th>Students<br />Compared</th><th>+ / ~ / -</th><th>Overall</th></tr>
           </thead>
           <tbody>
             {filtered.map((r) => {
@@ -163,6 +164,7 @@ function ClassProgressInner() {
                 <tr key={r.class_id}>
                   <td>{r.class_code}</td>
                   <td>{r.subject}</td>
+                  <td>{r.teacher}</td>
                   <td>{r.year}</td>
                   <td>{r.n}</td>
                   <td>{r.above} / {r.on} / {r.below}</td>

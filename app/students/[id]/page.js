@@ -92,7 +92,7 @@ function StudentDetail() {
 
     const { data: tt } = await supabase
       .from('student_class')
-      .select('classes(class_id, room, subjects(subject_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
+      .select('classes(class_id, room, subjects(subject_name, display_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
       .eq('student_id', id);
     setTimetable(tt || []);
 
@@ -113,12 +113,12 @@ function StudentDetail() {
 
     const { data: r } = await supabase
       .from('results')
-      .select('*, subjects(subject_name)')
+      .select('*, subjects(subject_name, display_name)')
       .eq('student_id', id)
       .order('week_start_date', { ascending: false });
     setResults(r || []);
 
-    const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name)').eq('student_id', id);
+    const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name, display_name)').eq('student_id', id);
     setTargetList(tg || []);
     setTargetMap(Object.fromEntries((tg || []).map((t) => [t.subject_id, t.target_grade])));
     const { data: gs } = await supabase.from('grade_scale').select('*');
@@ -133,7 +133,7 @@ function StudentDetail() {
     if (s.year_group) {
       const { data: cb, error: cbErr } = await supabase
         .from('curriculum_blocks')
-        .select('block_id, block_name, band, classes!classes_block_id_fkey(class_id, class_code, room, subjects(subject_name), staff(first_name, last_name))')
+        .select('block_id, block_name, band, classes!classes_block_id_fkey(class_id, class_code, room, subjects(subject_name, display_name), staff(first_name, last_name))')
         .eq('year_group', s.year_group)
         .order('block_name');
       if (cbErr) {
@@ -297,7 +297,7 @@ function StudentDetail() {
   timetable.forEach((tc) => {
     (tc.classes?.timetable_slots || []).forEach((slot) => {
       cellMap[`${slot.day_of_week}-${slot.period_number}`] = {
-        subject: tc.classes?.subjects?.subject_name,
+        subject: tc.classes?.subjects?.display_name || tc.classes?.subjects?.subject_name,
         room: tc.classes?.room,
       };
     });
@@ -592,7 +592,7 @@ function StudentDetail() {
                             <option value="">— Not allocated —</option>
                             {options.map((c) => (
                               <option key={c.class_id} value={c.class_id}>
-                                {c.class_code} — {c.subjects?.subject_name || ''}
+                                {c.class_code} — {c.subjects?.display_name || c.subjects?.subject_name || ''}
                                 {c.staff ? ` (${c.staff.first_name} ${c.staff.last_name})` : ''}
                               </option>
                             ))}
@@ -672,7 +672,7 @@ function StudentDetail() {
                   const label = { above: 'Above target', on: 'On target', below: 'Below target' }[cmp];
                   return (
                     <tr key={t.subject_id}>
-                      <td>{t.subjects?.subject_name}</td>
+                      <td>{t.subjects?.display_name || t.subjects?.subject_name}</td>
                       <td>{t.target_grade}</td>
                       <td>{latestResult?.grade ?? '—'}</td>
                       <td>{cmp ? <span className="badge" style={style}>{label}</span> : '—'}</td>
@@ -704,7 +704,7 @@ function StudentDetail() {
                   return (
                     <tr key={r.result_id}>
                       <td>{r.week_start_date}</td>
-                      <td>{r.subjects?.subject_name}</td>
+                      <td>{r.subjects?.display_name || r.subjects?.subject_name}</td>
                       <td>{r.score ?? '—'}{r.max_score ? ` / ${r.max_score}` : ''}</td>
                       <td>{r.grade ?? '—'}</td>
                       <td>{target ?? '—'}</td>
