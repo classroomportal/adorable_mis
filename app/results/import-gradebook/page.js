@@ -73,6 +73,23 @@ function ImportInner() {
     const problems = [];
     let successCount = 0;
 
+    // Cache grade boundaries per subject+year_group to avoid a query per row.
+    const boundaryCache = new Map();
+    async function lookupGrade(subjectId, yearGroup, score) {
+      const key = `${subjectId}:${yearGroup}`;
+      if (!boundaryCache.has(key)) {
+        const { data } = await supabase
+          .from('subject_grade_boundaries')
+          .select('grade, min_score, max_score')
+          .eq('subject_id', subjectId)
+          .eq('year_group', yearGroup);
+        boundaryCache.set(key, data || []);
+      }
+      const rows = boundaryCache.get(key);
+      const match = rows.find((r) => score >= r.min_score && score <= r.max_score);
+      return match ? match.grade : null;
+    }
+
     // 1. Resolve/upsert subjects for each detected column -> subject_id
     const subjectIdByHeader = {};
     for (const header of subjectColumns) {
@@ -108,7 +125,7 @@ function ImportInner() {
 
       const { data: student, error: sErr } = await supabase
         .from('students')
-        .select('student_id')
+        .select('student_id, year_group')
         .eq('upn', upn)
         .maybeSingle();
 
@@ -123,12 +140,15 @@ function ImportInner() {
         const score = Number(raw);
         if (Number.isNaN(score)) { problems.push(`Row ${i + 2}, "${header}": "${raw}" is not a number, skipped.`); continue; }
 
+        const grade = await lookupGrade(subjectId, student.year_group, score);
+
         toUpsert.push({
           student_id: student.student_id,
           subject_id: subjectId,
           week_start_date: weekStart,
           score,
           max_score: 100,
+          grade,
         });
       }
     }
