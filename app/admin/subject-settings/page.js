@@ -5,6 +5,7 @@ import RequireAuth from '../../RequireAuth';
 
 function ImportInner() {
   const [subjects, setSubjects] = useState([]);
+  const [subjectsWithTargets, setSubjectsWithTargets] = useState(new Set());
   const [status, setStatus] = useState(null);
   const [filter, setFilter] = useState('');
 
@@ -16,6 +17,24 @@ function ImportInner() {
       .select('subject_id, subject_name, display_name, target_fallback_subject_id')
       .order('subject_name');
     setSubjects(data || []);
+
+    // Only subjects that actually have target_grades rows are useful as a
+    // fallback source. Page through target_grades (can exceed 1000 rows)
+    // and collect the distinct subject_ids.
+    const ids = new Set();
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      const { data: page, error } = await supabase
+        .from('target_grades')
+        .select('subject_id')
+        .range(from, from + PAGE - 1);
+      if (error) { console.error('target_grades fetch:', error.message); break; }
+      (page || []).forEach((r) => ids.add(r.subject_id));
+      if (!page || page.length < PAGE) break;
+      from += PAGE;
+    }
+    setSubjectsWithTargets(ids);
   }
 
   function updateField(id, field, value) {
@@ -81,9 +100,11 @@ function ImportInner() {
                       onChange={(e) => updateField(s.subject_id, 'target_fallback_subject_id', e.target.value ? Number(e.target.value) : null)}
                     >
                       <option value="">(none)</option>
-                      {subjects.filter((o) => o.subject_id !== s.subject_id).map((o) => (
-                        <option key={o.subject_id} value={o.subject_id}>{o.subject_name}</option>
-                      ))}
+                      {subjects
+                        .filter((o) => o.subject_id !== s.subject_id && subjectsWithTargets.has(o.subject_id))
+                        .map((o) => (
+                          <option key={o.subject_id} value={o.subject_id}>{o.subject_name}</option>
+                        ))}
                     </select>
                   </td>
                   <td><button onClick={() => saveRow(s)}>Save</button></td>
