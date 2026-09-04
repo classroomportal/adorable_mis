@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
-import { generateTranscript } from '../../lib/generateTranscript';
+import TranscriptDownload from '../components/TranscriptDownload';
 
 function ParentPortalInner() {
   const { profile } = useAuth();
@@ -65,7 +65,7 @@ function ParentPortalInner() {
       {children.length === 0 ? <p>No linked children found.</p> : (
         <>
           <div className="card">
-            <button onClick={() => generateTranscript(selectedId)}>📄 Download Transcript</button>
+            <TranscriptDownload studentId={selectedId} />
           </div>
 
           <div className="card">

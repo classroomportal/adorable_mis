@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
-import { generateTranscript } from '../../../lib/generateTranscript';
+import TranscriptDownload from '../../components/TranscriptDownload';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -311,7 +311,7 @@ function StudentDetail() {
   return (
     <div>
       <h1>{student.first_name} {student.last_name}</h1>
-      <button onClick={() => generateTranscript(student.student_id)}>📄 Download Transcript</button>
+      <TranscriptDownload studentId={student.student_id} />
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
