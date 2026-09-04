@@ -48,7 +48,7 @@ Auth-linked identity row. `id` (uuid, = `auth.users.id`), `email`, `role`, and n
 ## Curriculum & timetable
 
 ### subjects
-`subject_id` (PK), `subject_name`, `subject_code`.
+`subject_id` (PK, integer), `subject_name` (Nova-T source, do not edit directly), `subject_code`, `display_name` (nullable text override shown in UI, falls back to `subject_name`), `target_fallback_subject_id` (nullable FK → subjects.subject_id, used when this subject has no `target_grades` of its own — see `subject_grade_boundaries` below and `/admin/subject-settings`).
 
 ### curriculum_blocks
 `block_id` (PK), `block_name`, `year_group`, `band`, `is_compound` (bool — Pathway/Vocational blocks that are exempt from the one-class-per-block uniqueness rule).
@@ -109,6 +109,9 @@ Lookup. `grade` (PK), `points` (numeric) — for grade-to-points conversion (e.g
 
 ### target_grades
 `student_id`, `subject_id`, `target_grade`. Composite key — used for red/amber/green comparison against `results`.
+
+### subject_grade_boundaries
+Grade cutoffs used to compute `results.grade` from `results.score` at import time. Defined **per subject and per year group** — not a single shared scale, since Year 12 uses WAEC-style A1–F9 and other years use IGCSE A*–G, and different subjects have different actual percentage cutoffs even within the same scale type. `id` (PK), `subject_id` → subjects, `year_group` (integer), `grade`, `min_score`, `max_score`. Unique on `(subject_id, year_group, grade)`. Editable per subject/year on `/admin/grade-boundaries`. Current values are seeded starting guesses (WAEC for Year 12, a generic 90/80/70/60/50/40/30 IGCSE split for Years 7–11) — not confirmed school policy, review before relying on for reporting.
 
 ### cat4_results
 Predictive/cognitive ability scores. `cat4_id` (PK), `student_id`, `test_date`, `level`, `mean_sas`, `verbal_sas`, `non_verbal_sas`, `quantitative_sas`, `spatial_sas`.

@@ -62,6 +62,13 @@ Confirmed and shipped the "today so far" attendance strip: read-only, colour-cod
 ### 8. Schema documentation
 A full live schema dump was pulled from `information_schema.columns` and turned into `docs/schema-snapshot.md` — 30 tables/views covering all of the above. Chris uploaded it to the repo directly via GitHub's mobile web editor (PAT avoided for that step).
 
+### 9. Weekly results import, grade computation, and Class Progress fix (most recent session)
+Built `/results/import-gradebook` to handle the actual weekly gradebook CSV export (wide format, variable subject columns, headers like `"Quiz: Business Studies Exam (Real)"`), replacing the old fixed-column importer (now retired with a redirect). Added `subject_grade_boundaries` (migrations 039/040) — grade cutoffs defined **per subject and per year group**, not one shared scale, since Year 12 uses WAEC A1–F9 and other years use IGCSE A*–G, and different subjects have genuinely different cutoffs. Boundaries are currently seeded placeholder guesses (see `/admin/grade-boundaries`), not confirmed school policy.
+
+Diagnosed and fixed Class Progress (`/classes/progress`) showing no data despite real results/targets existing — three stacked causes: (1) the gradebook importer created duplicate subject rows where its parsed CSV header name didn't exactly match an existing curriculum subject name (e.g. "Business Studies" vs "Business", "MFL (Ng)" vs "Igbo"), fixed via a corrected `merge_subjects()` function that now also moves `classes`, `target_grades`, and `subject_grade_boundaries`, not just `results`; (2) Supabase's default 1000-row cap on unpaginated `.select()` calls was silently truncating `student_class` (4,262 rows), `target_grades`, and `results` fetches — fixed with a paginated `fetchAll()` helper, likely needed on other pages too. Full root-cause chain in `docs/2026-09-04-session-notes.md`.
+
+Added a subject **display name / target fallback overlay** (migration 041, `/admin/subject-settings`) — lets a subject show a friendly label in the UI without touching Nova-T source data (e.g. "Mu" → "Music"), and lets a subject with no target grades of its own borrow another subject's targets for progress comparison (e.g. Business borrows Economics). Applied across Class Progress, the student page (timetable/blocks/targets/results), and both portals.
+
 ---
 
 ## Current live schema (highlights)
@@ -70,10 +77,10 @@ Full column-level detail lives in `docs/schema-snapshot.md`. Structurally:
 
 - **People:** `students` (very wide, SIMS-aligned), `families`, `parents`, `student_parent`
 - **Staff:** `staff`, `staff_roles`, `profiles` (auth-linked, one of staff/parent/student per row)
-- **Curriculum/timetable:** `subjects`, `curriculum_blocks`, `classes`, `timetable_slots`, `periods`, `student_class`, `terms`
+- **Curriculum/timetable:** `subjects` (+ `display_name`, `target_fallback_subject_id` overlay), `curriculum_blocks`, `classes`, `timetable_slots`, `periods`, `student_class`, `terms`
 - **Behaviour:** `behaviour_categories`, `behaviour_events`, `behaviour_appeals`
 - **Attendance:** `attendance_codes`, `attendance`, `attendance_today` (view)
-- **Assessment:** `results`, `grade_scale`, `target_grades`, `cat4_results`, `ngrt_results`, `certificates_awarded`
+- **Assessment:** `results`, `grade_scale`, `target_grades`, `subject_grade_boundaries` (per subject + year group), `cat4_results`, `ngrt_results`, `certificates_awarded`
 - **Calendar:** `calendar_events`
 - **Reporting:** `student_summary` (view)
 
@@ -87,6 +94,7 @@ Full column-level detail lives in `docs/schema-snapshot.md`. Structurally:
 - **Import path bug pattern:** nested `app/` routes need one extra `../` per directory level (e.g. `app/staff/roles/` needs `../../../lib/`).
 - **Auth quirk:** `auth.uid()` returns null when a function is run directly in the Supabase SQL editor, so admin-gated functions built for direct SQL-editor execution can't rely on `is_admin()`.
 - **Postgres pattern:** skip-on-duplicate bulk inserts need a nested `BEGIN...EXCEPTION WHEN unique_violation THEN...END` block, not a top-level exception handler.
+- **Supabase 1000-row cap:** any unpaginated `.select()` silently truncates at 1000 rows. Tables that can exceed this (`student_class`, `target_grades`, `results`) need a paginated fetch helper — not yet audited across every page that reads them.
 
 ---
 
@@ -96,12 +104,16 @@ Full column-level detail lives in `docs/schema-snapshot.md`. Structurally:
 - Three staff members remain unlinked (missing staff codes)
 - Compound block UI doesn't auto-assign sibling classes
 - Possible stale seed attendance data from an early seed script — needs review
-- CSV results importer still needs to accept ReLP names
 - Families management UI not yet built
 - Term-based filtering not yet wired into results/attendance views
 - Decide whether `attendance_today` visibility should be scoped to pastoral/SMT roles rather than all staff
 - Consider Vercel Pro plan for institutional compliance
 - Confirm whether the most recent PAT has been revoked
+- Write a committed migration for the corrected `merge_subjects()` function (currently only applied live via SQL editor)
+- Audit other pages for the same 1000-row silent-truncation risk
+- Review/correct the seeded WAEC and IGCSE grade boundary guesses per subject
+- Decide + document which subjects are intentionally targetless vs just missing data
+- Parent transcript PDF with school logo — still not started
 
 ---
 
