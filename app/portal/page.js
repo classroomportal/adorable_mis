@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
+import { generateTranscript } from '../../lib/generateTranscript';
 
 function PortalInner() {
   const { profile } = useAuth();
@@ -55,6 +56,7 @@ function PortalInner() {
   return (
     <div>
       <h1>My Grades & Behaviour</h1>
+      <button onClick={() => generateTranscript(studentId)}>📄 Download Transcript</button>
 
       <div className="card">
         <h2>Results vs Target</h2>

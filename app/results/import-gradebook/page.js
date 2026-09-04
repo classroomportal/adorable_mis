@@ -21,6 +21,12 @@ function parseSubjectName(header) {
   return name.trim();
 }
 
+// Type is read from the raw header BEFORE parseSubjectName strips the
+// "Exam"/"Quiz" wording, since that wording is the only signal we have.
+function parseResultType(header) {
+  return /exam/i.test(header) ? 'Exam' : 'ReLP';
+}
+
 function chunk(arr, size) {
   const out = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -149,6 +155,7 @@ function ImportInner() {
           score,
           max_score: 100,
           grade,
+          result_type: parseResultType(header),
         });
       }
     }
