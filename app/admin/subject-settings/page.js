@@ -3,9 +3,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 
+const KEY_STAGES = ['KS3', 'KS4', 'KS5'];
+
 function ImportInner() {
   const [subjects, setSubjects] = useState([]);
   const [subjectsWithTargets, setSubjectsWithTargets] = useState(new Set());
+  const [keyStagesBySubject, setKeyStagesBySubject] = useState({}); // subject_id -> Set of key stages
   const [status, setStatus] = useState(null);
   const [filter, setFilter] = useState('');
 
@@ -17,6 +20,16 @@ function ImportInner() {
       .select('subject_id, subject_name, display_name, target_fallback_subject_id')
       .order('subject_name');
     setSubjects(data || []);
+
+    const { data: ksRows } = await supabase
+      .from('subject_key_stages')
+      .select('subject_id, key_stage');
+    const ksMap = {};
+    (ksRows || []).forEach((r) => {
+      if (!ksMap[r.subject_id]) ksMap[r.subject_id] = new Set();
+      ksMap[r.subject_id].add(r.key_stage);
+    });
+    setKeyStagesBySubject(ksMap);
 
     // Only subjects that actually have target_grades rows are useful as a
     // fallback source. Page through target_grades (can exceed 1000 rows)
@@ -35,6 +48,23 @@ function ImportInner() {
       from += PAGE;
     }
     setSubjectsWithTargets(ids);
+  }
+
+  async function toggleKeyStage(subjectId, keyStage) {
+    const current = keyStagesBySubject[subjectId] || new Set();
+    const has = current.has(keyStage);
+    if (has) {
+      await supabase.from('subject_key_stages').delete().eq('subject_id', subjectId).eq('key_stage', keyStage);
+    } else {
+      await supabase.from('subject_key_stages').insert([{ subject_id: subjectId, key_stage: keyStage }]);
+    }
+    setKeyStagesBySubject((prev) => {
+      const next = { ...prev };
+      const set = new Set(next[subjectId] || []);
+      if (has) set.delete(keyStage); else set.add(keyStage);
+      next[subjectId] = set;
+      return next;
+    });
   }
 
   function updateField(id, field, value) {
@@ -68,6 +98,11 @@ function ImportInner() {
           <strong>Use targets from</strong> lets a subject with no target grades of its own borrow another
           subject's targets for progress comparison (e.g. Business can borrow Economics targets).
         </p>
+        <p>
+          <strong>Key stages</strong> controls which subjects appear on a student's transcript, based on
+          their year group (KS3 = Years 7–9, KS4 = Years 10–11, KS5 = Year 12). A subject can belong to more
+          than one key stage. Untagged subjects show at every key stage by default.
+        </p>
         <input
           type="text"
           placeholder="Filter subjects..."
@@ -80,7 +115,7 @@ function ImportInner() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Subject (source)</th><th>Display name</th><th>Use targets from</th><th></th></tr>
+              <tr><th>Subject (source)</th><th>Display name</th><th>Use targets from</th><th>Key stages</th><th></th></tr>
             </thead>
             <tbody>
               {filtered.map((s) => (
@@ -106,6 +141,17 @@ function ImportInner() {
                           <option key={o.subject_id} value={o.subject_id}>{o.subject_name}</option>
                         ))}
                     </select>
+                  </td>
+                  <td>
+                    {KEY_STAGES.map((ks) => (
+                      <label key={ks} style={{ marginRight: '0.6rem', whiteSpace: 'nowrap' }}>
+                        <input
+                          type="checkbox"
+                          checked={(keyStagesBySubject[s.subject_id] || new Set()).has(ks)}
+                          onChange={() => toggleKeyStage(s.subject_id, ks)}
+                        />{' '}{ks}
+                      </label>
+                    ))}
                   </td>
                   <td><button onClick={() => saveRow(s)}>Save</button></td>
                 </tr>

@@ -15,7 +15,10 @@ export default function TranscriptDownload({ studentId }) {
         .select('term_id, term_name, start_date')
         .order('start_date', { ascending: false });
       setTerms(data || []);
-      if (data && data.length > 0) setTermId(data[0].term_id);
+      const today = new Date().toISOString().slice(0, 10);
+      const current = (data || []).find((t) => t.start_date <= today && t.end_date >= today);
+      if (current) setTermId(current.term_id);
+      else if (data && data.length > 0) setTermId(data[0].term_id);
     }
     load();
   }, []);

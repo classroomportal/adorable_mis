@@ -52,7 +52,10 @@ function ImportInner() {
         .select('term_id, term_name, start_date, end_date')
         .order('start_date', { ascending: false });
       setTerms(data || []);
-      if (data && data.length > 0) setTermId(data[0].term_id);
+      const today = new Date().toISOString().slice(0, 10);
+      const current = (data || []).find((t) => t.start_date <= today && t.end_date >= today);
+      if (current) setTermId(current.term_id);
+      else if (data && data.length > 0) setTermId(data[0].term_id);
     }
     loadTerms();
   }, []);
@@ -187,7 +190,9 @@ function ImportInner() {
     }
 
     // 3. Write in batches
-    for (const batch of chunk(toUpsert, BATCH_SIZE)) {
+    const batches = chunk(toUpsert, BATCH_SIZE);
+    for (const [i, batch] of batches.entries()) {
+      setStatus(`Importing batch ${i + 1} of ${batches.length} (${successCount} of ${toUpsert.length} results written so far)...`);
       const { error: upErr } = await supabase
         .from('results')
         .upsert(batch, { onConflict: 'student_id,subject_id,week_start_date' });
