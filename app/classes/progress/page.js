@@ -23,15 +23,34 @@ function ClassProgressInner() {
   const [subjectFilter, setSubjectFilter] = useState('');
 
   useEffect(() => {
+    // Supabase caps unpaginated selects at 1000 rows. Several of these
+    // tables exceed that (student_class alone is 4000+), so page through
+    // all rows rather than risk silently truncated data.
+    async function fetchAll(table, columns, filterFn) {
+      const PAGE = 1000;
+      let from = 0;
+      let all = [];
+      while (true) {
+        let q = supabase.from(table).select(columns).range(from, from + PAGE - 1);
+        if (filterFn) q = filterFn(q);
+        const { data, error } = await q;
+        if (error) { console.error(`fetchAll ${table}:`, error.message); break; }
+        all = all.concat(data || []);
+        if (!data || data.length < PAGE) break;
+        from += PAGE;
+      }
+      return all;
+    }
+
     async function load() {
-      const [{ data: classes }, { data: sc }, { data: students }, { data: targets }, { data: results }, { data: gs }, { data: subjMeta }] = await Promise.all([
-        supabase.from('classes').select('class_id, class_code, subject_id, subjects(subject_name)').not('subject_id', 'is', null),
-        supabase.from('student_class').select('student_id, class_id'),
-        supabase.from('students').select('student_id, year_group'),
-        supabase.from('target_grades').select('student_id, subject_id, target_grade'),
-        supabase.from('results').select('student_id, subject_id, grade, week_start_date'),
-        supabase.from('grade_scale').select('*'),
-        supabase.from('subjects').select('subject_id, subject_name, display_name, target_fallback_subject_id'),
+      const [classes, sc, students, targets, results, gs, subjMeta] = await Promise.all([
+        fetchAll('classes', 'class_id, class_code, subject_id, subjects(subject_name)', (q) => q.not('subject_id', 'is', null)),
+        fetchAll('student_class', 'student_id, class_id'),
+        fetchAll('students', 'student_id, year_group'),
+        fetchAll('target_grades', 'student_id, subject_id, target_grade'),
+        fetchAll('results', 'student_id, subject_id, grade, week_start_date'),
+        fetchAll('grade_scale', '*'),
+        fetchAll('subjects', 'subject_id, subject_name, display_name, target_fallback_subject_id'),
       ]);
 
       const displayName = {};
