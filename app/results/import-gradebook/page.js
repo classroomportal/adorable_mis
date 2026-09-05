@@ -37,13 +37,23 @@ function chunk(arr, size) {
 function ImportInner() {
   const [rows, setRows] = useState([]);
   const [subjectColumns, setSubjectColumns] = useState([]); // raw header names
-  const [subjectNames, setSubjectNames] = useState({}); // raw header -> editable name
+  const [subjectNames, setSubjectNames] = useState({}); // raw header -> parsed name (display only)
+  const [allSubjects, setAllSubjects] = useState([]); // {subject_id, subject_name}
+  const [resolution, setResolution] = useState({}); // header -> { mode: 'existing'|'new'|'unresolved', subjectId, auto }
   const [terms, setTerms] = useState([]);
   const [termId, setTermId] = useState('');
   const [weekLabel, setWeekLabel] = useState('');
   const [status, setStatus] = useState(null);
   const [errors, setErrors] = useState([]);
   const [preview, setPreview] = useState([]);
+
+  useEffect(() => {
+    async function loadSubjectsAndAliases() {
+      const { data: subs } = await supabase.from('subjects').select('subject_id, subject_name').order('subject_name');
+      setAllSubjects(subs || []);
+    }
+    loadSubjectsAndAliases();
+  }, []);
 
   useEffect(() => {
     async function loadTerms() {
@@ -71,13 +81,13 @@ function ImportInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [termId, terms]);
 
-  function handleFile(e) {
+  async function handleFile(e) {
     const file = e.target.files[0];
     if (!file) return;
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: async (results) => {
         const data = results.data;
         setRows(data);
         setPreview(data.slice(0, 8));
@@ -91,17 +101,48 @@ function ImportInner() {
         const names = {};
         subjCols.forEach((h) => { names[h] = parseSubjectName(h); });
         setSubjectNames(names);
+
+        // Resolve each column against aliases, then exact subject name match.
+        // Anything left over is NOT auto-created — it needs a person to pair
+        // it to an existing subject or explicitly confirm a new one, since a
+        // typo'd or shorthand header should never silently spawn an orphan
+        // subject with no class behind it.
+        const { data: aliasRows } = await supabase.from('subject_aliases').select('alias_name, subject_id');
+        const aliasByName = {};
+        (aliasRows || []).forEach((a) => { aliasByName[a.alias_name] = a.subject_id; });
+
+        const res = {};
+        for (const h of subjCols) {
+          const name = names[h];
+          if (aliasByName[name]) {
+            res[h] = { mode: 'existing', subjectId: aliasByName[name], auto: true };
+            continue;
+          }
+          const match = allSubjects.find((s) => s.subject_name === name);
+          if (match) {
+            res[h] = { mode: 'existing', subjectId: match.subject_id, auto: true };
+          } else {
+            res[h] = { mode: 'unresolved', subjectId: null, auto: false };
+          }
+        }
+        setResolution(res);
       },
     });
   }
 
-  function updateSubjectName(header, value) {
-    setSubjectNames((prev) => ({ ...prev, [header]: value }));
+  function setResolutionMode(header, mode, subjectId = null) {
+    setResolution((prev) => ({ ...prev, [header]: { mode, subjectId, auto: false } }));
   }
+
+  const unresolvedCount = subjectColumns.filter((h) => resolution[h]?.mode === 'unresolved').length;
 
   async function handleImport() {
     if (!weekStart) {
       setStatus('Please choose a term and week first.');
+      return;
+    }
+    if (unresolvedCount > 0) {
+      setStatus(`${unresolvedCount} column(s) still need to be paired to a subject before importing.`);
       return;
     }
     setStatus('Importing...');
@@ -125,32 +166,26 @@ function ImportInner() {
       return match ? match.grade : null;
     }
 
-    // 1. Resolve/upsert subjects for each detected column -> subject_id
+    // 1. Resolve subject_id for each column from the confirmed pairing —
+    // no silent creation here. "existing" reuses the chosen subject and,
+    // if the header text differs from that subject's stored name, saves a
+    // permanent alias so the same header auto-resolves next time. "new"
+    // creates a subject only because a person explicitly confirmed it.
     const subjectIdByHeader = {};
     for (const header of subjectColumns) {
-      const name = (subjectNames[header] || '').trim();
-      if (!name) { problems.push(`Column "${header}": no subject name given, skipped.`); continue; }
+      const r = resolution[header];
+      const name = subjectNames[header];
+      if (!r || r.mode === 'unresolved') { problems.push(`Column "${header}": not paired to a subject, skipped.`); continue; }
 
-      // Check for a permanent alias first (e.g. "Business Studies" -> Business),
-      // so a previously-merged duplicate doesn't get silently recreated.
-      const { data: alias } = await supabase
-        .from('subject_aliases')
-        .select('subject_id')
-        .eq('alias_name', name)
-        .maybeSingle();
-      if (alias) { subjectIdByHeader[header] = alias.subject_id; continue; }
-
-      const { data: existing, error: findErr } = await supabase
-        .from('subjects')
-        .select('subject_id')
-        .eq('subject_name', name)
-        .maybeSingle();
-
-      if (findErr) { problems.push(`Subject lookup failed for "${name}": ${findErr.message}`); continue; }
-
-      if (existing) {
-        subjectIdByHeader[header] = existing.subject_id;
-      } else {
+      if (r.mode === 'existing') {
+        subjectIdByHeader[header] = r.subjectId;
+        if (!r.auto) {
+          const existingSubject = allSubjects.find((s) => s.subject_id === r.subjectId);
+          if (existingSubject && existingSubject.subject_name !== name) {
+            await supabase.from('subject_aliases').upsert([{ alias_name: name, subject_id: r.subjectId }]);
+          }
+        }
+      } else if (r.mode === 'new') {
         const { data: created, error: createErr } = await supabase
           .from('subjects')
           .insert([{ subject_name: name }])
@@ -248,22 +283,57 @@ function ImportInner() {
       {subjectColumns.length > 0 && (
         <div className="card">
           <h2>Detected subjects ({subjectColumns.length})</h2>
-          <p>Correct any of these before importing if they were mis-parsed.</p>
+          <p>
+            Columns that already match an existing subject are paired automatically. Anything unmatched
+            needs to be paired to an existing subject or explicitly confirmed as new — nothing is created
+            silently.
+          </p>
+          {unresolvedCount > 0 && (
+            <p style={{ color: '#a33', fontWeight: 600 }}>
+              {unresolvedCount} column(s) need pairing before you can import.
+            </p>
+          )}
           <table>
-            <thead><tr><th>CSV column</th><th>Subject name</th></tr></thead>
+            <thead><tr><th>CSV column</th><th>Parsed name</th><th>Pairing</th></tr></thead>
             <tbody>
-              {subjectColumns.map((h) => (
-                <tr key={h}>
-                  <td><code>{h}</code></td>
-                  <td>
-                    <input
-                      type="text"
-                      value={subjectNames[h] || ''}
-                      onChange={(e) => updateSubjectName(h, e.target.value)}
-                    />
-                  </td>
-                </tr>
-              ))}
+              {subjectColumns.map((h) => {
+                const r = resolution[h] || { mode: 'unresolved' };
+                return (
+                  <tr key={h} style={r.mode === 'unresolved' ? { background: '#fdeaea' } : undefined}>
+                    <td><code>{h}</code></td>
+                    <td>{subjectNames[h]}</td>
+                    <td>
+                      {r.mode === 'existing' && r.auto && (
+                        <span>
+                          ✓ matches <strong>{allSubjects.find((s) => s.subject_id === r.subjectId)?.subject_name}</strong>
+                          {' '}
+                          <button className="secondary" onClick={() => setResolutionMode(h, 'unresolved')}>change</button>
+                        </span>
+                      )}
+                      {r.mode !== 'existing' || !r.auto ? (
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <select
+                            value={r.mode === 'existing' ? r.subjectId : ''}
+                            onChange={(e) => e.target.value && setResolutionMode(h, 'existing', Number(e.target.value))}
+                          >
+                            <option value="">-- pair to existing subject --</option>
+                            {allSubjects.map((s) => (
+                              <option key={s.subject_id} value={s.subject_id}>{s.subject_name}</option>
+                            ))}
+                          </select>
+                          <button
+                            className="secondary"
+                            onClick={() => setResolutionMode(h, 'new')}
+                            style={r.mode === 'new' ? { fontWeight: 700 } : undefined}
+                          >
+                            {r.mode === 'new' ? '✓ ' : ''}Create new subject "{subjectNames[h]}"
+                          </button>
+                        </div>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -285,7 +355,9 @@ function ImportInner() {
             </table>
           </div>
           <p style={{ marginTop: '1rem' }}>{rows.length} students, {subjectColumns.length} subject columns detected. Written in batches of {BATCH_SIZE}.</p>
-          <button onClick={handleImport}>Import results for {selectedTerm?.term_name || '(choose term)'} — {weekLabel || '(choose week)'}</button>
+          <button onClick={handleImport} disabled={unresolvedCount > 0}>
+            Import results for {selectedTerm?.term_name || '(choose term)'} — {weekLabel || '(choose week)'}
+          </button>
         </div>
       )}
 

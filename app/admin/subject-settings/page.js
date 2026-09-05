@@ -95,15 +95,20 @@ function ImportInner() {
     setSubjects((prev) => prev.map((s) => (s.subject_id === id ? { ...s, [field]: value } : s)));
   }
 
-  async function saveRow(row) {
-    const { error } = await supabase
-      .from('subjects')
-      .update({
-        display_name: row.display_name || null,
-        target_fallback_subject_id: row.target_fallback_subject_id || null,
-      })
-      .eq('subject_id', row.subject_id);
-    setStatus(error ? `Error saving ${row.subject_name}: ${error.message}` : `Saved ${row.subject_name}.`);
+  async function saveAll() {
+    setStatus('Saving...');
+    const updates = subjects.map((row) =>
+      supabase
+        .from('subjects')
+        .update({
+          display_name: row.display_name || null,
+          target_fallback_subject_id: row.target_fallback_subject_id || null,
+        })
+        .eq('subject_id', row.subject_id)
+    );
+    const results = await Promise.all(updates);
+    const failed = results.filter((r) => r.error);
+    setStatus(failed.length ? `Saved with ${failed.length} error(s): ${failed[0].error.message}` : 'All changes saved.');
   }
 
   const filtered = subjects.filter((s) =>
@@ -139,7 +144,7 @@ function ImportInner() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Subject (source)</th><th>Display name</th><th>Use targets from</th><th>Key stages</th><th>Aliases</th><th></th></tr>
+              <tr><th>Subject (source)</th><th>Display name</th><th>Use targets from</th><th>Key stages</th><th>Aliases</th></tr>
             </thead>
             <tbody>
               {filtered.map((s) => (
@@ -194,12 +199,15 @@ function ImportInner() {
                       <button className="secondary" onClick={() => saveAlias(s.subject_id)}>+</button>
                     </div>
                   </td>
-                  <td><button onClick={() => saveRow(s)}>Save</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="card" style={{ position: 'sticky', bottom: 0 }}>
+        <button onClick={saveAll}>Save all changes</button>
       </div>
 
       {status && <p>{status}</p>}
