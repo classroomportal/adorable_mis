@@ -65,8 +65,8 @@ function PermissionsInner() {
             style={{
               padding: '0.4rem 0.9rem',
               borderRadius: '999px',
-              border: selectedRole === r.role_name ? '2px solid #7a1e1e' : '1px solid #ddd0b8',
-              background: selectedRole === r.role_name ? '#7a1e1e' : 'transparent',
+              border: selectedRole === r.role_name ? '2px solid #99163e' : '1px solid #ddd0b8',
+              background: selectedRole === r.role_name ? '#99163e' : 'transparent',
               color: selectedRole === r.role_name ? '#fdf6ea' : '#333',
               fontWeight: selectedRole === r.role_name ? 700 : 400,
             }}

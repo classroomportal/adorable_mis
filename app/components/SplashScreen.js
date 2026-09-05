@@ -38,7 +38,7 @@ export default function SplashScreen({ onDone }) {
         position: 'fixed',
         inset: 0,
         zIndex: 1000,
-        background: '#fdf6ea',
+        background: '#f6f6f4',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -48,7 +48,7 @@ export default function SplashScreen({ onDone }) {
       }}
     >
       <img src="/logo.png" alt="Adorable British College" style={{ width: '120px', marginBottom: '1.5rem' }} />
-      <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#7a1e1e', marginBottom: '1.5rem' }}>
+      <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#99163e', marginBottom: '1.5rem' }}>
         Adorable British College
       </div>
       {photos.length > 0 && (
@@ -71,7 +71,7 @@ export default function SplashScreen({ onDone }) {
                 height: '72px',
                 objectFit: 'cover',
                 borderRadius: '50%',
-                border: '2px solid #7a1e1e',
+                border: '2px solid #99163e',
               }}
             />
           ))}

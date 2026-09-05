@@ -1,12 +1,14 @@
 :root {
-  --red-900: #6b0f1a;
-  --red-800: #8c1622;
-  --red-700: #a8202c;
-  --red-600: #c22c38;
+  --red-900: #7a1030;
+  --red-800: #99163e;
+  --red-700: #b91d4c;
+  --red-600: #d13868;
   --yellow-100: #fff6d6;
   --yellow-200: #fdecad;
-  --slate-50: #fdfaf5;
-  --slate-200: #f0e4c8;
+  --blue-100: #eaf2fb;
+  --blue-200: #d7e6f7;
+  --slate-50: #f6f6f4;
+  --slate-200: #e4e2dc;
   --text-dark: #2a1a10;
 }
 
@@ -81,13 +83,13 @@ th {
 }
 
 tbody tr:nth-child(odd) td {
-  background: var(--yellow-100);
+  background: var(--blue-100);
 }
 tbody tr:nth-child(even) td {
   background: white;
 }
 tr:hover td {
-  background: var(--yellow-200) !important;
+  background: var(--blue-200) !important;
 }
 
 button, input, select {
