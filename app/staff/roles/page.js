@@ -4,12 +4,17 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 
 const ROLE_LABELS = {
-  sysadmin: 'Sysadmin',
+  admin: 'Admin',
   smt: 'SMT',
+  hr: 'HR',
+  pastoral: 'Pastoral',
   houseparent: 'Houseparent',
-  head_of_department: 'Head of Department',
   assessment_manager: 'Assessment Manager',
-  class_teacher: 'Class Teacher',
+  assessment_user: 'Assessment User',
+  teacher: 'Teacher',
+  bursar: 'Bursar',
+  school_office: 'School Office',
+  admissions: 'Admissions',
 };
 const ALL_ROLES = Object.keys(ROLE_LABELS);
 
