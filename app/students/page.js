@@ -1,45 +1,54 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 
 function StudentsList() {
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [formFilter, setFormFilter] = useState('');
+  const [years, setYears] = useState([]);
+  const [forms, setForms] = useState([]);
 
+  // On mount, only fetch the small distinct year/form lists needed to
+  // populate the filter dropdowns — not the full student list or photos.
   useEffect(() => {
-    async function load() {
-      const { data, error } = await supabase
-        .from('student_summary')
-        .select('*')
-        .order('last_name', { ascending: true });
-      if (error) { setError(error.message); setLoading(false); return; }
-
-      const { data: photos } = await supabase.from('students').select('student_id, photo_base64');
-      const photoMap = Object.fromEntries((photos || []).filter((p) => p.photo_base64).map((p) => [p.student_id, p.photo_base64]));
-      setStudents((data || []).map((s) => ({ ...s, photo_base64: photoMap[s.student_id] })));
-      setLoading(false);
+    async function loadFilterOptions() {
+      const { data } = await supabase.from('student_summary').select('year_group, form_class');
+      setYears([...new Set((data || []).map((s) => s.year_group))].sort());
+      setForms([...new Set((data || []).map((s) => s.form_class))].filter(Boolean).sort());
     }
-    load();
+    loadFilterOptions();
   }, []);
 
-  const years = useMemo(() => [...new Set(students.map((s) => s.year_group))].sort(), [students]);
-  const forms = useMemo(() => [...new Set(students.map((s) => s.form_class))].sort(), [students]);
+  async function loadStudents() {
+    setLoading(true);
+    setError(null);
+    let query = supabase.from('student_summary').select('*').order('last_name', { ascending: true });
+    if (yearFilter) query = query.eq('year_group', Number(yearFilter));
+    if (formFilter) query = query.eq('form_class', formFilter);
+    if (search.trim()) query = query.or(`first_name.ilike.%${search.trim()}%,last_name.ilike.%${search.trim()}%`);
 
-  const filtered = useMemo(() => {
-    return students.filter((s) => {
-      const nameMatch = `${s.first_name} ${s.last_name}`.toLowerCase().includes(search.toLowerCase());
-      const yearMatch = !yearFilter || String(s.year_group) === yearFilter;
-      const formMatch = !formFilter || s.form_class === formFilter;
-      return nameMatch && yearMatch && formMatch;
-    });
-  }, [students, search, yearFilter, formFilter]);
+    const { data, error } = await query;
+    if (error) { setError(error.message); setLoading(false); return; }
 
-  if (loading) return <p>Loading students...</p>;
+    // Only fetch photos for the students actually matching the filter,
+    // not the whole school — this is what was making the page slow.
+    const ids = (data || []).map((s) => s.student_id);
+    let photoMap = {};
+    if (ids.length > 0) {
+      const { data: photos } = await supabase.from('students').select('student_id, photo_base64').in('student_id', ids);
+      photoMap = Object.fromEntries((photos || []).filter((p) => p.photo_base64).map((p) => [p.student_id, p.photo_base64]));
+    }
+    setStudents((data || []).map((s) => ({ ...s, photo_base64: photoMap[s.student_id] })));
+    setHasLoaded(true);
+    setLoading(false);
+  }
+
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
 
   return (
@@ -47,7 +56,7 @@ function StudentsList() {
       <h1>Students</h1>
       <p><a href="/students/import">→ Bulk import students from CSV</a> &nbsp;|&nbsp; <a href="/assessments/import">→ Import CAT4/NGRT predictive data</a> &nbsp;|&nbsp; <a href="/parents/import">→ Import parents from CSV</a> &nbsp;|&nbsp; <a href="/students/photos/import">→ Import student photos</a></p>
 
-      <form onSubmit={(e) => e.preventDefault()}>
+      <form onSubmit={(e) => { e.preventDefault(); loadStudents(); }}>
         <label>
           Search name
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Wilson" />
@@ -66,11 +75,18 @@ function StudentsList() {
             {forms.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
         </label>
+        <button type="submit" disabled={loading}>{loading ? 'Loading...' : 'Load students'}</button>
       </form>
 
-      <p style={{ color: '#5a6b8c', fontSize: '0.9rem' }}>{filtered.length} of {students.length} students</p>
+      {!hasLoaded && !loading && (
+        <p style={{ color: '#5a6b8c' }}>Choose filters (or leave blank for everyone) and press Load students.</p>
+      )}
 
-      <div className="table-scroll"><table>
+      {hasLoaded && (
+        <>
+          <p style={{ color: '#5a6b8c', fontSize: '0.9rem' }}>{students.length} student(s) loaded</p>
+
+          <div className="table-scroll"><table>
         <thead>
           <tr>
             <th></th>
@@ -83,7 +99,7 @@ function StudentsList() {
           </tr>
         </thead>
         <tbody>
-          {filtered.map((s) => (
+          {students.map((s) => (
             <tr key={s.student_id} className="student-link" onClick={() => window.location.href = `/students/${s.student_id}`}>
               <td>
                 {s.photo_base64 ? (
@@ -102,6 +118,8 @@ function StudentsList() {
           ))}
         </tbody>
       </table></div>
+        </>
+      )}
     </div>
   );
 }
