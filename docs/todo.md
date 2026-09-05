@@ -7,7 +7,10 @@ none fit — no special format required beyond a markdown checkbox.
 
 ## Dashboard access & design
 
-- [ ] Design proper per-role tile visibility (currently only two gates exist: pastoral/SMT for Behaviour Appeals, admin for the whole Admin section — everything else in Students shows to any staff login)
+- [ ] Build a real permissions model (role -> resource/tile grants, e.g. new role_permissions table), replacing the current handful of hardcoded isAdmin/isPastoralOrSmt checks
+- [ ] Build a UI to create staff/parent/student logins directly (currently done via SQL functions in the Supabase SQL editor + manual welcome-email CSV paste)
+- [ ] Role list to design permissions against: SMT, HR (manages staff details), Pastoral (manages appeals & detention), Houseparent (a separate role, but one person could also hold Teacher or Pastoral at the same time — manages room assignment, restaurant assignment 1-4; tuck shop purchases not included yet), Assessment manager, Assessment user (imports results & targets), Teacher, Student, Parent, Bursar, School office (edits student & parent core data, manages parent-student links), Admissions (new — needs its own section/workflow, not yet scoped)
+- [ ] Scope out Admissions as a distinct section: handles pre-enrolment (applications, entrance test scores, offer status) as a separate flow from the live students table, before a student record is created. Not yet decided whether applicants get their own login type or this stays staff-facing only.
 - [ ] Consider a more colourful/visual dashboard layout (reference: CTS Portal screenshot)
 - [ ] Rename/reorganise tiles once access model is settled
 
