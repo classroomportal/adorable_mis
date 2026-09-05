@@ -95,6 +95,7 @@ export default function Home() {
       {isAdmin && (
         <Section title="Admin">
           <Tile href="/staff/roles" icon="🧑‍🏫" label="Staff & Roles" />
+          <Tile href="/staff/import-emails" icon="📧" label="Bulk Import Staff Emails" />
           <Tile href="/admin/permissions" icon="🔐" label="Permissions" />
           <Tile href="/staff/welcome-emails" icon="✉️" label="Send Staff Welcome Emails" />
           <Tile href="/admin/block-allocation" icon="🗂️" label="Class Allocation" />

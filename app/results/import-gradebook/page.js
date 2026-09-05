@@ -19,6 +19,10 @@ function parseSubjectName(header) {
   name = name.replace(/^Quiz:\s*/i, '');
   name = name.replace(/\s*Exam\s*\(Real\)\s*$/i, '');
   name = name.replace(/\s*\(Real\)\s*$/i, '');
+  // Moodle exports append the year group as a trailing number, e.g.
+  // "Spanish 6" or "Civics 6" — that's not part of the subject name, so
+  // strip it before matching against existing subjects.
+  name = name.replace(/\s+\d+$/, '');
   return name.trim();
 }
 
