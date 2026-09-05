@@ -5,6 +5,12 @@ rather than living in a chat session. Tick items by changing `[ ]` to `[x]` and
 committing. Add new jobs under whichever section fits, or start a new section if
 none fit — no special format required beyond a markdown checkbox.
 
+## Dashboard access & design
+
+- [ ] Design proper per-role tile visibility (currently only two gates exist: pastoral/SMT for Behaviour Appeals, admin for the whole Admin section — everything else in Students shows to any staff login)
+- [ ] Consider a more colourful/visual dashboard layout (reference: CTS Portal screenshot)
+- [ ] Rename/reorganise tiles once access model is settled
+
 ## Data cleanup
 
 - [ ] Merge duplicate/abbreviated subjects (`Dl`, `Fa`, `Gl`, `Gs`, old `Religion`) via `merge_subjects()`
@@ -14,6 +20,7 @@ none fit — no special format required beyond a markdown checkbox.
 
 ## Not yet built
 
+- [ ] School fees / billing module (see CTS Portal reference screenshot for a possible access-control/UI pattern)
 - [ ] Families management UI
 - [ ] Term-based filtering wired into results and attendance views generally
 - [ ] Pastoral dashboard with full-day attendance patterns
