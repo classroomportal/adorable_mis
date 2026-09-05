@@ -24,10 +24,10 @@ function ImportInner() {
   async function handleParse() {
     const parsed = Papa.parse(csvText.trim(), { header: true, skipEmptyLines: true });
     const rows = (parsed.data || []).map((r) => ({
-      staff_code: (r.staff_code || r.Code || '').trim().toUpperCase() || null,
+      staff_code: (r.staff_code || r.Code || r['Staff Code'] || '').trim().toUpperCase() || null,
       first_name: (r.first_name || r.First_Name || r['First Name'] || '').trim(),
       last_name: (r.last_name || r.Last_Name || r['Last Name'] || '').trim(),
-      email: (r.email || r.Email || '').trim(),
+      email: (r.email || r.Email || r['Work Email'] || r['Home Email'] || '').trim(),
     }));
 
     const { data: staffList } = await supabase.from('staff').select('staff_id, first_name, last_name, staff_code, email');
