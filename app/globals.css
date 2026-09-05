@@ -211,6 +211,49 @@ input, select { width: 100%; }
 .cert-name { font-size: 1.8rem; font-weight: 700; margin: 0.75rem 0; border-bottom: 1px solid var(--slate-300); display: inline-block; padding: 0 1rem 0.25rem; }
 .cert-date { margin-top: 2rem; font-size: 0.95rem; color: #666; }
 
+.module-tabs {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  border-bottom: 2px solid var(--slate-200);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.module-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  background: transparent !important;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0 !important;
+  color: var(--text-dark) !important;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+  opacity: 0.65;
+}
+.module-tab-icon { font-size: 1.05rem; }
+.module-tab:hover { opacity: 1; background: var(--yellow-100) !important; }
+.module-tab.active {
+  opacity: 1;
+  border-bottom-color: var(--accent-color, var(--red-700));
+  color: var(--accent-color, var(--red-700)) !important;
+}
+.module-tab.accent-myinfo.active   { --accent-color: #2f6fa8; }
+.module-tab.accent-family.active   { --accent-color: #c07d1f; }
+.module-tab.accent-students.active { --accent-color: #3f8f5f; }
+.module-tab.accent-school.active   { --accent-color: #7a52a8; }
+.module-tab.accent-admin.active    { --accent-color: var(--red-700); }
+.module-tab.accent-setup.active    { --accent-color: #8a8378; }
+
+@media (max-width: 640px) {
+  .module-tab { padding: 0.5rem 0.6rem; font-size: 0.8rem; }
+}
+
 .dash-section { margin-bottom: 1.75rem; }
 
 .dash-section-title {
