@@ -7,6 +7,7 @@ const KEY_STAGES = ['KS3', 'KS4', 'KS5'];
 
 function ImportInner() {
   const [subjects, setSubjects] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [subjectsWithTargets, setSubjectsWithTargets] = useState(new Set());
   const [keyStagesBySubject, setKeyStagesBySubject] = useState({}); // subject_id -> Set of key stages
   const [aliasesBySubject, setAliasesBySubject] = useState({}); // subject_id -> array of alias names
@@ -19,9 +20,12 @@ function ImportInner() {
   async function load() {
     const { data } = await supabase
       .from('subjects')
-      .select('subject_id, subject_name, display_name, target_fallback_subject_id')
+      .select('subject_id, subject_name, display_name, target_fallback_subject_id, department_name')
       .order('subject_name');
     setSubjects(data || []);
+
+    const { data: depts } = await supabase.from('departments').select('department_name').order('department_name');
+    setDepartments((depts || []).map((d) => d.department_name));
 
     const { data: ksRows } = await supabase
       .from('subject_key_stages')
@@ -103,6 +107,7 @@ function ImportInner() {
         .update({
           display_name: row.display_name || null,
           target_fallback_subject_id: row.target_fallback_subject_id || null,
+          department_name: row.department_name || null,
         })
         .eq('subject_id', row.subject_id)
     );
@@ -128,9 +133,17 @@ function ImportInner() {
           subject's targets for progress comparison (e.g. Business can borrow Economics targets).
         </p>
         <p>
+          <strong>Aliases</strong> only affect the weekly gradebook importer — they tell it which
+          existing subject a CSV column header should match, so a header like "Digital Literacy"
+          maps onto <code>Dl</code> instead of creating a duplicate. Aliases do <em>not</em> change
+          what's shown on the timetable, transcript, or anywhere else — for that, set the
+          <strong> Display name</strong> field instead.
+        </p>
+        <p>
           <strong>Key stages</strong> controls which subjects appear on a student's transcript, based on
           their year group (KS3 = Years 7–9, KS4 = Years 10–11, KS5 = Year 12). A subject can belong to more
-          than one key stage. Untagged subjects show at every key stage by default.
+          than one key stage. A subject with no key stage ticked will never show on any transcript — and
+          note it also needs at least one actual result to appear, not just a target grade.
         </p>
         <input
           type="text"
@@ -144,7 +157,7 @@ function ImportInner() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Subject (source)</th><th>Display name</th><th>Use targets from</th><th>Key stages</th><th>Aliases</th></tr>
+              <tr><th>Subject (source)</th><th>Display name</th><th>Department</th><th>Use targets from</th><th>Key stages</th><th>Aliases</th></tr>
             </thead>
             <tbody>
               {filtered.map((s) => (
@@ -157,6 +170,15 @@ function ImportInner() {
                       value={s.display_name || ''}
                       onChange={(e) => updateField(s.subject_id, 'display_name', e.target.value)}
                     />
+                  </td>
+                  <td>
+                    <select
+                      value={s.department_name || ''}
+                      onChange={(e) => updateField(s.subject_id, 'department_name', e.target.value || null)}
+                    >
+                      <option value="">(none)</option>
+                      {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
                   </td>
                   <td>
                     <select

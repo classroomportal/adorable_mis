@@ -15,12 +15,15 @@ const ROLE_LABELS = {
   bursar: 'Bursar',
   school_office: 'School Office',
   admissions: 'Admissions',
+  head_of_department: 'Head of Dept',
 };
 const ALL_ROLES = Object.keys(ROLE_LABELS);
 
 function StaffRolesInner() {
   const [staff, setStaff] = useState([]);
   const [roleMap, setRoleMap] = useState({}); // staff_id -> Set of role_name
+  const [scopeMap, setScopeMap] = useState({}); // staff_id -> department_name (for head_of_department)
+  const [departments, setDepartments] = useState([]);
   const [status, setStatus] = useState(null);
   const [newStaff, setNewStaff] = useState({ first_name: '', last_name: '', staff_code: '', email: '' });
 
@@ -29,14 +32,31 @@ function StaffRolesInner() {
     setStaff(s || []);
     const { data: r } = await supabase.from('staff_roles').select('*');
     const map = {};
+    const scopes = {};
     (r || []).forEach((row) => {
       if (!map[row.staff_id]) map[row.staff_id] = new Set();
       map[row.staff_id].add(row.role_name);
+      if (row.role_name === 'head_of_department' && row.scope_value) {
+        scopes[row.staff_id] = row.scope_value;
+      }
     });
     setRoleMap(map);
+    setScopeMap(scopes);
+    const { data: d } = await supabase.from('departments').select('department_name').order('department_name');
+    setDepartments((d || []).map((x) => x.department_name));
   }
 
   useEffect(() => { load(); }, []);
+
+  async function setDepartmentScope(staffId, departmentName) {
+    const { error } = await supabase
+      .from('staff_roles')
+      .update({ scope_type: 'department', scope_value: departmentName })
+      .eq('staff_id', staffId)
+      .eq('role_name', 'head_of_department');
+    if (error) { setStatus(`Error: ${error.message}`); return; }
+    setScopeMap((prev) => ({ ...prev, [staffId]: departmentName }));
+  }
 
   async function toggleRole(staffId, roleName, checked) {
     if (checked) {
@@ -170,6 +190,16 @@ function StaffRolesInner() {
                     checked={roleMap[s.staff_id]?.has(r) || false}
                     onChange={(e) => toggleRole(s.staff_id, r, e.target.checked)}
                   />
+                  {r === 'head_of_department' && roleMap[s.staff_id]?.has('head_of_department') && (
+                    <select
+                      value={scopeMap[s.staff_id] || ''}
+                      onChange={(e) => setDepartmentScope(s.staff_id, e.target.value)}
+                      style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.75rem' }}
+                    >
+                      <option value="">-- department --</option>
+                      {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  )}
                 </td>
               ))}
             </tr>

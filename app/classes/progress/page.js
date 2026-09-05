@@ -21,6 +21,7 @@ function ClassProgressInner() {
   const [loading, setLoading] = useState(true);
   const [yearFilter, setYearFilter] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
+  const [scopedDepartment, setScopedDepartment] = useState(null);
 
   useEffect(() => {
     // Supabase caps unpaginated selects at 1000 rows. Several of these
@@ -43,15 +44,24 @@ function ClassProgressInner() {
     }
 
     async function load() {
-      const [classes, sc, students, targets, results, gs, subjMeta] = await Promise.all([
+      const [classes, sc, students, targets, results, gs, subjMeta, myScope] = await Promise.all([
         fetchAll('classes', 'class_id, class_code, subject_id, staff_id, subjects(subject_name), staff(first_name, last_name)', (q) => q.not('subject_id', 'is', null)),
         fetchAll('student_class', 'student_id, class_id'),
         fetchAll('students', 'student_id, year_group'),
         fetchAll('target_grades', 'student_id, subject_id, target_grade'),
         fetchAll('results', 'student_id, subject_id, grade, week_start_date'),
         fetchAll('grade_scale', '*'),
-        fetchAll('subjects', 'subject_id, subject_name, display_name, target_fallback_subject_id'),
+        fetchAll('subjects', 'subject_id, subject_name, display_name, target_fallback_subject_id, department_name'),
+        supabase.rpc('my_department_scope'),
       ]);
+      // NULL means unscoped (admin, assessment_manager, etc.) — see everything,
+      // same as today. A non-null value means the viewer is a Head of
+      // Department scoped to that department, so Class Progress narrows to
+      // subjects in that department only, across ALL teachers — not just
+      // their own classes.
+      const departmentScope = myScope?.data || null;
+      setScopedDepartment(departmentScope);
+      const departmentBySubject = Object.fromEntries((subjMeta || []).map((s) => [s.subject_id, s.department_name]));
 
       const displayName = {};
       const fallbackFor = {};
@@ -81,7 +91,9 @@ function ClassProgressInner() {
       });
 
       const out = [];
-      (classes || []).forEach((c) => {
+      (classes || [])
+        .filter((c) => !departmentScope || departmentBySubject[c.subject_id] === departmentScope)
+        .forEach((c) => {
         const roster = studentsByClass[c.class_id] || [];
         let targetSum = 0, actualSum = 0, n = 0, above = 0, on = 0, below = 0;
         let yearGuess = null;
@@ -133,6 +145,11 @@ function ClassProgressInner() {
   return (
     <div>
       <h1>Class Progress</h1>
+      {scopedDepartment && (
+        <p style={{ color: '#7a1e1e', fontWeight: 600 }}>
+          Showing {scopedDepartment} department classes only (Head of Department view)
+        </p>
+      )}
       <p>Each class's average grade vs the average target grade for the same students, most recent result per subject. Classes with fewer than one comparable student are hidden. Sorted worst-to-best. (+ / ~ / - = Above / On / Below target)</p>
 
       <div className="card">
