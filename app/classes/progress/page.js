@@ -146,7 +146,7 @@ function ClassProgressInner() {
     <div>
       <h1>Class Progress</h1>
       {scopedDepartment && (
-        <p style={{ color: '#99163e', fontWeight: 600 }}>
+        <p style={{ color: '#e34430', fontWeight: 600 }}>
           Showing {scopedDepartment} department classes only (Head of Department view)
         </p>
       )}
