@@ -6,15 +6,17 @@ import SplashScreen from './components/SplashScreen';
 function Tile({ href, icon, label }) {
   return (
     <a className="dash-tile" href={href}>
-      <span className="dash-tile-icon">{icon}</span>
+      <span className="dash-tile-icon-badge">
+        <span className="dash-tile-icon">{icon}</span>
+      </span>
       <span>{label}</span>
     </a>
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, accent, children }) {
   return (
-    <div className="dash-section">
+    <div className={`dash-section accent-${accent || 'default'}`}>
       <div className="dash-section-title">{title}</div>
       <div className="dash-grid">{children}</div>
     </div>
@@ -51,7 +53,7 @@ export default function Home() {
     return (
       <div>
         <h1>Welcome{profile.student_id ? '' : ' — account not linked yet'}</h1>
-        <Section title="My Info">
+        <Section title="My Info" accent="myinfo">
           <Tile href="/portal" icon="📚" label="My Grades & Behaviour" />
           <Tile href="/change-password" icon="🔑" label="Change Password" />
         </Section>
@@ -63,7 +65,7 @@ export default function Home() {
     return (
       <div>
         <h1>Welcome{profile.parent_id ? '' : ' — account not linked yet'}</h1>
-        <Section title="My Family">
+        <Section title="My Family" accent="family">
           <Tile href="/parent-portal" icon="👨‍👩‍👧" label="My Children" />
           <Tile href="/change-password" icon="🔑" label="Change Password" />
         </Section>
@@ -75,7 +77,7 @@ export default function Home() {
     <div>
       <h1>Adorable MIS</h1>
 
-      <Section title="Students">
+      <Section title="Students" accent="students">
         <Tile href="/staff/timetable" icon="🗓️" label="My Timetable" />
         <Tile href="/parent-portal" icon="👨‍👩‍👧" label="My Children" />
         <Tile href="/students" icon="🎓" label="Core Data" />
@@ -88,12 +90,12 @@ export default function Home() {
         {isPastoralOrSmt && <Tile href="/appeals" icon="⚖️" label="Behaviour Appeals" />}
       </Section>
 
-      <Section title="Whole School">
+      <Section title="Whole School" accent="school">
         <Tile href="/calendar" icon="📅" label="Calendar" />
       </Section>
 
       {isAdmin && (
-        <Section title="Admin">
+        <Section title="Admin" accent="admin">
           <Tile href="/staff/roles" icon="🧑‍🏫" label="Staff & Roles" />
           <Tile href="/staff/import-emails" icon="📧" label="Bulk Import Staff Emails" />
           <Tile href="/admin/permissions" icon="🔐" label="Permissions" />
@@ -101,16 +103,19 @@ export default function Home() {
           <Tile href="/admin/block-allocation" icon="🗂️" label="Class Allocation" />
           <Tile href="/parents" icon="👪" label="Parents" />
           <Tile href="/parents/welcome-emails" icon="✉️" label="Send Parent Welcome Emails" />
-          <Tile href="/students/import" icon="📥" label="Import Students" />
           <Tile href="/parents/import" icon="📥" label="Import Parents" />
           <Tile href="/results/import-gradebook" icon="📥" label="Import Weekly Results" />
           <Tile href="/target-grades/import" icon="📥" label="Import Target Grades" />
           <Tile href="/admin/grade-boundaries" icon="🎯" label="Grade Boundaries" />
           <Tile href="/admin/subject-settings" icon="🏷️" label="Subject Settings" />
-          <Tile href="/students/photos/import" icon="📥" label="Import Photos" />
           <Tile href="/assessments/import" icon="📥" label="Import CAT4/NGRT" />
-          <Tile href="/admin/import-timetable" icon="📥" label="Import Timetable" />
-          <Tile href="/admin/import-classes" icon="📥" label="Import Class/Teacher/Room" />
+          <Tile href="/admin/import-classes" icon="📥" label="Import Nova-T Timetable (Classes/Teacher/Room)" />
+        </Section>
+
+        <Section title="Initial Setup (one-time, from SIMS)" accent="setup">
+          <Tile href="/students/import" icon="📥" label="Import Students" />
+          <Tile href="/students/photos/import" icon="📥" label="Import Photos" />
+          <Tile href="/admin/import-timetable" icon="📥" label="Import Student Class Allocations" />
         </Section>
       )}
     </div>
