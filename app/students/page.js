@@ -17,7 +17,7 @@ function StudentsList() {
   // populate the filter dropdowns — not the full student list or photos.
   useEffect(() => {
     async function loadFilterOptions() {
-      const { data } = await supabase.from('student_summary').select('year_group, form_class');
+      const { data } = await supabase.from('students').select('year_group, form_class');
       setYearFormPairs(data || []);
     }
     loadFilterOptions();
