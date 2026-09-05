@@ -13,6 +13,14 @@ function ImportInner() {
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => setCsvText(evt.target.result);
+    reader.readAsText(file);
+  }
+
   async function handleParse() {
     const parsed = Papa.parse(csvText.trim(), { header: true, skipEmptyLines: true });
     const rows = (parsed.data || []).map((r) => ({
@@ -78,6 +86,7 @@ function ImportInner() {
           <code> first_name,last_name,email</code>. Nothing is written until you review the match preview
           below and press Apply.
         </p>
+        <input type="file" accept=".csv,text/csv" onChange={handleFileSelect} style={{ marginBottom: '0.5rem' }} />
         <textarea
           rows={8}
           style={{ width: '100%' }}
