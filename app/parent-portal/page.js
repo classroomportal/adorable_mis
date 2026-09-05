@@ -7,12 +7,31 @@ import TranscriptDownload from '../components/TranscriptDownload';
 
 function ParentPortalInner() {
   const { profile } = useAuth();
-  const parentId = profile?.parent_id;
+  const [resolvedParentId, setResolvedParentId] = useState(profile?.parent_id || null);
   const [children, setChildren] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [results, setResults] = useState([]);
   const [targets, setTargets] = useState([]);
   const [behaviour, setBehaviour] = useState([]);
+
+  // A parent login already has profile.parent_id set. A staff member who is
+  // also a parent doesn't — fall back to matching their login email against
+  // the parents table so the same "My Children" view works for both.
+  useEffect(() => {
+    async function resolveParent() {
+      if (profile?.parent_id) { setResolvedParentId(profile.parent_id); return; }
+      if (!profile?.email) return;
+      const { data } = await supabase
+        .from('parents')
+        .select('parent_id')
+        .eq('email', profile.email)
+        .maybeSingle();
+      setResolvedParentId(data?.parent_id || null);
+    }
+    resolveParent();
+  }, [profile]);
+
+  const parentId = resolvedParentId;
 
   useEffect(() => {
     async function loadChildren() {

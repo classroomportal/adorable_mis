@@ -77,6 +77,7 @@ export default function Home() {
 
       <Section title="Students">
         <Tile href="/staff/timetable" icon="🗓️" label="My Timetable" />
+        <Tile href="/parent-portal" icon="👨‍👩‍👧" label="My Children" />
         <Tile href="/students" icon="🎓" label="Core Data" />
         <Tile href="/behaviour" icon="⭐" label="Behaviour" />
         <Tile href="/attendance" icon="✅" label="Attendance" />
