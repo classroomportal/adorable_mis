@@ -11,19 +11,25 @@ function StudentsList() {
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [formFilter, setFormFilter] = useState('');
-  const [years, setYears] = useState([]);
-  const [forms, setForms] = useState([]);
+  const [yearFormPairs, setYearFormPairs] = useState([]); // [{year_group, form_class}]
 
   // On mount, only fetch the small distinct year/form lists needed to
   // populate the filter dropdowns — not the full student list or photos.
   useEffect(() => {
     async function loadFilterOptions() {
       const { data } = await supabase.from('student_summary').select('year_group, form_class');
-      setYears([...new Set((data || []).map((s) => s.year_group))].sort());
-      setForms([...new Set((data || []).map((s) => s.form_class))].filter(Boolean).sort());
+      setYearFormPairs(data || []);
     }
     loadFilterOptions();
   }, []);
+
+  const years = [...new Set(yearFormPairs.map((s) => s.year_group))].sort((a, b) => a - b);
+  // Form class options narrow to whatever Year group is currently selected.
+  const forms = [...new Set(
+    yearFormPairs
+      .filter((s) => !yearFilter || String(s.year_group) === yearFilter)
+      .map((s) => s.form_class)
+  )].filter(Boolean).sort();
 
   async function loadStudents() {
     setLoading(true);
@@ -63,7 +69,7 @@ function StudentsList() {
         </label>
         <label>
           Year group
-          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+          <select value={yearFilter} onChange={(e) => { setYearFilter(e.target.value); setFormFilter(''); }}>
             <option value="">All</option>
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
