@@ -13,6 +13,9 @@ function ParentPortalInner() {
   const [results, setResults] = useState([]);
   const [targets, setTargets] = useState([]);
   const [behaviour, setBehaviour] = useState([]);
+  const [feeTerm, setFeeTerm] = useState(null);
+  const [feeLineItems, setFeeLineItems] = useState([]);
+  const [feePayments, setFeePayments] = useState([]);
 
   // A parent login already has profile.parent_id set. A staff member who is
   // also a parent doesn't — fall back to matching their login email against
@@ -56,6 +59,37 @@ function ParentPortalInner() {
       setTargets(tg || []);
       const { data: b } = await supabase.from('behaviour_events').select('*').eq('student_id', selectedId).order('event_date', { ascending: false });
       setBehaviour(b || []);
+
+      const { data: term } = await supabase.from('fee_terms').select('id, name, is_current').eq('is_current', true).maybeSingle();
+      setFeeTerm(term || null);
+      if (term) {
+        const { data: invoice } = await supabase
+          .from('student_invoices')
+          .select('id, status')
+          .eq('student_id', selectedId)
+          .eq('term_id', term.id)
+          .maybeSingle();
+        if (invoice) {
+          const [{ data: items }, { data: pays }] = await Promise.all([
+            supabase
+              .from('invoice_line_items')
+              .select('id, description, amount, fee_items(name)')
+              .eq('invoice_id', invoice.id)
+              .order('created_at'),
+            supabase
+              .from('fee_payments')
+              .select('id, amount, method, paid_date')
+              .eq('invoice_id', invoice.id)
+              .order('paid_date', { ascending: false }),
+          ]);
+          setFeeLineItems((items || []).map((li) => ({ ...li, status: invoice.status })));
+          setFeePayments(pays || []);
+        } else {
+          setFeeLineItems([]);
+          setFeePayments([]);
+        }
+      }
+
     }
     loadChildData();
   }, [selectedId]);
@@ -85,6 +119,77 @@ function ParentPortalInner() {
         <>
           <div className="card">
             <TranscriptDownload studentId={selectedId} />
+          </div>
+
+          <div className="card">
+            <h2>Fees{feeTerm ? ` — ${feeTerm.name}` : ''}</h2>
+            {feeLineItems.length === 0 ? (
+              <p>No invoice available yet for this term.</p>
+            ) : (
+              (() => {
+                const totalDue = feeLineItems.reduce((sum, li) => sum + Number(li.amount), 0);
+                const totalPaid = feePayments.reduce((sum, p) => sum + Number(p.amount), 0);
+                const nowDue = totalDue - totalPaid;
+                const status = feeLineItems[0]?.status;
+                return (
+                  <>
+                    <div className="table-scroll">
+                      <table>
+                        <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+                        <tbody>
+                          {feeLineItems.map((li) => (
+                            <tr key={li.id}>
+                              <td>{li.description || li.fee_items?.name}</td>
+                              <td>₦{Number(li.amount).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Total</span>
+                        <span>₦{totalDue.toLocaleString()}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Paid</span>
+                        <span>₦{totalPaid.toLocaleString()}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                        <span>Now due</span>
+                        <span>₦{nowDue.toLocaleString()}</span>
+                      </div>
+                      {status && (
+                        <span className={`badge ${status === 'paid' ? 'badge-positive' : 'badge-negative'}`} style={{ marginTop: '0.35rem', width: 'fit-content' }}>
+                          {status}
+                        </span>
+                      )}
+                    </div>
+
+                    {feePayments.length > 0 && (
+                      <>
+                        <h3 style={{ marginTop: '1rem' }}>Payment history</h3>
+                        <div className="table-scroll">
+                          <table>
+                            <thead><tr><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
+                            <tbody>
+                              {feePayments.map((p) => (
+                                <tr key={p.id}>
+                                  <td>{p.paid_date}</td>
+                                  <td>₦{Number(p.amount).toLocaleString()}</td>
+                                  <td>{p.method}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()
+            )}
           </div>
 
           <div className="card">
