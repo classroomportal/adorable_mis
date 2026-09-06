@@ -76,10 +76,12 @@ const TABS = [
     render: () => (
       <Section accent="family">
         <Tile href="/bursar/fee-batches" icon="➕" label="Add a Charge" />
+        <Tile href="/bursar/fee-items" icon="🏷️" label="Fee Items (Prices)" />
         <Tile href="/bursar/generate-invoices" icon="🧾" label="Allocate Same Amount to a Year" />
         <Tile href="/bursar/payments" icon="💰" label="Record a Payment" />
         <Tile href="/bursar/fees-table" icon="📊" label="All Students (Table)" />
         <Tile href="/bursar/debtors" icon="📋" label="Debtors List" />
+        <Tile href="/bursar/audit" icon="🕵️" label="Audit" />
         <Tile href="/smt/fees-dashboard" icon="📈" label="SMT Dashboard" />
       </Section>
     ),
