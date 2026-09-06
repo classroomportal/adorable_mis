@@ -75,10 +75,7 @@ const TABS = [
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family', adminOnly: true,
     render: () => (
       <Section accent="family">
-        <div className="dash-tile" style={{ cursor: 'default', opacity: 0.7 }}>
-          <span className="dash-tile-icon-badge"><span className="dash-tile-icon">🚧</span></span>
-          <span>Coming soon</span>
-        </div>
+        <Tile href="/bursar/fee-batches" icon="➕" label="Add a Charge" />
       </Section>
     ),
   },
