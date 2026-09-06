@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
+import { generateInvoicePdfForStudent } from '../../../lib/generateInvoicePdf';
 
 const STATUS_STYLES = {
   paid: 'bg-green-50 text-green-700 border-green-200',
@@ -231,6 +232,14 @@ function RecordPaymentInner() {
                   {invoice.status}
                 </span>
               </div>
+
+              <button
+                type="button"
+                onClick={() => generateInvoicePdfForStudent(selectedStudent.student_id, Number(termId))}
+                className="text-sm px-3 py-1.5 rounded-lg border border-neutral-300 hover:bg-neutral-50"
+              >
+                Download PDF
+              </button>
 
               <ul className="divide-y divide-neutral-100 text-sm">
                 {lineItems.map((li) => (

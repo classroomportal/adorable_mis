@@ -82,7 +82,7 @@ function GenerateInvoicesInner() {
 
   return (
     <div>
-      <h1>Generate Invoices by Year Group</h1>
+      <h1>Allocate Same Amount to a Year</h1>
       <p style={{ color: '#666', fontSize: '0.9rem' }}>
         Set a different amount per year group for one fee item and apply it to every active
         student in that year group in one go. Runs the same charge-batch logic as the single

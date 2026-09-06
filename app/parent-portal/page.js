@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
 import TranscriptDownload from '../components/TranscriptDownload';
+import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 
 function ParentPortalInner() {
   const { profile } = useAuth();
@@ -180,6 +181,16 @@ function ParentPortalInner() {
                       </span>
                     )}
                   </summary>
+
+                  {feeLineItems.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => generateInvoicePdfForStudent(selectedId, feeTerm.id)}
+                      style={{ marginTop: '0.5rem' }}
+                    >
+                      Download PDF
+                    </button>
+                  )}
 
                   {feeLineItems.length === 0 ? (
                     <p>No invoice available yet for this term.</p>
