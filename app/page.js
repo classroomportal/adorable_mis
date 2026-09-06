@@ -76,6 +76,7 @@ const TABS = [
     render: () => (
       <Section accent="family">
         <Tile href="/bursar/fee-batches" icon="➕" label="Add a Charge" />
+        <Tile href="/bursar/payments" icon="💰" label="Record a Payment" />
       </Section>
     ),
   },
