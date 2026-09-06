@@ -122,77 +122,6 @@ function ParentPortalInner() {
           </div>
 
           <div className="card">
-            <h2>Fees{feeTerm ? ` — ${feeTerm.name}` : ''}</h2>
-            {feeLineItems.length === 0 ? (
-              <p>No invoice available yet for this term.</p>
-            ) : (
-              (() => {
-                const totalDue = feeLineItems.reduce((sum, li) => sum + Number(li.amount), 0);
-                const totalPaid = feePayments.reduce((sum, p) => sum + Number(p.amount), 0);
-                const nowDue = totalDue - totalPaid;
-                const status = feeLineItems[0]?.status;
-                return (
-                  <>
-                    <div className="table-scroll">
-                      <table>
-                        <thead><tr><th>Item</th><th>Amount</th></tr></thead>
-                        <tbody>
-                          {feeLineItems.map((li) => (
-                            <tr key={li.id}>
-                              <td>{li.description || li.fee_items?.name}</td>
-                              <td>₦{Number(li.amount).toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Total</span>
-                        <span>₦{totalDue.toLocaleString()}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Paid</span>
-                        <span>₦{totalPaid.toLocaleString()}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                        <span>Now due</span>
-                        <span>₦{nowDue.toLocaleString()}</span>
-                      </div>
-                      {status && (
-                        <span className={`badge ${status === 'paid' ? 'badge-positive' : 'badge-negative'}`} style={{ marginTop: '0.35rem', width: 'fit-content' }}>
-                          {status}
-                        </span>
-                      )}
-                    </div>
-
-                    {feePayments.length > 0 && (
-                      <>
-                        <h3 style={{ marginTop: '1rem' }}>Payment history</h3>
-                        <div className="table-scroll">
-                          <table>
-                            <thead><tr><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
-                            <tbody>
-                              {feePayments.map((p) => (
-                                <tr key={p.id}>
-                                  <td>{p.paid_date}</td>
-                                  <td>₦{Number(p.amount).toLocaleString()}</td>
-                                  <td>{p.method}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </>
-                    )}
-                  </>
-                );
-              })()
-            )}
-          </div>
-
-          <div className="card">
             <h2>Results vs Target</h2>
             {targets.length === 0 ? <p>No target grades set yet.</p> : (
               <div className="table-scroll"><table>
@@ -231,6 +160,84 @@ function ParentPortalInner() {
               </table></div>
             )}
           </div>
+
+          {(() => {
+            const totalDue = feeLineItems.reduce((sum, li) => sum + Number(li.amount), 0);
+            const totalPaid = feePayments.reduce((sum, p) => sum + Number(p.amount), 0);
+            const nowDue = totalDue - totalPaid;
+            const status = feeLineItems[0]?.status;
+            const paidInFull = status === 'paid';
+
+            return (
+              <div className="card">
+                <details open={!paidInFull}>
+                  <summary style={{ cursor: 'pointer', listStyle: 'none' }}>
+                    <h2 style={{ display: 'inline' }}>Fees{feeTerm ? ` — ${feeTerm.name}` : ''}</h2>
+                    {status && (
+                      <span className={`badge ${status === 'paid' ? 'badge-positive' : 'badge-negative'}`} style={{ marginLeft: '0.6rem' }}>
+                        {status}
+                      </span>
+                    )}
+                  </summary>
+
+                  {feeLineItems.length === 0 ? (
+                    <p>No invoice available yet for this term.</p>
+                  ) : (
+                    <>
+                      <div className="table-scroll">
+                        <table>
+                          <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+                          <tbody>
+                            {feeLineItems.map((li) => (
+                              <tr key={li.id}>
+                                <td>{li.description || li.fee_items?.name}</td>
+                                <td>₦{Number(li.amount).toLocaleString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Total</span>
+                          <span>₦{totalDue.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Paid</span>
+                          <span>₦{totalPaid.toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                          <span>Now due</span>
+                          <span>₦{nowDue.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {feePayments.length > 0 && (
+                        <>
+                          <h3 style={{ marginTop: '1rem' }}>Payment history</h3>
+                          <div className="table-scroll">
+                            <table>
+                              <thead><tr><th>Date</th><th>Amount</th><th>Method</th></tr></thead>
+                              <tbody>
+                                {feePayments.map((p) => (
+                                  <tr key={p.id}>
+                                    <td>{p.paid_date}</td>
+                                    <td>₦{Number(p.amount).toLocaleString()}</td>
+                                    <td>{p.method}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </details>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>
