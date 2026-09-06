@@ -15,6 +15,7 @@ const ROLE_LABELS = {
   bursar: 'Bursar',
   school_office: 'School Office',
   admissions: 'Admissions',
+  tuckshop: 'Tuckshop',
   head_of_department: 'Head of Dept',
 };
 const ALL_ROLES = Object.keys(ROLE_LABELS);

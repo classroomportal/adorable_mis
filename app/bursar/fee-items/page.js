@@ -1,12 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+
+const BANDS = ['A', 'B', 'C', 'Scholarship'];
 
 function FeeItemsInner() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bandAmounts, setBandAmounts] = useState({}); // fee_item_id -> { A: amount, B: ..., ... }
+  const [bandEdits, setBandEdits] = useState({}); // fee_item_id -> { band: value }
+  const [savingBandId, setSavingBandId] = useState(null);
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -26,6 +31,14 @@ function FeeItemsInner() {
     setLoading(true);
     const { data } = await supabase.from('fee_items').select('id, name, category, is_optional, default_amount').order('name');
     setItems(data ?? []);
+
+    const { data: bandRows } = await supabase.from('fee_item_band_amounts').select('fee_item_id, band, amount');
+    const map = {};
+    (bandRows || []).forEach((r) => {
+      if (!map[r.fee_item_id]) map[r.fee_item_id] = {};
+      map[r.fee_item_id][r.band] = r.amount;
+    });
+    setBandAmounts(map);
     setLoading(false);
   }
 
@@ -51,6 +64,40 @@ function FeeItemsInner() {
       await load();
     }
     setAdding(false);
+  }
+
+  function bandEditValue(itemId, band) {
+    return bandEdits[itemId]?.[band] !== undefined ? bandEdits[itemId][band] : (bandAmounts[itemId]?.[band] ?? '');
+  }
+
+  function setBandEdit(itemId, band, value) {
+    setBandEdits((prev) => ({ ...prev, [itemId]: { ...prev[itemId], [band]: value } }));
+  }
+
+  async function enableBandPricing(item) {
+    const base = item.default_amount || 0;
+    const rows = BANDS.map((band) => ({ fee_item_id: item.id, band, amount: base }));
+    await supabase.from('fee_item_band_amounts').upsert(rows, { onConflict: 'fee_item_id,band' });
+    await load();
+  }
+
+  async function saveBandPricing(item) {
+    setSavingBandId(item.id);
+    const edits = bandEdits[item.id] || {};
+    const rows = BANDS.map((band) => ({
+      fee_item_id: item.id,
+      band,
+      amount: Number(edits[band] !== undefined ? edits[band] : bandAmounts[item.id]?.[band] ?? 0),
+    }));
+    await supabase.from('fee_item_band_amounts').upsert(rows, { onConflict: 'fee_item_id,band' });
+    setBandEdits((prev) => { const next = { ...prev }; delete next[item.id]; return next; });
+    await load();
+    setSavingBandId(null);
+  }
+
+  async function disableBandPricing(item) {
+    await supabase.from('fee_item_band_amounts').delete().eq('fee_item_id', item.id);
+    await load();
   }
 
   function edit(id, field, value) {
@@ -117,40 +164,74 @@ function FeeItemsInner() {
             <tbody>
               {items.map((item) => {
                 const dirty = !!edits[item.id];
+                const hasBands = !!bandAmounts[item.id];
                 return (
-                  <tr key={item.id}>
-                    <td>{item.name}</td>
-                    <td>
-                      <input
-                        value={currentValue(item, 'category') || ''}
-                        onChange={(e) => edit(item.id, 'category', e.target.value)}
-                        style={{ width: '9rem' }}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min="0"
-                        value={currentValue(item, 'default_amount') ?? ''}
-                        onChange={(e) => edit(item.id, 'default_amount', e.target.value)}
-                        style={{ width: '8rem' }}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={!!currentValue(item, 'is_optional')}
-                        onChange={(e) => edit(item.id, 'is_optional', e.target.checked)}
-                      />
-                    </td>
-                    <td>
-                      {dirty && (
-                        <button onClick={() => saveItem(item)} disabled={savingId === item.id}>
-                          {savingId === item.id ? 'Saving…' : 'Save'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                  <React.Fragment key={item.id}>
+                    <tr>
+                      <td>{item.name}</td>
+                      <td>
+                        <input
+                          value={currentValue(item, 'category') || ''}
+                          onChange={(e) => edit(item.id, 'category', e.target.value)}
+                          style={{ width: '9rem' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          value={currentValue(item, 'default_amount') ?? ''}
+                          onChange={(e) => edit(item.id, 'default_amount', e.target.value)}
+                          style={{ width: '8rem' }}
+                          disabled={hasBands}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={!!currentValue(item, 'is_optional')}
+                          onChange={(e) => edit(item.id, 'is_optional', e.target.checked)}
+                        />
+                      </td>
+                      <td>
+                        {dirty && (
+                          <button onClick={() => saveItem(item)} disabled={savingId === item.id}>
+                            {savingId === item.id ? 'Saving…' : 'Save'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    <tr key={`${item.id}-bands`}>
+                      <td colSpan={5} style={{ background: '#FAF9F6', padding: '0.5rem 0.75rem' }}>
+                        {!hasBands ? (
+                          <button onClick={() => enableBandPricing(item)} style={{ fontSize: '0.85rem' }}>
+                            This item varies by band — set per-band prices
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {BANDS.map((band) => (
+                              <label key={band} style={{ fontSize: '0.85rem' }}>
+                                Band {band}
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={bandEditValue(item.id, band)}
+                                  onChange={(e) => setBandEdit(item.id, band, e.target.value)}
+                                  style={{ width: '7rem', marginLeft: '0.3rem' }}
+                                />
+                              </label>
+                            ))}
+                            <button onClick={() => saveBandPricing(item)} disabled={savingBandId === item.id}>
+                              {savingBandId === item.id ? 'Saving…' : 'Save band prices'}
+                            </button>
+                            <button onClick={() => disableBandPricing(item)} style={{ color: '#a3232c' }}>
+                              Remove band pricing
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 );
               })}
             </tbody>
