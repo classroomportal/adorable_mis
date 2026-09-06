@@ -36,6 +36,7 @@ none fit — no special format required beyond a markdown checkbox.
 - [ ] Decide how `late` attendance status should be handled in reporting
 - [ ] Compound block UI: auto-assign sibling classes
 - [ ] Link the three remaining staff with missing staff codes
+- [ ] Dedicated "Top Up Tuckshop Balance" button for bursar (currently uses the general Add a Charge screen with the "Tuck Shop Recharge" fee item — works, but a direct shortcut would be quicker)
 
 ## Technical risk (not yet audited)
 

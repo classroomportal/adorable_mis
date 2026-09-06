@@ -23,7 +23,7 @@ function GenerateInvoicesInner() {
 
   useEffect(() => {
     (async () => {
-      const { data: items } = await supabase.from('fee_items').select('id, name').order('name');
+      const { data: items } = await supabase.from('fee_items').select('id, name').or('category.is.null,category.neq.Tuckshop').order('name');
       setFeeItems(items ?? []);
       const { data: t } = await supabase.from('fee_terms').select('id, name, is_current').order('id', { ascending: false });
       setTerms(t ?? []);

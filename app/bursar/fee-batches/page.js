@@ -35,7 +35,7 @@ function FeeChargeBatchInner() {
   useEffect(() => {
     (async () => {
       const [{ data: items }, { data: termRows }, { data: batches }] = await Promise.all([
-        supabase.from('fee_items').select('id, name, category, is_optional, default_amount').order('name'),
+        supabase.from('fee_items').select('id, name, category, is_optional, default_amount').or('category.is.null,category.neq.Tuckshop').order('name'),
         supabase.from('fee_terms').select('id, name, is_current').order('id', { ascending: false }),
         supabase
           .from('fee_charge_batches')
