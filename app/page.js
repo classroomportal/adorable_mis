@@ -72,7 +72,7 @@ const TABS = [
     ),
   },
   {
-    key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family', adminOnly: true,
+    key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family', adminOnly: true, roles: ['bursar', 'smt'],
     render: () => (
       <Section accent="family">
         <Tile href="/bursar/fee-batches" icon="➕" label="Add a Charge" />
@@ -84,9 +84,17 @@ const TABS = [
         <Tile href="/bursar/fees-table" icon="📊" label="All Students (Table)" />
         <Tile href="/bursar/debtors" icon="📋" label="Debtors List" />
         <Tile href="/bursar/audit" icon="🕵️" label="Audit" />
-        <Tile href="/tuckshop/purchase" icon="🍭" label="Tuckshop Purchase" />
-        <Tile href="/tuckshop/items" icon="🧺" label="Tuckshop Items" />
         <Tile href="/smt/fees-dashboard" icon="📈" label="SMT Dashboard" />
+      </Section>
+    ),
+  },
+  {
+    key: 'tuckshop', label: 'Tuckshop', icon: '🍭', accent: 'family', adminOnly: true, roles: ['tuckshop', 'bursar'],
+    render: () => (
+      <Section accent="family">
+        <Tile href="/tuckshop/purchase" icon="🛒" label="Sell Items" />
+        <Tile href="/tuckshop/preorders" icon="📝" label="Preorders" />
+        <Tile href="/tuckshop/items" icon="🧺" label="Items & Prices" />
       </Section>
     ),
   },
@@ -117,7 +125,7 @@ const TABS = [
 ];
 
 export default function Home() {
-  const { session, profile, isPastoralOrSmt } = useAuth();
+  const { session, profile, isPastoralOrSmt, staffRoles } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const [showSplash, setShowSplash] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
@@ -167,7 +175,9 @@ export default function Home() {
     );
   }
 
-  const visibleTabs = TABS.filter((t) => !t.adminOnly || isAdmin);
+  const visibleTabs = TABS.filter((t) =>
+    !t.adminOnly || isAdmin || (t.roles && t.roles.some((r) => (staffRoles || []).includes(r)))
+  );
   const active = visibleTabs.find((t) => t.key === activeTab) || visibleTabs[0];
 
   return (

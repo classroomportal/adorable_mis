@@ -17,6 +17,8 @@ function ParentPortalInner() {
   const [feeTerm, setFeeTerm] = useState(null);
   const [feeLineItems, setFeeLineItems] = useState([]);
   const [feePayments, setFeePayments] = useState([]);
+  const [tuckshopBalance, setTuckshopBalance] = useState(null);
+  const [tuckshopHistory, setTuckshopHistory] = useState([]);
 
   // A parent login already has profile.parent_id set. A staff member who is
   // also a parent doesn't — fall back to matching their login email against
@@ -92,6 +94,15 @@ function ParentPortalInner() {
         }
       }
 
+      const { data: bal } = await supabase.rpc('get_tuckshop_balance', { p_student_id: selectedId });
+      setTuckshopBalance(bal);
+      const { data: hist } = await supabase
+        .from('tuckshop_purchases')
+        .select('id, purchase_date, total_amount')
+        .eq('student_id', selectedId)
+        .order('purchase_date', { ascending: false })
+        .limit(10);
+      setTuckshopHistory(hist || []);
     }
     loadChildData();
   }, [selectedId]);
@@ -250,6 +261,29 @@ function ParentPortalInner() {
               </div>
             );
           })()}
+
+          {tuckshopHistory.length > 0 && (
+            <div className="card">
+              <h2>Tuckshop</h2>
+              <p>
+                Balance:{' '}
+                <span style={{ fontWeight: 700, color: (tuckshopBalance ?? 0) < 0 ? '#a3232c' : '#1a7a3d' }}>
+                  {tuckshopBalance === null ? '…' : `₦${Number(tuckshopBalance).toLocaleString()}`}
+                </span>
+              </p>
+              <h3>Recent purchases</h3>
+              <div className="table-scroll">
+                <table>
+                  <thead><tr><th>Date</th><th>Amount</th></tr></thead>
+                  <tbody>
+                    {tuckshopHistory.map((h) => (
+                      <tr key={h.id}><td>{h.purchase_date}</td><td>₦{Number(h.total_amount).toLocaleString()}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
