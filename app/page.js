@@ -77,6 +77,7 @@ const TABS = [
       <Section accent="family">
         <Tile href="/bursar/fee-batches" icon="➕" label="Add a Charge" />
         <Tile href="/bursar/payments" icon="💰" label="Record a Payment" />
+        <Tile href="/bursar/fees-table" icon="📊" label="All Students (Table)" />
       </Section>
     ),
   },

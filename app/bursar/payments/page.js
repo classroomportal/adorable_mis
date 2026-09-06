@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
@@ -17,6 +18,8 @@ function naira(n) {
 
 function RecordPaymentInner() {
   const { session } = useAuth();
+  const searchParams = useSearchParams();
+  const presetStudentId = searchParams.get('student');
 
   const [terms, setTerms] = useState([]);
   const [termId, setTermId] = useState('');
@@ -45,6 +48,22 @@ function RecordPaymentInner() {
       if (current) setTermId(String(current.id));
     })();
   }, []);
+
+  useEffect(() => {
+    if (!presetStudentId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('students')
+        .select('student_id, first_name, last_name, form_class, year_group')
+        .eq('student_id', Number(presetStudentId))
+        .maybeSingle();
+      if (data) {
+        setSelectedStudent(data);
+        setStudentQuery(`${data.first_name} ${data.last_name}`);
+      }
+    })();
+  }, [presetStudentId]);
+
 
   useEffect(() => {
     if (studentQuery.trim().length < 2) {
@@ -340,7 +359,9 @@ function RecordPaymentInner() {
 export default function RecordPaymentPage() {
   return (
     <RequireAuth>
-      <RecordPaymentInner />
+      <Suspense fallback={<p className="p-5 text-sm text-neutral-500">Loading…</p>}>
+        <RecordPaymentInner />
+      </Suspense>
     </RequireAuth>
   );
 }
