@@ -60,9 +60,10 @@ function ParentPortalInner() {
       const { data: b } = await supabase.from('behaviour_events').select('*').eq('student_id', selectedId).order('event_date', { ascending: false });
       setBehaviour(b || []);
 
-      const { data: term } = await supabase.from('fee_terms').select('id, name, is_current').eq('is_current', true).maybeSingle();
-      setFeeTerm(term || null);
-      if (term) {
+      const { data: term } = await supabase.from('fee_terms').select('id, name, is_current, published_to_parents').eq('is_current', true).maybeSingle();
+      const visibleTerm = term?.published_to_parents ? term : null;
+      setFeeTerm(visibleTerm);
+      if (visibleTerm) {
         const { data: invoice } = await supabase
           .from('student_invoices')
           .select('id, status')
@@ -161,7 +162,7 @@ function ParentPortalInner() {
             )}
           </div>
 
-          {(() => {
+          {feeTerm && (() => {
             const totalDue = feeLineItems.reduce((sum, li) => sum + Number(li.amount), 0);
             const totalPaid = feePayments.reduce((sum, p) => sum + Number(p.amount), 0);
             const nowDue = totalDue - totalPaid;
