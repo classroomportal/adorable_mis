@@ -50,6 +50,19 @@ const TABS = [
     ),
   },
   {
+    key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students', adminOnly: true, roles: ['pastoral', 'houseparent', 'smt'],
+    render: () => (
+      <Section accent="students">
+        <Tile href="/behaviour" icon="⭐" label="Behaviour Log" />
+        <Tile href="/detention" icon="📋" label="Detentions" />
+        <Tile href="/certificates" icon="🏆" label="Certificates" />
+        <Tile href="/pastoral/registers-not-done" icon="⏱️" label="Registers Not Done" />
+        <Tile href="/appeals" icon="⚖️" label="Behaviour Appeals" />
+        <Tile href="/staff/mentor-groups" icon="🧑‍🏫" label="Mentor Groups" />
+      </Section>
+    ),
+  },
+  {
     key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school', adminOnly: true,
     render: () => (
       <Section accent="school">

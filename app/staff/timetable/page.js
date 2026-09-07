@@ -15,6 +15,7 @@ function StaffTimetable() {
   const [periods, setPeriods] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [myMissingCount, setMyMissingCount] = useState(0);
 
   useEffect(() => {
     async function loadStatic() {
@@ -91,6 +92,20 @@ function StaffTimetable() {
 
   const isOwnTimetable = profile?.staff_id && selectedStaffId === profile.staff_id;
 
+  useEffect(() => {
+    async function loadMyMissing() {
+      if (!isOwnTimetable) { setMyMissingCount(0); return; }
+      const { data } = await supabase
+        .from('registers_not_done')
+        .select('slot_id')
+        .eq('staff_id', profile.staff_id);
+      setMyMissingCount((data || []).length);
+    }
+    loadMyMissing();
+    const interval = setInterval(loadMyMissing, 60000);
+    return () => clearInterval(interval);
+  }, [isOwnTimetable, profile?.staff_id]);
+
   return (
     <div>
       <h1>Timetable</h1>
@@ -117,6 +132,12 @@ function StaffTimetable() {
           </button>
         )}
       </div>
+
+      {isOwnTimetable && myMissingCount > 0 && (
+        <div className="card" style={{ marginBottom: '1rem', borderColor: '#c0392b' }}>
+          <strong>{myMissingCount} of your registers {myMissingCount === 1 ? 'is' : 'are'} overdue</strong> — tap the class below to take it.
+        </div>
+      )}
 
       {loading ? (
         <p>Loading...</p>
