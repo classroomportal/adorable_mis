@@ -3,7 +3,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 
-const MILESTONES = [1000, 500, 100]; // check highest first
+const MILESTONES = [
+  { value: 500, label: 'Gold' },
+  { value: 200, label: 'Silver' },
+  { value: 100, label: 'Bronze' },
+]; // check highest first
 
 function CertificatesInner() {
   const [pending, setPending] = useState([]);
@@ -19,7 +23,7 @@ function CertificatesInner() {
 
     const totals = {};
     (events || []).forEach((e) => {
-      if (e.type !== 'positive' || !e.points) return;
+      if (!e.points) return;
       totals[e.student_id] = (totals[e.student_id] || 0) + e.points;
     });
     const awardedSet = new Set((already || []).map((a) => `${a.student_id}-${a.milestone}`));
@@ -28,8 +32,8 @@ function CertificatesInner() {
     const pend = [];
     Object.entries(totals).forEach(([sid, total]) => {
       for (const m of MILESTONES) {
-        if (total >= m && !awardedSet.has(`${sid}-${m}`)) {
-          pend.push({ student_id: Number(sid), student: studentMap[sid], milestone: m, total });
+        if (total >= m.value && !awardedSet.has(`${sid}-${m.value}`)) {
+          pend.push({ student_id: Number(sid), student: studentMap[sid], milestone: m.value, tier: m.label, total });
           break; // only the highest uncollected milestone per student
         }
       }
@@ -60,18 +64,18 @@ function CertificatesInner() {
     <div>
       <div className="no-print">
         <h1>Certificates</h1>
-        <p>Awarded automatically at 100, 500 and 1000 cumulative positive behaviour points.</p>
+        <p>Awarded at 100 (Bronze), 200 (Silver) and 500 (Gold) cumulative behaviour points — positive and negative combined.</p>
 
         <div className="card">
           <h2>Ready to award ({pending.length})</h2>
           {loading ? <p>Loading...</p> : pending.length === 0 ? <p>Nobody has newly crossed a milestone.</p> : (
             <div className="table-scroll"><table>
-              <thead><tr><th>Student</th><th>Milestone</th><th>Current total</th><th></th></tr></thead>
+              <thead><tr><th>Student</th><th>Tier</th><th>Current total</th><th></th></tr></thead>
               <tbody>
                 {pending.map((row) => (
                   <tr key={`${row.student_id}-${row.milestone}`}>
                     <td>{row.student?.first_name} {row.student?.last_name}</td>
-                    <td>{row.milestone}</td>
+                    <td>{row.tier} ({row.milestone})</td>
                     <td>{row.total}</td>
                     <td style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => doPrint(row)}>Print certificate</button>
@@ -110,7 +114,7 @@ function CertificatesInner() {
             <h1 className="cert-title">Certificate of Achievement</h1>
             <p className="cert-body">This certificate is proudly awarded to</p>
             <p className="cert-name">{printing.student?.first_name} {printing.student?.last_name}</p>
-            <p className="cert-body">for reaching <strong>{printing.milestone} positive behaviour points</strong></p>
+            <p className="cert-body">for reaching <strong>{printing.milestone} behaviour points ({printing.tier})</strong></p>
             <p className="cert-date">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
           <div className="no-print" style={{ marginTop: '1rem', textAlign: 'center' }}>
