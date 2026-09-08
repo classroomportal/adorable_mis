@@ -60,7 +60,7 @@ function StudentsList() {
   return (
     <div>
       <h1>Students</h1>
-      <p><a href="/students/new">→ Add a new student</a> &nbsp;|&nbsp; <a href="/students/import">→ Bulk import students from CSV</a> &nbsp;|&nbsp; <a href="/assessments/import">→ Import CAT4/NGRT predictive data</a> &nbsp;|&nbsp; <a href="/parents/import">→ Import parents from CSV</a> &nbsp;|&nbsp; <a href="/students/photos/import">→ Import student photos</a></p>
+      <p><a href="/students/new">+ Add a new student</a></p>
 
       <form onSubmit={(e) => { e.preventDefault(); loadStudents(); }}>
         <label>

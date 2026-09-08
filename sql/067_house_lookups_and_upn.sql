@@ -28,9 +28,11 @@ ALTER TABLE sports_houses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY read_all_sports_houses ON sports_houses FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY admin_write_sports_houses ON sports_houses FOR ALL USING (is_admin()) WITH CHECK (is_admin());
 
--- Auto-generated internal UPN for newly created students (format ABC-YYYY-NNNN).
--- Distinct from real imported UPNs (which follow the UK-style pattern like Q703939825091)
--- so it's obvious at a glance which students got a real UPN vs an internal placeholder.
+-- Auto-generated UPN for new students, matching the real UPN format already
+-- in use (e.g. M703939825141): 1 letter + school code 7039398 + 5 digits
+-- (2-digit year + 3-digit sequence). These children don't have a real UK-issued
+-- UPN since they didn't start school there, so we mint one in the same shape
+-- when they join us.
 CREATE SEQUENCE IF NOT EXISTS student_upn_seq START 1;
 
 CREATE OR REPLACE FUNCTION generate_next_upn() RETURNS TEXT AS $$
@@ -38,7 +40,7 @@ DECLARE
   candidate TEXT;
 BEGIN
   LOOP
-    candidate := 'ABC-' || to_char(current_date, 'YYYY') || '-' || lpad(nextval('student_upn_seq')::text, 4, '0');
+    candidate := 'Z7039398' || to_char(current_date, 'YY') || lpad((nextval('student_upn_seq') % 1000)::text, 3, '0');
     EXIT WHEN NOT EXISTS (SELECT 1 FROM students WHERE upn = candidate);
   END LOOP;
   RETURN candidate;
