@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import SplashScreen from './components/SplashScreen';
 
 function Tile({ href, icon, label }) {
@@ -11,6 +12,58 @@ function Tile({ href, icon, label }) {
       </span>
       <span>{label}</span>
     </a>
+  );
+}
+
+function ComingSoonTile({ icon, label }) {
+  return (
+    <div className="dash-tile dash-tile-soon" title="Coming soon">
+      <span className="dash-tile-icon-badge">
+        <span className="dash-tile-icon">{icon}</span>
+      </span>
+      <span>{label}</span>
+      <span className="dash-tile-soon-badge">Coming soon</span>
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon, accent }) {
+  return (
+    <div className={`stat-card accent-${accent}`}>
+      <div className="stat-card-icon">{icon}</div>
+      <div>
+        <div className="stat-card-value">{value ?? '—'}</div>
+        <div className="stat-card-label">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function DashboardStats() {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    async function load() {
+      const [{ count: studentCount }, { count: staffCount }, { data: alerts }] = await Promise.all([
+        supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('staff').select('staff_id', { count: 'exact', head: true }),
+        supabase.from('behaviour_events').select('event_id').eq('type', 'negative').gte('event_date', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
+      ]);
+      setStats({
+        students: studentCount ?? 0,
+        staff: staffCount ?? 0,
+        alerts: (alerts || []).length,
+      });
+    }
+    load();
+  }, []);
+
+  return (
+    <div className="stat-card-row">
+      <StatCard label="Active students" value={stats?.students} icon="🎓" accent="myinfo" />
+      <StatCard label="Staff" value={stats?.staff} icon="🧑‍🏫" accent="school" />
+      <StatCard label="Behaviour alerts (7 days)" value={stats?.alerts} icon="⚠️" accent="students" />
+    </div>
   );
 }
 
@@ -59,6 +112,14 @@ const TABS = [
         <Tile href="/pastoral/registers-not-done" icon="⏱️" label="Registers Not Done" />
         <Tile href="/appeals" icon="⚖️" label="Behaviour Appeals" />
         <Tile href="/staff/mentor-groups" icon="🧑‍🏫" label="Mentor Groups" />
+      </Section>
+    ),
+  },
+  {
+    key: 'comms', label: 'Communication', icon: '💬', accent: 'family', adminOnly: true, roles: ['smt', 'pastoral', 'school_office'],
+    render: () => (
+      <Section accent="family">
+        <ComingSoonTile icon="📣" label="Send Announcements to Parents / Groups" />
       </Section>
     ),
   },
@@ -198,6 +259,8 @@ export default function Home() {
   return (
     <div>
       <h1>Adorable MIS</h1>
+
+      <DashboardStats />
 
       <div className="module-tabs">
         {visibleTabs.map((t) => (
