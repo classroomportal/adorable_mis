@@ -58,6 +58,18 @@ function StudentDetail() {
   const [blockSelections, setBlockSelections] = useState({}); // block_id -> class_id (current + edits)
   const [blockSaveStatus, setBlockSaveStatus] = useState(null);
   const [blocksError, setBlocksError] = useState(null);
+  const [boardingHouses, setBoardingHouses] = useState([]);
+  const [sportsHouses, setSportsHouses] = useState([]);
+
+  useEffect(() => {
+    async function loadLookups() {
+      const { data: bh } = await supabase.from('boarding_houses').select('name').order('name');
+      setBoardingHouses((bh || []).map((r) => r.name));
+      const { data: sh } = await supabase.from('sports_houses').select('name').order('name');
+      setSportsHouses((sh || []).map((r) => r.name));
+    }
+    loadLookups();
+  }, []);
 
   async function loadAll() {
     const { data: s, error: sErr } = await supabase
@@ -185,6 +197,7 @@ function StudentDetail() {
         upn: editForm.upn || null,
         boarding_house: editForm.boarding_house,
         boarding_room_number: editForm.boarding_room_number,
+        restaurant: editForm.restaurant,
         home_town: editForm.home_town,
         lga: editForm.lga,
         national_identity_number: editForm.national_identity_number,
@@ -370,6 +383,7 @@ function StudentDetail() {
                   <p><strong>Religion:</strong> {student.religion || '—'}</p>
                   <p><strong>Boarding house:</strong> {student.boarding_house || '—'}</p>
                   <p><strong>Boarding room number:</strong> {student.boarding_room_number || '—'}</p>
+                  <p><strong>Restaurant:</strong> {student.restaurant || '—'}</p>
                   <p><strong>Sports house:</strong> {student.sports_house || '—'}</p>
                   <p><strong>National identity number:</strong> {student.national_identity_number || '—'}</p>
                   <p><strong>NECO exam number:</strong> {student.neco_exam_number || '—'}</p>
@@ -441,13 +455,28 @@ function StudentDetail() {
               <input value={editForm.religion || ''} onChange={(e) => setEditForm({ ...editForm, religion: e.target.value })} />
             </label>
             <label>Boarding house
-              <input value={editForm.boarding_house || ''} onChange={(e) => setEditForm({ ...editForm, boarding_house: e.target.value })} />
+              <select value={editForm.boarding_house || ''} onChange={(e) => setEditForm({ ...editForm, boarding_house: e.target.value })}>
+                <option value="">—</option>
+                {boardingHouses.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
             </label>
             <label>Boarding room number
               <input value={editForm.boarding_room_number || ''} onChange={(e) => setEditForm({ ...editForm, boarding_room_number: e.target.value })} />
             </label>
             <label>Sports house
-              <input value={editForm.sports_house || ''} onChange={(e) => setEditForm({ ...editForm, sports_house: e.target.value })} />
+              <select value={editForm.sports_house || ''} onChange={(e) => setEditForm({ ...editForm, sports_house: e.target.value })}>
+                <option value="">—</option>
+                {sportsHouses.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </label>
+            <label>Restaurant
+              <select value={editForm.restaurant || ''} onChange={(e) => setEditForm({ ...editForm, restaurant: e.target.value })}>
+                <option value="">—</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
             </label>
             <label>National identity number
               <input value={editForm.national_identity_number || ''} onChange={(e) => setEditForm({ ...editForm, national_identity_number: e.target.value })} />

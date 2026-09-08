@@ -119,6 +119,7 @@ const TABS = [
         <Tile href="/staff/roles" icon="🧑‍🏫" label="Staff & Roles" />
         <Tile href="/staff/import-emails" icon="📧" label="Bulk Import Staff Emails" />
         <Tile href="/admin/permissions" icon="🔐" label="Permissions" />
+        <Tile href="/admin/lookups" icon="🏠" label="Lookups (Houses)" />
         <Tile href="/staff/welcome-emails" icon="✉️" label="Send Staff Welcome Emails" />
         <Tile href="/parents" icon="👪" label="Parents" />
         <Tile href="/parents/welcome-emails" icon="✉️" label="Send Parent Welcome Emails" />
