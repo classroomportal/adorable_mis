@@ -1,7 +1,7 @@
 # Adorable MIS — Schema Snapshot
 
 **Source:** live dump from Supabase project `drjtcegtucovhbyfdpbx`, pulled via `information_schema.columns`.
-**Captured:** 2026-09-03
+**Captured:** 2026-09-08
 **How to refresh:** re-run the dump query and paste the new CSV back to Claude with "update the schema snapshot."
 
 > This file is the shared reference. Keep it in the repo at `docs/schema-snapshot.md` and paste it (or link the repo) at the start of a session when you want Claude working from the real current structure instead of memory.
@@ -20,6 +20,10 @@ Primary entity. `student_id` (PK, int). Wide SIMS-aligned profile:
 - Pastoral/SEND flags: `fsm`, `eal`, `send`, `medical_notes`, `custom1`, `custom2`
 - `family_id` → `families`
 - `photo_base64` (student photo, stored inline on the row rather than in a storage bucket)
+- Fees/pastoral additions: `fee_band` (A/B/C/Scholarship, drives fee amounts — see Fees & billing below), `mentor_staff_id` → staff, `mentor_group_id` → mentor_groups
+
+### mentor_groups
+`mentor_group_id` (PK), `group_name`, `year_group`, `description`. Referenced by `students.mentor_group_id`.
 
 ### families
 `family_id` (PK), `family_name`. Groups sibling students for household-level views.
@@ -42,6 +46,21 @@ Join table. `student_id`, `parent_id`, `is_primary_contact` (bool). Composite PK
 
 ### profiles
 Auth-linked identity row. `id` (uuid, = `auth.users.id`), `email`, `role`, and nullable `staff_id` / `parent_id` / `student_id` — one profile type per login (staff, parent, or student portal account).
+
+### staff_roles (scoped access)
+`staff_id`, `role_name`, plus `scope_type` / `scope_value` — the general subject/department/house-scoped access pattern (e.g. Head of Department scoped to one department, Houseparent scoped to one house), superseding the old blanket per-role checks.
+
+### roles / resources / role_permissions
+Permissions model. `roles.role_name` (PK), `resources.resource_key` (PK) + `label` + `section` + `sort_order`, `role_permissions` joins the two. Backs `has_resource_access()` and `/admin/permissions`.
+
+### departments
+`department_name` (PK, text — no surrogate int id). Referenced by `subjects.department_name`.
+
+### house_assignments
+`house_assignment_id` (PK), `house_name`, `houseparent_staff_id` → staff. Maps a houseparent to a boarding house.
+
+### boarding_houses / sports_houses
+Simple lookups: `house_id` (PK), `name`. `students.boarding_house` / `students.sports_house` currently store the name as free text rather than an FK to these — worth reconciling.
 
 ---
 
@@ -69,6 +88,15 @@ Join table. `student_id`, `class_id`, `block_id`, `is_compound` (bool).
 ### terms
 `term_id` (PK), `term_name`, `start_date`, `end_date`.
 
+### subject_key_stages
+`id` (uuid PK), `subject_id` → subjects, `key_stage`. Drives strict key-stage subject filtering in transcripts/reporting.
+
+### subject_aliases
+`alias_name` (PK, text), `subject_id` → subjects. Maps import-source subject name variants onto a canonical subject.
+
+### registers_not_done / register_alerts
+Pastoral lateness tooling. `registers_not_done` is a view (`slot_id`, `staff_id`, `teacher_name`, `class_code`, `period_number`, `start_time`, `minutes_since_start`) surfacing periods where no register has been taken yet. `register_alerts` (`register_alert_id` PK, `timetable_slot_id`, `staff_id`, `period_date`, `minutes_late`, `resolved`, `created_at`) logs/tracks those as resolvable alerts.
+
 ---
 
 ## Behaviour
@@ -82,6 +110,12 @@ Lookup. `category_id` (PK), `name`, `type` (positive/negative), `default_points`
 ### behaviour_appeals
 `appeal_id` (PK), `event_id` → behaviour_events, `student_id`, `reason`, `status`, `created_at`, `reviewed_by`, `reviewed_at`, `resolution_notes`.
 Trigger: upheld appeal zeroes the linked event's points.
+
+### behaviour_event_audit
+`audit_id` (PK), `event_id` → behaviour_events, `changed_by` (uuid), `changed_at`, `old_values` / `new_values` (jsonb). Audit trail for edits to behaviour events.
+
+### detentions
+`detention_id` (PK), `student_id`, `behaviour_event_id` (nullable → behaviour_events), `detention_date`, `status` (default `scheduled`), `created_at`.
 
 ---
 
@@ -121,6 +155,57 @@ Reading test scores. `ngrt_id` (PK), `student_id`, `test_date`, `form`, `sas`, `
 
 ### certificates_awarded
 `student_id`, `milestone`, `awarded_date`. No surrogate PK listed — likely composite (student_id, milestone).
+
+---
+
+## Fees & billing
+
+This module (migrations ~054–066) exists only as live schema — the individual migration files were run directly in the Supabase SQL editor and were never saved into `sql/`. See `docs/todo.md` for the task to reconstruct/export them.
+
+### fee_terms
+`id` (PK), `name`, `academic_year`, `start_date`, `is_current` (bool), plus SMT-facing publish controls: `published_to_parents` (bool), `published_at`, `published_by`.
+
+### fee_items
+Catalogue of chargeable items. `id` (PK), `name`, `category`, `is_recurring` (bool), `default_amount`, `is_optional` (bool, e.g. swimming, tuckshop recharge — excluded from default per-term billing).
+
+### fee_item_band_amounts
+Per-band pricing. `id` (PK), `fee_item_id` → fee_items, `band` (A/B/C/Scholarship, matches `students.fee_band`), `amount`.
+
+### fee_charge_batches
+A batch-applied charge run. `id` (PK), `fee_item_id`, `term_id`, `description`, `amount`, `target_type` / `target_value` (how the batch was targeted — e.g. by band, by year group), `created_by` (uuid), `created_at`. Backs `apply_fee_charge_batch`.
+
+### student_invoices
+`id` (PK), `student_id`, `term_id`, `status` (default `unpaid`), `created_at`. One invoice per student per term.
+
+### invoice_line_items
+`id` (PK), `invoice_id` → student_invoices, `fee_item_id`, `description`, `amount`, `is_extra_charge` (bool — manually added vs term-batch-generated), `batch_id` → fee_charge_batches, `added_by` (uuid), `created_at`.
+
+### fee_payments
+`id` (PK), `invoice_id` → student_invoices, `amount`, `method`, `reference`, `paid_date`, `recorded_by` (uuid), `created_at`.
+
+### fee_payment_plans / fee_payment_plan_installments
+Instalment support. `fee_payment_plans`: `id` (PK), `invoice_id`, `approved_by` (uuid), `created_at`. `fee_payment_plan_installments`: `id` (PK), `plan_id` → fee_payment_plans, `due_date`, `amount`, `status` (default `pending`).
+
+### fee_discount_types / student_discounts
+`fee_discount_types`: `id` (PK), `name`, `calc_type`, `value`, `applies_to` (default `tuition`). `student_discounts`: `id` (PK), `student_id`, `discount_type_id` → fee_discount_types, `start_term_id` / `end_term_id` → fee_terms, `approved_by` (uuid), `notes`, `created_at`. Backs `apply_student_discount`.
+
+---
+
+## Tuckshop
+
+Balances can go negative by design (settled later, not blocked at point of sale); balance is credited on billing rather than on payment.
+
+### tuckshop_items
+`id` (PK), `name`, `price`, `active` (bool), `created_at`.
+
+### tuckshop_purchases
+`id` (PK), `student_id`, `purchase_date` (default today), `total_amount`, `created_by` (uuid), `created_at`. Backs `record_tuckshop_purchase` / `get_tuckshop_balance` / `top_up_tuckshop_balance` (top-up charges only the shortfall to reach a target balance).
+
+### tuckshop_purchase_items
+`id` (PK), `purchase_id` → tuckshop_purchases, `tuckshop_item_id` → tuckshop_items, `quantity`, `unit_price`, `line_total`.
+
+### tuckshop_preorders / tuckshop_preorder_items
+`tuckshop_preorders`: `id` (PK), `student_id`, `for_date`, `status` (default `pending`), `purchase_id` (nullable → tuckshop_purchases once fulfilled), `created_at`. `tuckshop_preorder_items`: `id` (PK), `preorder_id` → tuckshop_preorders, `tuckshop_item_id`, `quantity`.
 
 ---
 
