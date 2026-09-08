@@ -121,6 +121,7 @@ function PortalInner() {
   return (
     <div>
       <h1>My Grades & Behaviour</h1>
+      <p><a href="/inbox">📬 Inbox</a></p>
       <TranscriptDownload studentId={studentId} />
 
       <div className="card">

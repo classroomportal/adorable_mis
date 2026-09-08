@@ -114,6 +114,7 @@ function ParentPortalInner() {
   return (
     <div>
       <h1>My Children</h1>
+      <p><a href="/inbox">📬 Inbox</a></p>
 
       {children.length > 1 && (
         <div className="card">

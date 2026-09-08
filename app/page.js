@@ -84,6 +84,7 @@ const TABS = [
         <Tile href="/staff/timetable" icon="🗓️" label="My Timetable" />
         <Tile href="/parent-portal" icon="👨‍👩‍👧" label="My Children" />
         <Tile href="/calendar" icon="📅" label="Calendar" />
+        <Tile href="/inbox" icon="📬" label="Inbox" />
       </Section>
     ),
   },
@@ -119,7 +120,8 @@ const TABS = [
     key: 'comms', label: 'Communication', icon: '💬', accent: 'family', adminOnly: true, roles: ['smt', 'pastoral', 'school_office'],
     render: () => (
       <Section accent="family">
-        <ComingSoonTile icon="📣" label="Send Announcements to Parents / Groups" />
+        <Tile href="/comms/compose" icon="📣" label="Send Announcements to Parents / Groups" />
+        <Tile href="/comms/history" icon="📜" label="Message History & Read Receipts" />
       </Section>
     ),
   },
