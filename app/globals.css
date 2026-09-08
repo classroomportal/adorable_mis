@@ -266,6 +266,49 @@ input, select { width: 100%; }
   .module-tab { padding: 0.5rem 0.6rem; font-size: 0.8rem; }
 }
 
+/* Responsive sidebar: on wide screens (iPad landscape / desktop) the module
+   nav becomes a vertical sidebar next to the content, CORAEDU/CTS-Portal
+   style. Below the breakpoint it stays the horizontal scrollable tab bar
+   used on phones. */
+.dashboard-layout { display: block; }
+.dashboard-content { min-width: 0; }
+
+@media (min-width: 900px) {
+  .dashboard-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.75rem;
+  }
+  .module-tabs {
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 220px;
+    overflow-x: visible;
+    border-bottom: none;
+    border-right: 2px solid var(--slate-200);
+    padding-right: 0.75rem;
+    margin-bottom: 0;
+    gap: 0.15rem;
+    position: sticky;
+    top: 1rem;
+  }
+  .module-tab {
+    width: 100%;
+    justify-content: flex-start;
+    border-bottom: none;
+    border-left: 3px solid transparent;
+    border-radius: 8px !important;
+    padding: 0.65rem 0.75rem;
+  }
+  .module-tab:hover { border-radius: 8px !important; }
+  .module-tab.active {
+    border-bottom-color: transparent;
+    border-left-color: var(--accent-color, var(--red-700));
+    background: var(--yellow-100) !important;
+  }
+  .dashboard-content { flex: 1; }
+}
+
 .dash-section { margin-bottom: 1.75rem; }
 
 .dash-section-title {

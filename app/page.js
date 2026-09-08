@@ -262,20 +262,24 @@ export default function Home() {
 
       <DashboardStats />
 
-      <div className="module-tabs">
-        {visibleTabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={`module-tab ${active.key === t.key ? 'active' : ''} accent-${t.accent}`}
-          >
-            <span className="module-tab-icon">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <div className="dashboard-layout">
+        <div className="module-tabs">
+          {visibleTabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`module-tab ${active.key === t.key ? 'active' : ''} accent-${t.accent}`}
+            >
+              <span className="module-tab-icon">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-      {active.render({ isPastoralOrSmt, isAdmin })}
+        <div className="dashboard-content">
+          {active.render({ isPastoralOrSmt, isAdmin })}
+        </div>
+      </div>
     </div>
   );
 }
