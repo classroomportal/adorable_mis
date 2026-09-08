@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
@@ -9,11 +9,11 @@ const TARGET_TYPES = [
   { value: 'all_parents', label: 'All parents', kind: 'none' },
   { value: 'all_students', label: 'All students', kind: 'none' },
   { value: 'all_staff', label: 'All staff', kind: 'none' },
-  { value: 'year_group', label: 'Year group', kind: 'text', placeholder: 'e.g. 9' },
-  { value: 'form_class', label: 'Form class', kind: 'text', placeholder: 'e.g. 9B' },
-  { value: 'boarding_house', label: 'Boarding house', kind: 'text', placeholder: 'e.g. Boys House' },
-  { value: 'mentor_group', label: 'Mentor group (by id)', kind: 'text', placeholder: 'e.g. 3' },
-  { value: 'staff_role', label: 'Staff role', kind: 'text', placeholder: 'e.g. teacher' },
+  { value: 'year_group', label: 'Year group', kind: 'options', optionsKey: 'yearGroupOptions' },
+  { value: 'form_class', label: 'Form class', kind: 'options', optionsKey: 'formClassOptions' },
+  { value: 'boarding_house', label: 'Boarding house', kind: 'options', optionsKey: 'houseOptions' },
+  { value: 'mentor_group', label: 'Mentor group', kind: 'mentor_group' },
+  { value: 'staff_role', label: 'Staff role', kind: 'options', optionsKey: 'roleOptions' },
 ];
 
 function ComposeInner() {
@@ -30,6 +30,24 @@ function ComposeInner() {
   const [previewCount, setPreviewCount] = useState(null);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
+
+  const [roleOptions, setRoleOptions] = useState([]);
+  const [houseOptions, setHouseOptions] = useState([]);
+  const [mentorGroupOptions, setMentorGroupOptions] = useState([]);
+  const [formClassOptions, setFormClassOptions] = useState([]);
+  const [yearGroupOptions, setYearGroupOptions] = useState([]);
+
+  useEffect(() => {
+    supabase.from('roles').select('role_name').order('role_name').then(({ data }) => setRoleOptions((data || []).map((r) => r.role_name)));
+    supabase.from('boarding_houses').select('name').order('name').then(({ data }) => setHouseOptions((data || []).map((h) => h.name)));
+    supabase.from('mentor_groups').select('mentor_group_id, group_name').order('group_name').then(({ data }) => setMentorGroupOptions(data || []));
+    supabase.from('students').select('form_class').not('form_class', 'is', null).then(({ data }) => {
+      setFormClassOptions([...new Set((data || []).map((s) => s.form_class))].sort());
+    });
+    supabase.from('students').select('year_group').not('year_group', 'is', null).then(({ data }) => {
+      setYearGroupOptions([...new Set((data || []).map((s) => s.year_group))].sort((a, b) => a - b));
+    });
+  }, []);
 
   const targetDef = TARGET_TYPES.find((t) => t.value === targetType);
 
@@ -55,7 +73,7 @@ function ComposeInner() {
     setPreviewCount('checking...');
     const { data, error } = await supabase.rpc('resolve_message_recipients', {
       p_target_type: targetType,
-      p_target_value: targetDef.kind === 'text' ? targetValue : null,
+      p_target_value: targetDef.kind !== 'none' ? targetValue : null,
     });
     if (error) { setPreviewCount(`error: ${error.message}`); return; }
     setPreviewCount(data?.length ?? 0);
@@ -64,11 +82,12 @@ function ComposeInner() {
   async function handleSend() {
     if (!subject.trim() || !body.trim()) { setResult('Enter a subject and message first.'); return; }
     if (targetType === 'individual' && selectedPeople.length === 0) { setResult('Search for and add at least one person.'); return; }
+    if (targetDef.kind !== 'none' && targetType !== 'individual' && !targetValue) { setResult('Choose an option from the list first.'); return; }
     setSending(true);
     setResult(null);
     const value = targetType === 'individual'
       ? selectedPeople.map((p) => p.profile_id).join(',')
-      : (targetDef.kind === 'text' ? targetValue : null);
+      : (targetDef.kind !== 'none' ? targetValue : null);
     const { data, error } = await supabase.rpc('send_message', {
       p_subject: subject,
       p_body: body,
@@ -125,13 +144,30 @@ function ComposeInner() {
           </div>
         )}
 
-        {targetDef.kind === 'text' && (
-          <input
+        {targetDef.kind === 'options' && (
+          <select
             style={{ display: 'block', width: '100%', marginTop: '0.5rem' }}
             value={targetValue}
             onChange={(e) => { setTargetValue(e.target.value); setPreviewCount(null); }}
-            placeholder={targetDef.placeholder}
-          />
+          >
+            <option value="">Choose...</option>
+            {(targetDef.optionsKey === 'yearGroupOptions' ? yearGroupOptions
+              : targetDef.optionsKey === 'formClassOptions' ? formClassOptions
+              : targetDef.optionsKey === 'houseOptions' ? houseOptions
+              : roleOptions
+            ).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        )}
+
+        {targetDef.kind === 'mentor_group' && (
+          <select
+            style={{ display: 'block', width: '100%', marginTop: '0.5rem' }}
+            value={targetValue}
+            onChange={(e) => { setTargetValue(e.target.value); setPreviewCount(null); }}
+          >
+            <option value="">Choose...</option>
+            {mentorGroupOptions.map((g) => <option key={g.mentor_group_id} value={g.mentor_group_id}>{g.group_name}</option>)}
+          </select>
         )}
 
         <button onClick={handlePreview} style={{ marginTop: '0.5rem' }}>Check recipient count</button>
