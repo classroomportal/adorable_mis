@@ -23,7 +23,7 @@ function FeeItemsInner() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('fee_items').select('id, name, category, is_optional, default_amount').order('name');
+    const { data } = await supabase.from('fee_items').select('id, name, display_name, category, is_optional, default_amount').order('name');
     setItems(data ?? []);
     setLoading(false);
   }
@@ -66,6 +66,8 @@ function FeeItemsInner() {
     const { error } = await supabase
       .from('fee_items')
       .update({
+        name: patch.name !== undefined ? patch.name : item.name,
+        display_name: patch.display_name !== undefined ? (patch.display_name === '' ? null : patch.display_name) : item.display_name,
         default_amount: patch.default_amount !== undefined ? (patch.default_amount === '' ? null : Number(patch.default_amount)) : item.default_amount,
         category: patch.category !== undefined ? patch.category : item.category,
         is_optional: patch.is_optional !== undefined ? patch.is_optional : item.is_optional,
@@ -108,13 +110,27 @@ function FeeItemsInner() {
       {loading ? <p>Loading…</p> : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Name</th><th>Category</th><th>Default amount</th><th>Optional</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Display name (shown to parents)</th><th>Category</th><th>Default amount</th><th>Optional</th><th></th></tr></thead>
             <tbody>
               {items.map((item) => {
                 const dirty = !!edits[item.id];
                 return (
                   <tr key={item.id}>
-                    <td>{item.name}</td>
+                    <td>
+                      <input
+                        value={currentValue(item, 'name') || ''}
+                        onChange={(e) => edit(item.id, 'name', e.target.value)}
+                        style={{ width: '10rem' }}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        value={currentValue(item, 'display_name') || ''}
+                        onChange={(e) => edit(item.id, 'display_name', e.target.value)}
+                        placeholder={item.name}
+                        style={{ width: '10rem' }}
+                      />
+                    </td>
                     <td>
                       <input
                         value={currentValue(item, 'category') || ''}

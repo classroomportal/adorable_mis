@@ -6,21 +6,16 @@ import RequireAuth from '../../RequireAuth';
 
 const YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
 
-
 function GenerateInvoicesInner() {
   const [feeItems, setFeeItems] = useState([]);
   const [terms, setTerms] = useState([]);
   const [feeItemId, setFeeItemId] = useState('');
   const [termId, setTermId] = useState('');
   const [description, setDescription] = useState('');
-  const [mode, setMode] = useState('band'); // 'band' | 'year_group'
-  const [amounts, setAmounts] = useState({}); // key -> amount string
+  const [amounts, setAmounts] = useState({}); // year_group -> amount string
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [preview, setPreview] = useState({}); // key -> student count
-  const [feeLevels, setFeeLevels] = useState([]);
-
-  const keys = mode === 'band' ? feeLevels : YEAR_GROUPS;
+  const [preview, setPreview] = useState({}); // year_group -> student count
 
   useEffect(() => {
     (async () => {
@@ -30,26 +25,22 @@ function GenerateInvoicesInner() {
       setTerms(t ?? []);
       const current = (t ?? []).find((x) => x.is_current);
       if (current) setTermId(String(current.id));
-      const { data: levels } = await supabase.from('fee_levels').select('name').order('name');
-      setFeeLevels((levels ?? []).map((l) => l.name));
-    })();
-  }, []);
 
-  useEffect(() => {
-    (async () => {
       const counts = {};
-      for (const key of keys) {
-        const q = supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('status', 'active');
-        const { count } = mode === 'band' ? await q.eq('fee_band', key) : await q.eq('year_group', key);
-        counts[key] = count ?? 0;
+      for (const yg of YEAR_GROUPS) {
+        const { count } = await supabase
+          .from('students')
+          .select('student_id', { count: 'exact', head: true })
+          .eq('year_group', yg)
+          .eq('status', 'active');
+        counts[yg] = count ?? 0;
       }
       setPreview(counts);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, []);
 
-  function setAmount(key, value) {
-    setAmounts((prev) => ({ ...prev, [key]: value }));
+  function setAmount(yg, value) {
+    setAmounts((prev) => ({ ...prev, [yg]: value }));
   }
 
   async function submit(e) {
@@ -63,26 +54,25 @@ function GenerateInvoicesInner() {
 
     const { data: userData } = await supabase.auth.getUser();
     const createdBy = userData?.user?.id;
-    const targetType = mode === 'band' ? 'band' : 'year_group';
 
     const results = [];
-    for (const key of keys) {
-      const amt = Number(amounts[key]);
+    for (const yg of YEAR_GROUPS) {
+      const amt = Number(amounts[yg]);
       if (!amt || amt <= 0) continue;
       const { data, error } = await supabase.rpc('apply_fee_charge_batch', {
         p_fee_item_id: feeItemId,
         p_term_id: termId,
         p_description: description || null,
         p_amount: amt,
-        p_target_type: targetType,
-        p_target_value: String(key),
+        p_target_type: 'year_group',
+        p_target_value: String(yg),
         p_created_by: createdBy,
       });
       if (error) {
-        results.push(`${mode === 'band' ? 'Level' : 'Year'} ${key}: error — ${error.message}`);
+        results.push(`Year ${yg}: error — ${error.message}`);
       } else {
         const row = Array.isArray(data) ? data[0] : data;
-        results.push(`${mode === 'band' ? 'Level' : 'Year'} ${key}: charged ${row?.students_charged ?? '?'} students`);
+        results.push(`Year ${yg}: charged ${row?.students_charged ?? '?'} students`);
       }
     }
 
@@ -92,21 +82,12 @@ function GenerateInvoicesInner() {
 
   return (
     <div>
-      <h1>Allocate Same Amount to a Group</h1>
+      <h1>Allocate Same Amount to a Year</h1>
       <p style={{ color: '#666', fontSize: '0.9rem' }}>
-        Set a different amount per band (or year group, for items that don't vary by band) for one
-        fee item, and apply it to everyone in that group in one go. Each application is undoable
-        individually from the Audit screen.
+        Set a different amount per year group for one fee item, and apply it to every active
+        student in that year group in one go. Each application is undoable individually from the
+        Audit screen.
       </p>
-
-      <div className="card" style={{ display: 'flex', gap: '1rem' }}>
-        <label>
-          <input type="radio" checked={mode === 'band'} onChange={() => setMode('band')} /> By fee level
-        </label>
-        <label>
-          <input type="radio" checked={mode === 'year_group'} onChange={() => setMode('year_group')} /> By year group
-        </label>
-      </div>
 
       <form onSubmit={submit} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         <label>
@@ -131,19 +112,19 @@ function GenerateInvoicesInner() {
 
         <div className="table-scroll">
           <table>
-            <thead><tr><th>{mode === 'band' ? 'Fee level' : 'Year group'}</th><th>Active students</th><th>Amount (₦)</th></tr></thead>
+            <thead><tr><th>Year group</th><th>Active students</th><th>Amount (₦)</th></tr></thead>
             <tbody>
-              {keys.map((key) => (
-                <tr key={key}>
-                  <td>{mode === 'band' ? key : `Year ${key}`}</td>
-                  <td>{preview[key] ?? '…'}</td>
+              {YEAR_GROUPS.map((yg) => (
+                <tr key={yg}>
+                  <td>Year {yg}</td>
+                  <td>{preview[yg] ?? '…'}</td>
                   <td>
                     <input
                       type="number"
                       min="0"
                       placeholder="0"
-                      value={amounts[key] || ''}
-                      onChange={(e) => setAmount(key, e.target.value)}
+                      value={amounts[yg] || ''}
+                      onChange={(e) => setAmount(yg, e.target.value)}
                       style={{ width: '9rem' }}
                     />
                   </td>
@@ -154,7 +135,7 @@ function GenerateInvoicesInner() {
         </div>
 
         <button type="submit" disabled={submitting}>
-          {submitting ? 'Applying…' : `Apply to all ${mode === 'band' ? 'bands' : 'year groups'}`}
+          {submitting ? 'Applying…' : 'Apply to all year groups'}
         </button>
         {status && <p>{status}</p>}
       </form>

@@ -77,7 +77,7 @@ function ParentPortalInner() {
           const [{ data: items }, { data: pays }] = await Promise.all([
             supabase
               .from('invoice_line_items')
-              .select('id, description, amount, fee_items(name)')
+              .select('id, description, amount, fee_items(name, display_name)')
               .eq('invoice_id', invoice.id)
               .order('created_at'),
             supabase
@@ -214,7 +214,7 @@ function ParentPortalInner() {
                           <tbody>
                             {feeLineItems.map((li) => (
                               <tr key={li.id}>
-                                <td>{li.description || li.fee_items?.name}</td>
+                                <td>{li.description || li.fee_items?.display_name || li.fee_items?.name}</td>
                                 <td>₦{Number(li.amount).toLocaleString()}</td>
                               </tr>
                             ))}

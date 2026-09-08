@@ -35,7 +35,7 @@ function ChargeChecklistInner() {
       if (current) setTermId(String(current.id));
       const { data: s } = await supabase
         .from('students')
-        .select('student_id, first_name, last_name, year_group, form_class, fee_band')
+        .select('student_id, first_name, last_name, year_group, form_class')
         .eq('status', 'active')
         .order('year_group')
         .order('last_name');
@@ -196,7 +196,7 @@ function ChargeChecklistInner() {
           {loading ? <p>Loading…</p> : (
             <div className="table-scroll">
               <table>
-                <thead><tr><th></th><th>Student</th><th>Year</th><th>Form</th><th>Level</th><th>Amount</th><th>Status</th></tr></thead>
+                <thead><tr><th></th><th>Student</th><th>Year</th><th>Form</th><th>Amount</th><th>Status</th></tr></thead>
                 <tbody>
                   {filtered.map((s) => {
                     const already = chargedIds.has(s.student_id);
@@ -214,8 +214,7 @@ function ChargeChecklistInner() {
                         <td>{s.first_name} {s.last_name}</td>
                         <td>{s.year_group}</td>
                         <td>{s.form_class}</td>
-                        <td>{s.fee_band || '—'}</td>
-                        <td>{amount === null ? <span style={{ color: '#a3232c' }}>no amount set</span> : naira(amount)}</td>
+                                                <td>{amount === null ? <span style={{ color: '#a3232c' }}>no amount set</span> : naira(amount)}</td>
                         <td>
                           <span className={`badge ${already ? 'badge-positive' : 'badge-negative'}`}>
                             {already ? 'Charged' : 'Not yet'}
