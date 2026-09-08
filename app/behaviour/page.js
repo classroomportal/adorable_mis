@@ -18,6 +18,7 @@ function BehaviourPageInner() {
   const [boardingHouses, setBoardingHouses] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [yearGroups, setYearGroups] = useState([]);
+  const [houseScope, setHouseScope] = useState(null);
 
   const [groupType, setGroupType] = useState(searchParams.get('groupType') || (searchParams.get('classId') ? 'mentor' : ''));
   const [classId, setClassId] = useState(searchParams.get('classId') || ''); // mentor group class_id
@@ -39,7 +40,7 @@ function BehaviourPageInner() {
   async function loadEvents() {
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, type, category, points, description, students(first_name,last_name)')
+      .select('event_id, event_date, type, category, points, description, students(student_id, first_name, last_name, boarding_house)')
       .order('event_date', { ascending: false })
       .limit(20);
     setEvents(data || []);
@@ -50,12 +51,20 @@ function BehaviourPageInner() {
     since.setDate(since.getDate() - 7);
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, category, points, description, students(first_name,last_name)')
+      .select('event_id, event_date, category, points, description, students(student_id, first_name, last_name, boarding_house)')
       .eq('type', 'negative')
       .gte('event_date', since.toISOString().slice(0, 10))
       .order('event_date', { ascending: false });
     setAlerts(data || []);
   }
+
+  // NULL means unscoped (admin, pastoral, SMT, etc.) — see everything, same as
+  // today. A non-null value means the viewer is a Houseparent scoped to that
+  // boarding house: the group picker defaults + locks to it, the single-student
+  // list narrows to it, and the alerts/recent-events tables only show it.
+  const scopedEvents = houseScope ? events.filter((e) => e.students?.boarding_house === houseScope) : events;
+  const scopedAlerts = houseScope ? alerts.filter((a) => a.students?.boarding_house === houseScope) : alerts;
+  const scopedAllStudents = houseScope ? allStudents.filter((s) => s.boarding_house === houseScope) : allStudents;
 
   useEffect(() => {
     async function loadOptions() {
@@ -75,6 +84,13 @@ function BehaviourPageInner() {
 
       const { data: cat } = await supabase.from('behaviour_categories').select('category_id, name, type, default_points').order('name');
       setCategories(cat || []);
+
+      const { data: scope } = await supabase.rpc('my_house_scope');
+      if (scope) {
+        setHouseScope(scope);
+        setGroupType('boarding');
+        setBoardingHouse(scope);
+      }
     }
     loadOptions();
     loadEvents();
@@ -191,12 +207,13 @@ function BehaviourPageInner() {
 
       {isPastoralOrSmt && (
         <div className="card">
-          <h2>Behaviour Alerts — last 7 days ({alerts.length})</h2>
-          {alerts.length === 0 ? <p>No negative events logged in the last 7 days.</p> : (
+          <h2>Behaviour Alerts — last 7 days ({scopedAlerts.length})</h2>
+          {houseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {houseScope} only (Houseparent view)</p>}
+          {scopedAlerts.length === 0 ? <p>No negative events logged in the last 7 days.</p> : (
             <div className="table-scroll"><table>
               <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Description</th></tr></thead>
               <tbody>
-                {alerts.map((a) => (
+                {scopedAlerts.map((a) => (
                   <tr key={a.event_id}>
                     <td>{a.event_date}</td>
                     <td>{a.students?.first_name} {a.students?.last_name}</td>
@@ -214,7 +231,7 @@ function BehaviourPageInner() {
       <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         <label>
           Group (optional — pick to log for several students at once)
-          <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)}>
+          <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)} disabled={!!houseScope}>
             <option value="">No group — pick one student below</option>
             <option value="mentor">Mentor group</option>
             <option value="boarding">Boarding house</option>
@@ -238,9 +255,9 @@ function BehaviourPageInner() {
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
             <label style={{ flex: 1, minWidth: '160px' }}>
               Boarding house
-              <select value={boardingHouse} onChange={(e) => setBoardingHouse(e.target.value)}>
+              <select value={boardingHouse} onChange={(e) => setBoardingHouse(e.target.value)} disabled={!!houseScope}>
                 <option value="">Select...</option>
-                {boardingHouses.map((h) => <option key={h} value={h}>{h}</option>)}
+                {(houseScope ? [houseScope] : boardingHouses).map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
             </label>
             <label style={{ flex: 1, minWidth: '120px' }}>
@@ -290,7 +307,7 @@ function BehaviourPageInner() {
             Student
             <select value={singleStudentId} onChange={(e) => setSingleStudentId(e.target.value)}>
               <option value="">Select...</option>
-              {allStudents.map((s) => (
+              {scopedAllStudents.map((s) => (
                 <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name}</option>
               ))}
             </select>
@@ -340,12 +357,13 @@ function BehaviourPageInner() {
       {status && <p>{status}</p>}
 
       <h2>Recent events</h2>
+      {houseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {houseScope} only (Houseparent view)</p>}
       <div className="table-scroll"><table>
         <thead>
           <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th>{profile?.role === 'admin' && <th></th>}</tr>
         </thead>
         <tbody>
-          {events.map((ev) => (
+          {scopedEvents.map((ev) => (
             <tr key={ev.event_id}>
               <td>{ev.event_date}</td>
               <td>{ev.students?.first_name} {ev.students?.last_name}</td>
