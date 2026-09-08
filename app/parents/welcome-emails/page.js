@@ -20,6 +20,37 @@ function WelcomeEmailsInner() {
     setStatus(`${valid.length} parent(s) ready to email (skipped rows without a real password).`);
   }
 
+  function handleExportCsv() {
+    const csv = Papa.unparse(rows.map((r) => ({
+      parent_name: r.parent_name || '',
+      email: r.email,
+      temp_password: r.temp_password,
+    })));
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `parent-welcome-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const MAIL_MERGE_TEMPLATE = `Subject: Your Adorable MIS parent portal login
+
+Dear {{parent_name}},
+
+Your Adorable MIS parent portal account is ready.
+
+Login email: {{email}}
+Temporary password: {{temp_password}}
+
+Please log in at mis.classroomportal.org and change your password on first login.
+
+Kind regards,
+Adorable British College`;
+
+  const OVER_DAILY_CAP = rows.length > 90;
+
   async function handleSend() {
     setSending(true);
     let sent = 0;
@@ -58,7 +89,23 @@ function WelcomeEmailsInner() {
       {rows.length > 0 && (
         <div className="card">
           <p>{rows.length} parent(s) will receive an email with their login and temporary password.</p>
-          <button onClick={handleSend} disabled={sending}>{sending ? 'Sending...' : `Send ${rows.length} emails`}</button>
+
+          {OVER_DAILY_CAP && (
+            <p style={{ color: '#b45309', fontWeight: 600 }}>
+              {rows.length} is over Resend's 100/day free-tier cap — sending now will fail partway through.
+              Export the CSV below and mail-merge it through the school office's own email instead.
+            </p>
+          )}
+
+          <button onClick={handleExportCsv} style={{ marginRight: '0.5rem' }}>Download CSV for mail merge</button>
+          <button onClick={handleSend} disabled={sending || OVER_DAILY_CAP}>
+            {sending ? 'Sending...' : `Send ${rows.length} emails via Resend`}
+          </button>
+
+          <details style={{ marginTop: '0.75rem' }}>
+            <summary>Mail-merge email template (copy for Word/Outlook)</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{MAIL_MERGE_TEMPLATE}</pre>
+          </details>
         </div>
       )}
 

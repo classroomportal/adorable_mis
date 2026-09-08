@@ -5,6 +5,13 @@ rather than living in a chat session. Tick items by changing `[ ]` to `[x]` and
 committing. Add new jobs under whichever section fits, or start a new section if
 none fit — no special format required beyond a markdown checkbox.
 
+## Launch readiness
+
+- [x] Parent welcome emails: CSV export + mail-merge template added to /parents/welcome-emails, Resend send button capped/disabled above 90 recipients (Resend free tier is 100/day) — DONE
+- [ ] Apply the same export/cap treatment to /staff/welcome-emails (lower risk, ~40-50 staff, but same cap applies)
+- [ ] Check current Resend account usage (behaviour alerts + welcome emails share the same free-tier allowance) before go-live
+- [ ] Communication module: DECIDED — sender-side threshold, in-app inbox only above a recipient-count cutoff, email fanout only for small/targeted messages; no queue/throttle needed since large sends just skip email
+
 ## Dashboard access & design
 
 - [ ] Departments/Faculties: new table grouping subjects into departments (confirm whether a subject can belong to only one department or more than one — e.g. English vs English Lit)
