@@ -179,11 +179,11 @@ function AttendanceInner() {
             <p>No students are linked to this class yet.</p>
           ) : (
             <>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'stretch' }}>
                 <button type="button" onClick={markAllPresent} className="secondary" style={{ width: 'fit-content' }}>
                   Mark all present
                 </button>
-                <Link href={`/behaviour?classId=${classId}&date=${date}`} className="secondary" style={{ width: 'fit-content', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '0 0.9rem', borderRadius: '6px' }}>
+                <Link href={`/behaviour?classId=${classId}&date=${date}`} className="secondary" style={{ width: 'fit-content', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '0.5rem 0.65rem', borderRadius: '6px', fontSize: '1rem', lineHeight: 'normal' }}>
                   Log behaviour for this class
                 </Link>
               </div>

@@ -10,17 +10,25 @@ function BehaviourPageInner() {
   const searchParams = useSearchParams();
 
   const [mentorClasses, setMentorClasses] = useState([]);
-  const [subjectClasses, setSubjectClasses] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
   const [alerts, setAlerts] = useState([]);
 
-  const [classId, setClassId] = useState(searchParams.get('classId') || '');
+  const [boardingHouses, setBoardingHouses] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
+  const [yearGroups, setYearGroups] = useState([]);
+
+  const [groupType, setGroupType] = useState(searchParams.get('groupType') || (searchParams.get('classId') ? 'mentor' : ''));
+  const [classId, setClassId] = useState(searchParams.get('classId') || ''); // mentor group class_id
+  const [boardingHouse, setBoardingHouse] = useState('');
+  const [restaurant, setRestaurant] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+
   const [roster, setRoster] = useState([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [selected, setSelected] = useState(new Set()); // student_ids chosen from roster
-  const [singleStudentId, setSingleStudentId] = useState(''); // used when no class chosen
+  const [singleStudentId, setSingleStudentId] = useState(''); // used when no group chosen
 
   const [form, setForm] = useState({
     event_date: searchParams.get('date') || new Date().toISOString().slice(0, 10),
@@ -53,15 +61,17 @@ function BehaviourPageInner() {
     async function loadOptions() {
       const { data: c } = await supabase
         .from('classes')
-        .select('class_id, class_code, room, subjects(subject_name), curriculum_blocks(block_name)')
+        .select('class_id, class_code, curriculum_blocks(block_name)')
         .not('class_code', 'is', null)
         .order('class_code');
-      const all = c || [];
-      setMentorClasses(all.filter((cl) => cl.curriculum_blocks?.block_name === 'Mentor'));
-      setSubjectClasses(all.filter((cl) => cl.curriculum_blocks?.block_name !== 'Mentor'));
+      setMentorClasses((c || []).filter((cl) => cl.curriculum_blocks?.block_name === 'Mentor'));
 
-      const { data: s } = await supabase.from('students').select('student_id, first_name, last_name').order('last_name');
-      setAllStudents(s || []);
+      const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, restaurant, year_group').order('last_name');
+      const list = s || [];
+      setAllStudents(list);
+      setBoardingHouses([...new Set(list.map((x) => x.boarding_house).filter(Boolean))].sort());
+      setRestaurants([...new Set(list.map((x) => x.restaurant).filter(Boolean))].sort());
+      setYearGroups([...new Set(list.map((x) => x.year_group).filter(Boolean))].sort((a, b) => a - b));
 
       const { data: cat } = await supabase.from('behaviour_categories').select('category_id, name, type, default_points').order('name');
       setCategories(cat || []);
@@ -72,26 +82,49 @@ function BehaviourPageInner() {
   }, []);
 
   async function loadRoster() {
-    if (!classId) {
-      setRoster([]);
-      setSelected(new Set());
+    if (groupType === 'mentor' && classId) {
+      setLoadingRoster(true);
+      const { data: sc } = await supabase
+        .from('student_class')
+        .select('students(student_id, first_name, last_name)')
+        .eq('class_id', classId);
+      const studentList = (sc || [])
+        .map((row) => row.students)
+        .filter(Boolean)
+        .sort((a, b) => a.last_name.localeCompare(b.last_name));
+      setRoster(studentList);
+      setSelected(new Set(studentList.map((s) => s.student_id)));
+      setLoadingRoster(false);
       return;
     }
-    setLoadingRoster(true);
-    const { data: sc } = await supabase
-      .from('student_class')
-      .select('students(student_id, first_name, last_name)')
-      .eq('class_id', classId);
-    const studentList = (sc || [])
-      .map((row) => row.students)
-      .filter(Boolean)
-      .sort((a, b) => a.last_name.localeCompare(b.last_name));
-    setRoster(studentList);
-    setSelected(new Set(studentList.map((s) => s.student_id))); // default: everyone selected
-    setLoadingRoster(false);
+    if (groupType === 'boarding' && boardingHouse) {
+      const studentList = allStudents
+        .filter((s) => s.boarding_house === boardingHouse && (!yearFilter || String(s.year_group) === yearFilter))
+        .sort((a, b) => a.last_name.localeCompare(b.last_name));
+      setRoster(studentList);
+      setSelected(new Set(studentList.map((s) => s.student_id)));
+      return;
+    }
+    if (groupType === 'restaurant' && restaurant) {
+      const studentList = allStudents
+        .filter((s) => s.restaurant === restaurant)
+        .sort((a, b) => a.last_name.localeCompare(b.last_name));
+      setRoster(studentList);
+      setSelected(new Set(studentList.map((s) => s.student_id)));
+      return;
+    }
+    setRoster([]);
+    setSelected(new Set());
   }
 
-  useEffect(() => { loadRoster(); }, [classId]);
+  useEffect(() => { loadRoster(); }, [groupType, classId, boardingHouse, restaurant, yearFilter, allStudents]);
+
+  function handleGroupTypeChange(newType) {
+    setGroupType(newType);
+    setClassId(''); setBoardingHouse(''); setRestaurant(''); setYearFilter('');
+  }
+
+  const usingGroup = groupType && (classId || boardingHouse || restaurant);
 
   const categoriesForType = categories.filter((c) => c.type === form.type);
 
@@ -118,7 +151,7 @@ function BehaviourPageInner() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const studentIds = classId ? Array.from(selected) : (singleStudentId ? [Number(singleStudentId)] : []);
+    const studentIds = usingGroup ? Array.from(selected) : (singleStudentId ? [Number(singleStudentId)] : []);
     if (studentIds.length === 0) {
       setStatus('Choose at least one student.');
       return;
@@ -139,7 +172,7 @@ function BehaviourPageInner() {
     } else {
       setStatus(`Saved ${rows.length} event${rows.length > 1 ? 's' : ''}.`);
       setForm({ ...form, category: '', points: '', description: '' });
-      if (classId) selectAll(); else setSingleStudentId('');
+      if (usingGroup) selectAll(); else setSingleStudentId('');
       loadEvents();
       loadAlerts();
     }
@@ -180,32 +213,60 @@ function BehaviourPageInner() {
 
       <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         <label>
-          Class / group (optional — pick to log for several students at once)
-          <select value={classId} onChange={(e) => setClassId(e.target.value)}>
-            <option value="">No class — pick one student below</option>
-            {mentorClasses.length > 0 && (
-              <optgroup label="Mentor groups">
-                {mentorClasses.map((c) => (
-                  <option key={c.class_id} value={c.class_id}>{c.class_code}</option>
-                ))}
-              </optgroup>
-            )}
-            {subjectClasses.length > 0 && (
-              <optgroup label="Subject classes">
-                {subjectClasses.map((c) => (
-                  <option key={c.class_id} value={c.class_id}>
-                    {c.class_code} — {c.subjects?.subject_name || ''}
-                  </option>
-                ))}
-              </optgroup>
-            )}
+          Group (optional — pick to log for several students at once)
+          <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)}>
+            <option value="">No group — pick one student below</option>
+            <option value="mentor">Mentor group</option>
+            <option value="boarding">Boarding house</option>
+            <option value="restaurant">Restaurant</option>
           </select>
         </label>
 
-        {classId ? (
+        {groupType === 'mentor' && (
+          <label style={{ marginTop: '0.5rem' }}>
+            Mentor group
+            <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <option value="">Select...</option>
+              {mentorClasses.map((c) => (
+                <option key={c.class_id} value={c.class_id}>{c.class_code}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {groupType === 'boarding' && (
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+            <label style={{ flex: 1, minWidth: '160px' }}>
+              Boarding house
+              <select value={boardingHouse} onChange={(e) => setBoardingHouse(e.target.value)}>
+                <option value="">Select...</option>
+                {boardingHouses.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </label>
+            <label style={{ flex: 1, minWidth: '120px' }}>
+              Year group (optional)
+              <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+                <option value="">All years</option>
+                {yearGroups.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+
+        {groupType === 'restaurant' && (
+          <label style={{ marginTop: '0.5rem' }}>
+            Restaurant
+            <select value={restaurant} onChange={(e) => setRestaurant(e.target.value)}>
+              <option value="">Select...</option>
+              {restaurants.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+        )}
+
+        {usingGroup ? (
           <div style={{ marginTop: '0.75rem' }}>
             {loadingRoster ? <p>Loading roster...</p> : roster.length === 0 ? (
-              <p>No students are linked to this class yet.</p>
+              <p>No students in this group yet.</p>
             ) : (
               <>
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -224,7 +285,7 @@ function BehaviourPageInner() {
               </>
             )}
           </div>
-        ) : (
+        ) : !groupType ? (
           <label style={{ marginTop: '0.75rem' }}>
             Student
             <select value={singleStudentId} onChange={(e) => setSingleStudentId(e.target.value)}>
@@ -234,7 +295,7 @@ function BehaviourPageInner() {
               ))}
             </select>
           </label>
-        )}
+        ) : null}
       </div>
 
       <form onSubmit={handleSubmit} className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
@@ -272,7 +333,7 @@ function BehaviourPageInner() {
         </label>
 
         <button type="submit" style={{ width: 'fit-content' }}>
-          {classId ? `Add event for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Add event'}
+          {usingGroup ? `Add event for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Add event'}
         </button>
       </form>
 
