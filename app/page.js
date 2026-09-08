@@ -154,7 +154,7 @@ const TABS = [
         <Tile href="/bursar/charge-checklist" icon="✅" label="Charge Checklist" />
         <Tile href="/bursar/fee-batches" icon="➕" label="Add a Charge" />
         <Tile href="/bursar/fee-items" icon="🏷️" label="Fee Items (Prices)" />
-        <Tile href="/bursar/fee-bands" icon="🎚️" label="Fee Bands" />
+        <Tile href="/bursar/fee-levels" icon="🎚️" label="Fee Levels" />
         <Tile href="/bursar/discounts" icon="🏷️" label="Discounts" />
         <Tile href="/bursar/generate-invoices" icon="🧾" label="Allocate Same Amount to a Group" />
         <Tile href="/bursar/payments" icon="💰" label="Record a Payment" />

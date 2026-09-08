@@ -15,7 +15,6 @@ function ChargeChecklistInner() {
   const [termId, setTermId] = useState('');
   const [description, setDescription] = useState('');
   const [flatAmount, setFlatAmount] = useState('');
-  const [bandAmounts, setBandAmounts] = useState({}); // band -> amount, if item varies by band
 
   const [students, setStudents] = useState([]);
   const [chargedIds, setChargedIds] = useState(new Set());
@@ -44,17 +43,10 @@ function ChargeChecklistInner() {
     })();
   }, []);
 
-  // When fee item changes: prefill flat amount, and load per-band pricing if it has any.
+  // When fee item changes: prefill the flat amount from its default.
   useEffect(() => {
-    (async () => {
-      if (!feeItemId) return;
-      const item = feeItems.find((f) => String(f.id) === String(feeItemId));
-      setFlatAmount(item?.default_amount ? String(item.default_amount) : '');
-      const { data } = await supabase.from('fee_item_band_amounts').select('band, amount').eq('fee_item_id', feeItemId);
-      const map = {};
-      (data || []).forEach((r) => { map[r.band] = r.amount; });
-      setBandAmounts(map);
-    })();
+    const item = feeItems.find((f) => String(f.id) === String(feeItemId));
+    setFlatAmount(item?.default_amount ? String(item.default_amount) : '');
   }, [feeItemId, feeItems]);
 
   async function refreshChargedStatus() {
@@ -84,9 +76,6 @@ function ChargeChecklistInner() {
   useEffect(() => { refreshChargedStatus(); setSelected(new Set()); }, [feeItemId, termId]); // eslint-disable-line
 
   function amountFor(student) {
-    if (Object.keys(bandAmounts).length > 0) {
-      return student.fee_band && bandAmounts[student.fee_band] !== undefined ? bandAmounts[student.fee_band] : null;
-    }
     return flatAmount ? Number(flatAmount) : null;
   }
 
@@ -153,8 +142,6 @@ function ChargeChecklistInner() {
     setSubmitting(false);
   }
 
-  const usesBands = Object.keys(bandAmounts).length > 0;
-
   return (
     <div>
       <h1>Charge Checklist</h1>
@@ -182,16 +169,10 @@ function ChargeChecklistInner() {
           <input value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: '100%' }} />
         </label>
 
-        {usesBands ? (
-          <p style={{ fontSize: '0.85rem', color: '#666' }}>
-            This item has per-band pricing — each student is charged according to their own band automatically.
-          </p>
-        ) : (
-          <label>
-            Amount (₦)
-            <input type="number" min="0" value={flatAmount} onChange={(e) => setFlatAmount(e.target.value)} style={{ width: '10rem' }} />
-          </label>
-        )}
+        <label>
+          Amount (₦)
+          <input type="number" min="0" value={flatAmount} onChange={(e) => setFlatAmount(e.target.value)} style={{ width: '10rem' }} />
+        </label>
       </div>
 
       {feeItemId && termId && (
@@ -215,7 +196,7 @@ function ChargeChecklistInner() {
           {loading ? <p>Loading…</p> : (
             <div className="table-scroll">
               <table>
-                <thead><tr><th></th><th>Student</th><th>Year</th><th>Form</th><th>Band</th><th>Amount</th><th>Status</th></tr></thead>
+                <thead><tr><th></th><th>Student</th><th>Year</th><th>Form</th><th>Level</th><th>Amount</th><th>Status</th></tr></thead>
                 <tbody>
                   {filtered.map((s) => {
                     const already = chargedIds.has(s.student_id);
@@ -234,7 +215,7 @@ function ChargeChecklistInner() {
                         <td>{s.year_group}</td>
                         <td>{s.form_class}</td>
                         <td>{s.fee_band || '—'}</td>
-                        <td>{amount === null ? <span style={{ color: '#a3232c' }}>no band price set</span> : naira(amount)}</td>
+                        <td>{amount === null ? <span style={{ color: '#a3232c' }}>no amount set</span> : naira(amount)}</td>
                         <td>
                           <span className={`badge ${already ? 'badge-positive' : 'badge-negative'}`}>
                             {already ? 'Charged' : 'Not yet'}

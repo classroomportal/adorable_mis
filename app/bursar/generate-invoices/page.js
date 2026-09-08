@@ -5,7 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 
 const YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
-const BANDS = ['A', 'B', 'C', 'Scholarship'];
+
 
 function GenerateInvoicesInner() {
   const [feeItems, setFeeItems] = useState([]);
@@ -18,8 +18,9 @@ function GenerateInvoicesInner() {
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [preview, setPreview] = useState({}); // key -> student count
+  const [feeLevels, setFeeLevels] = useState([]);
 
-  const keys = mode === 'band' ? BANDS : YEAR_GROUPS;
+  const keys = mode === 'band' ? feeLevels : YEAR_GROUPS;
 
   useEffect(() => {
     (async () => {
@@ -29,6 +30,8 @@ function GenerateInvoicesInner() {
       setTerms(t ?? []);
       const current = (t ?? []).find((x) => x.is_current);
       if (current) setTermId(String(current.id));
+      const { data: levels } = await supabase.from('fee_levels').select('name').order('name');
+      setFeeLevels((levels ?? []).map((l) => l.name));
     })();
   }, []);
 
@@ -44,19 +47,6 @@ function GenerateInvoicesInner() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
-
-  // When a fee item with per-band pricing is chosen in band mode, prefill amounts.
-  useEffect(() => {
-    (async () => {
-      if (mode !== 'band' || !feeItemId) return;
-      const { data } = await supabase.from('fee_item_band_amounts').select('band, amount').eq('fee_item_id', feeItemId);
-      if (data && data.length > 0) {
-        const prefilled = {};
-        data.forEach((r) => { prefilled[r.band] = String(r.amount); });
-        setAmounts((prev) => ({ ...prefilled, ...prev }));
-      }
-    })();
-  }, [feeItemId, mode]);
 
   function setAmount(key, value) {
     setAmounts((prev) => ({ ...prev, [key]: value }));
@@ -89,10 +79,10 @@ function GenerateInvoicesInner() {
         p_created_by: createdBy,
       });
       if (error) {
-        results.push(`${mode === 'band' ? 'Band' : 'Year'} ${key}: error — ${error.message}`);
+        results.push(`${mode === 'band' ? 'Level' : 'Year'} ${key}: error — ${error.message}`);
       } else {
         const row = Array.isArray(data) ? data[0] : data;
-        results.push(`${mode === 'band' ? 'Band' : 'Year'} ${key}: charged ${row?.students_charged ?? '?'} students`);
+        results.push(`${mode === 'band' ? 'Level' : 'Year'} ${key}: charged ${row?.students_charged ?? '?'} students`);
       }
     }
 
@@ -111,7 +101,7 @@ function GenerateInvoicesInner() {
 
       <div className="card" style={{ display: 'flex', gap: '1rem' }}>
         <label>
-          <input type="radio" checked={mode === 'band'} onChange={() => setMode('band')} /> By fee band
+          <input type="radio" checked={mode === 'band'} onChange={() => setMode('band')} /> By fee level
         </label>
         <label>
           <input type="radio" checked={mode === 'year_group'} onChange={() => setMode('year_group')} /> By year group
@@ -141,11 +131,11 @@ function GenerateInvoicesInner() {
 
         <div className="table-scroll">
           <table>
-            <thead><tr><th>{mode === 'band' ? 'Band' : 'Year group'}</th><th>Active students</th><th>Amount (₦)</th></tr></thead>
+            <thead><tr><th>{mode === 'band' ? 'Fee level' : 'Year group'}</th><th>Active students</th><th>Amount (₦)</th></tr></thead>
             <tbody>
               {keys.map((key) => (
                 <tr key={key}>
-                  <td>{mode === 'band' ? `Band ${key}` : `Year ${key}`}</td>
+                  <td>{mode === 'band' ? key : `Year ${key}`}</td>
                   <td>{preview[key] ?? '…'}</td>
                   <td>
                     <input

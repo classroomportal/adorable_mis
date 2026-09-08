@@ -166,14 +166,14 @@ function TopUpInner() {
               <select value={groupType} onChange={(e) => setGroupType(e.target.value)}>
                 <option value="year_group">Year group</option>
                 <option value="form_class">Form class</option>
-                <option value="band">Fee band</option>
+                <option value="band">Fee level</option>
                 <option value="all">All students</option>
               </select>
             </label>
             {groupType !== 'all' && (
               <label>
                 Value
-                <input value={groupValue} onChange={(e) => setGroupValue(e.target.value)} placeholder={groupType === 'year_group' ? 'e.g. 9' : groupType === 'band' ? 'A / B / C / Scholarship' : 'e.g. 9A'} />
+                <input value={groupValue} onChange={(e) => setGroupValue(e.target.value)} placeholder={groupType === 'year_group' ? 'e.g. 9' : groupType === 'band' ? 'the fee level name' : 'e.g. 9A'} />
               </label>
             )}
             <button onClick={submitGroup} disabled={submitting || (groupType !== 'all' && !groupValue)}>
