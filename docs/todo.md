@@ -10,7 +10,7 @@ none fit — no special format required beyond a markdown checkbox.
 - [x] Parent welcome emails: CSV export + mail-merge template added to /parents/welcome-emails, Resend send button capped/disabled above 90 recipients (Resend free tier is 100/day) — DONE
 - [ ] Apply the same export/cap treatment to /staff/welcome-emails (lower risk, ~40-50 staff, but same cap applies)
 - [ ] Check current Resend account usage (behaviour alerts + welcome emails share the same free-tier allowance) before go-live
-- [x] Communication module: DONE — /comms/compose (targeted or broadcast, recipient-count preview), /comms/history (read receipts), shared /inbox for staff dashboard, parent portal, student portal. Sender-side threshold at 30 recipients: at/under emails + in-app, over is in-app only (migration 069).
+- [x] Communication module: DONE — /comms/compose (targeted or broadcast, recipient-count preview), /comms/history (read receipts), shared /inbox for staff dashboard, parent portal, student portal. Individual sends always email; every group/broadcast type is in-app only, no threshold to reason about (migration 070). Targeting fields (year group, form class, boarding house, mentor group, staff role) are real dropdowns sourced from live data, not free text.
 
 ## Dashboard access & design
 
