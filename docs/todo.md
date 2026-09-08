@@ -21,6 +21,11 @@ none fit — no special format required beyond a markdown checkbox.
 - [ ] Parent/group messaging — "Coming soon" tile added under new Communication tab; not yet built (needs: message composer, group/recipient picker, delivery via Resend, message history)
 - [ ] Rename/reorganise tiles once access model is settled
 
+## Docs out of sync with live DB
+
+- [ ] `sql/` folder is missing the fees/tuckshop migrations (~054–066) — they were run directly in the Supabase SQL editor and never saved as files. Reconstruct or re-export them from the live DB so the repo isn't missing schema history.
+- [ ] `docs/schema-snapshot.md` predates the fees module entirely — no fee_item_band_amounts, fee bands, tuckshop tables, etc. Needs a refresh pass against the live schema.
+
 ## Data cleanup
 
 - [ ] Merge duplicate/abbreviated subjects (`Dl`, `Fa`, `Gl`, `Gs`, old `Religion`) via `merge_subjects()`
@@ -37,14 +42,14 @@ none fit — no special format required beyond a markdown checkbox.
 
 ## Not yet built
 
-- [ ] School fees / billing module (see CTS Portal reference screenshot for a possible access-control/UI pattern)
+- [x] School fees / billing module — DONE (fee bands, fee items, batches, discounts, debtors, generate-invoices, payments, audit under /bursar, plus /smt/fees-dashboard). sql/ folder and schema-snapshot.md don't reflect the migrations behind this yet — see Data cleanup below.
 - [ ] Families management UI
 - [ ] Term-based filtering wired into results and attendance views generally
 - [ ] Pastoral dashboard with full-day attendance patterns
 - [ ] Decide how `late` attendance status should be handled in reporting
 - [ ] Compound block UI: auto-assign sibling classes
 - [ ] Link the three remaining staff with missing staff codes
-- [ ] Dedicated "Top Up Tuckshop Balance" button for bursar (currently uses the general Add a Charge screen with the "Tuck Shop Recharge" fee item — works, but a direct shortcut would be quicker)
+- [x] Dedicated "Top Up Tuckshop Balance" button for bursar — DONE (/tuckshop/topup, target minus carried-over balance)
 
 ## Technical risk (not yet audited)
 
