@@ -10,7 +10,7 @@ none fit — no special format required beyond a markdown checkbox.
 - [x] Parent welcome emails: CSV export + mail-merge template added to /parents/welcome-emails, Resend send button capped/disabled above 90 recipients (Resend free tier is 100/day) — DONE
 - [ ] Apply the same export/cap treatment to /staff/welcome-emails (lower risk, ~40-50 staff, but same cap applies)
 - [ ] Check current Resend account usage (behaviour alerts + welcome emails share the same free-tier allowance) before go-live
-- [ ] Communication module: DECIDED — sender-side threshold, in-app inbox only above a recipient-count cutoff, email fanout only for small/targeted messages; no queue/throttle needed since large sends just skip email
+- [x] Communication module: DONE — /comms/compose (targeted or broadcast, recipient-count preview), /comms/history (read receipts), shared /inbox for staff dashboard, parent portal, student portal. Sender-side threshold at 30 recipients: at/under emails + in-app, over is in-app only (migration 069).
 
 ## Dashboard access & design
 
@@ -25,7 +25,7 @@ none fit — no special format required beyond a markdown checkbox.
 - [ ] Role list to design permissions against: SMT, HR (manages staff details), Pastoral (manages appeals & detention), Houseparent (a separate role, but one person could also hold Teacher or Pastoral at the same time — manages room assignment, restaurant assignment 1-4; tuck shop purchases not included yet), Assessment manager, Assessment user (imports results & targets), Teacher, Student, Parent, Bursar, School office (edits student & parent core data, manages parent-student links), Admissions (new — needs its own section/workflow, not yet scoped)
 - [ ] Scope out Admissions as a distinct section: handles pre-enrolment (applications, entrance test scores, offer status) as a separate flow from the live students table, before a student record is created. Not yet decided whether applicants get their own login type or this stays staff-facing only.
 - [x] More colourful/visual dashboard layout (reference: CTS Portal / CORAEDU) — stat-card row (active students, staff, behaviour alerts) added to home dashboard. Further polish possible (sidebar nav, more stats) if wanted later.
-- [ ] Parent/group messaging — "Coming soon" tile added under new Communication tab; not yet built (needs: message composer, group/recipient picker, delivery via Resend, message history)
+- [x] Parent/group messaging — DONE, see Launch readiness section (communication module shipped)
 - [ ] Rename/reorganise tiles once access model is settled
 
 ## Docs out of sync with live DB
