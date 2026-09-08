@@ -14,7 +14,9 @@ function ChargeChecklistInner() {
   const [feeItemId, setFeeItemId] = useState('');
   const [termId, setTermId] = useState('');
   const [description, setDescription] = useState('');
+  const [amountMode, setAmountMode] = useState('flat'); // 'flat' | 'per_year'
   const [flatAmount, setFlatAmount] = useState('');
+  const [yearAmounts, setYearAmounts] = useState({}); // year_group -> amount string
 
   const [students, setStudents] = useState([]);
   const [chargedIds, setChargedIds] = useState(new Set());
@@ -76,7 +78,15 @@ function ChargeChecklistInner() {
   useEffect(() => { refreshChargedStatus(); setSelected(new Set()); }, [feeItemId, termId]); // eslint-disable-line
 
   function amountFor(student) {
+    if (amountMode === 'per_year') {
+      const v = yearAmounts[student.year_group];
+      return v ? Number(v) : null;
+    }
     return flatAmount ? Number(flatAmount) : null;
+  }
+
+  function setYearAmount(yg, value) {
+    setYearAmounts((prev) => ({ ...prev, [yg]: value }));
   }
 
   const filtered = useMemo(() => {
@@ -169,10 +179,44 @@ function ChargeChecklistInner() {
           <input value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: '100%' }} />
         </label>
 
-        <label>
-          Amount (₦)
-          <input type="number" min="0" value={flatAmount} onChange={(e) => setFlatAmount(e.target.value)} style={{ width: '10rem' }} />
-        </label>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <label>
+            <input type="radio" checked={amountMode === 'flat'} onChange={() => setAmountMode('flat')} /> Same amount for everyone ticked
+          </label>
+          <label>
+            <input type="radio" checked={amountMode === 'per_year'} onChange={() => setAmountMode('per_year')} /> Different amount per year group
+          </label>
+        </div>
+
+        {amountMode === 'flat' ? (
+          <label>
+            Amount (₦)
+            <input type="number" min="0" value={flatAmount} onChange={(e) => setFlatAmount(e.target.value)} style={{ width: '10rem' }} />
+          </label>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Year group</th><th>Amount (₦)</th></tr></thead>
+              <tbody>
+                {[7, 8, 9, 10, 11, 12].map((yg) => (
+                  <tr key={yg}>
+                    <td>Year {yg}</td>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={yearAmounts[yg] || ''}
+                        onChange={(e) => setYearAmount(yg, e.target.value)}
+                        style={{ width: '9rem' }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {feeItemId && termId && (
