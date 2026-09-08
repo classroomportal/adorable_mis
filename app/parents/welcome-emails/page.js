@@ -20,6 +20,15 @@ function WelcomeEmailsInner() {
     setStatus(`${valid.length} parent(s) ready to email (skipped rows without a real password).`);
   }
 
+  const GMAIL_MAIL_MERGE_INSTRUCTIONS = `Sending via info@abc.sch.ng (Google Workspace mail merge)
+
+1. Open Google Sheets → File → Import → upload the CSV you just downloaded. Keep the header row (parent_name, email, temp_password).
+2. In Gmail, compose a new email and click the mail-merge icon in the compose toolbar (only shows if multi-send mode is on).
+   Not showing? Settings → See all settings → Advanced → Multi-Send Mode → Enable.
+3. Link the Google Sheet you just made as the recipient source.
+4. Write the email using {{parent_name}}, {{email}}, {{temp_password}} as merge fields (see the Resend template above for wording — swap {{ }} for the merge fields).
+5. Preview a few, then send. Workspace allows up to 2,000 recipients/day, so the whole parent list can go in one send.`;
+
   function handleExportCsv() {
     const csv = Papa.unparse(rows.map((r) => ({
       parent_name: r.parent_name || '',
@@ -102,7 +111,12 @@ Adorable British College`;
             {sending ? 'Sending...' : `Send ${rows.length} emails via Resend`}
           </button>
 
-          <details style={{ marginTop: '0.75rem' }}>
+          <details style={{ marginTop: '0.75rem' }} open={OVER_DAILY_CAP}>
+            <summary>How to send via info@abc.sch.ng (Google Workspace mail merge)</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{GMAIL_MAIL_MERGE_INSTRUCTIONS}</pre>
+          </details>
+
+          <details style={{ marginTop: '0.5rem' }}>
             <summary>Mail-merge email template (copy for Word/Outlook)</summary>
             <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{MAIL_MERGE_TEMPLATE}</pre>
           </details>
