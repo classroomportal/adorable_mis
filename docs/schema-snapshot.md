@@ -60,7 +60,7 @@ Permissions model. `roles.role_name` (PK), `resources.resource_key` (PK) + `labe
 `house_assignment_id` (PK), `house_name`, `houseparent_staff_id` → staff. Maps a houseparent to a boarding house.
 
 ### boarding_houses / sports_houses
-Simple lookups: `house_id` (PK), `name`. `students.boarding_house` / `students.sports_house` currently store the name as free text rather than an FK to these — worth reconciling.
+Simple lookups: `house_id` (PK), `name` (unique). `students.boarding_house` / `students.sports_house` are FK'd to `name` (migration 068, `on update cascade`), so a rename in the lookup table propagates automatically and bad values are rejected at the DB level.
 
 ---
 

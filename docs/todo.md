@@ -24,7 +24,8 @@ none fit — no special format required beyond a markdown checkbox.
 ## Docs out of sync with live DB
 
 - [ ] `sql/` folder is missing the fees/tuckshop migrations (~054–066) — they were run directly in the Supabase SQL editor and never saved as files. Reconstruct or re-export them from the live DB so the repo isn't missing schema history.
-- [ ] `docs/schema-snapshot.md` predates the fees module entirely — no fee_item_band_amounts, fee bands, tuckshop tables, etc. Needs a refresh pass against the live schema.
+- [x] `docs/schema-snapshot.md` predates the fees module entirely — DONE, refreshed 2026-09-08 against full live dump (fees, tuckshop, mentor groups, scoped roles, register alerts, etc. all now documented)
+- [x] `students.boarding_house` / `sports_house` were free text with no FK — DONE (migration 068, filed in sql/)
 
 ## Data cleanup
 
