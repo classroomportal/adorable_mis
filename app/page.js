@@ -151,6 +151,7 @@ const TABS = [
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family', adminOnly: true, roles: ['bursar', 'smt'],
     render: () => (
       <Section accent="family">
+        <Tile href="/bursar/charge-checklist" icon="✅" label="Charge Checklist" />
         <Tile href="/bursar/fee-batches" icon="➕" label="Add a Charge" />
         <Tile href="/bursar/fee-items" icon="🏷️" label="Fee Items (Prices)" />
         <Tile href="/bursar/fee-bands" icon="🎚️" label="Fee Bands" />
