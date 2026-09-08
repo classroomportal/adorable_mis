@@ -108,11 +108,13 @@ button {
   font-weight: 500;
 }
 button:hover { background: var(--red-900); }
-button.secondary {
+button.secondary, a.secondary {
   background: white;
   color: var(--red-700);
   border: 1px solid var(--red-700);
 }
+a.secondary { font-weight: 500; cursor: pointer; }
+a.secondary:hover { background: var(--red-900); color: white; }
 
 form {
   display: flex;
@@ -199,6 +201,9 @@ input, select { width: 100%; }
 @media print {
   .no-print { display: none !important; }
   .certificate-print { display: block !important; }
+  nav, .navbar, header { display: none !important; }
+  main { padding: 0 !important; max-width: none !important; margin: 0 !important; }
+  body { margin: 0; }
 }
 .certificate-border {
   border: 6px double var(--red-800);
@@ -207,11 +212,16 @@ input, select { width: 100%; }
   margin: 2rem;
   font-family: Georgia, serif;
 }
+.cert-logo { width: 90px; height: 90px; object-fit: contain; margin: 0 auto 0.75rem; display: block; }
 .cert-eyebrow { text-transform: uppercase; letter-spacing: 0.15em; color: var(--red-800); font-size: 0.9rem; }
 .cert-title { font-size: 2rem; color: var(--red-800); margin: 0.5rem 0 1.5rem; }
 .cert-body { font-size: 1.1rem; margin: 0.5rem 0; }
 .cert-name { font-size: 1.8rem; font-weight: 700; margin: 0.75rem 0; border-bottom: 1px solid var(--slate-300); display: inline-block; padding: 0 1rem 0.25rem; }
 .cert-date { margin-top: 2rem; font-size: 0.95rem; color: #666; }
+.cert-signature-row { display: flex; justify-content: space-between; margin-top: 3rem; padding: 0 1.5rem; }
+.cert-signature { text-align: center; flex: 1; }
+.cert-signature-line { border-top: 1px solid #333; margin: 0 2rem 0.35rem; padding-top: 0.35rem; height: 2.2rem; }
+.cert-signature-label { font-size: 0.85rem; color: #666; }
 
 .module-tabs {
   display: flex;

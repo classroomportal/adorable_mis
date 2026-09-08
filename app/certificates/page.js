@@ -110,12 +110,23 @@ function CertificatesInner() {
       {printing && (
         <div className="certificate-print">
           <div className="certificate-border">
+            <img src="/logo.png" alt="Adorable British College" className="cert-logo" />
             <p className="cert-eyebrow">Adorable British College</p>
             <h1 className="cert-title">Certificate of Achievement</h1>
             <p className="cert-body">This certificate is proudly awarded to</p>
             <p className="cert-name">{printing.student?.first_name} {printing.student?.last_name}</p>
             <p className="cert-body">for reaching <strong>{printing.milestone} behaviour points ({printing.tier})</strong></p>
             <p className="cert-date">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <div className="cert-signature-row">
+              <div className="cert-signature">
+                <div className="cert-signature-line"></div>
+                <p className="cert-signature-label">Principal</p>
+              </div>
+              <div className="cert-signature">
+                <div className="cert-signature-line"></div>
+                <p className="cert-signature-label">Head of Pastoral</p>
+              </div>
+            </div>
           </div>
           <div className="no-print" style={{ marginTop: '1rem', textAlign: 'center' }}>
             <button onClick={() => { markAwarded(printing); setPrinting(null); }}>Mark as awarded</button>

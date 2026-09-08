@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import Link from 'next/link';
 
 function AttendanceInner() {
   const searchParams = useSearchParams();
@@ -178,9 +179,14 @@ function AttendanceInner() {
             <p>No students are linked to this class yet.</p>
           ) : (
             <>
-              <button type="button" onClick={markAllPresent} className="secondary" style={{ width: 'fit-content', marginBottom: '1rem' }}>
-                Mark all present
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                <button type="button" onClick={markAllPresent} className="secondary" style={{ width: 'fit-content' }}>
+                  Mark all present
+                </button>
+                <Link href={`/behaviour?classId=${classId}&date=${date}`} className="secondary" style={{ width: 'fit-content', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '0 0.9rem', borderRadius: '6px' }}>
+                  Log behaviour for this class
+                </Link>
+              </div>
               <div className="table-scroll"><table>
                 <thead><tr><th>Student</th><th>Today so far</th><th>Code</th></tr></thead>
                 <tbody>
