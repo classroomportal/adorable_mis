@@ -27,6 +27,13 @@ none fit — no special format required beyond a markdown checkbox.
 - [ ] Confirm the null-grade backfill from the Business merge actually ran
 - [ ] Review seeded WAEC/IGCSE grade boundary guesses against real school policy
 
+## Pastoral / Certificates — next session
+
+- [ ] Certificate print output: fix print stylesheet so the app header/nav bar doesn't appear in the printed certificate (currently only the certificate card should print)
+- [ ] Add school logo and staff signature line to the certificate template
+- [ ] Faster behaviour entry: allow staff to pick a group/list of students at once when logging a behaviour event, not just one student at a time
+- [ ] Faster behaviour entry: add a quick-entry path from the class register (accessible by tapping into a class from the staff timetable) so behaviour can be logged directly against that class's students
+
 ## Not yet built
 
 - [ ] School fees / billing module (see CTS Portal reference screenshot for a possible access-control/UI pattern)
