@@ -35,6 +35,7 @@ export default function LoginPage() {
         <button type="submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button>
         {error && <p style={{ color: '#a3232c' }}>{error}</p>}
       </form>
+      <p><a href="/login/forgot">Forgot password?</a></p>
     </div>
   );
 }
