@@ -20,6 +20,46 @@ function StaffWelcomeEmailsInner() {
     setStatus(`${valid.length} staff member(s) ready to email (skipped rows without a real password).`);
   }
 
+  function handleExportCsv() {
+    const csv = Papa.unparse(rows.map((r) => ({
+      staff_name: r.staff_name || '',
+      email: r.email,
+      temp_password: r.temp_password,
+    })));
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `staff-welcome-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const MAIL_MERGE_TEMPLATE = `Subject: Your Adorable MIS staff login
+
+Dear {{staff_name}},
+
+Your Adorable MIS staff account is ready.
+
+Login email: {{email}}
+Temporary password: {{temp_password}}
+
+Please log in at mis.classroomportal.org and change your password on first login.
+
+Kind regards,
+Adorable British College`;
+
+  const GMAIL_MAIL_MERGE_INSTRUCTIONS = `Sending via info@abc.sch.ng (Google Workspace mail merge)
+
+1. Open Google Sheets → File → Import → upload the CSV you just downloaded. Keep the header row (staff_name, email, temp_password).
+2. In Gmail, compose a new email and click the mail-merge icon in the compose toolbar (only shows if multi-send mode is on).
+   Not showing? Settings → See all settings → Advanced → Multi-Send Mode → Enable.
+3. Link the Google Sheet you just made as the recipient source.
+4. Write the email using {{staff_name}}, {{email}}, {{temp_password}} as merge fields (see the Resend template above for wording — swap {{ }} for the merge fields).
+5. Preview a few, then send. Workspace allows up to 2,000 recipients/day, so the whole staff list can go in one send.`;
+
+  const OVER_DAILY_CAP = rows.length > 90;
+
   async function handleSend() {
     setSending(true);
     let sent = 0;
@@ -62,7 +102,28 @@ function StaffWelcomeEmailsInner() {
       {rows.length > 0 && (
         <div className="card">
           <p>{rows.length} staff member(s) will receive an email with their login and temporary password.</p>
-          <button onClick={handleSend} disabled={sending}>{sending ? 'Sending...' : `Send ${rows.length} emails`}</button>
+
+          {OVER_DAILY_CAP && (
+            <p style={{ color: '#b45309', fontWeight: 600 }}>
+              {rows.length} is over Resend's 100/day free-tier cap — sending now will fail partway through.
+              Export the CSV below and mail-merge it through the school office's own email instead.
+            </p>
+          )}
+
+          <button onClick={handleExportCsv} style={{ marginRight: '0.5rem' }}>Download CSV for mail merge</button>
+          <button onClick={handleSend} disabled={sending || OVER_DAILY_CAP}>
+            {sending ? 'Sending...' : `Send ${rows.length} emails via Resend`}
+          </button>
+
+          <details style={{ marginTop: '0.75rem' }} open={OVER_DAILY_CAP}>
+            <summary>How to send via info@abc.sch.ng (Google Workspace mail merge)</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{GMAIL_MAIL_MERGE_INSTRUCTIONS}</pre>
+          </details>
+
+          <details style={{ marginTop: '0.5rem' }}>
+            <summary>Mail-merge email template (copy for Word/Outlook)</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{MAIL_MERGE_TEMPLATE}</pre>
+          </details>
         </div>
       )}
 

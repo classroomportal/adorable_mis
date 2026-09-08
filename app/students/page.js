@@ -12,6 +12,7 @@ function StudentsList() {
   const [yearFilter, setYearFilter] = useState('');
   const [formFilter, setFormFilter] = useState('');
   const [yearFormPairs, setYearFormPairs] = useState([]); // [{year_group, form_class}]
+  const [houseScope, setHouseScope] = useState(null);
 
   // On mount, only fetch the small distinct year/form lists needed to
   // populate the filter dropdowns — not the full student list or photos.
@@ -19,6 +20,11 @@ function StudentsList() {
     async function loadFilterOptions() {
       const { data } = await supabase.from('students').select('year_group, form_class');
       setYearFormPairs(data || []);
+      // NULL means unscoped (admin, SMT, etc.) — see everyone, same as today.
+      // A non-null value means the viewer is a Houseparent scoped to that
+      // boarding house, so the student list narrows to their house only.
+      const { data: scope } = await supabase.rpc('my_house_scope');
+      setHouseScope(scope || null);
     }
     loadFilterOptions();
   }, []);
@@ -38,6 +44,14 @@ function StudentsList() {
     if (yearFilter) query = query.eq('year_group', Number(yearFilter));
     if (formFilter) query = query.eq('form_class', formFilter);
     if (search.trim()) query = query.or(`first_name.ilike.%${search.trim()}%,last_name.ilike.%${search.trim()}%`);
+
+    // student_summary has no boarding_house column, so a Houseparent's scope
+    // is applied by first resolving matching student_ids from students directly.
+    if (houseScope) {
+      const { data: houseStudents } = await supabase.from('students').select('student_id').eq('boarding_house', houseScope);
+      const ids = (houseStudents || []).map((s) => s.student_id);
+      query = query.in('student_id', ids.length ? ids : [-1]);
+    }
 
     const { data, error } = await query;
     if (error) { setError(error.message); setLoading(false); return; }
@@ -61,6 +75,11 @@ function StudentsList() {
     <div>
       <h1>Students</h1>
       <p><a href="/students/new">+ Add a new student</a></p>
+      {houseScope && (
+        <p style={{ background: '#fdecad', padding: '0.4rem 0.6rem', borderRadius: '4px', display: 'inline-block' }}>
+          Showing {houseScope} students only (Houseparent view)
+        </p>
+      )}
 
       <form onSubmit={(e) => { e.preventDefault(); loadStudents(); }}>
         <label>
