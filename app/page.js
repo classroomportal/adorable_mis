@@ -220,7 +220,6 @@ export default function Home() {
   if (!session) {
     return (
       <div>
-        <h1>Adorable MIS</h1>
         <p>School management information system for Adorable British College.</p>
         <a href="/login"><button>Sign in</button></a>
       </div>
@@ -258,8 +257,6 @@ export default function Home() {
 
   return (
     <div>
-      <h1>Adorable MIS</h1>
-
       <DashboardStats />
 
       <div className="dashboard-layout">
