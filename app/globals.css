@@ -72,6 +72,19 @@ table {
   .table-compact { max-width: 620px; }
 }
 
+/* Two subject tables side by side on wider screens; each column naturally
+   wraps below the other once the viewport is too narrow to fit both. */
+.subjects-two-col {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.subjects-two-col .table-scroll {
+  flex: 1 1 280px;
+  margin-top: 0;
+}
+
 th, td {
   text-align: left;
   padding: 0.55rem 0.7rem;

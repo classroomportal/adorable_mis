@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
 import TranscriptDownload from '../components/TranscriptDownload';
+import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -127,21 +128,7 @@ function PortalInner() {
       <div className="card">
         <h2>Results vs Target</h2>
         {targets.length === 0 ? <p>No target grades set yet.</p> : (
-          <div className="table-scroll table-compact"><table>
-            <thead><tr><th>Subject</th><th>Target</th><th>Most recent grade</th></tr></thead>
-            <tbody>
-              {targets.map((t) => {
-                const latest = results.find((r) => r.subject_id === t.subject_id);
-                return (
-                  <tr key={t.subject_id}>
-                    <td>{t.subjects?.display_name || t.subjects?.subject_name}</td>
-                    <td>{t.target_grade}</td>
-                    <td>{latest?.grade ?? '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table></div>
+          <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} />
         )}
       </div>
 

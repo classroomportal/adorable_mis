@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
 import TranscriptDownload from '../components/TranscriptDownload';
+import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 
 function ParentPortalInner() {
@@ -19,6 +20,7 @@ function ParentPortalInner() {
   const [feePayments, setFeePayments] = useState([]);
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
   const [tuckshopHistory, setTuckshopHistory] = useState([]);
+  const [gradePoints, setGradePoints] = useState({});
 
   // A parent login already has profile.parent_id set. A staff member who is
   // also a parent doesn't — fall back to matching their login email against
@@ -62,6 +64,8 @@ function ParentPortalInner() {
       setTargets(tg || []);
       const { data: b } = await supabase.from('behaviour_events').select('*').eq('student_id', selectedId).order('event_date', { ascending: false });
       setBehaviour(b || []);
+      const { data: gs } = await supabase.from('grade_scale').select('*');
+      setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
 
       const { data: term } = await supabase.from('fee_terms').select('id, name, is_current, published_to_parents').eq('is_current', true).maybeSingle();
       const visibleTerm = term?.published_to_parents ? term : null;
@@ -138,21 +142,7 @@ function ParentPortalInner() {
           <div className="card">
             <h2>Results vs Target</h2>
             {targets.length === 0 ? <p>No target grades set yet.</p> : (
-              <div className="table-scroll table-compact"><table>
-                <thead><tr><th>Subject</th><th>Target</th><th>Most recent grade</th></tr></thead>
-                <tbody>
-                  {targets.map((t) => {
-                    const latest = results.find((r) => r.subject_id === t.subject_id);
-                    return (
-                      <tr key={t.subject_id}>
-                        <td>{t.subjects?.display_name || t.subjects?.subject_name}</td>
-                        <td>{t.target_grade}</td>
-                        <td>{latest?.grade ?? '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table></div>
+              <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} />
             )}
           </div>
 
