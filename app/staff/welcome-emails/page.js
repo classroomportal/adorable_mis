@@ -35,16 +35,16 @@ function StaffWelcomeEmailsInner() {
     URL.revokeObjectURL(url);
   }
 
-  const MAIL_MERGE_TEMPLATE = `Subject: Your Adorable MIS staff login
+  const MAIL_MERGE_TEMPLATE = `Subject: Your Formwork staff login
 
 Dear {{staff_name}},
 
-Your Adorable MIS staff account is ready.
+Your Formwork staff account is ready.
 
 Login email: {{email}}
 Temporary password: {{temp_password}}
 
-Please log in at mis.classroomportal.org and change your password on first login.
+Please log in at misform.work and change your password on first login.
 
 Kind regards,
 Adorable British College`;

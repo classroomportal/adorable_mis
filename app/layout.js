@@ -3,7 +3,7 @@ import { AuthProvider } from '../lib/AuthContext';
 import NavBar from './NavBar';
 
 export const metadata = {
-  title: 'Adorable MIS',
+  title: 'Formwork',
   description: 'School management information system',
 };
 

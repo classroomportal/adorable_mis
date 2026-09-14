@@ -44,16 +44,16 @@ function WelcomeEmailsInner() {
     URL.revokeObjectURL(url);
   }
 
-  const MAIL_MERGE_TEMPLATE = `Subject: Your Adorable MIS parent portal login
+  const MAIL_MERGE_TEMPLATE = `Subject: Your Formwork parent portal login
 
 Dear {{parent_name}},
 
-Your Adorable MIS parent portal account is ready.
+Your Formwork parent portal account is ready.
 
 Login email: {{email}}
 Temporary password: {{temp_password}}
 
-Please log in at mis.classroomportal.org and change your password on first login.
+Please log in at misform.work and change your password on first login.
 
 Kind regards,
 Adorable British College`;

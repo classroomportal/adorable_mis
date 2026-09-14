@@ -221,7 +221,7 @@ export default function Home() {
   if (!session) {
     return (
       <div>
-        <p>School management information system for Adorable British College.</p>
+        <p>Formwork — school management information system for Adorable British College.</p>
         <a href="/login"><button>Sign in</button></a>
       </div>
     );
