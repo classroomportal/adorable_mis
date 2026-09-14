@@ -168,6 +168,7 @@ const TABS = [
       <Section accent="family">
         <Tile href="/tuckshop/purchase" icon="🛒" label="Sell Items" />
         <Tile href="/tuckshop/topup" icon="💵" label="Top Up Balance" />
+        <Tile href="/tuckshop/balances" icon="📊" label="Balances" />
         <Tile href="/tuckshop/preorders" icon="📝" label="Preorders" />
         <Tile href="/tuckshop/items" icon="🧺" label="Items & Prices" />
       </Section>
