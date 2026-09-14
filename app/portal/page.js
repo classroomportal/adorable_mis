@@ -127,7 +127,7 @@ function PortalInner() {
       <div className="card">
         <h2>Results vs Target</h2>
         {targets.length === 0 ? <p>No target grades set yet.</p> : (
-          <div className="table-scroll"><table>
+          <div className="table-scroll table-compact"><table>
             <thead><tr><th>Subject</th><th>Target</th><th>Most recent grade</th></tr></thead>
             <tbody>
               {targets.map((t) => {

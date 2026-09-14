@@ -138,7 +138,7 @@ function ParentPortalInner() {
           <div className="card">
             <h2>Results vs Target</h2>
             {targets.length === 0 ? <p>No target grades set yet.</p> : (
-              <div className="table-scroll"><table>
+              <div className="table-scroll table-compact"><table>
                 <thead><tr><th>Subject</th><th>Target</th><th>Most recent grade</th></tr></thead>
                 <tbody>
                   {targets.map((t) => {
@@ -159,7 +159,7 @@ function ParentPortalInner() {
           <div className="card">
             <h2>Behaviour</h2>
             {behaviour.length === 0 ? <p>No events logged.</p> : (
-              <div className="table-scroll"><table>
+              <div className="table-scroll table-compact"><table>
                 <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Points</th></tr></thead>
                 <tbody>
                   {behaviour.map((b) => (

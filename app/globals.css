@@ -66,6 +66,12 @@ table {
   background: white;
 }
 
+/* Compact variant: for narrow-content tables (few short columns) so they
+   don't stretch edge-to-edge on wide desktop screens. Mobile is unaffected. */
+@media (min-width: 900px) {
+  .table-compact { max-width: 620px; }
+}
+
 th, td {
   text-align: left;
   padding: 0.55rem 0.7rem;
