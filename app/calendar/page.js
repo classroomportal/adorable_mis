@@ -14,7 +14,10 @@ const CATEGORY_LABELS = {
   awareness_day: 'Awareness day',
   holiday: 'Holiday',
   other: 'Other',
+  report_period: 'Report period',
 };
+
+const ALL_YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
 
 function CalendarInner() {
   const { profile } = useAuth();
@@ -26,6 +29,13 @@ function CalendarInner() {
   const [editDraft, setEditDraft] = useState(null);
   const [newEvent, setNewEvent] = useState({ event_date: '', event_name: '', category: 'relp', year_group_note: '', is_result_set: false });
   const [status, setStatus] = useState(null);
+  const [isReportPeriod, setIsReportPeriod] = useState(false);
+  const [reportYearGroups, setReportYearGroups] = useState([]);
+  const [checkDueDate, setCheckDueDate] = useState('');
+
+  function toggleReportYearGroup(yg) {
+    setReportYearGroups((prev) => (prev.includes(yg) ? prev.filter((y) => y !== yg) : [...prev, yg].sort((a, b) => a - b)));
+  }
 
   async function loadEvents() {
     const { data: e } = await supabase.from('calendar_events').select('*').order('event_date');
@@ -68,15 +78,36 @@ function CalendarInner() {
   async function addEvent(e) {
     e.preventDefault();
     if (!newEvent.event_date || !newEvent.event_name) { setStatus('Date and name are required.'); return; }
-    const { error } = await supabase.from('calendar_events').insert([{
+    if (isReportPeriod && reportYearGroups.length === 0) { setStatus('Select at least one year group for the report period.'); return; }
+
+    const eventCategory = isReportPeriod ? 'report_period' : newEvent.category;
+    const { data: inserted, error } = await supabase.from('calendar_events').insert([{
       event_date: newEvent.event_date,
       event_name: newEvent.event_name,
-      category: newEvent.category,
-      year_group_note: newEvent.year_group_note || null,
+      category: eventCategory,
+      year_group_note: newEvent.year_group_note || (isReportPeriod ? reportYearGroups.map((y) => `Y${y}`).join('/') : null),
       is_result_set: newEvent.is_result_set,
-    }]);
-    if (error) setStatus(`Error: ${error.message}`);
-    else { setNewEvent({ event_date: '', event_name: '', category: 'relp', year_group_note: '', is_result_set: false }); setStatus('Added.'); loadEvents(); }
+    }]).select().single();
+
+    if (error) { setStatus(`Error: ${error.message}`); return; }
+
+    if (isReportPeriod) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: rpError } = await supabase.from('report_periods').insert([{
+        name: newEvent.event_name,
+        year_groups: reportYearGroups,
+        comments_due_date: newEvent.event_date,
+        check_due_date: checkDueDate || null,
+        calendar_event_id: inserted.event_id,
+        created_by: user?.id || null,
+      }]);
+      if (rpError) { setStatus(`Event added, but report period failed: ${rpError.message}`); loadEvents(); return; }
+    }
+
+    setNewEvent({ event_date: '', event_name: '', category: 'relp', year_group_note: '', is_result_set: false });
+    setIsReportPeriod(false); setReportYearGroups([]); setCheckDueDate('');
+    setStatus(isReportPeriod ? 'Event and report period added.' : 'Added.');
+    loadEvents();
   }
 
   const filtered = categoryFilter ? events.filter((e) => e.category === categoryFilter) : events;
@@ -122,6 +153,30 @@ function CalendarInner() {
               <input type="checkbox" checked={newEvent.is_result_set} onChange={(e) => setNewEvent({ ...newEvent, is_result_set: e.target.checked })} />
               Result set (show in Subject Overview dataset picker)
             </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <input type="checkbox" checked={isReportPeriod} onChange={(e) => setIsReportPeriod(e.target.checked)} />
+              Report period (also creates a Report Period for Write/Check Reports)
+            </label>
+            {isReportPeriod && (
+              <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.6rem', margin: '0.4rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.8rem', marginBottom: '0.2rem' }}>Year groups covered</div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {ALL_YEAR_GROUPS.map((yg) => (
+                      <label key={yg} style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={reportYearGroups.includes(yg)} onChange={() => toggleReportYearGroup(yg)} />
+                        Y{yg}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <label>
+                  Checking due date (end of week 2)
+                  <input type="date" value={checkDueDate} onChange={(e) => setCheckDueDate(e.target.value)} />
+                </label>
+                <span style={{ fontSize: '0.75rem', color: '#666' }}>The event date above is used as the comments-due date (end of week 1).</span>
+              </div>
+            )}
             <button type="submit">Add event</button>
           </form>
         </div>
