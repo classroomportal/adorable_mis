@@ -686,12 +686,15 @@ function StudentDetail() {
       </Collapsible>
 
       <Collapsible title="Target Grades">
-        {targetList.length === 0 ? <p>No target grades set for this student.</p> : (
+        {(() => {
+          const targetsWithResults = targetList.filter((t) => results.some((r) => r.subject_id === t.subject_id));
+          if (targetsWithResults.length === 0) return <p>No target grades set for this student.</p>;
+          return (
           <div className="table-scroll">
             <table>
               <thead><tr><th>Subject</th><th>Target</th><th>Most recent grade</th><th>vs Target</th></tr></thead>
               <tbody>
-                {targetList.map((t) => {
+                {targetsWithResults.map((t) => {
                   const latestResult = results.find((r) => r.subject_id === t.subject_id);
                   const targetPts = gradePoints[t.target_grade];
                   const gotPts = latestResult?.grade ? gradePoints[latestResult.grade.trim().toUpperCase()] : undefined;
@@ -713,7 +716,8 @@ function StudentDetail() {
               </tbody>
             </table>
           </div>
-        )}
+          );
+        })()}
       </Collapsible>
 
       <Collapsible title="Results">
