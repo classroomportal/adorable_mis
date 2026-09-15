@@ -131,7 +131,7 @@ const TABS = [
       <Section accent="school">
         <Tile href="/staff/timetable" icon="🗓️" label="My Timetable" />
         <Tile href="/admin/block-allocation" icon="🗂️" label="Class Allocation" />
-        <Tile href="/admin/import-classes" icon="📥" label="Import Nova-T Timetable (Classes/Teacher/Room)" />
+        <Tile href="/admin/import-classes" icon="📥" label="Import Nova-T Timetable" />
       </Section>
     ),
   },
