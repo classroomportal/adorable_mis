@@ -10,6 +10,11 @@ const STYLE = {
 };
 const LABEL = { above: 'Above target', on: 'On target', below: 'Below target' };
 
+const WAEC_GRADES = new Set(['A1+', 'A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9']);
+function gradeScaleOf(grade) {
+  return WAEC_GRADES.has(grade) ? 'waec' : 'igcse';
+}
+
 function classify(diff) {
   if (diff > 0.15) return 'above';
   if (diff < -0.15) return 'below';
@@ -105,8 +110,11 @@ function ClassProgressInner() {
           const target = targetByKey[targetKey];
           const latest = latestGrade[key];
           if (!target || !latest?.grade) return;
-          const tp = points[target];
-          const ap = points[latest.grade.trim().toUpperCase()];
+          const targetGrade = target;
+          const actualGrade = latest.grade.trim().toUpperCase();
+          if (gradeScaleOf(targetGrade) !== gradeScaleOf(actualGrade)) return; // different grading systems — not comparable
+          const tp = points[targetGrade];
+          const ap = points[actualGrade];
           if (tp === undefined || ap === undefined) return;
           targetSum += tp; actualSum += ap; n += 1;
           const c2 = ap > tp ? 'above' : ap < tp ? 'below' : 'on';
@@ -150,7 +158,7 @@ function ClassProgressInner() {
           Showing {scopedDepartment} department classes only (Head of Department view)
         </p>
       )}
-      <p>Each class's average grade vs the average target grade for the same students, most recent result per subject. Classes with fewer than one comparable student are hidden. Sorted worst-to-best. (+ / ~ / - = Above / On / Below target)</p>
+      <p>Each class's average grade vs the average target grade for the same students, most recent result per subject. Classes with fewer than one comparable student are hidden. Target and actual grades are only compared when both are on the same grading scale (IGCSE or WAEC) — a Year 12 class whose latest result predates their WAEC track (e.g. still IGCSE-graded) won't show a comparison until a WAEC-scale result is entered. Sorted worst-to-best. (+ / ~ / - = Above / On / Below target)</p>
 
       <div className="card">
         <label>
