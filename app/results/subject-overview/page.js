@@ -75,15 +75,32 @@ function SubjectOverviewInner() {
 
     // Base query (date range + result type) shared by both the selected student's
     // results and the whole-cohort results used to compute the average line.
-    let baseQuery = supabase
-      .from('results')
-      .select('score, max_score, student_id, week_start_date, result_type, subject_id, subjects(subject_name, display_name)')
-      .gt('max_score', 0);
-    if (startDate) baseQuery = baseQuery.gte('week_start_date', startDate);
-    if (endDate) baseQuery = baseQuery.lte('week_start_date', endDate);
-    if (selectedTypes.length > 0) baseQuery = baseQuery.in('result_type', selectedTypes);
+    // Paginated explicitly: Supabase/PostgREST caps a single request at 1000 rows by
+    // default, and this filter can easily match several thousand rows (e.g. ~2,956 for
+    // one exam-import date across the whole school) — an unpaginated fetch silently
+    // truncates, which showed up as some students missing subjects and others showing
+    // no results at all, depending on where their rows fell in the truncated batch.
+    const PAGE_SIZE = 1000;
+    let allRows = [];
+    let from = 0;
+    let qError = null;
+    for (;;) {
+      let pageQuery = supabase
+        .from('results')
+        .select('score, max_score, student_id, week_start_date, result_type, subject_id, subjects(subject_name, display_name)')
+        .gt('max_score', 0);
+      if (startDate) pageQuery = pageQuery.gte('week_start_date', startDate);
+      if (endDate) pageQuery = pageQuery.lte('week_start_date', endDate);
+      if (selectedTypes.length > 0) pageQuery = pageQuery.in('result_type', selectedTypes);
+      pageQuery = pageQuery.range(from, from + PAGE_SIZE - 1);
 
-    const { data, error: qError } = await baseQuery;
+      const { data: page, error: pageError } = await pageQuery;
+      if (pageError) { qError = pageError; break; }
+      allRows = allRows.concat(page || []);
+      if (!page || page.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+    const data = allRows;
 
     if (qError) {
       console.error('subject-overview query error:', qError);
