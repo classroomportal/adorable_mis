@@ -118,6 +118,18 @@ const TABS = [
     ),
   },
   {
+    key: 'reports', label: 'Reports', icon: '📝', accent: 'students',
+    render: ({ isAdmin }) => (
+      <Section accent="students">
+        <Tile href="/reports/write-subject-comments" icon="✍️" label="Write Subject Comments" />
+        <Tile href="/reports/write-pastoral-comments" icon="💬" label="Write Pastoral Comments" />
+        <Tile href="/reports/check" icon="🔍" label="Check Reports" />
+        {isAdmin && <Tile href="/reports/periods" icon="🗂️" label="Manage Report Periods" />}
+        {isAdmin && <Tile href="/reports/generate" icon="📄" label="Generate Reports" />}
+      </Section>
+    ),
+  },
+  {
     key: 'comms', label: 'Communication', icon: '💬', accent: 'family', adminOnly: true, roles: ['smt', 'pastoral', 'school_office'],
     render: () => (
       <Section accent="family">
