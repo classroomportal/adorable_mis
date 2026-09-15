@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
+import { formatUKDate } from '../../lib/formatDate';
 
 const CATEGORY_LABELS = {
   term_boundary: 'Term boundary',
@@ -101,6 +102,7 @@ function CalendarInner() {
           <form onSubmit={addEvent}>
             <label>Date
               <input type="date" value={newEvent.event_date} onChange={(e) => setNewEvent({ ...newEvent, event_date: e.target.value })} required />
+              {newEvent.event_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(newEvent.event_date)}</span>}
             </label>
             <label>Name
               <input value={newEvent.event_name} onChange={(e) => setNewEvent({ ...newEvent, event_name: e.target.value })} required />
@@ -153,7 +155,7 @@ function CalendarInner() {
                   </tr>
                 ) : (
                   <tr key={e.event_id}>
-                    <td>{e.event_date}</td>
+                    <td>{e.event_date}<br /><span style={{ fontSize: '0.75rem', color: '#666' }}>{formatUKDate(e.event_date)}</span></td>
                     <td>{e.event_name}</td>
                     <td>{CATEGORY_LABELS[e.category] || e.category}</td>
                     <td>{e.year_group_note || ''}</td>

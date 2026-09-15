@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
+import { formatUKDate } from '../../lib/formatDate';
 
 function BehaviourPageInner() {
   const { isPastoralOrSmt, profile } = useAuth();
@@ -215,7 +216,7 @@ function BehaviourPageInner() {
               <tbody>
                 {scopedAlerts.map((a) => (
                   <tr key={a.event_id}>
-                    <td>{a.event_date}</td>
+                    <td>{formatUKDate(a.event_date)}</td>
                     <td>{a.students?.first_name} {a.students?.last_name}</td>
                     <td>{a.category ?? '—'}</td>
                     <td>{a.points ?? '—'}</td>
@@ -319,6 +320,7 @@ function BehaviourPageInner() {
         <label>
           Date
           <input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required />
+          {form.event_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(form.event_date)}</span>}
         </label>
 
         <label>
@@ -365,7 +367,7 @@ function BehaviourPageInner() {
         <tbody>
           {scopedEvents.map((ev) => (
             <tr key={ev.event_id}>
-              <td>{ev.event_date}</td>
+              <td>{formatUKDate(ev.event_date)}</td>
               <td>{ev.students?.first_name} {ev.students?.last_name}</td>
               <td>{ev.type}</td>
               <td>{ev.category ?? '—'}</td>

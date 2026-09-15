@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import Link from 'next/link';
+import { formatUKDate } from '../../lib/formatDate';
 
 function AttendanceInner() {
   const searchParams = useSearchParams();
@@ -137,6 +138,7 @@ function AttendanceInner() {
           <label>
             Date
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            {date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(date)}</span>}
           </label>
 
           <label>

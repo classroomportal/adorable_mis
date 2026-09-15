@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import { formatUKDate } from '../../../lib/formatDate';
 import { useAuth } from '../../../lib/AuthContext';
 import { generateInvoicePdfForStudent } from '../../../lib/generateInvoicePdf';
 
@@ -314,6 +315,7 @@ function RecordPaymentInner() {
                   onChange={(e) => setPaidDate(e.target.value)}
                   className="mt-1 w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-base"
                 />
+                {paidDate && <span className="block text-xs text-neutral-500 mt-1">{formatUKDate(paidDate)}</span>}
               </div>
 
               <button

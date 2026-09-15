@@ -96,6 +96,7 @@ const TABS = [
         <Tile href="/behaviour" icon="⭐" label="Behaviour" />
         <Tile href="/attendance" icon="✅" label="Attendance" />
         <Tile href="/results" icon="📊" label="Results" />
+        <Tile href="/results/subject-overview" icon="📈" label="Subject Overview" />
         <Tile href="/certificates" icon="🏆" label="Certificates" />
         <Tile href="/detention" icon="📋" label="Detention List" />
         {isPastoralOrSmt && <Tile href="/appeals" icon="⚖️" label="Behaviour Appeals" />}

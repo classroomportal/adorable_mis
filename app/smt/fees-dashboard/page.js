@@ -156,7 +156,7 @@ function FeesDashboardInner() {
             </span>
             {term.published_to_parents && term.published_at && (
               <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                Published {new Date(term.published_at).toLocaleDateString()}
+                Published {new Date(term.published_at).toLocaleDateString('en-GB')}
               </span>
             )}
             {canPublish ? (

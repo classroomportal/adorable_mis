@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import { formatUKDate } from '../../lib/formatDate';
 
 function ResultsPageInner() {
   const [students, setStudents] = useState([]);
@@ -84,7 +85,6 @@ function ResultsPageInner() {
     <div>
       <h1>Weekly Results</h1>
       <p><a href="/results/import-gradebook">→ Bulk import results from CSV</a></p>
-      <p><a href="/results/subject-overview">→ Subject overview (max &amp; average % by subject)</a></p>
 
       <form onSubmit={handleSubmit}>
         <label>
@@ -115,7 +115,7 @@ function ResultsPageInner() {
           >
             <option value="">Select a ReLP, or type a custom date below...</option>
             {relps.map((r) => (
-              <option key={r.event_id} value={r.event_date}>{r.event_name} — {r.event_date}</option>
+              <option key={r.event_id} value={r.event_date}>{r.event_name} — {formatUKDate(r.event_date)}</option>
             ))}
           </select>
         </label>
@@ -123,6 +123,11 @@ function ResultsPageInner() {
         <label>
           Or custom date
           <input type="date" value={form.week_start_date} onChange={(e) => setForm({ ...form, week_start_date: e.target.value })} />
+          {form.week_start_date && (
+            <span style={{ display: 'block', fontSize: '0.8rem', color: '#666', marginTop: '0.2rem' }}>
+              {formatUKDate(form.week_start_date)}
+            </span>
+          )}
         </label>
 
         <label>
@@ -156,7 +161,7 @@ function ResultsPageInner() {
             const cmp = compareToTarget(r);
             return (
               <tr key={r.result_id}>
-                <td>{r.week_start_date}</td>
+                <td>{formatUKDate(r.week_start_date)}</td>
                 <td>{r.students?.first_name} {r.students?.last_name}</td>
                 <td>{r.subjects?.subject_name}</td>
                 <td>{r.score ?? '—'}{r.max_score ? ` / ${r.max_score}` : ''}</td>

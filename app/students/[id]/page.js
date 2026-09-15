@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
+import { formatUKDate } from '../../../lib/formatDate';
 import TranscriptDownload from '../../components/TranscriptDownload';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -423,6 +424,7 @@ function StudentDetail() {
             </label>
             <label>DOB
               <input type="date" value={editForm.dob || ''} onChange={(e) => setEditForm({ ...editForm, dob: e.target.value })} />
+              {editForm.dob && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.dob)}</span>}
             </label>
             <label>Year group
               <input type="number" value={editForm.year_group || ''} onChange={(e) => setEditForm({ ...editForm, year_group: e.target.value })} />
@@ -432,9 +434,11 @@ function StudentDetail() {
             </label>
             <label>Admission date
               <input type="date" value={editForm.admission_date || ''} onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })} />
+              {editForm.admission_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.admission_date)}</span>}
             </label>
             <label>Admitted/letter date
               <input type="date" value={editForm.admitted_letter_date || ''} onChange={(e) => setEditForm({ ...editForm, admitted_letter_date: e.target.value })} />
+              {editForm.admitted_letter_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.admitted_letter_date)}</span>}
             </label>
             <label>Gender
               <input value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} />
@@ -516,6 +520,7 @@ function StudentDetail() {
             </label>
             <label>Leaving date
               <input type="date" value={editForm.leaving_date || ''} onChange={(e) => setEditForm({ ...editForm, leaving_date: e.target.value })} />
+              {editForm.leaving_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.leaving_date)}</span>}
             </label>
             <label>Status
               <select value={editForm.status || 'active'} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>

@@ -7,6 +7,7 @@ import {
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
+import { formatUKDate } from '../../../lib/formatDate';
 
 // All result_type values currently in use — extend as new types appear.
 const RESULT_TYPES = [
@@ -109,11 +110,13 @@ function SubjectOverviewInner() {
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>From</label>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
             style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px' }} />
+          {startDate && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(startDate)}</span>}
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>To</label>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
             style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px' }} />
+          {endDate && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(endDate)}</span>}
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Result type</label>
