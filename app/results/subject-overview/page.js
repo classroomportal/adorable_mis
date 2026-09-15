@@ -21,6 +21,9 @@ function SubjectOverviewInner() {
   const isStudent = !!profile?.student_id && !profile?.staff_id;
 
   const [students, setStudents] = useState([]);
+  const [mentorGroups, setMentorGroups] = useState([]);
+  const [selectedYearGroup, setSelectedYearGroup] = useState('');
+  const [selectedMentorGroupId, setSelectedMentorGroupId] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -29,17 +32,30 @@ function SubjectOverviewInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Student login is locked to their own record. Staff pick a student from a dropdown.
+  // Student login is locked to their own record. Staff pick Year Group -> TG (mentor
+  // group) -> student, all fetched once and filtered client-side (student count is small).
   useEffect(() => {
     if (isStudent) {
       setSelectedStudentId(String(profile.student_id));
       return;
     }
     if (isStaff) {
-      supabase.from('students').select('student_id, first_name, last_name').order('last_name')
+      supabase.from('students').select('student_id, first_name, last_name, year_group, mentor_group_id').order('last_name')
         .then(({ data }) => setStudents(data || []));
+      supabase.from('mentor_groups').select('mentor_group_id, group_name, year_group').order('group_name')
+        .then(({ data }) => setMentorGroups(data || []));
     }
   }, [isStaff, isStudent, profile]);
+
+  const yearGroups = Array.from(new Set(students.map((s) => s.year_group).filter((y) => y != null))).sort((a, b) => a - b);
+  const mentorGroupsForYear = selectedYearGroup
+    ? mentorGroups.filter((m) => String(m.year_group) === String(selectedYearGroup))
+    : [];
+  const filteredStudents = students.filter((s) => {
+    if (selectedYearGroup && String(s.year_group) !== String(selectedYearGroup)) return false;
+    if (selectedMentorGroupId && String(s.mentor_group_id) !== String(selectedMentorGroupId)) return false;
+    return true;
+  });
 
   const fetchData = useCallback(async () => {
     if (!profile) return;
@@ -136,19 +152,48 @@ function SubjectOverviewInner() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-end' }}>
         {isStaff && (
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Student</label>
-            <select
-              value={selectedStudentId}
-              onChange={(e) => setSelectedStudentId(e.target.value)}
-              style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '180px' }}
-            >
-              <option value="">Select a student...</option>
-              {students.map((s) => (
-                <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name}</option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Year group</label>
+              <select
+                value={selectedYearGroup}
+                onChange={(e) => { setSelectedYearGroup(e.target.value); setSelectedMentorGroupId(''); setSelectedStudentId(''); }}
+                style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px' }}
+              >
+                <option value="">All years</option>
+                {yearGroups.map((y) => (
+                  <option key={y} value={y}>Year {y}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>TG (mentor group)</label>
+              <select
+                value={selectedMentorGroupId}
+                onChange={(e) => { setSelectedMentorGroupId(e.target.value); setSelectedStudentId(''); }}
+                disabled={!selectedYearGroup}
+                style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px' }}
+              >
+                <option value="">All TGs</option>
+                {mentorGroupsForYear.map((m) => (
+                  <option key={m.mentor_group_id} value={m.mentor_group_id}>{m.group_name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Student</label>
+              <select
+                value={selectedStudentId}
+                onChange={(e) => setSelectedStudentId(e.target.value)}
+                style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '180px' }}
+              >
+                <option value="">Select a student...</option>
+                {filteredStudents.map((s) => (
+                  <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name}</option>
+                ))}
+              </select>
+            </div>
+          </>
         )}
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>From</label>
