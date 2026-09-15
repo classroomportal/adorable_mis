@@ -77,10 +77,29 @@ export default function ImportClassesPage() {
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
 
+  // Lookup lists kept around for the "create new class" form dropdowns.
+  const [subjectsList, setSubjectsList] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [blocksList, setBlocksList] = useState([]);
+
+  // newClassForm[class_code] = { subject_id, staff_id, room, block_choice, new_block_name, new_block_band, new_block_is_compound }
+  const [newClassForm, setNewClassForm] = useState({});
+  const [creating, setCreating] = useState(false);
+  const [createResult, setCreateResult] = useState(null);
+
+  function updateNewClassField(classCode, field, value) {
+    setNewClassForm((prev) => ({
+      ...prev,
+      [classCode]: { ...(prev[classCode] || {}), [field]: value },
+    }));
+  }
+
   async function handleFiles(e) {
     setError(null);
     setResult(null);
     setPreview(null);
+    setCreateResult(null);
+    setNewClassForm({});
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -88,15 +107,25 @@ export default function ImportClassesPage() {
     try {
       const parsedClasses = await parseFiles(files);
 
-      const [{ data: existingClasses, error: cErr }, { data: staff, error: sErr }, { data: subjects, error: subErr }] =
-        await Promise.all([
-          supabase.from("classes").select("class_id, class_code, staff_id, room, subject_id"),
-          supabase.from("staff").select("staff_id, staff_code"),
-          supabase.from("subjects").select("subject_id, subject_code"),
-        ]);
+      const [
+        { data: existingClasses, error: cErr },
+        { data: staff, error: sErr },
+        { data: subjects, error: subErr },
+        { data: blocks, error: bErr },
+      ] = await Promise.all([
+        supabase.from("classes").select("class_id, class_code, staff_id, room, subject_id"),
+        supabase.from("staff").select("staff_id, staff_code, first_name, last_name"),
+        supabase.from("subjects").select("subject_id, subject_code, subject_name"),
+        supabase.from("curriculum_blocks").select("block_id, block_name, year_group, band, is_compound"),
+      ]);
       if (cErr) throw cErr;
       if (sErr) throw sErr;
       if (subErr) throw subErr;
+      if (bErr) throw bErr;
+
+      setSubjectsList(subjects || []);
+      setStaffList(staff || []);
+      setBlocksList(blocks || []);
 
       const classByCode = new Map(existingClasses.map((c) => [c.class_code, c]));
       const staffByCode = new Map(staff.map((s) => [s.staff_code, s.staff_id]));
@@ -184,17 +213,86 @@ export default function ImportClassesPage() {
     }
   }
 
+  async function createNewClasses() {
+    if (!preview?.newClasses?.length) return;
+    setCreating(true);
+    setError(null);
+    try {
+      // Resolve any "create new block" choices first, one insert per
+      // distinct (year_group, name, band) so classes sharing the same
+      // new block description end up pointing at the same block_id.
+      const blockKeyToId = new Map();
+      for (const c of preview.newClasses) {
+        const f = newClassForm[c.class_code] || {};
+        if (f.block_choice !== "__new__") continue;
+        const name = (f.new_block_name || "").trim();
+        if (!name) continue;
+        const band = (f.new_block_band || "").trim() || null;
+        const key = `${c.year_group}|${name}|${band || ""}`;
+        if (blockKeyToId.has(key)) continue;
+        const { data: inserted, error: blockErr } = await supabase
+          .from("curriculum_blocks")
+          .insert({
+            block_name: name,
+            year_group: c.year_group,
+            band,
+            is_compound: !!f.new_block_is_compound,
+          })
+          .select("block_id")
+          .single();
+        if (blockErr) throw blockErr;
+        blockKeyToId.set(key, inserted.block_id);
+      }
+
+      let created = 0;
+      const failed = [];
+      for (const c of preview.newClasses) {
+        const f = newClassForm[c.class_code] || {};
+        let blockId = null;
+        if (f.block_choice === "__new__") {
+          const name = (f.new_block_name || "").trim();
+          const band = (f.new_block_band || "").trim() || null;
+          const key = `${c.year_group}|${name}|${band || ""}`;
+          blockId = blockKeyToId.get(key) || null;
+        } else if (f.block_choice && f.block_choice !== "none") {
+          blockId = Number(f.block_choice);
+        }
+
+        const { error: insErr } = await supabase.from("classes").insert({
+          class_code: c.class_code,
+          subject_id: f.subject_id ? Number(f.subject_id) : c.subject_id || null,
+          staff_id: f.staff_id ? Number(f.staff_id) : c.staff_id || null,
+          room: (f.room ?? c.room) || null,
+          year_group: c.year_group,
+          block_id: blockId,
+        });
+        if (insErr) {
+          failed.push({ class_code: c.class_code, error: insErr.message });
+        } else {
+          created++;
+        }
+      }
+
+      setCreateResult({ created, failed });
+    } catch (err) {
+      setError(err.message || String(err));
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "1rem" }}>
       <h1>Import Class / Teacher / Room Changes</h1>
       <p style={{ color: "#555" }}>
         Upload Nova-T's <code>TBTRA.DAT</code> – <code>TBTRF.DAT</code> files
-        (select all of them at once). This only ever <strong>updates
-        existing classes</strong>' teacher/room/subject — it never touches
-        <code>timetable_slots</code> (day/period), since that decoding needs
-        manual verification each time rather than being trusted to an
-        automatic import. New class codes are flagged for you to review
-        manually, not created automatically.
+        (select all of them at once). Existing classes' teacher/room/subject
+        get updated here; it never touches <code>timetable_slots</code>
+        (day/period), since that decoding needs manual verification each
+        time rather than being trusted to an automatic import. Class codes
+        not yet in the database are listed below so you can create them —
+        with subject, teacher, room and a curriculum block (existing or new)
+        — right here, instead of needing manual SQL.
       </p>
 
       <input type="file" multiple accept=".dat,.txt,text/plain,application/octet-stream,*/*" onChange={handleFiles} disabled={busy} />
@@ -242,19 +340,139 @@ export default function ImportClassesPage() {
           )}
 
           {preview.newClasses.length > 0 && (
-            <details style={{ marginTop: "1rem" }}>
+            <details open style={{ marginTop: "1rem" }}>
               <summary style={{ color: "#b45309" }}>
-                {preview.newClasses.length} class code(s) in the file but not in the database — review manually
+                {preview.newClasses.length} class code(s) in the file but not in the database — create them below
               </summary>
-              <pre style={{ whiteSpace: "pre-wrap" }}>
-                {preview.newClasses.map((c) => c.class_code).join(", ")}
-              </pre>
               <p style={{ fontSize: "0.9em", color: "#555" }}>
-                These aren't created automatically — if they're genuinely new
-                classes (not a naming mismatch with an existing one), add
-                them via the normal class-creation flow, then re-run this
-                import to pick up their teacher/room.
+                Subject/teacher/room are pre-filled from the file where matched. Pick an
+                existing curriculum block for each new class, or create a new one — leave
+                block as "None" for classes that aren't part of a block (e.g. mentor groups).
               </p>
+              <table style={{ width: "100%", marginTop: "0.5rem", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left" }}>Class</th>
+                    <th style={{ textAlign: "left" }}>Subject</th>
+                    <th style={{ textAlign: "left" }}>Teacher</th>
+                    <th style={{ textAlign: "left" }}>Room</th>
+                    <th style={{ textAlign: "left" }}>Block</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.newClasses.map((c) => {
+                    const f = newClassForm[c.class_code] || {};
+                    const yearBlocks = blocksList.filter((b) => b.year_group === c.year_group);
+                    return (
+                      <tr key={c.class_code} style={{ borderTop: "1px solid #eee" }}>
+                        <td style={{ padding: "0.3rem 0.3rem 0.3rem 0" }}>
+                          {c.class_code}
+                          <div style={{ fontSize: "0.8em", color: "#888" }}>Year {c.year_group ?? "?"}</div>
+                        </td>
+                        <td style={{ padding: "0.3rem" }}>
+                          <select
+                            value={f.subject_id ?? c.subject_id ?? ""}
+                            onChange={(e) => updateNewClassField(c.class_code, "subject_id", e.target.value)}
+                          >
+                            <option value="">—</option>
+                            {subjectsList.map((s) => (
+                              <option key={s.subject_id} value={s.subject_id}>
+                                {s.subject_name || s.subject_code}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={{ padding: "0.3rem" }}>
+                          <select
+                            value={f.staff_id ?? c.staff_id ?? ""}
+                            onChange={(e) => updateNewClassField(c.class_code, "staff_id", e.target.value)}
+                          >
+                            <option value="">—</option>
+                            {staffList.map((s) => (
+                              <option key={s.staff_id} value={s.staff_id}>
+                                {s.first_name} {s.last_name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={{ padding: "0.3rem" }}>
+                          <input
+                            type="text"
+                            value={f.room ?? c.room ?? ""}
+                            onChange={(e) => updateNewClassField(c.class_code, "room", e.target.value)}
+                            style={{ width: "5rem" }}
+                          />
+                        </td>
+                        <td style={{ padding: "0.3rem" }}>
+                          <select
+                            value={f.block_choice ?? "none"}
+                            onChange={(e) => updateNewClassField(c.class_code, "block_choice", e.target.value)}
+                          >
+                            <option value="none">None</option>
+                            {yearBlocks.map((b) => (
+                              <option key={b.block_id} value={b.block_id}>
+                                {b.block_name}
+                              </option>
+                            ))}
+                            <option value="__new__">+ Create new block…</option>
+                          </select>
+                          {f.block_choice === "__new__" && (
+                            <div style={{ marginTop: "0.3rem", display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                              <input
+                                type="text"
+                                placeholder="New block name"
+                                value={f.new_block_name ?? ""}
+                                onChange={(e) => updateNewClassField(c.class_code, "new_block_name", e.target.value)}
+                              />
+                              <input
+                                type="text"
+                                placeholder="Band (optional)"
+                                value={f.new_block_band ?? ""}
+                                onChange={(e) => updateNewClassField(c.class_code, "new_block_band", e.target.value)}
+                              />
+                              <label style={{ fontSize: "0.85em" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!f.new_block_is_compound}
+                                  onChange={(e) => updateNewClassField(c.class_code, "new_block_is_compound", e.target.checked)}
+                                />{" "}
+                                Compound (students can be in more than one class in this block)
+                              </label>
+                              <span style={{ fontSize: "0.8em", color: "#888" }}>
+                                Reused automatically for other new classes here with the same name/year/band.
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <button
+                onClick={createNewClasses}
+                disabled={creating}
+                style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}
+              >
+                {creating ? "Creating…" : `Create ${preview.newClasses.length} new class(es)`}
+              </button>
+              {createResult && (
+                <div style={{ marginTop: "0.75rem" }}>
+                  <p style={{ color: "green" }}>Created {createResult.created} class(es).</p>
+                  {createResult.failed.length > 0 && (
+                    <div style={{ color: "crimson" }}>
+                      <p>{createResult.failed.length} failed:</p>
+                      <pre style={{ whiteSpace: "pre-wrap" }}>
+                        {createResult.failed.map((f) => `${f.class_code}: ${f.error}`).join("\n")}
+                      </pre>
+                    </div>
+                  )}
+                  <p style={{ fontSize: "0.9em", color: "#555" }}>
+                    Once created, run the "Import Student Class Allocations" tool with your
+                    SIMS student export to link students to these classes.
+                  </p>
+                </div>
+              )}
             </details>
           )}
 
