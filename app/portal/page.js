@@ -184,8 +184,6 @@ function PortalInner() {
         )}
         {status && <p>{status}</p>}
       </div>
-
-      <p style={{ marginTop: '1rem' }}><a href="/portal/tuckshop">🛒 Tuckshop</a></p>
     </div>
   );
 }

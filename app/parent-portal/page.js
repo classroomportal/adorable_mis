@@ -242,10 +242,6 @@ function ParentPortalInner() {
           })()}
         </>
       )}
-
-      {children.length > 0 && (
-        <p style={{ marginTop: '1rem' }}><a href="/parent-portal/tuckshop">🛒 Tuckshop</a></p>
-      )}
     </div>
   );
 }
