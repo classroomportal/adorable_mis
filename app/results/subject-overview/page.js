@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ComposedChart, Bar, Cell, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
@@ -13,6 +13,41 @@ import { formatUKDate } from '../../../lib/formatDate';
 const RESULT_TYPES = [
   { value: 'term_exam_import', label: 'Term Exam Import' },
 ];
+
+// Maths -> blue shades, English -> green shades, Science (and its sciences) -> yellow
+// shades. Everything else gets a fixed, distinct colour assigned deterministically by
+// subject name (a stable hash into a palette), so colours stay consistent across
+// reloads without needing a colour picked for every single subject by hand.
+const MATHS_SHADES = ['#1a4d8f', '#2f6fbf', '#4f8fd6'];
+const ENGLISH_SHADES = ['#1a7a3d', '#2fa354', '#5cc47c'];
+const SCIENCE_SHADES = ['#b8860b', '#d4a017', '#e8c547'];
+const OTHER_PALETTE = [
+  '#A6192E', '#7B4B94', '#C2703D', '#3D8A8A', '#8A3D6B',
+  '#6B8A3D', '#3D5A8A', '#8A6B3D', '#5A3D8A', '#8A3D3D',
+  '#3D8A5A', '#8A5A3D', '#3D6B8A', '#6B3D8A', '#8A8A3D',
+];
+
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function subjectColor(subjectName) {
+  const name = subjectName.toLowerCase();
+  if (name.includes('math')) {
+    return MATHS_SHADES[hashString(name) % MATHS_SHADES.length];
+  }
+  if (name.includes('english')) {
+    return ENGLISH_SHADES[hashString(name) % ENGLISH_SHADES.length];
+  }
+  if (name === 'science' || name.includes('biology') || name.includes('chemistry') || name.includes('physics')) {
+    return SCIENCE_SHADES[hashString(name) % SCIENCE_SHADES.length];
+  }
+  return OTHER_PALETTE[hashString(name) % OTHER_PALETTE.length];
+}
 
 // UK academic year runs Sept–Aug. Returns the year the academic year started in
 // (e.g. a date in July 2026 or Jan 2027 both return 2026, for "2026/27").
@@ -295,7 +330,11 @@ function SubjectOverviewInner() {
               <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
               <Tooltip formatter={(value) => (value === null ? 'No cohort data' : `${value}%`)} />
               <Legend verticalAlign="top" />
-              <Bar dataKey="student_percentage" name={isStudent ? 'My %' : `${selectedStudentName} %`} fill="#A6192E" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="student_percentage" name={isStudent ? 'My %' : `${selectedStudentName} %`} radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={entry.subject} fill={subjectColor(entry.subject)} />
+                ))}
+              </Bar>
               <Line dataKey="cohort_avg_percentage" name="Cohort Average %" stroke="#1a1a1a" strokeWidth={3} dot={{ r: 4 }} type="monotone" connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
