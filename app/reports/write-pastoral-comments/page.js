@@ -175,7 +175,7 @@ function WritePastoralCommentsInner() {
           </select>
         </label>
 
-        {availableTypes.length > 1 && (
+        {availableTypes.length > 0 && (
           <label>
             Writing as
             <select value={commentType} onChange={(e) => setCommentType(e.target.value)}>
