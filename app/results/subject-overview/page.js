@@ -14,6 +14,29 @@ const RESULT_TYPES = [
   { value: 'term_exam_import', label: 'Term Exam Import' },
 ];
 
+// UK academic year runs Sept–Aug. Returns the year the academic year started in
+// (e.g. a date in July 2026 or Jan 2027 both return 2026, for "2026/27").
+function academicYearStart(date) {
+  const y = date.getFullYear();
+  const m = date.getMonth(); // 0-indexed, so 8 = September
+  return m >= 8 ? y : y - 1;
+}
+
+// A dataset (calendar event) is labelled with the year group the selected student
+// was actually in when it happened, not their current year group — e.g. a July 2026
+// exam sat by a student now in Y12 was sat while they were in Y11, one academic year
+// earlier, so it's labelled "Y11 T3 Exam" rather than "Y12 T3 Exam".
+function datasetLabel(event, currentYearGroup) {
+  if (!event) return '';
+  if (currentYearGroup == null) return event.event_name;
+  const eventYear = academicYearStart(new Date(event.event_date));
+  const thisYear = academicYearStart(new Date());
+  const yearsAgo = thisYear - eventYear;
+  if (yearsAgo <= 0) return event.event_name;
+  const yearGroupThen = currentYearGroup - yearsAgo;
+  return `Y${yearGroupThen} ${event.event_name}`;
+}
+
 function SubjectOverviewInner() {
   const { profile, staffRoles, loading: authLoading } = useAuth();
 
@@ -21,12 +44,13 @@ function SubjectOverviewInner() {
   const isStudent = !!profile?.student_id && !profile?.staff_id;
 
   const [students, setStudents] = useState([]);
+  const [ownStudent, setOwnStudent] = useState(null);
   const [mentorGroups, setMentorGroups] = useState([]);
   const [selectedYearGroup, setSelectedYearGroup] = useState('');
   const [selectedMentorGroupId, setSelectedMentorGroupId] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [datasets, setDatasets] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState('');
   const [selectedTypes, setSelectedTypes] = useState(RESULT_TYPES.map((t) => t.value));
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,6 +61,8 @@ function SubjectOverviewInner() {
   useEffect(() => {
     if (isStudent) {
       setSelectedStudentId(String(profile.student_id));
+      supabase.from('students').select('student_id, first_name, last_name, year_group').eq('student_id', profile.student_id).single()
+        .then(({ data }) => setOwnStudent(data || null));
       return;
     }
     if (isStaff) {
@@ -46,6 +72,14 @@ function SubjectOverviewInner() {
         .then(({ data }) => setMentorGroups(data || []));
     }
   }, [isStaff, isStudent, profile]);
+
+  // Datasets = calendar events, most recent first (any category — exam, relp, etc.).
+  useEffect(() => {
+    if (!isStaff && !isStudent) return;
+    supabase.from('calendar_events').select('event_id, event_date, event_name, category')
+      .order('event_date', { ascending: false })
+      .then(({ data }) => setDatasets(data || []));
+  }, [isStaff, isStudent]);
 
   const yearGroups = Array.from(new Set(students.map((s) => s.year_group).filter((y) => y != null))).sort((a, b) => a - b);
   const mentorGroupsForYear = selectedYearGroup
@@ -57,6 +91,10 @@ function SubjectOverviewInner() {
     return true;
   });
 
+  const matchedStudent = students.find((s) => String(s.student_id) === String(selectedStudentId));
+  const selectedStudentYearGroup = isStudent ? ownStudent?.year_group : matchedStudent?.year_group;
+  const selectedEvent = datasets.find((d) => String(d.event_id) === String(selectedEventId));
+
   const fetchData = useCallback(async () => {
     if (!profile) return;
     if (!isStaff && !isStudent) {
@@ -64,7 +102,7 @@ function SubjectOverviewInner() {
       setError('This view is only available to staff and students.');
       return;
     }
-    if (!selectedStudentId) {
+    if (!selectedStudentId || !selectedEventId) {
       setChartData([]);
       setError(null);
       return;
@@ -73,13 +111,14 @@ function SubjectOverviewInner() {
     setLoading(true);
     setError(null);
 
-    // Base query (date range + result type) shared by both the selected student's
-    // results and the whole-cohort results used to compute the average line.
+    const eventDate = selectedEvent?.event_date;
+    if (!eventDate) { setLoading(false); return; }
+
+    // Base query (exact dataset date + result type) shared by both the selected
+    // student's results and the whole-cohort results used for the average line.
     // Paginated explicitly: Supabase/PostgREST caps a single request at 1000 rows by
-    // default, and this filter can easily match several thousand rows (e.g. ~2,956 for
-    // one exam-import date across the whole school) — an unpaginated fetch silently
-    // truncates, which showed up as some students missing subjects and others showing
-    // no results at all, depending on where their rows fell in the truncated batch.
+    // default, and one dataset can match several thousand rows school-wide — an
+    // unpaginated fetch silently truncates.
     const PAGE_SIZE = 1000;
     let allRows = [];
     let from = 0;
@@ -88,9 +127,8 @@ function SubjectOverviewInner() {
       let pageQuery = supabase
         .from('results')
         .select('score, max_score, student_id, week_start_date, result_type, subject_id, subjects(subject_name, display_name)')
-        .gt('max_score', 0);
-      if (startDate) pageQuery = pageQuery.gte('week_start_date', startDate);
-      if (endDate) pageQuery = pageQuery.lte('week_start_date', endDate);
+        .gt('max_score', 0)
+        .eq('week_start_date', eventDate);
       if (selectedTypes.length > 0) pageQuery = pageQuery.in('result_type', selectedTypes);
       pageQuery = pageQuery.range(from, from + PAGE_SIZE - 1);
 
@@ -110,10 +148,7 @@ function SubjectOverviewInner() {
       return;
     }
 
-    // Cohort average % per subject (all students, same filters).
     const cohortBySubject = new Map();
-    // Selected student's own average % per subject, over the same filters
-    // (averaged in case more than one result falls in the chosen date range).
     const studentBySubject = new Map();
 
     for (const row of data) {
@@ -130,7 +165,6 @@ function SubjectOverviewInner() {
       }
     }
 
-    // Only chart subjects the selected student actually has results for.
     const summary = Array.from(studentBySubject.entries())
       .map(([subject, s]) => {
         const cohort = cohortBySubject.get(subject);
@@ -144,7 +178,7 @@ function SubjectOverviewInner() {
 
     setChartData(summary);
     setLoading(false);
-  }, [profile, isStaff, isStudent, selectedStudentId, startDate, endDate, selectedTypes]);
+  }, [profile, isStaff, isStudent, selectedStudentId, selectedEventId, selectedEvent, selectedTypes]);
 
   useEffect(() => {
     if (!authLoading) fetchData();
@@ -156,7 +190,6 @@ function SubjectOverviewInner() {
 
   if (authLoading) return <p>Loading...</p>;
 
-  const matchedStudent = students.find((s) => String(s.student_id) === String(selectedStudentId));
   const selectedStudentName = isStudent
     ? 'My'
     : (matchedStudent ? `${matchedStudent.first_name} ${matchedStudent.last_name}'s` : null);
@@ -213,16 +246,19 @@ function SubjectOverviewInner() {
           </>
         )}
         <div>
-          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>From</label>
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-            style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px' }} />
-          {startDate && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(startDate)}</span>}
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>To</label>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-            style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px' }} />
-          {endDate && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(endDate)}</span>}
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Dataset</label>
+          <select
+            value={selectedEventId}
+            onChange={(e) => setSelectedEventId(e.target.value)}
+            style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '220px' }}
+          >
+            <option value="">Select a dataset...</option>
+            {datasets.map((d) => (
+              <option key={d.event_id} value={d.event_id}>
+                {datasetLabel(d, selectedStudentYearGroup)} — {formatUKDate(d.event_date)}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Result type</label>
@@ -236,7 +272,7 @@ function SubjectOverviewInner() {
           </div>
         </div>
         <button
-          onClick={() => { setStartDate(''); setEndDate(''); setSelectedTypes(RESULT_TYPES.map((t) => t.value)); }}
+          onClick={() => { setSelectedEventId(''); setSelectedTypes(RESULT_TYPES.map((t) => t.value)); }}
           style={{ padding: '0.4rem 0.75rem', border: '1px solid #A6192E', color: '#A6192E', background: 'white', borderRadius: '4px', fontSize: '0.85rem' }}
         >
           Reset
@@ -244,9 +280,10 @@ function SubjectOverviewInner() {
       </div>
 
       {isStaff && !selectedStudentId && <p>Select a student to see their subject breakdown against the cohort average.</p>}
+      {selectedStudentId && !selectedEventId && <p>Select a dataset (exam or ReLP) to see results.</p>}
       {loading && <p>Loading…</p>}
       {error && <p style={{ color: '#A6192E' }}>{error}</p>}
-      {!loading && !error && selectedStudentId && chartData.length === 0 && <p>No results found for this student in the selected filters.</p>}
+      {!loading && !error && selectedStudentId && selectedEventId && chartData.length === 0 && <p>No results found for this student in the selected dataset.</p>}
 
       {!loading && !error && chartData.length > 0 && (
         <div style={{ width: '100%', height: 450 }}>
