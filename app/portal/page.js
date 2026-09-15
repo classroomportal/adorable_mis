@@ -142,6 +142,9 @@ function PortalInner() {
         {targets.length === 0 ? <p>No target grades set yet.</p> : (
           <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} />
         )}
+        <p style={{ marginTop: '0.75rem' }}>
+          <a href="/results/subject-overview">View my subject overview (max &amp; average %) →</a>
+        </p>
       </div>
 
       <div className="card">
