@@ -246,6 +246,7 @@ export default function Home() {
         <h1>Welcome{profile.parent_id ? '' : ' — account not linked yet'}</h1>
         <Section title="My Family" accent="family">
           <Tile href="/parent-portal" icon="👨‍👩‍👧" label="My Children" />
+          <Tile href="/parent-portal/tuckshop" icon="🛒" label="Tuckshop" />
           <Tile href="/change-password" icon="🔑" label="Change Password" />
         </Section>
       </div>
