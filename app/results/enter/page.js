@@ -113,13 +113,14 @@ function EnterResultsInner() {
   }
 
   async function handleSaveAll() {
-    if (!selectedClass || !resultSetEventId) return;
+    if (!selectedClass || !resultSetEventId || !selectedResultSet) return;
     const toSave = roster
       .filter((s) => rows[s.student_id]?.score !== '' && rows[s.student_id]?.score != null)
       .map((s) => ({
         student_id: s.student_id,
         subject_id: selectedClass.subject_id,
         result_set_event_id: resultSetEventId,
+        week_start_date: selectedResultSet.event_date,
         score: Number(rows[s.student_id].score),
         max_score: 100,
         grade: rows[s.student_id].grade || null,
