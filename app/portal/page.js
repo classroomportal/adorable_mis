@@ -1,10 +1,12 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
 import TranscriptDownload from '../components/TranscriptDownload';
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
+
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -29,6 +31,10 @@ function PortalInner() {
   const [appealForm, setAppealForm] = useState(null); // event_id being appealed
   const [appealReason, setAppealReason] = useState('');
   const [status, setStatus] = useState(null);
+
+  const [periods, setPeriods] = useState([]);
+  const [timetableClasses, setTimetableClasses] = useState([]);
+  const [timetableLoading, setTimetableLoading] = useState(true);
 
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
   const [tuckshopHistory, setTuckshopHistory] = useState([]);
@@ -69,6 +75,28 @@ function PortalInner() {
       .limit(5);
     setMyPreorders(pre || []);
   }
+
+  useEffect(() => {
+    async function loadPeriods() {
+      const { data: pr } = await supabase.from('periods').select('*').order('period_number');
+      setPeriods(pr || []);
+    }
+    loadPeriods();
+  }, []);
+
+  useEffect(() => {
+    async function loadTimetable() {
+      if (!studentId) { setTimetableClasses([]); setTimetableLoading(false); return; }
+      setTimetableLoading(true);
+      const { data } = await supabase
+        .from('student_class')
+        .select('classes(class_id, room, class_code, subjects(subject_name, display_name), staff(first_name, last_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
+        .eq('student_id', studentId);
+      setTimetableClasses((data || []).map((row) => row.classes).filter(Boolean));
+      setTimetableLoading(false);
+    }
+    loadTimetable();
+  }, [studentId]);
 
   function setPreorderQty(itemId, qty) {
     setPreorderCart((prev) => {
@@ -119,11 +147,60 @@ function PortalInner() {
 
   const STATUS_LABEL = { pending: 'Pending review', upheld: 'Appeal upheld', rejected: 'Appeal rejected' };
 
+  const cellMap = {};
+  timetableClasses.forEach((c) => {
+    (c.timetable_slots || []).forEach((slot) => {
+      const key = `${slot.day_of_week}-${slot.period_number}`;
+      const entry = {
+        subject: c.subjects?.display_name || c.subjects?.subject_name,
+        room: c.room,
+        teacher: c.staff ? `${c.staff.first_name} ${c.staff.last_name}` : null,
+      };
+      cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
+    });
+  });
+
   return (
     <div>
       <h1>My Grades & Behaviour</h1>
       <p><a href="/inbox">📬 Inbox</a></p>
       <TranscriptDownload studentId={studentId} />
+
+      <div className="card">
+        <h2>My Timetable</h2>
+        {timetableLoading ? (
+          <p>Loading…</p>
+        ) : timetableClasses.length === 0 ? (
+          <p>No timetable found yet.</p>
+        ) : (
+          <div className="table-scroll">
+            <div className="timetable-grid">
+              <div className="tt-head"></div>
+              {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
+              {periods.map((p) => (
+                <Fragment key={p.period_number}>
+                  <div className="tt-cell tt-period-label">{p.period_name}</div>
+                  {DAYS.map((d) => {
+                    const entries = cellMap[`${d}-${p.period_number}`];
+                    return (
+                      <div key={`${d}-${p.period_number}`} className={`tt-cell ${entries ? 'tt-filled' : ''}`}>
+                        {entries
+                          ? entries.map((e, i) => (
+                              <div key={i} style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}>
+                                {e.subject}<br />
+                                <span style={{ opacity: 0.6 }}>{e.room}{e.teacher ? ` · ${e.teacher}` : ''}</span>
+                              </div>
+                            ))
+                          : ''}
+                      </div>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="card">
         <h2>Results vs Target</h2>
