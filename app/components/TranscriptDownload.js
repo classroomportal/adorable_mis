@@ -50,7 +50,7 @@ export default function TranscriptDownload({ studentId }) {
         <option value="">All terms</option>
       </select>
       <button onClick={handleDownload} disabled={busy || !studentId}>
-        {busy ? 'Generating...' : '📄 Download Transcript'}
+        {busy ? 'Generating...' : '📄 Download Report'}
       </button>
     </div>
   );
