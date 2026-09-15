@@ -31,7 +31,7 @@ function ResultsPageInner() {
       const { data: sub } = await supabase.from('subjects').select('subject_id, subject_name').order('subject_name');
       setStudents(s || []);
       setSubjects(sub || []);
-      const { data: rl } = await supabase.from('calendar_events').select('event_id, event_date, event_name').eq('category', 'relp').order('event_date', { ascending: false });
+      const { data: rl } = await supabase.from('calendar_events').select('event_id, event_date, event_name').eq('is_result_set', true).order('event_date', { ascending: false });
       setRelps(rl || []);
 
       const { data: gs } = await supabase.from('grade_scale').select('*');
@@ -108,12 +108,12 @@ function ResultsPageInner() {
         </label>
 
         <label>
-          ReLP (test)
+          Result Set
           <select
             value={form.week_start_date}
             onChange={(e) => setForm({ ...form, week_start_date: e.target.value })}
           >
-            <option value="">Select a ReLP, or type a custom date below...</option>
+            <option value="">Select a result set, or type a custom date below...</option>
             {relps.map((r) => (
               <option key={r.event_id} value={r.event_date}>{r.event_name} — {formatUKDate(r.event_date)}</option>
             ))}
