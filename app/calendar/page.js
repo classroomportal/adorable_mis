@@ -9,6 +9,7 @@ const CATEGORY_LABELS = {
   term_boundary: 'Term boundary',
   relp: 'ReLP (test)',
   exam: 'Exam',
+  teacher_assessment: 'Teacher Assessment',
   consult_day: 'Consult day',
   awareness_day: 'Awareness day',
   holiday: 'Holiday',
