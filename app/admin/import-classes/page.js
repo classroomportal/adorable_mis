@@ -87,6 +87,11 @@ export default function ImportClassesPage() {
   const [creating, setCreating] = useState(false);
   const [createResult, setCreateResult] = useState(null);
 
+  // staleSelections[class_id] = boolean (whether to delete it)
+  const [staleSelections, setStaleSelections] = useState({});
+  const [deletingStale, setDeletingStale] = useState(false);
+  const [deleteStaleResult, setDeleteStaleResult] = useState(null);
+
   function updateNewClassField(classCode, field, value) {
     setNewClassForm((prev) => ({
       ...prev,
@@ -100,6 +105,8 @@ export default function ImportClassesPage() {
     setPreview(null);
     setCreateResult(null);
     setNewClassForm({});
+    setDeleteStaleResult(null);
+    setStaleSelections({});
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -113,7 +120,7 @@ export default function ImportClassesPage() {
         { data: subjects, error: subErr },
         { data: blocks, error: bErr },
       ] = await Promise.all([
-        supabase.from("classes").select("class_id, class_code, staff_id, room, subject_id"),
+        supabase.from("classes").select("class_id, class_code, staff_id, room, subject_id, year_group"),
         supabase.from("staff").select("staff_id, staff_code, first_name, last_name"),
         supabase.from("subjects").select("subject_id, subject_code, subject_name"),
         supabase.from("curriculum_blocks").select("block_id, block_name, year_group, band, is_compound"),
@@ -136,8 +143,13 @@ export default function ImportClassesPage() {
       const newClasses = [];    // class_code not in classes at all
       const unmatchedStaff = new Set();
       const unmatchedSubjects = new Set();
+      const parsedCodes = new Set();
+      const yearGroupsInFile = new Set();
 
       for (const row of parsedClasses) {
+        parsedCodes.add(row.class_code);
+        if (row.year_group != null) yearGroupsInFile.add(row.year_group);
+
         const staffId = row.staff_code ? staffByCode.get(row.staff_code) : null;
         if (row.staff_code && !staffId) unmatchedStaff.add(row.staff_code);
 
@@ -176,6 +188,43 @@ export default function ImportClassesPage() {
         }
       }
 
+      // Classes already in the DB, in a year group covered by the files you
+      // just uploaded, but not mentioned anywhere in those files at all —
+      // these are candidates for removal (e.g. the old OH1 classes after a
+      // block was renamed to PS1/PS2). Only years actually present in the
+      // upload are considered, so a partial upload (e.g. just one year's
+      // files) won't flag every other year's classes as stale.
+      const staleCandidates = existingClasses.filter(
+        (c) => yearGroupsInFile.has(c.year_group) && !parsedCodes.has(c.class_code)
+      );
+
+      let staleClasses = [];
+      if (staleCandidates.length > 0) {
+        const staleIds = staleCandidates.map((c) => c.class_id);
+        const [{ data: scRows, error: scErr }, { data: tsRows, error: tsErr }] = await Promise.all([
+          supabase.from("student_class").select("class_id").in("class_id", staleIds),
+          supabase.from("timetable_slots").select("class_id").in("class_id", staleIds),
+        ]);
+        if (scErr) throw scErr;
+        if (tsErr) throw tsErr;
+        const studentCounts = new Map();
+        for (const r of scRows || []) studentCounts.set(r.class_id, (studentCounts.get(r.class_id) || 0) + 1);
+        const slotCounts = new Map();
+        for (const r of tsRows || []) slotCounts.set(r.class_id, (slotCounts.get(r.class_id) || 0) + 1);
+
+        staleClasses = staleCandidates.map((c) => ({
+          ...c,
+          studentCount: studentCounts.get(c.class_id) || 0,
+          slotCount: slotCounts.get(c.class_id) || 0,
+        }));
+
+        // Default-select only the ones with no students still linked —
+        // anything with students still on it needs a human decision.
+        const defaults = {};
+        for (const c of staleClasses) defaults[c.class_id] = c.studentCount === 0;
+        setStaleSelections(defaults);
+      }
+
       setPreview({
         totalParsed: parsedClasses.length,
         updates,
@@ -183,6 +232,8 @@ export default function ImportClassesPage() {
         newClasses,
         unmatchedStaff: [...unmatchedStaff],
         unmatchedSubjects: [...unmatchedSubjects],
+        staleClasses,
+        yearGroupsInFile: [...yearGroupsInFile].sort((a, b) => a - b),
       });
     } catch (err) {
       setError(err.message || String(err));
@@ -281,6 +332,52 @@ export default function ImportClassesPage() {
     }
   }
 
+  function toggleStaleSelection(classId) {
+    setStaleSelections((prev) => ({ ...prev, [classId]: !prev[classId] }));
+  }
+
+  async function deleteStaleClasses() {
+    if (!preview?.staleClasses?.length) return;
+    const selectedIds = preview.staleClasses
+      .filter((c) => staleSelections[c.class_id])
+      .map((c) => c.class_id);
+    if (selectedIds.length === 0) return;
+
+    setDeletingStale(true);
+    setError(null);
+    try {
+      // Order matters: slots and student links first, then the class
+      // itself, so no foreign key is left dangling.
+      const { error: slotsErr } = await supabase
+        .from("timetable_slots")
+        .delete()
+        .in("class_id", selectedIds);
+      if (slotsErr) throw slotsErr;
+
+      const { error: scErr } = await supabase
+        .from("student_class")
+        .delete()
+        .in("class_id", selectedIds);
+      if (scErr) throw scErr;
+
+      const { error: classErr } = await supabase
+        .from("classes")
+        .delete()
+        .in("class_id", selectedIds);
+      if (classErr) throw classErr;
+
+      setDeleteStaleResult({ deleted: selectedIds.length });
+      setPreview((prev) => ({
+        ...prev,
+        staleClasses: prev.staleClasses.filter((c) => !selectedIds.includes(c.class_id)),
+      }));
+    } catch (err) {
+      setError(err.message || String(err));
+    } finally {
+      setDeletingStale(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "1rem" }}>
       <h1>Import Class / Teacher / Room Changes</h1>
@@ -292,7 +389,10 @@ export default function ImportClassesPage() {
         time rather than being trusted to an automatic import. Class codes
         not yet in the database are listed below so you can create them —
         with subject, teacher, room and a curriculum block (existing or new)
-        — right here, instead of needing manual SQL.
+        — right here, instead of needing manual SQL. Classes that used to
+        exist for a year group covered by this upload, but aren't mentioned
+        anywhere in the file, are flagged for review and optional deletion
+        too (e.g. after renaming a block).
       </p>
 
       <input type="file" multiple accept=".dat,.txt,text/plain,application/octet-stream,*/*" onChange={handleFiles} disabled={busy} />
@@ -472,6 +572,69 @@ export default function ImportClassesPage() {
                     SIMS student export to link students to these classes.
                   </p>
                 </div>
+              )}
+            </details>
+          )}
+
+          {preview.staleClasses && preview.staleClasses.length > 0 && (
+            <details open style={{ marginTop: "1rem" }}>
+              <summary style={{ color: "crimson" }}>
+                {preview.staleClasses.length} class(es) in the database, for year group(s){" "}
+                {preview.yearGroupsInFile.join(", ")}, that aren't in this file at all — review before deleting
+              </summary>
+              <p style={{ fontSize: "0.9em", color: "#555" }}>
+                These are typically retired classes (e.g. a renamed block, like OH1 →
+                PS1/PS2). Ticked ones will have their timetable slots, any remaining
+                student links, and the class itself all deleted. Unticked by default
+                whenever students are still linked — check those carefully first.
+              </p>
+              <table style={{ width: "100%", marginTop: "0.5rem", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th style={{ textAlign: "left" }}>Class</th>
+                    <th style={{ textAlign: "left" }}>Students linked</th>
+                    <th style={{ textAlign: "left" }}>Timetable slots</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.staleClasses.map((c) => (
+                    <tr key={c.class_id} style={{ borderTop: "1px solid #eee" }}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={!!staleSelections[c.class_id]}
+                          onChange={() => toggleStaleSelection(c.class_id)}
+                        />
+                      </td>
+                      <td style={{ padding: "0.3rem" }}>{c.class_code}</td>
+                      <td
+                        style={{
+                          padding: "0.3rem",
+                          color: c.studentCount > 0 ? "crimson" : "inherit",
+                          fontWeight: c.studentCount > 0 ? "bold" : "normal",
+                        }}
+                      >
+                        {c.studentCount}
+                      </td>
+                      <td style={{ padding: "0.3rem" }}>{c.slotCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button
+                onClick={deleteStaleClasses}
+                disabled={deletingStale || preview.staleClasses.every((c) => !staleSelections[c.class_id])}
+                style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}
+              >
+                {deletingStale
+                  ? "Deleting…"
+                  : `Delete ${preview.staleClasses.filter((c) => staleSelections[c.class_id]).length} selected class(es)`}
+              </button>
+              {deleteStaleResult && (
+                <p style={{ marginTop: "0.5rem", color: "green" }}>
+                  Deleted {deleteStaleResult.deleted} class(es).
+                </p>
               )}
             </details>
           )}
