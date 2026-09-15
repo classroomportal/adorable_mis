@@ -6,6 +6,27 @@ import { useAuth } from '../../../lib/AuthContext';
 
 const ALL_YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
 
+function YearGroupPicker({ selected, onToggle }) {
+  return (
+    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+      {ALL_YEAR_GROUPS.map((yg) => {
+        const isOn = selected.includes(yg);
+        return (
+          <button
+            key={yg}
+            type="button"
+            onClick={() => onToggle(yg)}
+            className={isOn ? '' : 'secondary'}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem', minWidth: 56 }}
+          >
+            Year {yg}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ManagePeriodsInner() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
@@ -120,15 +141,15 @@ function ManagePeriodsInner() {
 
       <div className="dash-section" style={{ marginBottom: '1.5rem' }}>
         <div className="dash-section-title">New Report Period</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxWidth: 480 }}>
+        <form onSubmit={(e) => { e.preventDefault(); createPeriod(); }}>
           <label>
             Name
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. End of Term 1 Report" style={{ width: '100%' }} />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. End of Term 1 Report" />
           </label>
 
           <label>
             Term
-            <select value={termId} onChange={(e) => setTermId(e.target.value)} style={{ width: '100%' }}>
+            <select value={termId} onChange={(e) => setTermId(e.target.value)}>
               <option value="">— None / not tied to a term —</option>
               {terms.map((t) => (
                 <option key={t.term_id} value={t.term_id}>{t.term_name}</option>
@@ -136,30 +157,23 @@ function ManagePeriodsInner() {
             </select>
           </label>
 
-          <div>
-            <div>Year groups covered</div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {ALL_YEAR_GROUPS.map((yg) => (
-                <label key={yg} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <input type="checkbox" checked={selectedYears.includes(yg)} onChange={() => toggleYear(yg)} />
-                  Year {yg}
-                </label>
-              ))}
-            </div>
-          </div>
-
           <label>
             Comments due (end of week 1)
-            <input type="date" value={commentsDue} onChange={(e) => setCommentsDue(e.target.value)} style={{ width: '100%' }} />
+            <input type="date" value={commentsDue} onChange={(e) => setCommentsDue(e.target.value)} />
           </label>
 
           <label>
             Checking due (end of week 2)
-            <input type="date" value={checkDue} onChange={(e) => setCheckDue(e.target.value)} style={{ width: '100%' }} />
+            <input type="date" value={checkDue} onChange={(e) => setCheckDue(e.target.value)} />
           </label>
 
-          <button onClick={createPeriod}>Create Report Period</button>
-        </div>
+          <div style={{ flex: '1 1 100%' }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--red-800)', marginBottom: '0.35rem' }}>Year groups covered</div>
+            <YearGroupPicker selected={selectedYears} onToggle={toggleYear} />
+          </div>
+
+          <button type="submit" style={{ flex: '1 1 100%' }}>Create Report Period</button>
+        </form>
       </div>
 
       <div className="dash-section">
@@ -203,8 +217,8 @@ function ManagePeriodsInner() {
                       );
                     })}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <select value={checkerStaffId} onChange={(e) => setCheckerStaffId(e.target.value)}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <select value={checkerStaffId} onChange={(e) => setCheckerStaffId(e.target.value)} style={{ width: 'auto', flex: '1 1 auto' }}>
                       <option value="">— Select staff —</option>
                       {staffList.map((s) => (
                         <option key={s.staff_id} value={s.staff_id}>{s.first_name} {s.last_name}</option>
