@@ -96,7 +96,6 @@ const TABS = [
         <Tile href="/behaviour" icon="⭐" label="Behaviour" />
         <Tile href="/attendance" icon="✅" label="Attendance" />
         <Tile href="/results" icon="📊" label="Results" />
-        <Tile href="/classes/progress" icon="📈" label="Class Progress" />
         <Tile href="/certificates" icon="🏆" label="Certificates" />
         <Tile href="/detention" icon="📋" label="Detention List" />
         {isPastoralOrSmt && <Tile href="/appeals" icon="⚖️" label="Behaviour Appeals" />}
@@ -141,6 +140,7 @@ const TABS = [
       <Section accent="school">
         <Tile href="/results/import-gradebook" icon="📥" label="Import Weekly Results" />
         <Tile href="/target-grades/import" icon="📥" label="Import Target Grades" />
+        <Tile href="/classes/progress" icon="📈" label="Class Progress" />
         <Tile href="/admin/grade-boundaries" icon="🎯" label="Grade Boundaries" />
         <Tile href="/admin/subject-settings" icon="🏷️" label="Subject Settings" />
         <Tile href="/assessments/import" icon="📥" label="Import CAT4/NGRT" />
