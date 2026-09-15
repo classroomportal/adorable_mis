@@ -233,6 +233,7 @@ export default function Home() {
         <h1>Welcome{profile.student_id ? '' : ' — account not linked yet'}</h1>
         <Section title="My Info" accent="myinfo">
           <Tile href="/portal" icon="📚" label="My Grades & Behaviour" />
+          <Tile href="/portal/tuckshop" icon="🛒" label="Tuckshop" />
           <Tile href="/change-password" icon="🔑" label="Change Password" />
         </Section>
       </div>

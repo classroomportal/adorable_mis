@@ -12,13 +12,22 @@ export default function TranscriptDownload({ studentId }) {
     async function load() {
       const { data } = await supabase
         .from('terms')
-        .select('term_id, term_name, start_date')
+        .select('term_id, term_name, start_date, end_date')
         .order('start_date', { ascending: false });
       setTerms(data || []);
+
       const today = new Date().toISOString().slice(0, 10);
-      const current = (data || []).find((t) => t.start_date <= today && t.end_date >= today);
-      if (current) setTermId(current.term_id);
-      else if (data && data.length > 0) setTermId(data[0].term_id);
+      const sorted = [...(data || [])].sort((a, b) => a.start_date.localeCompare(b.start_date));
+      const current = sorted.find((t) => t.start_date <= today && t.end_date >= today);
+      // If no term's date range actually contains today (a gap between
+      // terms, or a term's dates not set up yet), fall back to the most
+      // recently *started* term rather than blindly picking the first row
+      // of the (newest-first) list — which would jump to the furthest
+      // future term instead of a sensible "current-ish" one.
+      const started = sorted.filter((t) => t.start_date <= today);
+      const fallback = started.length > 0 ? started[started.length - 1] : sorted[0];
+      const pick = current || fallback;
+      if (pick) setTermId(pick.term_id);
     }
     load();
   }, []);
