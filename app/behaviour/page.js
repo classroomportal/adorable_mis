@@ -293,9 +293,9 @@ function BehaviourPageInner() {
                 </div>
                 <div className="table-scroll" style={{ maxHeight: '260px', overflowY: 'auto' }}>
                   {roster.map((s) => (
-                    <label key={s.student_id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0' }}>
-                      <input type="checkbox" checked={selected.has(s.student_id)} onChange={() => toggleStudent(s.student_id)} />
-                      {s.first_name} {s.last_name}
+                    <label key={s.student_id} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0' }}>
+                      <input type="checkbox" checked={selected.has(s.student_id)} onChange={() => toggleStudent(s.student_id)} style={{ flex: '0 0 auto', width: 'auto' }} />
+                      <span>{s.first_name} {s.last_name}</span>
                     </label>
                   ))}
                 </div>
