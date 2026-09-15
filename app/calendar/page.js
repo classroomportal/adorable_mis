@@ -23,7 +23,7 @@ function CalendarInner() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
-  const [newEvent, setNewEvent] = useState({ event_date: '', event_name: '', category: 'relp', year_group_note: '' });
+  const [newEvent, setNewEvent] = useState({ event_date: '', event_name: '', category: 'relp', year_group_note: '', is_result_set: false });
   const [status, setStatus] = useState(null);
 
   async function loadEvents() {
@@ -51,6 +51,7 @@ function CalendarInner() {
       event_name: editDraft.event_name,
       category: editDraft.category,
       year_group_note: editDraft.year_group_note || null,
+      is_result_set: !!editDraft.is_result_set,
     }).eq('event_id', editingId);
     if (error) setStatus(`Error: ${error.message}`);
     else { setEditingId(null); setStatus('Saved.'); loadEvents(); }
@@ -71,9 +72,10 @@ function CalendarInner() {
       event_name: newEvent.event_name,
       category: newEvent.category,
       year_group_note: newEvent.year_group_note || null,
+      is_result_set: newEvent.is_result_set,
     }]);
     if (error) setStatus(`Error: ${error.message}`);
-    else { setNewEvent({ event_date: '', event_name: '', category: 'relp', year_group_note: '' }); setStatus('Added.'); loadEvents(); }
+    else { setNewEvent({ event_date: '', event_name: '', category: 'relp', year_group_note: '', is_result_set: false }); setStatus('Added.'); loadEvents(); }
   }
 
   const filtered = categoryFilter ? events.filter((e) => e.category === categoryFilter) : events;
@@ -115,6 +117,10 @@ function CalendarInner() {
             <label>Note (optional)
               <input value={newEvent.year_group_note} onChange={(e) => setNewEvent({ ...newEvent, year_group_note: e.target.value })} placeholder="e.g. Y9/11" />
             </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <input type="checkbox" checked={newEvent.is_result_set} onChange={(e) => setNewEvent({ ...newEvent, is_result_set: e.target.checked })} />
+              Result set (show in Subject Overview dataset picker)
+            </label>
             <button type="submit">Add event</button>
           </form>
         </div>
@@ -135,7 +141,7 @@ function CalendarInner() {
         </form>
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Date</th><th>Event</th><th>Category</th><th>Note</th>{isAdmin && <th>Actions</th>}</tr></thead>
+            <thead><tr><th>Date</th><th>Event</th><th>Category</th><th>Note</th><th>Result set</th>{isAdmin && <th>Actions</th>}</tr></thead>
             <tbody>
               {filtered.map((e) => (
                 editingId === e.event_id ? (
@@ -148,6 +154,9 @@ function CalendarInner() {
                       </select>
                     </td>
                     <td><input value={editDraft.year_group_note || ''} onChange={(ev) => setEditDraft({ ...editDraft, year_group_note: ev.target.value })} /></td>
+                    <td style={{ textAlign: 'center' }}>
+                      <input type="checkbox" checked={!!editDraft.is_result_set} onChange={(ev) => setEditDraft({ ...editDraft, is_result_set: ev.target.checked })} />
+                    </td>
                     <td>
                       <button onClick={saveEdit}>Save</button>{' '}
                       <button className="secondary" onClick={() => setEditingId(null)}>Cancel</button>
@@ -159,6 +168,7 @@ function CalendarInner() {
                     <td>{e.event_name}</td>
                     <td>{CATEGORY_LABELS[e.category] || e.category}</td>
                     <td>{e.year_group_note || ''}</td>
+                    <td style={{ textAlign: 'center' }}>{e.is_result_set ? '✅' : ''}</td>
                     {isAdmin && (
                       <td>
                         <button className="secondary" onClick={() => startEdit(e)}>Edit</button>{' '}

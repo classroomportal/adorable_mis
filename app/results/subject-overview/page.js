@@ -77,6 +77,7 @@ function SubjectOverviewInner() {
   useEffect(() => {
     if (!isStaff && !isStudent) return;
     supabase.from('calendar_events').select('event_id, event_date, event_name, category')
+      .eq('is_result_set', true)
       .order('event_date', { ascending: false })
       .then(({ data }) => setDatasets(data || []));
   }, [isStaff, isStudent]);
