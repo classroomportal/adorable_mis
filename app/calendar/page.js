@@ -165,7 +165,7 @@ function CalendarInner() {
                   </tr>
                 ) : (
                   <tr key={e.event_id}>
-                    <td>{e.event_date}<br /><span style={{ fontSize: '0.75rem', color: '#666' }}>{formatUKDate(e.event_date)}</span></td>
+                    <td>{formatUKDate(e.event_date)}</td>
                     <td>{e.event_name}</td>
                     <td>{CATEGORY_LABELS[e.category] || e.category}</td>
                     <td>{e.year_group_note || ''}</td>
