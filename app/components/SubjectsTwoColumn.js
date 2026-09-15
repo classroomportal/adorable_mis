@@ -67,9 +67,10 @@ function SubjectTable({ items, results, gradePoints }) {
 }
 
 export default function SubjectsTwoColumn({ targets, results, gradePoints }) {
-  const mid = Math.ceil(targets.length / 2);
-  const left = targets.slice(0, mid);
-  const right = targets.slice(mid);
+  const targetsWithResults = targets.filter((t) => results.some((r) => r.subject_id === t.subject_id));
+  const mid = Math.ceil(targetsWithResults.length / 2);
+  const left = targetsWithResults.slice(0, mid);
+  const right = targetsWithResults.slice(mid);
 
   return (
     <div className="subjects-two-col">
