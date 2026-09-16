@@ -187,6 +187,7 @@ const TABS = [
     description: 'Staff accounts, roles, permissions and parent records.',
     items: () => [
       { href: '/staff/roles', label: 'Staff & Roles' },
+      { href: '/admin/register-alerts', label: 'Register Alerts' },
       { href: '/staff/import-emails', label: 'Bulk Import Staff Emails' },
       { href: '/admin/permissions', label: 'Permissions' },
       { href: '/admin/lookups', label: 'Lookups (Houses)' },
