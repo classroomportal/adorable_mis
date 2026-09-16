@@ -8,7 +8,7 @@ const ROLE_LABELS = {
   smt: 'SMT',
   hr: 'HR',
   pastoral: 'Pastoral',
-  houseparent: 'Houseparent',
+  houseparent: 'House Parent',
   assessment_manager: 'Assessment Manager',
   assessment_user: 'Assessment User',
   teacher: 'Teacher',
@@ -182,13 +182,13 @@ function StaffRolesInner() {
               <td>
                 <input
                   value={s.first_name}
-                  style={{ width: '7rem' }}
+                  style={{ width: '100%', boxSizing: 'border-box', display: 'block' }}
                   onChange={(e) => updateField(s.staff_id, 'first_name', e.target.value)}
                   onBlur={(e) => saveField(s.staff_id, 'first_name', e.target.value)}
                 />
                 <input
                   value={s.last_name}
-                  style={{ width: '7rem', marginLeft: '0.3rem' }}
+                  style={{ width: '100%', boxSizing: 'border-box', display: 'block', marginTop: '0.3rem' }}
                   onChange={(e) => updateField(s.staff_id, 'last_name', e.target.value)}
                   onBlur={(e) => saveField(s.staff_id, 'last_name', e.target.value)}
                 />
@@ -198,7 +198,7 @@ function StaffRolesInner() {
                   value={s.staff_code || ''}
                   placeholder="e.g. CBT"
                   maxLength={10}
-                  style={{ width: '6rem', textTransform: 'uppercase' }}
+                  style={{ width: '100%', boxSizing: 'border-box', textTransform: 'uppercase' }}
                   onChange={(e) => updateField(s.staff_id, 'staff_code', e.target.value)}
                   onBlur={(e) => saveField(s.staff_id, 'staff_code', e.target.value)}
                 />
@@ -210,7 +210,7 @@ function StaffRolesInner() {
                   placeholder="name@abc.sch.ng"
                   onChange={(e) => updateField(s.staff_id, 'email', e.target.value)}
                   onBlur={(e) => saveField(s.staff_id, 'email', e.target.value)}
-                  style={{ width: '14rem' }}
+                  style={{ width: '100%', boxSizing: 'border-box' }}
                 />
               </td>
               {ALL_ROLES.map((r) => (

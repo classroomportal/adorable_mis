@@ -113,11 +113,38 @@ tbody tr:nth-child(odd) td {
 
 /* Wide role-grid tables (Staff & Roles): keep the name in view while
    scrolling sideways through many role columns, and let role headers wrap
-   instead of forcing every column as wide as its longest label. */
+   instead of forcing every column as wide as its longest label.
+   table-layout: fixed + an explicit <colgroup> keeps every role column the
+   same width regardless of content (a department/house <select> would
+   otherwise stretch its own column wider than the rest). */
+.roles-table {
+  table-layout: fixed;
+  /* An explicit width (not auto) is required here — with width:auto this
+     table falls back to sizing columns off cell content regardless of the
+     per-column widths below, even though table-layout is fixed. 16 columns:
+     10 + 5.5 + 11 + 13*5 rem. */
+  width: 91.5rem;
+}
+
+/* nth-child widths, not <col style>, because browsers don't reliably apply
+   CSS width on <col> for table-layout: fixed column sizing. */
+.roles-table th:nth-child(1), .roles-table td:nth-child(1) { width: 10rem; }
+.roles-table th:nth-child(2), .roles-table td:nth-child(2) { width: 5.5rem; }
+.roles-table th:nth-child(3), .roles-table td:nth-child(3) { width: 11rem; }
+.roles-table th:nth-child(n+4), .roles-table td:nth-child(n+4) { width: 5rem; }
+
 .roles-table th:not(:first-child) {
   white-space: normal;
-  width: 4.5rem;
+  word-break: normal;
+  overflow-wrap: break-word;
   text-align: center;
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
+  font-size: 0.68rem;
+}
+
+.roles-table select {
+  max-width: 100%;
 }
 
 .roles-table th:first-child,
