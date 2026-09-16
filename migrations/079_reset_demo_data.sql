@@ -84,14 +84,14 @@ begin
 
   -- 5. A couple of timetable slots per class, using real period numbers.
   if v_maths_subject_id is not null and array_length(v_periods, 1) >= 2 then
-    insert into timetable_slots (class_id, day_of_week, period_number, is_demo) values
-      (900001, 'Mon', v_periods[1], true),
-      (900001, 'Wed', v_periods[2], true);
+    insert into timetable_slots (class_id, day_of_week, period_number, start_time, end_time, is_demo) values
+      (900001, 'Mon', v_periods[1], '08:55', '09:45', true),
+      (900001, 'Wed', v_periods[2], '10:45', '11:35', true);
   end if;
   if v_english_subject_id is not null and array_length(v_periods, 1) >= 4 then
-    insert into timetable_slots (class_id, day_of_week, period_number, is_demo) values
-      (900002, 'Tue', v_periods[3], true),
-      (900002, 'Thu', v_periods[4], true);
+    insert into timetable_slots (class_id, day_of_week, period_number, start_time, end_time, is_demo) values
+      (900002, 'Tue', v_periods[3], '09:45', '10:35', true),
+      (900002, 'Thu', v_periods[4], '13:15', '14:05', true);
   end if;
 
   -- 6. Enroll every demo student in both demo classes.
