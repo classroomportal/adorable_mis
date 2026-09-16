@@ -187,7 +187,6 @@ const TABS = [
     description: 'Staff accounts, roles, permissions and parent records.',
     items: () => [
       { href: '/staff/roles', label: 'Staff & Roles' },
-      { href: '/admin/register-alerts', label: 'Register Alerts' },
       { href: '/staff/import-emails', label: 'Bulk Import Staff Emails' },
       { href: '/admin/permissions', label: 'Permissions' },
       { href: '/admin/lookups', label: 'Lookups (Houses)' },
@@ -195,6 +194,13 @@ const TABS = [
       { href: '/parents', label: 'Parents' },
       { href: '/parents/welcome-emails', label: 'Send Parent Welcome Emails' },
       { href: '/parents/import', label: 'Import Parents' },
+    ],
+  },
+  {
+    key: 'register_alerts', label: 'Register Alerts', icon: '⏰', accent: 'admin', adminOnly: true, roles: ['hr', 'school_office'],
+    description: "Follow up with staff who don't take registers on time.",
+    items: () => [
+      { href: '/admin/register-alerts', label: 'Register Alerts' },
     ],
   },
   {

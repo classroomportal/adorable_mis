@@ -11,9 +11,9 @@
 -- no-op), meant to be called on a schedule. is_demo is derived directly from
 -- timetable_slots rather than from the view, since the view doesn't expose it.
 --
--- NOTE: RLS below is scoped to is_admin() as a placeholder — I don't know the
--- actual staff_roles.role_name values used for SRO/HR in this school's setup.
--- Tell me those and I'll narrow this from admin-only to the right roles.
+-- RLS is scoped to the 'hr' and 'school_office' roles (school_office = SRO),
+-- matching staff_roles.role_name values already defined in migrations/046 and
+-- migrations/050. Admins can always see and touch everything, same as elsewhere.
 
 alter table register_alerts add column if not exists is_demo boolean not null default false;
 
@@ -35,11 +35,11 @@ $$;
 select cron.schedule('capture-register-alerts', '*/15 * * * *', $$select capture_register_alerts();$$);
 
 drop policy if exists "admin_read_register_alerts" on register_alerts;
-create policy "admin_read_register_alerts" on register_alerts for select using (
-  is_admin() and (is_demo = is_demo_account() or is_admin())
+create policy "hr_read_register_alerts" on register_alerts for select using (
+  (has_staff_role(array['hr','school_office']) or is_admin()) and (is_demo = is_demo_account() or is_admin())
 );
 
 drop policy if exists "admin_update_register_alerts" on register_alerts;
-create policy "admin_update_register_alerts" on register_alerts for update using (
-  is_admin() and (is_demo = is_demo_account() or is_admin())
+create policy "hr_update_register_alerts" on register_alerts for update using (
+  (has_staff_role(array['hr','school_office']) or is_admin()) and (is_demo = is_demo_account() or is_admin())
 );
