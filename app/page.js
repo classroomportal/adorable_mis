@@ -4,7 +4,14 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import SplashScreen from './components/SplashScreen';
 
-function Chip({ href, label }) {
+function Chip({ href, label, disabled }) {
+  if (disabled) {
+    return (
+      <span className="module-chip module-chip-soon" title="Not available on the training account yet">
+        {label}
+      </span>
+    );
+  }
   return (
     <a className="module-chip" href={href}>
       {label}
@@ -53,7 +60,10 @@ function DashboardStats() {
 }
 
 // A module card names what it's for, then lists its destinations as pill buttons.
-function ModuleCard({ icon, label, accent, description, items }) {
+// allowedHrefs, when given, greys out any item not in the set instead of hiding it —
+// used by the training account so it can see the full shape of what a real SMT
+// member has access to, without being able to actually open the unverified parts.
+function ModuleCard({ icon, label, accent, description, items, allowedHrefs }) {
   if (!items || items.length === 0) return null;
   return (
     <div className={`module-card accent-${accent}`}>
@@ -62,7 +72,7 @@ function ModuleCard({ icon, label, accent, description, items }) {
       {description && <div className="module-card-desc">{description}</div>}
       <div className="module-card-chips">
         {items.map((it) => (
-          <Chip key={it.href} href={it.href} label={it.label} />
+          <Chip key={it.href} href={it.href} label={it.label} disabled={allowedHrefs && !allowedHrefs.has(it.href)} />
         ))}
       </div>
     </div>
@@ -256,6 +266,45 @@ export default function Home() {
               { href: '/change-password', label: 'Change Password' },
             ]}
           />
+        </div>
+      </div>
+    );
+  }
+
+  // Training accounts see the same set of module cards a real staff member with
+  // their roles would see — full shape of the app, nothing hidden — but only the
+  // links actually verified as demo-data-isolated are clickable. Everything else
+  // (Fees & Bills, Communication, Reports, Registers Not Done, Mentor Groups) is
+  // shown greyed out: either that module's schema was never captured in this repo
+  // so it can't safely be demo-scoped yet, or it touches real, unscoped data
+  // (Communication genuinely emails real people — blocked server-side too, see
+  // migration 081, so greying it out here is a UX nicety, not the real safeguard).
+  if (profile?.is_demo_account) {
+    const demoAllowedHrefs = new Set([
+      '/staff/timetable', '/calendar', '/inbox',
+      '/students', '/behaviour', '/attendance', '/results', '/certificates', '/detention', '/appeals',
+    ]);
+    const demoTabs = TABS.filter((t) =>
+      !t.adminOnly || isAdmin || (t.roles && t.roles.some((r) => (staffRoles || []).includes(r)))
+    );
+    return (
+      <div>
+        <div className="card" style={{ borderLeft: '4px solid #c07d1f', background: '#fff7e0' }}>
+          <strong>Training account.</strong> Everything below is fake practice data that resets automatically — nothing you do here affects real students. Greyed-out links aren't available on this account yet.
+        </div>
+        <h1>Welcome — Training Account</h1>
+        <div className="module-card-grid">
+          {demoTabs.map((t) => (
+            <ModuleCard
+              key={t.key}
+              icon={t.icon}
+              label={t.label}
+              accent={t.accent}
+              description={t.description}
+              items={t.items({ isPastoralOrSmt, isAdmin })}
+              allowedHrefs={demoAllowedHrefs}
+            />
+          ))}
         </div>
       </div>
     );
