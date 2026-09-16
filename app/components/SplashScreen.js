@@ -32,7 +32,7 @@ export default function SplashScreen({ onDone }) {
         style={{
           width: 'min(84vw, 380px)',
           height: 'min(84vw, 380px)',
-          background: '#C0272D',
+          background: '#2F6FA8',
           borderRadius: '24px',
           display: 'flex',
           flexDirection: 'column',
@@ -60,7 +60,7 @@ export default function SplashScreen({ onDone }) {
             zIndex: 1,
           }}
         >
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#C0272D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#2F6FA8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             <path d="M9 12l2 2 4-4" />
           </svg>

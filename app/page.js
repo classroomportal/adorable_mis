@@ -261,6 +261,29 @@ export default function Home() {
     );
   }
 
+  // Bursar staff get a dedicated finance-only landing page instead of the full
+  // multi-role staff dashboard, unless they also hold a broader role (admin).
+  if (!isAdmin && (staffRoles || []).includes('bursar')) {
+    const bursarTabs = TABS.filter((t) => t.key === 'fees' || t.key === 'tuckshop');
+    return (
+      <div>
+        <h1>Welcome — Bursar</h1>
+        <div className="module-card-grid">
+          {bursarTabs.map((t) => (
+            <ModuleCard
+              key={t.key}
+              icon={t.icon}
+              label={t.label}
+              accent={t.accent}
+              description={t.description}
+              items={t.items({ isPastoralOrSmt, isAdmin })}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   const visibleTabs = TABS.filter((t) =>
     !t.adminOnly || isAdmin || (t.roles && t.roles.some((r) => (staffRoles || []).includes(r)))
   );
