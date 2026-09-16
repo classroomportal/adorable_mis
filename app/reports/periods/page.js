@@ -168,7 +168,7 @@ function ManagePeriodsInner() {
           </label>
 
           <div style={{ flex: '1 1 100%' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--red-800)', marginBottom: '0.35rem' }}>Year groups covered</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '0.35rem' }}>Year groups covered</div>
             <YearGroupPicker selected={selectedYears} onToggle={toggleYear} />
           </div>
 
