@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 
-const THRESHOLD = 10;
+const STATUS_OPTIONS = ['scheduled', 'attended', 'missed', 'cancelled'];
 
 function saturdayOf(date) {
   const d = new Date(date);
@@ -23,37 +23,56 @@ function DetentionInner() {
 
   const baseSat = saturdayOf(new Date());
   const start = addDays(baseSat, weekOffset * 7);
-  const end = addDays(start, 6); // Friday
+  const end = addDays(start, 6); // Friday — detentions are always dated to this Friday
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const { data: events } = await supabase
-        .from('behaviour_events')
-        .select('student_id, points, type, event_date, category, students(first_name, last_name, year_group, form_class)')
-        .eq('type', 'negative')
-        .gte('event_date', fmt(start))
-        .lte('event_date', fmt(end));
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase
+      .from('detentions')
+      .select('detention_id, student_id, behaviour_event_id, status, students(first_name, last_name, year_group, form_class), behaviour_events(category, points, description)')
+      .eq('detention_date', fmt(end));
 
-      const totals = {};
-      (events || []).forEach((e) => {
-        const pts = Math.abs(e.points || 0);
-        if (!totals[e.student_id]) totals[e.student_id] = { student: e.students, total: 0, events: [] };
-        totals[e.student_id].total += pts;
-        totals[e.student_id].events.push(e);
-      });
-      const list = Object.values(totals).filter((t) => t.total >= THRESHOLD).sort((a, b) => b.total - a.total);
-      setRows(list);
-      setLoading(false);
-    }
+    // A student can be flagged by both a serious single event and the weekly
+    // total in the same week — group into one row with combined reasons so
+    // the list (and the status control) reads as one detention per student.
+    const grouped = {};
+    (data || []).forEach((row) => {
+      if (!grouped[row.student_id]) {
+        grouped[row.student_id] = {
+          student_id: row.student_id,
+          student: row.students,
+          status: row.status,
+          detentionIds: [],
+          reasons: [],
+        };
+      }
+      const g = grouped[row.student_id];
+      g.detentionIds.push(row.detention_id);
+      g.reasons.push(
+        row.behaviour_event_id
+          ? `Serious event — ${row.behaviour_events?.category || 'negative event'} (${row.behaviour_events?.points ?? '?'} pts)`
+          : 'Weekly total reached 10+ points'
+      );
+    });
+    const list = Object.values(grouped).sort((a, b) =>
+      (a.student?.last_name || '').localeCompare(b.student?.last_name || '')
+    );
+    setRows(list);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, [weekOffset]);
+
+  async function updateStatus(detentionIds, newStatus) {
+    await supabase.from('detentions').update({ status: newStatus }).in('detention_id', detentionIds);
     load();
-  }, [weekOffset]);
+  }
 
   return (
     <div>
       <div className="no-print">
         <h1>Friday Detention List</h1>
-        <p>Students with {THRESHOLD}+ negative behaviour points, Saturday through Friday.</p>
+        <p>Students flagged by a serious single event or 10+ negative points, Saturday through Friday.</p>
         <div className="card" style={{ alignItems: 'center' }}>
           <button className="secondary" onClick={() => setWeekOffset((w) => w - 1)}>← Previous week</button>
           <strong>{fmt(start)} to {fmt(end)}</strong>
@@ -69,14 +88,19 @@ function DetentionInner() {
         </div>
         {loading ? <p>Loading...</p> : rows.length === 0 ? <p>Nobody has reached the threshold this week.</p> : (
           <div className="table-scroll"><table>
-            <thead><tr><th>Student</th><th>Year</th><th>Form</th><th>Total negative points</th></tr></thead>
+            <thead><tr><th>Student</th><th>Year</th><th>Form</th><th>Reason</th><th>Status</th></tr></thead>
             <tbody>
-              {rows.map((r, i) => (
-                <tr key={i}>
+              {rows.map((r) => (
+                <tr key={r.student_id}>
                   <td>{r.student?.first_name} {r.student?.last_name}</td>
                   <td>{r.student?.year_group}</td>
                   <td>{r.student?.form_class}</td>
-                  <td>{r.total}</td>
+                  <td>{r.reasons.join('; ')}</td>
+                  <td>
+                    <select value={r.status} onChange={(e) => updateStatus(r.detentionIds, e.target.value)}>
+                      {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -29,6 +29,7 @@ function StaffRolesInner() {
   const [houses, setHouses] = useState([]);
   const [status, setStatus] = useState(null);
   const [newStaff, setNewStaff] = useState({ first_name: '', last_name: '', staff_code: '', email: '' });
+  const [nameFilter, setNameFilter] = useState('');
 
   async function load() {
     const { data: s } = await supabase.from('staff').select('*').order('last_name');
@@ -157,7 +158,14 @@ function StaffRolesInner() {
         <button type="submit">Add</button>
       </form>
 
-      <div className="table-scroll"><table>
+      <input
+        placeholder="Filter by name..."
+        value={nameFilter}
+        onChange={(e) => setNameFilter(e.target.value)}
+        style={{ marginBottom: '0.75rem', maxWidth: '20rem' }}
+      />
+
+      <div className="table-scroll"><table className="roles-table">
         <thead>
           <tr>
             <th>Name</th>
@@ -167,7 +175,9 @@ function StaffRolesInner() {
           </tr>
         </thead>
         <tbody>
-          {staff.map((s) => (
+          {staff
+            .filter((s) => `${s.first_name} ${s.last_name}`.toLowerCase().includes(nameFilter.toLowerCase()))
+            .map((s) => (
             <tr key={s.staff_id}>
               <td>
                 <input

@@ -197,6 +197,13 @@ const TABS = [
     ],
   },
   {
+    key: 'register_alerts', label: 'Register Alerts', icon: '⏰', accent: 'admin', adminOnly: true, roles: ['hr', 'school_office'],
+    description: "Follow up with staff who don't take registers on time.",
+    items: () => [
+      { href: '/admin/register-alerts', label: 'Register Alerts' },
+    ],
+  },
+  {
     key: 'setup', label: 'Initial Setup', icon: '📥', accent: 'setup', adminOnly: true,
     description: 'One-off imports for getting a new school set up.',
     items: () => [
