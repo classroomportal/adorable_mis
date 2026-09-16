@@ -4,26 +4,11 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import SplashScreen from './components/SplashScreen';
 
-function Tile({ href, icon, label }) {
+function Chip({ href, label }) {
   return (
-    <a className="dash-tile" href={href}>
-      <span className="dash-tile-icon-badge">
-        <span className="dash-tile-icon">{icon}</span>
-      </span>
-      <span>{label}</span>
+    <a className="module-chip" href={href}>
+      {label}
     </a>
-  );
-}
-
-function ComingSoonTile({ icon, label }) {
-  return (
-    <div className="dash-tile dash-tile-soon" title="Coming soon">
-      <span className="dash-tile-icon-badge">
-        <span className="dash-tile-icon">{icon}</span>
-      </span>
-      <span>{label}</span>
-      <span className="dash-tile-soon-badge">Coming soon</span>
-    </div>
   );
 }
 
@@ -67,11 +52,19 @@ function DashboardStats() {
   );
 }
 
-function Section({ title, accent, children }) {
+// A module card names what it's for, then lists its destinations as pill buttons.
+function ModuleCard({ icon, label, accent, description, items }) {
+  if (!items || items.length === 0) return null;
   return (
-    <div className={`dash-section accent-${accent || 'default'}`}>
-      {title && <div className="dash-section-title">{title}</div>}
-      <div className="dash-grid">{children}</div>
+    <div className={`module-card accent-${accent}`}>
+      <div className="module-card-icon">{icon}</div>
+      <div className="module-card-title">{label}</div>
+      {description && <div className="module-card-desc">{description}</div>}
+      <div className="module-card-chips">
+        {items.map((it) => (
+          <Chip key={it.href} href={it.href} label={it.label} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -79,139 +72,128 @@ function Section({ title, accent, children }) {
 const TABS = [
   {
     key: 'home', label: 'Dashboard', icon: '🏠', accent: 'myinfo',
-    render: () => (
-      <Section accent="myinfo">
-        <Tile href="/staff/timetable" icon="🗓️" label="My Timetable" />
-        <Tile href="/parent-portal" icon="👨‍👩‍👧" label="My Children" />
-        <Tile href="/calendar" icon="📅" label="Calendar" />
-        <Tile href="/inbox" icon="📬" label="Inbox" />
-      </Section>
-    ),
+    description: 'Your day-to-day — timetable, family, calendar and messages.',
+    items: () => [
+      { href: '/staff/timetable', label: 'My Timetable' },
+      { href: '/parent-portal', label: 'My Children' },
+      { href: '/calendar', label: 'Calendar' },
+      { href: '/inbox', label: 'Inbox' },
+    ],
   },
   {
     key: 'students', label: 'Students', icon: '🎓', accent: 'students',
-    render: ({ isPastoralOrSmt }) => (
-      <Section accent="students">
-        <Tile href="/students" icon="🎓" label="Core Data" />
-        <Tile href="/behaviour" icon="⭐" label="Behaviour" />
-        <Tile href="/attendance" icon="✅" label="Attendance" />
-        <Tile href="/results" icon="📊" label="Results" />
-        <Tile href="/results/enter" icon="✍️" label="Enter Results" />
-        <Tile href="/results/subject-overview" icon="📈" label="Subject Overview" />
-        <Tile href="/certificates" icon="🏆" label="Certificates" />
-        <Tile href="/detention" icon="📋" label="Detention List" />
-        {isPastoralOrSmt && <Tile href="/appeals" icon="⚖️" label="Behaviour Appeals" />}
-      </Section>
-    ),
+    description: 'Core records, behaviour, attendance, results and certificates.',
+    items: ({ isPastoralOrSmt }) => [
+      { href: '/students', label: 'Core Data' },
+      { href: '/behaviour', label: 'Behaviour' },
+      { href: '/attendance', label: 'Attendance' },
+      { href: '/results', label: 'Results' },
+      { href: '/results/enter', label: 'Enter Results' },
+      { href: '/results/subject-overview', label: 'Subject Overview' },
+      { href: '/certificates', label: 'Certificates' },
+      { href: '/detention', label: 'Detention List' },
+      isPastoralOrSmt && { href: '/appeals', label: 'Behaviour Appeals' },
+    ].filter(Boolean),
   },
   {
     key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students', adminOnly: true, roles: ['pastoral', 'houseparent', 'smt'],
-    render: () => (
-      <Section accent="students">
-        <Tile href="/behaviour" icon="⭐" label="Behaviour Log" />
-        <Tile href="/detention" icon="📋" label="Detentions" />
-        <Tile href="/certificates" icon="🏆" label="Certificates" />
-        <Tile href="/pastoral/registers-not-done" icon="⏱️" label="Registers Not Done" />
-        <Tile href="/appeals" icon="⚖️" label="Behaviour Appeals" />
-        <Tile href="/staff/mentor-groups" icon="🧑‍🏫" label="Mentor Groups" />
-      </Section>
-    ),
+    description: 'Pastoral oversight — behaviour, detentions and mentor groups.',
+    items: () => [
+      { href: '/behaviour', label: 'Behaviour Log' },
+      { href: '/detention', label: 'Detentions' },
+      { href: '/certificates', label: 'Certificates' },
+      { href: '/pastoral/registers-not-done', label: 'Registers Not Done' },
+      { href: '/appeals', label: 'Behaviour Appeals' },
+      { href: '/staff/mentor-groups', label: 'Mentor Groups' },
+    ],
   },
   {
     key: 'reports', label: 'Reports', icon: '📝', accent: 'students',
-    render: ({ isAdmin }) => (
-      <Section accent="students">
-        <Tile href="/reports/write-subject-comments" icon="✍️" label="Write Subject Comments" />
-        <Tile href="/reports/write-pastoral-comments" icon="💬" label="Write Pastoral Comments" />
-        <Tile href="/reports/check" icon="🔍" label="Check Reports" />
-        {isAdmin && <Tile href="/reports/periods" icon="🗂️" label="Manage Report Periods" />}
-        {isAdmin && <Tile href="/reports/generate" icon="📄" label="Generate Reports" />}
-      </Section>
-    ),
+    description: 'Write, check and generate student reports.',
+    items: ({ isAdmin }) => [
+      { href: '/reports/write-subject-comments', label: 'Write Subject Comments' },
+      { href: '/reports/write-pastoral-comments', label: 'Write Pastoral Comments' },
+      { href: '/reports/check', label: 'Check Reports' },
+      isAdmin && { href: '/reports/periods', label: 'Manage Report Periods' },
+      isAdmin && { href: '/reports/generate', label: 'Generate Reports' },
+    ].filter(Boolean),
   },
   {
     key: 'comms', label: 'Communication', icon: '💬', accent: 'family', adminOnly: true, roles: ['smt', 'pastoral', 'school_office'],
-    render: () => (
-      <Section accent="family">
-        <Tile href="/comms/compose" icon="📣" label="Send Announcements to Parents / Groups" />
-        <Tile href="/comms/history" icon="📜" label="Message History & Read Receipts" />
-      </Section>
-    ),
+    description: 'Send announcements to parents and track read receipts.',
+    items: () => [
+      { href: '/comms/compose', label: 'Send Announcements to Parents / Groups' },
+      { href: '/comms/history', label: 'Message History & Read Receipts' },
+    ],
   },
   {
     key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school', adminOnly: true,
-    render: () => (
-      <Section accent="school">
-        <Tile href="/staff/timetable" icon="🗓️" label="My Timetable" />
-        <Tile href="/admin/block-allocation" icon="🗂️" label="Class Allocation" />
-        <Tile href="/admin/import-classes" icon="📥" label="Import Nova-T Timetable" />
-      </Section>
-    ),
+    description: 'Manage timetables and class allocations.',
+    items: () => [
+      { href: '/staff/timetable', label: 'My Timetable' },
+      { href: '/admin/block-allocation', label: 'Class Allocation' },
+      { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
+    ],
   },
   {
     key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school', adminOnly: true,
-    render: () => (
-      <Section accent="school">
-        <Tile href="/results/import-gradebook" icon="📥" label="Import Weekly Results" />
-        <Tile href="/target-grades/import" icon="📥" label="Import Target Grades" />
-        <Tile href="/classes/progress" icon="📈" label="Class Progress" />
-        <Tile href="/admin/grade-boundaries" icon="🎯" label="Grade Boundaries" />
-        <Tile href="/admin/subject-settings" icon="🏷️" label="Subject Settings" />
-        <Tile href="/assessments/import" icon="📥" label="Import CAT4/NGRT" />
-      </Section>
-    ),
+    description: 'Import results, target grades and manage grading setup.',
+    items: () => [
+      { href: '/results/import-gradebook', label: 'Import Weekly Results' },
+      { href: '/target-grades/import', label: 'Import Target Grades' },
+      { href: '/classes/progress', label: 'Class Progress' },
+      { href: '/admin/grade-boundaries', label: 'Grade Boundaries' },
+      { href: '/admin/subject-settings', label: 'Subject Settings' },
+      { href: '/assessments/import', label: 'Import CAT4/NGRT' },
+    ],
   },
   {
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family', adminOnly: true, roles: ['bursar', 'smt'],
-    render: () => (
-      <Section accent="family">
-        <Tile href="/bursar/charge-checklist" icon="✅" label="Charge Checklist" />
-        <Tile href="/bursar/fee-items" icon="🏷️" label="Fee Items (Prices)" />
-        <Tile href="/bursar/discounts" icon="🏷️" label="Discounts" />
-        <Tile href="/bursar/payments" icon="💰" label="Record a Payment" />
-        <Tile href="/bursar/fees-table" icon="📊" label="All Students (Table)" />
-        <Tile href="/bursar/debtors" icon="📋" label="Debtors List" />
-        <Tile href="/bursar/audit" icon="🕵️" label="Audit" />
-        <Tile href="/smt/fees-dashboard" icon="📈" label="SMT Dashboard" />
-      </Section>
-    ),
+    description: 'Charges, payments, discounts and the debtors list.',
+    items: () => [
+      { href: '/bursar/charge-checklist', label: 'Charge Checklist' },
+      { href: '/bursar/fee-items', label: 'Fee Items (Prices)' },
+      { href: '/bursar/discounts', label: 'Discounts' },
+      { href: '/bursar/payments', label: 'Record a Payment' },
+      { href: '/bursar/fees-table', label: 'All Students (Table)' },
+      { href: '/bursar/debtors', label: 'Debtors List' },
+      { href: '/bursar/audit', label: 'Audit' },
+      { href: '/smt/fees-dashboard', label: 'SMT Dashboard' },
+    ],
   },
   {
     key: 'tuckshop', label: 'Tuckshop', icon: '🍭', accent: 'family', adminOnly: true, roles: ['tuckshop', 'bursar'],
-    render: () => (
-      <Section accent="family">
-        <Tile href="/tuckshop/purchase" icon="🛒" label="Sell Items" />
-        <Tile href="/tuckshop/topup" icon="💵" label="Top Up Balance" />
-        <Tile href="/tuckshop/balances" icon="📊" label="Balances" />
-        <Tile href="/tuckshop/preorders" icon="📝" label="Preorders" />
-        <Tile href="/tuckshop/items" icon="🧺" label="Items & Prices" />
-      </Section>
-    ),
+    description: 'Sell items, top up balances and manage stock.',
+    items: () => [
+      { href: '/tuckshop/purchase', label: 'Sell Items' },
+      { href: '/tuckshop/topup', label: 'Top Up Balance' },
+      { href: '/tuckshop/balances', label: 'Balances' },
+      { href: '/tuckshop/preorders', label: 'Preorders' },
+      { href: '/tuckshop/items', label: 'Items & Prices' },
+    ],
   },
   {
     key: 'staff', label: 'Staff & Access', icon: '🔐', accent: 'admin', adminOnly: true,
-    render: () => (
-      <Section accent="admin">
-        <Tile href="/staff/roles" icon="🧑‍🏫" label="Staff & Roles" />
-        <Tile href="/staff/import-emails" icon="📧" label="Bulk Import Staff Emails" />
-        <Tile href="/admin/permissions" icon="🔐" label="Permissions" />
-        <Tile href="/admin/lookups" icon="🏠" label="Lookups (Houses)" />
-        <Tile href="/staff/welcome-emails" icon="✉️" label="Send Staff Welcome Emails" />
-        <Tile href="/parents" icon="👪" label="Parents" />
-        <Tile href="/parents/welcome-emails" icon="✉️" label="Send Parent Welcome Emails" />
-        <Tile href="/parents/import" icon="📥" label="Import Parents" />
-      </Section>
-    ),
+    description: 'Staff accounts, roles, permissions and parent records.',
+    items: () => [
+      { href: '/staff/roles', label: 'Staff & Roles' },
+      { href: '/staff/import-emails', label: 'Bulk Import Staff Emails' },
+      { href: '/admin/permissions', label: 'Permissions' },
+      { href: '/admin/lookups', label: 'Lookups (Houses)' },
+      { href: '/staff/welcome-emails', label: 'Send Staff Welcome Emails' },
+      { href: '/parents', label: 'Parents' },
+      { href: '/parents/welcome-emails', label: 'Send Parent Welcome Emails' },
+      { href: '/parents/import', label: 'Import Parents' },
+    ],
   },
   {
     key: 'setup', label: 'Initial Setup', icon: '📥', accent: 'setup', adminOnly: true,
-    render: () => (
-      <Section accent="setup">
-        <Tile href="/students/import" icon="📥" label="Import Students" />
-        <Tile href="/students/photos/import" icon="📥" label="Import Photos" />
-        <Tile href="/admin/import-timetable" icon="📥" label="Import Student Class Allocations" />
-      </Section>
-    ),
+    description: 'One-off imports for getting a new school set up.',
+    items: () => [
+      { href: '/students/import', label: 'Import Students' },
+      { href: '/students/photos/import', label: 'Import Photos' },
+      { href: '/admin/import-timetable', label: 'Import Student Class Allocations' },
+    ],
   },
 ];
 
@@ -219,7 +201,6 @@ export default function Home() {
   const { session, profile, isPastoralOrSmt, staffRoles } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const [showSplash, setShowSplash] = useState(false);
-  const [activeTab, setActiveTab] = useState('home');
 
   useEffect(() => {
     if (session && !sessionStorage.getItem('splashShown')) {
@@ -234,8 +215,9 @@ export default function Home() {
 
   if (!session) {
     return (
-      <div>
-        <p>Formwork — school management information system for Adorable British College.</p>
+      <div className="welcome-card">
+        <h1>Formwork</h1>
+        <p>School management information system for Adorable British College.</p>
         <a href="/login"><button>Sign in</button></a>
       </div>
     );
@@ -245,11 +227,17 @@ export default function Home() {
     return (
       <div>
         <h1>Welcome{profile.student_id ? '' : ' — account not linked yet'}</h1>
-        <Section title="My Info" accent="myinfo">
-          <Tile href="/portal" icon="📚" label="My Grades & Behaviour" />
-          <Tile href="/portal/tuckshop" icon="🛒" label="Tuckshop" />
-          <Tile href="/change-password" icon="🔑" label="Change Password" />
-        </Section>
+        <div className="module-card-grid">
+          <ModuleCard
+            icon="📚" label="My Info" accent="myinfo"
+            description="Your grades, behaviour record and account."
+            items={[
+              { href: '/portal', label: 'My Grades & Behaviour' },
+              { href: '/portal/tuckshop', label: 'Tuckshop' },
+              { href: '/change-password', label: 'Change Password' },
+            ]}
+          />
+        </div>
       </div>
     );
   }
@@ -258,11 +246,17 @@ export default function Home() {
     return (
       <div>
         <h1>Welcome{profile.parent_id ? '' : ' — account not linked yet'}</h1>
-        <Section title="My Family" accent="family">
-          <Tile href="/parent-portal" icon="👨‍👩‍👧" label="My Children" />
-          <Tile href="/parent-portal/tuckshop" icon="🛒" label="Tuckshop" />
-          <Tile href="/change-password" icon="🔑" label="Change Password" />
-        </Section>
+        <div className="module-card-grid">
+          <ModuleCard
+            icon="👨‍👩‍👧" label="My Family" accent="family"
+            description="Your children's progress, tuckshop balance and account."
+            items={[
+              { href: '/parent-portal', label: 'My Children' },
+              { href: '/parent-portal/tuckshop', label: 'Tuckshop' },
+              { href: '/change-password', label: 'Change Password' },
+            ]}
+          />
+        </div>
       </div>
     );
   }
@@ -270,29 +264,21 @@ export default function Home() {
   const visibleTabs = TABS.filter((t) =>
     !t.adminOnly || isAdmin || (t.roles && t.roles.some((r) => (staffRoles || []).includes(r)))
   );
-  const active = visibleTabs.find((t) => t.key === activeTab) || visibleTabs[0];
 
   return (
     <div>
       <DashboardStats />
-
-      <div className="dashboard-layout">
-        <div className="module-tabs">
-          {visibleTabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className={`module-tab ${active.key === t.key ? 'active' : ''} accent-${t.accent}`}
-            >
-              <span className="module-tab-icon">{t.icon}</span>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="dashboard-content">
-          {active.render({ isPastoralOrSmt, isAdmin })}
-        </div>
+      <div className="module-card-grid">
+        {visibleTabs.map((t) => (
+          <ModuleCard
+            key={t.key}
+            icon={t.icon}
+            label={t.label}
+            accent={t.accent}
+            description={t.description}
+            items={t.items({ isPastoralOrSmt, isAdmin })}
+          />
+        ))}
       </div>
     </div>
   );
