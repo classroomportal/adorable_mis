@@ -24,7 +24,9 @@ function WriteSubjectCommentsInner() {
 
   const [roster, setRoster] = useState([]);
   const [rows, setRows] = useState({}); // student_id -> { id, comment, effort_grade, status, checker_note }
+  const [performance, setPerformance] = useState({}); // student_id -> { latestGrade, latestScorePct, targetGrade }
   const [loadingRoster, setLoadingRoster] = useState(false);
+  const [generatingFor, setGeneratingFor] = useState(null); // student_id currently generating, or null
   const [status, setStatus] = useState(null);
 
   const selectedPeriod = periods.find((p) => String(p.report_period_id) === String(periodId));
@@ -87,6 +89,33 @@ function WriteSubjectCommentsInner() {
       if (!nextRows[s.student_id]) nextRows[s.student_id] = { id: null, comment: '', effort_grade: '', status: 'draft', checker_note: '' };
     }
     setRows(nextRows);
+
+    // Latest result and target grade per student, to ground the AI draft in real data
+    // rather than have it invent anything.
+    const nextPerf = {};
+    if (ids.length > 0) {
+      const { data: targets } = await supabase
+        .from('target_grades')
+        .select('student_id, target_grade')
+        .eq('subject_id', selectedClass.subject_id)
+        .in('student_id', ids);
+      for (const t of targets || []) {
+        nextPerf[t.student_id] = { ...nextPerf[t.student_id], targetGrade: t.target_grade };
+      }
+
+      const { data: latestResults } = await supabase
+        .from('results')
+        .select('student_id, score, max_score, grade, week_start_date')
+        .eq('subject_id', selectedClass.subject_id)
+        .in('student_id', ids)
+        .order('week_start_date', { ascending: false });
+      for (const r of latestResults || []) {
+        if (nextPerf[r.student_id]?.latestGrade) continue; // already have the most recent (results ordered desc)
+        const pct = r.score != null && r.max_score ? Math.round((r.score / r.max_score) * 100) : null;
+        nextPerf[r.student_id] = { ...nextPerf[r.student_id], latestGrade: r.grade, latestScorePct: pct };
+      }
+    }
+    setPerformance(nextPerf);
     setLoadingRoster(false);
   }, [periodId, classId, selectedClass]);
 
@@ -125,6 +154,42 @@ function WriteSubjectCommentsInner() {
       return;
     }
     setRows((prev) => ({ ...prev, [studentId]: { ...prev[studentId], id: data.id, status: data.status } }));
+  }
+
+  async function generateDraft(student) {
+    const row = rows[student.student_id] || {};
+    if (row.comment && row.comment.trim()) {
+      if (!confirm(`Replace ${student.first_name}'s existing comment with an AI draft? This can't be undone.`)) return;
+    }
+    setGeneratingFor(student.student_id);
+    setStatus(null);
+    try {
+      const perf = performance[student.student_id] || {};
+      const res = await fetch('/api/generate-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'subject',
+          studentFirstName: student.first_name,
+          subjectName: selectedClass?.subjects?.subject_name,
+          effortGrade: row.effort_grade,
+          latestGrade: perf.latestGrade,
+          latestScorePct: perf.latestScorePct,
+          targetGrade: perf.targetGrade,
+          priorComment: row.comment,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus(`Couldn't generate a draft: ${data.error || 'unknown error'}`);
+        return;
+      }
+      updateField(student.student_id, 'comment', data.draft || '');
+    } catch (err) {
+      setStatus(`Couldn't generate a draft: ${err.message}`);
+    } finally {
+      setGeneratingFor(null);
+    }
   }
 
   async function submitAllDrafts() {
@@ -225,7 +290,15 @@ function WriteSubjectCommentsInner() {
                   </label>
 
                   {!locked && (
-                    <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => generateDraft(s)}
+                        disabled={generatingFor === s.student_id}
+                      >
+                        {generatingFor === s.student_id ? 'Generating...' : '✨ Generate draft'}
+                      </button>
                       <button type="button" className="secondary" onClick={() => saveRow(s.student_id, 'draft')}>Save Draft</button>
                       <button type="button" onClick={() => saveRow(s.student_id, 'submitted')}>Submit</button>
                     </div>
