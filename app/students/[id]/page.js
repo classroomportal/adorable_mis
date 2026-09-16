@@ -166,13 +166,18 @@ function StudentDetail() {
       setBlockClasses({});
     }
 
+    // Read the live block_id via the classes join rather than trusting student_class.block_id:
+    // that column is only a denormalised copy kept in sync by a trigger on insert/update of
+    // student_class, so it goes stale whenever a class gets linked to a block afterwards.
     const { data: currentLinks } = await supabase
       .from('student_class')
-      .select('class_id, block_id')
-      .eq('student_id', id)
-      .not('block_id', 'is', null);
+      .select('class_id, classes(block_id)')
+      .eq('student_id', id);
     const sel = {};
-    (currentLinks || []).forEach((l) => { sel[l.block_id] = l.class_id; });
+    (currentLinks || []).forEach((l) => {
+      const bId = l.classes?.block_id;
+      if (bId) sel[bId] = l.class_id;
+    });
     setBlockSelections(sel);
 
     setLoading(false);
