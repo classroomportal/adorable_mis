@@ -106,15 +106,15 @@ begin
 
   -- 7. Results — a realistic spread, reusing a real result-set event if one exists.
   if v_maths_subject_id is not null and v_result_event_id is not null then
-    insert into results (student_id, subject_id, result_set_event_id, week_start_date, score, max_score, grade, staff_id, is_demo) values
-      (900001, v_maths_subject_id, v_result_event_id, v_result_event_date, 88, 100, 'A',  900001, true),
-      (900002, v_maths_subject_id, v_result_event_id, v_result_event_date, 95, 100, 'A*', 900001, true),
-      (900003, v_maths_subject_id, v_result_event_id, v_result_event_date, 72, 100, 'B',  900001, true),
-      (900004, v_maths_subject_id, v_result_event_id, v_result_event_date, 58, 100, 'D',  900001, true),
-      (900005, v_maths_subject_id, v_result_event_id, v_result_event_date, 91, 100, 'A*', 900001, true),
-      (900006, v_maths_subject_id, v_result_event_id, v_result_event_date, 66, 100, 'C',  900001, true),
-      (900007, v_maths_subject_id, v_result_event_id, v_result_event_date, 45, 100, 'E',  900001, true),
-      (900008, v_maths_subject_id, v_result_event_id, v_result_event_date, 79, 100, 'B',  900001, true)
+    insert into results (student_id, subject_id, result_set_event_id, week_start_date, score, max_score, grade, staff_id, result_type, is_demo) values
+      (900001, v_maths_subject_id, v_result_event_id, v_result_event_date, 88, 100, 'A',  900001, 'exam_grade', true),
+      (900002, v_maths_subject_id, v_result_event_id, v_result_event_date, 95, 100, 'A*', 900001, 'exam_grade', true),
+      (900003, v_maths_subject_id, v_result_event_id, v_result_event_date, 72, 100, 'B',  900001, 'exam_grade', true),
+      (900004, v_maths_subject_id, v_result_event_id, v_result_event_date, 58, 100, 'D',  900001, 'exam_grade', true),
+      (900005, v_maths_subject_id, v_result_event_id, v_result_event_date, 91, 100, 'A*', 900001, 'exam_grade', true),
+      (900006, v_maths_subject_id, v_result_event_id, v_result_event_date, 66, 100, 'C',  900001, 'exam_grade', true),
+      (900007, v_maths_subject_id, v_result_event_id, v_result_event_date, 45, 100, 'E',  900001, 'exam_grade', true),
+      (900008, v_maths_subject_id, v_result_event_id, v_result_event_date, 79, 100, 'B',  900001, 'exam_grade', true)
     on conflict (student_id, subject_id, result_set_event_id) do nothing;
   end if;
 
