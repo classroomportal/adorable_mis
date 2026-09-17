@@ -2,23 +2,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import { classifyAverage, isWaecGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
 
-const STYLE = {
-  above: { background: '#dcf5e3', color: '#1a7a3d' },
-  on: { background: '#fdecad', color: '#8a6d00' },
-  below: { background: '#fbdede', color: '#a3232c' },
-};
-const LABEL = { above: 'Above target', on: 'On target', below: 'Below target' };
-
-const WAEC_GRADES = new Set(['A1+', 'A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9']);
 function gradeScaleOf(grade) {
-  return WAEC_GRADES.has(grade) ? 'waec' : 'igcse';
-}
-
-function classify(diff) {
-  if (diff > 0.15) return 'above';
-  if (diff < -0.15) return 'below';
-  return 'on';
+  return isWaecGrade(grade) ? 'waec' : 'igcse';
 }
 
 function ClassProgressInner() {
@@ -184,7 +171,7 @@ function ClassProgressInner() {
           </thead>
           <tbody>
             {filtered.map((r) => {
-              const cls = classify(r.diff);
+              const cls = classifyAverage(r.diff);
               return (
                 <tr key={r.class_id}>
                   <td>{r.class_code}</td>
