@@ -2,3 +2,9 @@ node_modules/
 .next/
 .env
 .env.local
+
+# backup protocol: real credentials and actual dump files must never be committed
+scripts/backup/backup.env
+scripts/backup/*.dump
+scripts/backup/*.dump.gpg
+scripts/backup/*.plist
