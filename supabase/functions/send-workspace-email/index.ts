@@ -49,7 +49,14 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), { status: 502 });
   } finally {
-    await client.close().catch(() => {});
+    // denomailer's close() can throw synchronously (not just reject), so a
+    // plain .catch() doesn't guard it — wrap in try/catch instead. This was
+    // causing a 500 after the email had already sent successfully.
+    try {
+      await client.close();
+    } catch {
+      // best-effort cleanup; the send already succeeded or failed above
+    }
   }
 
   return new Response(JSON.stringify({ ok: true }), {
