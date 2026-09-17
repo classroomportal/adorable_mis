@@ -42,6 +42,7 @@ function BehaviourPageInner() {
     const { data } = await supabase
       .from('behaviour_events')
       .select('event_id, event_date, type, category, points, students(student_id, first_name, last_name, boarding_house), staff(first_name, last_name)')
+      .eq('is_demo', !!profile?.is_demo_account)
       .order('event_date', { ascending: false })
       .limit(20);
     setEvents(data || []);
@@ -54,6 +55,7 @@ function BehaviourPageInner() {
       .from('behaviour_events')
       .select('event_id, event_date, category, points, students(student_id, first_name, last_name, boarding_house), staff(first_name, last_name)')
       .eq('type', 'negative')
+      .eq('is_demo', !!profile?.is_demo_account)
       .gte('event_date', since.toISOString().slice(0, 10))
       .order('event_date', { ascending: false });
     setAlerts(data || []);
