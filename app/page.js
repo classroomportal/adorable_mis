@@ -190,7 +190,7 @@ const TABS = [
       { href: '/staff/roles', label: 'Staff & Roles' },
       { href: '/staff/import-emails', label: 'Bulk Import Staff Emails' },
       { href: '/admin/permissions', label: 'Permissions' },
-      { href: '/admin/lookups', label: 'Lookups (Houses)' },
+      { href: '/admin/lookups', label: 'Lookups' },
       { href: '/staff/welcome-emails', label: 'Send Staff Welcome Emails' },
       { href: '/parents', label: 'Parents' },
       { href: '/parents/welcome-emails', label: 'Send Parent Welcome Emails' },
