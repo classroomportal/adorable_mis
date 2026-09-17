@@ -1,0 +1,76 @@
+name: Nightly database backup
+
+# DIY safety net for the Supabase Free plan, which includes no automatic
+# backups at all (see migrations/088_create_db_backups_bucket.sql). Dumps
+# roles, schema, and data via the Supabase CLI (its bundled pg_dump matches
+# the project's Postgres version, unlike apt's), packages them, and uploads
+# to the private db-backups Storage bucket. Backups older than
+# RETENTION_DAYS are pruned after each successful upload.
+#
+# Requires two repo secrets (Settings > Secrets and variables > Actions),
+# neither of which this workflow or Claude can create:
+#   SUPABASE_DB_URL          direct Postgres connection string, e.g.
+#                             postgresql://postgres:[PASSWORD]@db.drjtcegtucovhbyfdpbx.supabase.co:5432/postgres
+#                             (Project Settings > Database > Connection string > URI)
+#   SUPABASE_SERVICE_ROLE_KEY  the service_role key (Project Settings > API)
+#
+# To restore: download the backup, `tar xzf`, then
+#   psql "$DB_URL" -f roles.sql
+#   psql "$DB_URL" -f schema.sql
+#   psql "$DB_URL" -f data.sql
+# against a fresh/target database (never against production without a
+# read-through of what you're about to overwrite first).
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 02:00 UTC = ~03:00 Lagos time
+  workflow_dispatch: {}
+
+env:
+  PROJECT_URL: https://drjtcegtucovhbyfdpbx.supabase.co
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dump roles, schema, and data
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          supabase db dump --db-url "$DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$DB_URL" -f backup/data.sql --data-only --use-copy
+
+      - name: Package with a UTC timestamp
+        id: pkg
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+          file="backup-${stamp}.tar.gz"
+          tar -czf "$file" -C backup roles.sql schema.sql data.sql
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to the private db-backups bucket
+        env:
+          SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS -X POST \
+            "$PROJECT_URL/storage/v1/object/db-backups/${{ steps.pkg.outputs.file }}" \
+            -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/gzip" \
+            --data-binary "@${{ steps.pkg.outputs.file }}"
+
+      - name: Prune backups older than 14 days
+        env:
+          SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RETENTION_DAYS: '14'
+        run: ./scripts/prune-backups.sh
