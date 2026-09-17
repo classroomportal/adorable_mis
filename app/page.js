@@ -32,15 +32,15 @@ function StatCard({ label, value, icon, accent, href }) {
   );
 }
 
-function DashboardStats() {
+function DashboardStats({ isDemoAccount }) {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
     async function load() {
       const [{ count: studentCount }, { count: staffCount }, { data: alerts }] = await Promise.all([
-        supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('staff').select('staff_id', { count: 'exact', head: true }),
-        supabase.from('behaviour_events').select('event_id').eq('type', 'negative').gte('event_date', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
+        supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('status', 'active').eq('is_demo', !!isDemoAccount),
+        supabase.from('staff').select('staff_id', { count: 'exact', head: true }).eq('is_demo', !!isDemoAccount),
+        supabase.from('behaviour_events').select('event_id').eq('type', 'negative').eq('is_demo', !!isDemoAccount).gte('event_date', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
       ]);
       setStats({
         students: studentCount ?? 0,
@@ -49,7 +49,7 @@ function DashboardStats() {
       });
     }
     load();
-  }, []);
+  }, [isDemoAccount]);
 
   return (
     <div className="stat-card-row">
@@ -332,7 +332,7 @@ export default function Home() {
 
   return (
     <div>
-      <DashboardStats />
+      <DashboardStats isDemoAccount={profile?.is_demo_account} />
       <div className="module-card-grid">
         {visibleTabs.map((t) => (
           <ModuleCard
