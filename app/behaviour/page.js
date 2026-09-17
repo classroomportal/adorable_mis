@@ -41,7 +41,7 @@ function BehaviourPageInner() {
   async function loadEvents() {
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, type, category, points, description, students(student_id, first_name, last_name, boarding_house)')
+      .select('event_id, event_date, type, category, points, students(student_id, first_name, last_name, boarding_house), staff(first_name, last_name)')
       .order('event_date', { ascending: false })
       .limit(20);
     setEvents(data || []);
@@ -52,7 +52,7 @@ function BehaviourPageInner() {
     since.setDate(since.getDate() - 7);
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, category, points, description, students(student_id, first_name, last_name, boarding_house)')
+      .select('event_id, event_date, category, points, students(student_id, first_name, last_name, boarding_house), staff(first_name, last_name)')
       .eq('type', 'negative')
       .gte('event_date', since.toISOString().slice(0, 10))
       .order('event_date', { ascending: false });
@@ -212,15 +212,15 @@ function BehaviourPageInner() {
           {houseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {houseScope} only (Houseparent view)</p>}
           {scopedAlerts.length === 0 ? <p>No negative events logged in the last 7 days.</p> : (
             <div className="table-scroll"><table>
-              <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Description</th></tr></thead>
+              <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th></tr></thead>
               <tbody>
                 {scopedAlerts.map((a) => (
-                  <tr key={a.event_id}>
+                  <tr key={a.event_id} className="student-link" onClick={() => window.location.href = `/students/${a.students?.student_id}`}>
                     <td>{formatUKDate(a.event_date)}</td>
                     <td>{a.students?.first_name} {a.students?.last_name}</td>
                     <td>{a.category ?? '—'}</td>
                     <td>{a.points ?? '—'}</td>
-                    <td>{a.description ?? ''}</td>
+                    <td>{a.staff ? `${a.staff.first_name} ${a.staff.last_name}` : '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -362,18 +362,19 @@ function BehaviourPageInner() {
       {houseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {houseScope} only (Houseparent view)</p>}
       <div className="table-scroll"><table>
         <thead>
-          <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th>{profile?.role === 'admin' && <th></th>}</tr>
+          <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th><th>Logged by</th>{profile?.role === 'admin' && <th></th>}</tr>
         </thead>
         <tbody>
           {scopedEvents.map((ev) => (
-            <tr key={ev.event_id}>
+            <tr key={ev.event_id} className="student-link" onClick={() => window.location.href = `/students/${ev.students?.student_id}`}>
               <td>{formatUKDate(ev.event_date)}</td>
               <td>{ev.students?.first_name} {ev.students?.last_name}</td>
               <td>{ev.type}</td>
               <td>{ev.category ?? '—'}</td>
               <td>{ev.points ?? '—'}</td>
+              <td>{ev.staff ? `${ev.staff.first_name} ${ev.staff.last_name}` : '—'}</td>
               {profile?.role === 'admin' && (
-                <td><button className="secondary" onClick={() => handleDelete(ev.event_id)}>Delete</button></td>
+                <td><button className="secondary" onClick={(e) => { e.stopPropagation(); handleDelete(ev.event_id); }}>Delete</button></td>
               )}
             </tr>
           ))}
