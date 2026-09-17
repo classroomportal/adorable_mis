@@ -1,6 +1,6 @@
 # Formwork — orientation for Claude
 
-School MIS for Adorable British College (Next.js 14 App Router + Supabase). Live app at `mis.classroomportal.org`, deployed on Vercel; the demo/training login uses `misform.work`.
+School MIS for Adorable British College (Next.js 14 App Router + Supabase). Live app at `mis.classroomportal.org`, deployed on Vercel. `misform.work` is the same live app/data — not a separate demo environment — just reachable at a second domain; it has a demo account available on it for training (see `staff_demo` under Conventions below).
 
 ## Schema: read `sql/CURRENT_SCHEMA.md` before guessing
 
