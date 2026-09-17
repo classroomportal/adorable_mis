@@ -8,6 +8,12 @@ import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 // the direct https://api.resend.com/emails calls — this is the bridge,
 // since pg_net only speaks HTTP and Workspace has no equivalent HTTP API.
 //
+// Accepts the union of what the four call sites need: `to` as a single
+// address or an array (notify_pastoral_on_negative_behaviour emails
+// multiple smt/houseparent staff at once), and either `text` or `html`
+// body content (the welcome-email and behaviour-alert functions send HTML;
+// send_message sends plain text).
+//
 // Required secret (Dashboard > Edge Functions > Secrets, or
 // `supabase secrets set`): GMAIL_APP_PASSWORD
 // Optional secret: GMAIL_SENDER (defaults to mis@abc.sch.ng if unset)
@@ -23,16 +29,16 @@ Deno.serve(async (req: Request) => {
   }
   const sender = Deno.env.get("GMAIL_SENDER") || "mis@abc.sch.ng";
 
-  let payload: { to?: string; subject?: string; text?: string };
+  let payload: { to?: string | string[]; subject?: string; text?: string; html?: string };
   try {
     payload = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
   }
 
-  const { to, subject, text } = payload;
-  if (!to || !subject || !text) {
-    return new Response(JSON.stringify({ error: "to, subject, and text are required" }), { status: 400 });
+  const { to, subject, text, html } = payload;
+  if (!to || !subject || (!text && !html)) {
+    return new Response(JSON.stringify({ error: "to, subject, and text or html are required" }), { status: 400 });
   }
 
   const client = new SMTPClient({
@@ -45,13 +51,20 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
-    await client.send({ from: sender, to, subject, content: text });
+    await client.send({
+      from: sender,
+      to,
+      subject,
+      // denomailer requires plain-text `content` even for an HTML send —
+      // fall back to a stripped version of the HTML when only html is given.
+      content: text ?? html!.replace(/<[^>]+>/g, ""),
+      ...(html ? { html } : {}),
+    });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), { status: 502 });
   } finally {
     // denomailer's close() can throw synchronously (not just reject), so a
-    // plain .catch() doesn't guard it — wrap in try/catch instead. This was
-    // causing a 500 after the email had already sent successfully.
+    // plain .catch() doesn't guard it — wrap in try/catch instead.
     try {
       await client.close();
     } catch {
