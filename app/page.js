@@ -20,15 +20,15 @@ function Chip({ href, label, disabled }) {
   );
 }
 
-function StatCard({ label, value, icon, accent }) {
+function StatCard({ label, value, icon, accent, href }) {
   return (
-    <div className={`stat-card accent-${accent}`}>
+    <a className={`stat-card accent-${accent}`} href={href} style={{ textDecoration: 'none' }}>
       <div className="stat-card-icon">{icon}</div>
       <div>
         <div className="stat-card-value">{value ?? '—'}</div>
         <div className="stat-card-label">{label}</div>
       </div>
-    </div>
+    </a>
   );
 }
 
@@ -53,9 +53,9 @@ function DashboardStats() {
 
   return (
     <div className="stat-card-row">
-      <StatCard label="Active students" value={stats?.students} icon="🎓" accent="myinfo" />
-      <StatCard label="Staff" value={stats?.staff} icon="🧑‍🏫" accent="school" />
-      <StatCard label="Behaviour alerts (7 days)" value={stats?.alerts} icon="⚠️" accent="students" />
+      <StatCard label="Active students" value={stats?.students} icon="🎓" accent="myinfo" href="/students" />
+      <StatCard label="Staff" value={stats?.staff} icon="🧑‍🏫" accent="school" href="/staff/roles" />
+      <StatCard label="Behaviour alerts (7 days)" value={stats?.alerts} icon="⚠️" accent="students" href="/behaviour" />
     </div>
   );
 }
