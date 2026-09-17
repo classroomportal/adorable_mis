@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import SplashScreen from './components/SplashScreen';
+import { ParentPortalInner } from './parent-portal/page';
 
 function Chip({ href, label, disabled }) {
   if (disabled) {
@@ -260,22 +261,7 @@ export default function Home() {
   }
 
   if (profile?.role === 'parent') {
-    return (
-      <div>
-        <h1>Welcome{profile.parent_id ? '' : ' — account not linked yet'}</h1>
-        <div className="module-card-grid">
-          <ModuleCard
-            icon="👨‍👩‍👧" label="My Family" accent="family"
-            description="Your children's progress, tuckshop balance and account."
-            items={[
-              { href: '/parent-portal', label: 'My Children' },
-              { href: '/parent-portal/tuckshop', label: 'Tuckshop' },
-              { href: '/change-password', label: 'Change Password' },
-            ]}
-          />
-        </div>
-      </div>
-    );
+    return <ParentPortalInner />;
   }
 
   // Training accounts see the same set of module cards a real staff member with

@@ -10,7 +10,7 @@ import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const ATTENDANCE_LABEL = { present: 'Present', absent: 'Absent', late: 'Late', authorized_absence: 'Authorised absence' };
 
-function ParentPortalInner() {
+export function ParentPortalInner() {
   const { profile } = useAuth();
   const [resolvedParentId, setResolvedParentId] = useState(profile?.parent_id || null);
   const [children, setChildren] = useState([]);
