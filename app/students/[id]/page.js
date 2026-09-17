@@ -6,6 +6,7 @@ import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import TranscriptDownload from '../../components/TranscriptDownload';
+import { classifyGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -706,20 +707,13 @@ function StudentDetail() {
               <tbody>
                 {targetsWithResults.map((t) => {
                   const latestResult = results.find((r) => r.subject_id === t.subject_id);
-                  const targetPts = gradePoints[t.target_grade];
-                  const gotPts = latestResult?.grade ? gradePoints[latestResult.grade.trim().toUpperCase()] : undefined;
-                  let cmp = null;
-                  if (targetPts !== undefined && gotPts !== undefined) {
-                    cmp = gotPts > targetPts ? 'above' : gotPts < targetPts ? 'below' : 'on';
-                  }
-                  const style = { above: { background: '#dcf5e3', color: '#1a7a3d' }, on: { background: '#fdecad', color: '#8a6d00' }, below: { background: '#fbdede', color: '#a3232c' } }[cmp];
-                  const label = { above: 'Above target', on: 'On target', below: 'Below target' }[cmp];
+                  const cmp = classifyGrade(t.target_grade, latestResult?.grade, gradePoints);
                   return (
                     <tr key={t.subject_id}>
                       <td>{t.subjects?.display_name || t.subjects?.subject_name}</td>
                       <td>{t.target_grade}</td>
                       <td>{latestResult?.grade ?? '—'}</td>
-                      <td>{cmp ? <span className="badge" style={style}>{label}</span> : '—'}</td>
+                      <td>{cmp ? <span className="badge" style={STYLE[cmp]}>{LABEL[cmp]}</span> : '—'}</td>
                     </tr>
                   );
                 })}
@@ -738,14 +732,7 @@ function StudentDetail() {
               <tbody>
                 {results.map((r) => {
                   const target = targetMap[r.subject_id];
-                  const targetPts = target ? gradePoints[target] : undefined;
-                  const gotPts = r.grade ? gradePoints[r.grade.trim().toUpperCase()] : undefined;
-                  let cmp = null;
-                  if (targetPts !== undefined && gotPts !== undefined) {
-                    cmp = gotPts > targetPts ? 'above' : gotPts < targetPts ? 'below' : 'on';
-                  }
-                  const style = { above: { background: '#dcf5e3', color: '#1a7a3d' }, on: { background: '#fdecad', color: '#8a6d00' }, below: { background: '#fbdede', color: '#a3232c' } }[cmp];
-                  const label = { above: 'Above target', on: 'On target', below: 'Below target' }[cmp];
+                  const cmp = classifyGrade(target, r.grade, gradePoints);
                   return (
                     <tr key={r.result_id}>
                       <td>{r.week_start_date}</td>
@@ -753,7 +740,7 @@ function StudentDetail() {
                       <td>{r.score ?? '—'}{r.max_score ? ` / ${r.max_score}` : ''}</td>
                       <td>{r.grade ?? '—'}</td>
                       <td>{target ?? '—'}</td>
-                      <td>{cmp ? <span className="badge" style={style}>{label}</span> : '—'}</td>
+                      <td>{cmp ? <span className="badge" style={STYLE[cmp]}>{LABEL[cmp]}</span> : '—'}</td>
                     </tr>
                   );
                 })}

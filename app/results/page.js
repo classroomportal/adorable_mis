@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { formatUKDate } from '../../lib/formatDate';
+import { classifyGrade, STYLE, LABEL } from '../../lib/gradeCompare';
 
 function ResultsPageInner() {
   const [students, setStudents] = useState([]);
@@ -45,21 +46,9 @@ function ResultsPageInner() {
 
   function compareToTarget(result) {
     const target = targetMap[`${result.student_id}-${result.subject_id}`];
-    if (!target || !result.grade) return null;
-    const targetPts = gradePoints[target];
-    const gotPts = gradePoints[result.grade.trim().toUpperCase()];
-    if (targetPts === undefined || gotPts === undefined) return null;
-    if (gotPts > targetPts) return 'above';
-    if (gotPts < targetPts) return 'below';
-    return 'on';
+    if (!target) return null;
+    return classifyGrade(target, result.grade, gradePoints) ?? null;
   }
-
-  const COMPARE_STYLE = {
-    above: { background: '#dcf5e3', color: '#1a7a3d' },
-    on: { background: '#fdecad', color: '#8a6d00' },
-    below: { background: '#fbdede', color: '#a3232c' },
-  };
-  const COMPARE_LABEL = { above: 'Above target', on: 'On target', below: 'Below target' };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -169,7 +158,7 @@ function ResultsPageInner() {
                 <td>{target ?? '—'}</td>
                 <td>
                   {cmp ? (
-                    <span className="badge" style={COMPARE_STYLE[cmp]}>{COMPARE_LABEL[cmp]}</span>
+                    <span className="badge" style={STYLE[cmp]}>{LABEL[cmp]}</span>
                   ) : '—'}
                 </td>
               </tr>
