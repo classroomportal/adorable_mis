@@ -139,6 +139,13 @@ export function ParentPortalInner() {
   const negativeCount = behaviour.filter((b) => b.type === 'negative').length;
   const positiveCount = behaviour.filter((b) => b.type === 'positive').length;
 
+  // target_grades can carry a stray row for every subject the school offers,
+  // not just the ones this child is actually taking — SubjectsTwoColumn
+  // already filters down to targets with a matching result before
+  // rendering, so the tile preview needs the same filter to avoid
+  // advertising a subject count nobody will actually see in the table.
+  const targetsWithResults = targets.filter((t) => results.some((r) => r.subject_id === t.subject_id));
+
   const presentLike = attendance.filter((a) => a.status === 'present' || a.status === 'late').length;
   const attendancePct = attendance.length > 0 ? Math.round((presentLike / attendance.length) * 100) : null;
   const attendanceCounts = attendance.reduce((acc, a) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc; }, {});
@@ -207,7 +214,7 @@ export function ParentPortalInner() {
                 <button type="button" className="dashboard-tile" onClick={() => setActiveView('assessment')}>
                   <span className="dashboard-tile-label">Assessment</span>
                   <span className="dashboard-tile-icon">⭐</span>
-                  <span className="dashboard-tile-sub">{targets.length === 0 ? 'No targets set' : `${targets.length} subject${targets.length === 1 ? '' : 's'} tracked`}</span>
+                  <span className="dashboard-tile-sub">{targetsWithResults.length === 0 ? 'No targets set' : `${targetsWithResults.length} subject${targetsWithResults.length === 1 ? '' : 's'} tracked`}</span>
                 </button>
 
                 <button type="button" className="dashboard-tile" onClick={() => setActiveView('conduct')}>
@@ -289,7 +296,7 @@ export function ParentPortalInner() {
             <div className="card">
               <h2>Results vs Target</h2>
               <TranscriptDownload studentId={selectedId} />
-              {targets.length === 0 ? <p>No target grades set yet.</p> : (
+              {targetsWithResults.length === 0 ? <p>No target grades set yet.</p> : (
                 <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} />
               )}
             </div>
