@@ -29,7 +29,7 @@ if [ "$list_status" != "200" ]; then
 fi
 
 to_delete=$(echo "$objects" | jq -r --argjson cutoff "$cutoff_epoch" '
-  .[] | select((.created_at | fromdateiso8601) < $cutoff) | .name
+  .[] | select((.created_at | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) < $cutoff) | .name
 ')
 
 if [ -z "$to_delete" ]; then
