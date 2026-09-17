@@ -298,6 +298,21 @@ input, select { width: 100%; }
   font-family: inherit;
 }
 .dashboard-tile-icon { font-size: 1.6rem; }
+.child-tile { align-items: center; text-align: center; gap: 0.4rem; }
+.child-tile-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--brand-800);
+}
+.child-tile-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
 .dashboard-tile-label { font-weight: 600; }
 .dashboard-tile-sub { font-size: 0.78rem; opacity: 0.85; }
 .dashboard-back { display: inline-block; margin-bottom: 0.75rem; cursor: pointer; }

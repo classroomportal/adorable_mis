@@ -55,11 +55,11 @@ function ParentPortalInner() {
       if (!parentId) return;
       const { data } = await supabase
         .from('student_parent')
-        .select('students(student_id, first_name, last_name, year_group, form_class)')
+        .select('students(student_id, first_name, last_name, year_group, form_class, photo_base64)')
         .eq('parent_id', parentId);
       const list = (data || []).map((row) => row.students).filter(Boolean);
       setChildren(list);
-      if (list.length > 0) setSelectedId(list[0].student_id);
+      if (list.length === 1) setSelectedId(list[0].student_id);
     }
     loadChildren();
   }, [parentId]);
@@ -165,66 +165,80 @@ function ParentPortalInner() {
     <div>
       <h1>My Children</h1>
 
-      {children.length > 1 && (
-        <div className="card">
-          <label>
-            Child
-            <select value={selectedId} onChange={(e) => setSelectedId(Number(e.target.value))}>
-              {children.map((c) => (
-                <option key={c.student_id} value={c.student_id}>{c.first_name} {c.last_name}</option>
-              ))}
-            </select>
-          </label>
+      {children.length === 0 ? (
+        <p>No linked children found.</p>
+      ) : !selectedId ? (
+        <div className="dashboard-tiles">
+          {children.map((c) => (
+            <button
+              key={c.student_id}
+              type="button"
+              className="dashboard-tile child-tile"
+              onClick={() => setSelectedId(c.student_id)}
+            >
+              {c.photo_base64 ? (
+                <img className="child-tile-photo" src={`data:image/jpeg;base64,${c.photo_base64}`} alt="" />
+              ) : (
+                <span className="child-tile-photo child-tile-placeholder">{c.first_name?.[0]}{c.last_name?.[0]}</span>
+              )}
+              <span className="dashboard-tile-label">{c.first_name} {c.last_name}</span>
+              <span className="dashboard-tile-sub">{c.form_class || `Year ${c.year_group}`}</span>
+            </button>
+          ))}
         </div>
-      )}
-
-      {children.length === 0 ? <p>No linked children found.</p> : activeView === null ? (
-        <>
-          <div className="card">
-            <TranscriptDownload studentId={selectedId} />
-          </div>
-
-          <div className="dashboard-tiles">
-            <button type="button" className="dashboard-tile" onClick={() => setActiveView('timetable')}>
-              <span className="dashboard-tile-label">Timetable</span>
-              <span className="dashboard-tile-icon">🗓️</span>
-              <span className="dashboard-tile-sub">{selectedChild ? `${selectedChild.first_name}'s week` : ''}</span>
-            </button>
-
-            <button type="button" className="dashboard-tile" onClick={() => setActiveView('assessment')}>
-              <span className="dashboard-tile-label">Assessment</span>
-              <span className="dashboard-tile-icon">⭐</span>
-              <span className="dashboard-tile-sub">{targets.length === 0 ? 'No targets set' : `${targets.length} subject${targets.length === 1 ? '' : 's'} tracked`}</span>
-            </button>
-
-            <button type="button" className="dashboard-tile" onClick={() => setActiveView('conduct')}>
-              <span className="dashboard-tile-label">Conduct</span>
-              <span className="dashboard-tile-icon">📋</span>
-              <span className="dashboard-tile-sub">{behaviour.length === 0 ? 'No incidents logged' : `${positiveCount} positive, ${negativeCount} negative`}</span>
-            </button>
-
-            <button type="button" className="dashboard-tile" onClick={() => setActiveView('attendance')}>
-              <span className="dashboard-tile-label">Attendance</span>
-              <span className="dashboard-tile-icon">📊</span>
-              <span className="dashboard-tile-sub">{attendancePct === null ? 'No data yet' : `${attendancePct}% present`}</span>
-            </button>
-
-            {feeTerm && (
-              <button type="button" className="dashboard-tile" onClick={() => setActiveView('fees')}>
-                <span className="dashboard-tile-label">Fees</span>
-                <span className="dashboard-tile-icon">💰</span>
-                <span className="dashboard-tile-sub">{feeLineItems.length === 0 ? 'No invoice yet' : feeStatus === 'paid' ? 'Paid in full' : `₦${nowDue.toLocaleString()} due`}</span>
-              </button>
-            )}
-
-            <a href="/inbox" className="dashboard-tile" style={{ textDecoration: 'none' }}>
-              <span className="dashboard-tile-label">Messages</span>
-              <span className="dashboard-tile-icon">📬</span>
-              <span className="dashboard-tile-sub">View inbox</span>
-            </a>
-          </div>
-        </>
       ) : (
+        <>
+          {children.length > 1 && (
+            <p className="dashboard-back" onClick={() => { setSelectedId(''); setActiveView(null); }}>&larr; Switch child</p>
+          )}
+
+          {activeView === null ? (
+            <>
+              <div className="card">
+                <TranscriptDownload studentId={selectedId} />
+              </div>
+
+              <div className="dashboard-tiles">
+                <button type="button" className="dashboard-tile" onClick={() => setActiveView('timetable')}>
+                  <span className="dashboard-tile-label">Timetable</span>
+                  <span className="dashboard-tile-icon">🗓️</span>
+                  <span className="dashboard-tile-sub">{selectedChild ? `${selectedChild.first_name}'s week` : ''}</span>
+                </button>
+
+                <button type="button" className="dashboard-tile" onClick={() => setActiveView('assessment')}>
+                  <span className="dashboard-tile-label">Assessment</span>
+                  <span className="dashboard-tile-icon">⭐</span>
+                  <span className="dashboard-tile-sub">{targets.length === 0 ? 'No targets set' : `${targets.length} subject${targets.length === 1 ? '' : 's'} tracked`}</span>
+                </button>
+
+                <button type="button" className="dashboard-tile" onClick={() => setActiveView('conduct')}>
+                  <span className="dashboard-tile-label">Conduct</span>
+                  <span className="dashboard-tile-icon">📋</span>
+                  <span className="dashboard-tile-sub">{behaviour.length === 0 ? 'No incidents logged' : `${positiveCount} positive, ${negativeCount} negative`}</span>
+                </button>
+
+                <button type="button" className="dashboard-tile" onClick={() => setActiveView('attendance')}>
+                  <span className="dashboard-tile-label">Attendance</span>
+                  <span className="dashboard-tile-icon">📊</span>
+                  <span className="dashboard-tile-sub">{attendancePct === null ? 'No data yet' : `${attendancePct}% present`}</span>
+                </button>
+
+                {feeTerm && (
+                  <button type="button" className="dashboard-tile" onClick={() => setActiveView('fees')}>
+                    <span className="dashboard-tile-label">Fees</span>
+                    <span className="dashboard-tile-icon">💰</span>
+                    <span className="dashboard-tile-sub">{feeLineItems.length === 0 ? 'No invoice yet' : feeStatus === 'paid' ? 'Paid in full' : `₦${nowDue.toLocaleString()} due`}</span>
+                  </button>
+                )}
+
+                <a href="/inbox" className="dashboard-tile" style={{ textDecoration: 'none' }}>
+                  <span className="dashboard-tile-label">Messages</span>
+                  <span className="dashboard-tile-icon">📬</span>
+                  <span className="dashboard-tile-sub">View inbox</span>
+                </a>
+              </div>
+            </>
+          ) : (
         <>
           <BackLink />
 
@@ -391,6 +405,8 @@ function ParentPortalInner() {
                 </>
               )}
             </div>
+          )}
+        </>
           )}
         </>
       )}
