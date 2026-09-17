@@ -30,6 +30,7 @@ function ParentPortalInner() {
   const [timetableLoading, setTimetableLoading] = useState(true);
 
   const [attendance, setAttendance] = useState([]);
+  const [tuckshopBalance, setTuckshopBalance] = useState(null);
 
   // A parent login already has profile.parent_id set. A staff member who is
   // also a parent doesn't — fall back to matching their login email against
@@ -86,6 +87,8 @@ function ParentPortalInner() {
       setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
       const { data: att } = await supabase.from('attendance').select('attend_date, status, code').eq('student_id', selectedId).order('attend_date', { ascending: false });
       setAttendance(att || []);
+      const { data: bal } = await supabase.rpc('get_tuckshop_balance', { p_student_id: selectedId });
+      setTuckshopBalance(bal);
 
       setTimetableLoading(true);
       const { data: tt } = await supabase
@@ -194,10 +197,6 @@ function ParentPortalInner() {
 
           {activeView === null ? (
             <>
-              <div className="card">
-                <TranscriptDownload studentId={selectedId} />
-              </div>
-
               <div className="dashboard-tiles">
                 <button type="button" className="dashboard-tile" onClick={() => setActiveView('timetable')}>
                   <span className="dashboard-tile-label">Timetable</span>
@@ -230,6 +229,12 @@ function ParentPortalInner() {
                     <span className="dashboard-tile-sub">{feeLineItems.length === 0 ? 'No invoice yet' : feeStatus === 'paid' ? 'Paid in full' : `₦${nowDue.toLocaleString()} due`}</span>
                   </button>
                 )}
+
+                <a href="/parent-portal/tuckshop" className="dashboard-tile" style={{ textDecoration: 'none' }}>
+                  <span className="dashboard-tile-label">Tuckshop</span>
+                  <span className="dashboard-tile-icon">🛒</span>
+                  <span className="dashboard-tile-sub">{tuckshopBalance === null ? 'No data yet' : `₦${Number(tuckshopBalance).toLocaleString()} balance`}</span>
+                </a>
 
                 <a href="/inbox" className="dashboard-tile" style={{ textDecoration: 'none' }}>
                   <span className="dashboard-tile-label">Messages</span>
@@ -283,6 +288,7 @@ function ParentPortalInner() {
           {activeView === 'assessment' && (
             <div className="card">
               <h2>Results vs Target</h2>
+              <TranscriptDownload studentId={selectedId} />
               {targets.length === 0 ? <p>No target grades set yet.</p> : (
                 <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} />
               )}
