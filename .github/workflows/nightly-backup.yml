@@ -9,9 +9,14 @@ name: Nightly database backup
 #
 # Requires two repo secrets (Settings > Secrets and variables > Actions),
 # neither of which this workflow or Claude can create:
-#   SUPABASE_DB_URL          direct Postgres connection string, e.g.
-#                             postgresql://postgres:[PASSWORD]@db.drjtcegtucovhbyfdpbx.supabase.co:5432/postgres
-#                             (Project Settings > Database > Connection string > URI)
+#   SUPABASE_DB_URL          the TRANSACTION POOLER connection string, e.g.
+#                             postgresql://postgres.drjtcegtucovhbyfdpbx:[PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:6543/postgres
+#                             (dashboard > Connect > Transaction pooler tab).
+#                             Must be the pooler, not the direct "db.<ref>.
+#                             supabase.co:5432" string Supabase shows first —
+#                             GitHub Actions runners have no IPv6, and direct
+#                             connections are IPv6-only, so a direct URL here
+#                             fails with "Network is unreachable".
 #   SUPABASE_SERVICE_ROLE_KEY  the service_role key (Project Settings > API)
 #
 # To restore: download the backup, `tar xzf`, then
