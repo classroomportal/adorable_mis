@@ -13,8 +13,13 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
     setStatus(null);
+    // Hardcoded rather than window.location.origin: whoever submits this
+    // form from a local dev server (or any other non-canonical origin) would
+    // otherwise get a reset email whose link points nowhere reachable —
+    // Supabase still verifies the token fine, but the browser can never load
+    // the page to actually set a new password, so the reset silently fails.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/change-password`,
+      redirectTo: 'https://mis.classroomportal.org/change-password',
     });
     setLoading(false);
     if (error) setError(error.message);
