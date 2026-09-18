@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
     // Supabase still verifies the token fine, but the browser can never load
     // the page to actually set a new password, so the reset silently fails.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://mis.classroomportal.org/change-password',
+      redirectTo: 'https://misform.work/change-password',
     });
     setLoading(false);
     if (error) setError(error.message);
