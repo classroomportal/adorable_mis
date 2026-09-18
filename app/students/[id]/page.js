@@ -6,6 +6,7 @@ import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import TranscriptDownload from '../../components/TranscriptDownload';
+import PublishedDocuments from '../../components/PublishedDocuments';
 import { classifyGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -332,6 +333,7 @@ function StudentDetail() {
     <div>
       <h1>{student.first_name} {student.last_name}</h1>
       <TranscriptDownload studentId={student.student_id} />
+      <PublishedDocuments studentId={student.student_id} />
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
