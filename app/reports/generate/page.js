@@ -3,7 +3,13 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
-import { publishTranscript } from '../../../lib/generateTranscript';
+import { publishTermTestScores } from '../../../lib/generateTermTestScores';
+import { publishKeyStageTranscript, KEY_STAGE_GROUP_OPTIONS } from '../../../lib/generateKeyStageTranscript';
+
+const DOC_TYPES = [
+  { value: 'term_test_scores', label: 'Term Test Scores (this report period’s term)' },
+  ...KEY_STAGE_GROUP_OPTIONS.map((o) => ({ value: o.value, label: o.label, isKeyStage: true })),
+];
 
 function GenerateReportsInner() {
   const { profile } = useAuth();
@@ -11,6 +17,7 @@ function GenerateReportsInner() {
 
   const [periods, setPeriods] = useState([]);
   const [periodId, setPeriodId] = useState('');
+  const [docType, setDocType] = useState('term_test_scores');
   const [students, setStudents] = useState([]);
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState([]); // [{ student_id, name, status }]
@@ -42,7 +49,11 @@ function GenerateReportsInner() {
     setResults([]);
     for (const s of students) {
       try {
-        await publishTranscript(s.student_id, period.term_id || null);
+        if (docType === 'term_test_scores') {
+          await publishTermTestScores(s.student_id, period.term_id || null);
+        } else {
+          await publishKeyStageTranscript(s.student_id, docType);
+        }
         setResults((prev) => [...prev, { student_id: s.student_id, name: `${s.first_name} ${s.last_name}`, status: 'ok' }]);
       } catch (e) {
         setResults((prev) => [...prev, { student_id: s.student_id, name: `${s.first_name} ${s.last_name}`, status: `Error: ${e.message}` }]);
@@ -60,11 +71,21 @@ function GenerateReportsInner() {
     <div>
       <h1>Generate Reports</h1>
       <p>
-        Builds each student&apos;s transcript PDF and publishes it — parents and students will see it as an
-        available document to download, without needing to regenerate it themselves.
+        Builds the chosen document for every active student in a report period&apos;s year groups and publishes it —
+        parents and students will see it as an available document to download, without needing to regenerate it
+        themselves.
       </p>
 
       <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        <label>
+          Document type
+          <select value={docType} onChange={(e) => setDocType(e.target.value)}>
+            {DOC_TYPES.map((d) => (
+              <option key={d.value} value={d.value}>{d.label}</option>
+            ))}
+          </select>
+        </label>
+
         <label>
           Report period
           <select value={periodId} onChange={(e) => setPeriodId(e.target.value)}>

@@ -3,8 +3,9 @@ import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
-import TranscriptDownload from '../components/TranscriptDownload';
+import TermTestScoresDownload from '../components/TermTestScoresDownload';
 import PublishedDocuments from '../components/PublishedDocuments';
+import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload';
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 
@@ -296,7 +297,8 @@ export function ParentPortalInner() {
           {activeView === 'assessment' && (
             <div className="card">
               <h2>Results vs Target</h2>
-              <TranscriptDownload studentId={selectedId} />
+              <TermTestScoresDownload studentId={selectedId} />
+              <KeyStageTranscriptDownload studentId={selectedId} />
               <PublishedDocuments studentId={selectedId} />
               {targetsWithResults.length === 0 ? <p>No target grades set yet.</p> : (
                 <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} />

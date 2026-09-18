@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
-import { buildWeekColumns } from '../../../lib/generateTranscript';
+import { buildWeekColumns } from '../../../lib/generateTermTestScores';
 import RequireAuth from '../../RequireAuth';
 
 // Columns that are NOT subject score columns in the weekly gradebook export.
