@@ -3,8 +3,9 @@ import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
-import TranscriptDownload from '../components/TranscriptDownload';
+import TermTestScoresDownload from '../components/TermTestScoresDownload';
 import PublishedDocuments from '../components/PublishedDocuments';
+import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload';
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -100,7 +101,8 @@ function PortalInner() {
     <div>
       <h1>My Grades & Behaviour</h1>
       <p><a href="/inbox">📬 Inbox</a></p>
-      <TranscriptDownload studentId={studentId} />
+      <TermTestScoresDownload studentId={studentId} />
+      <KeyStageTranscriptDownload studentId={studentId} />
       <PublishedDocuments studentId={studentId} />
 
       <div className="card">

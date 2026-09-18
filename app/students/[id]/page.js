@@ -5,8 +5,9 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
-import TranscriptDownload from '../../components/TranscriptDownload';
+import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
+import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
 import { classifyGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -332,7 +333,8 @@ function StudentDetail() {
   return (
     <div>
       <h1>{student.first_name} {student.last_name}</h1>
-      <TranscriptDownload studentId={student.student_id} />
+      <TermTestScoresDownload studentId={student.student_id} />
+      <KeyStageTranscriptDownload studentId={student.student_id} />
       <PublishedDocuments studentId={student.student_id} />
 
       <div className="card">

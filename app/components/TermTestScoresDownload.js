@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { generateTranscript } from '../../lib/generateTranscript';
+import { generateTermTestScores } from '../../lib/generateTermTestScores';
 
-export default function TranscriptDownload({ studentId }) {
+export default function TermTestScoresDownload({ studentId }) {
   const [terms, setTerms] = useState([]);
   const [termId, setTermId] = useState('');
   const [busy, setBusy] = useState(false);
@@ -35,7 +35,7 @@ export default function TranscriptDownload({ studentId }) {
   async function handleDownload() {
     setBusy(true);
     try {
-      await generateTranscript(studentId, termId || null);
+      await generateTermTestScores(studentId, termId || null);
     } finally {
       setBusy(false);
     }
