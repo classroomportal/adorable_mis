@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
 import TranscriptDownload from '../components/TranscriptDownload';
+import PublishedDocuments from '../components/PublishedDocuments';
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -100,6 +101,7 @@ function PortalInner() {
       <h1>My Grades & Behaviour</h1>
       <p><a href="/inbox">📬 Inbox</a></p>
       <TranscriptDownload studentId={studentId} />
+      <PublishedDocuments studentId={studentId} />
 
       <div className="card">
         <h2>My Timetable</h2>
