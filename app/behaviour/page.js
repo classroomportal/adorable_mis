@@ -78,7 +78,7 @@ function BehaviourPageInner() {
         .order('class_code');
       setMentorClasses((c || []).filter((cl) => cl.curriculum_blocks?.block_name === 'Mentor'));
 
-      const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, restaurant, year_group').order('last_name');
+      const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, restaurant, year_group').eq('status', 'active').order('last_name');
       const list = s || [];
       setAllStudents(list);
       setBoardingHouses([...new Set(list.map((x) => x.boarding_house).filter(Boolean))].sort());

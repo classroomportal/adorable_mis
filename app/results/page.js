@@ -28,7 +28,7 @@ function ResultsPageInner() {
 
   useEffect(() => {
     async function loadOptions() {
-      const { data: s } = await supabase.from('students').select('student_id, first_name, last_name').order('last_name');
+      const { data: s } = await supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active').order('last_name');
       const { data: sub } = await supabase.from('subjects').select('subject_id, subject_name').order('subject_name');
       setStudents(s || []);
       setSubjects(sub || []);
