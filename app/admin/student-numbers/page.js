@@ -128,10 +128,20 @@ export default function StudentNumbersPage() {
         setMentorTotal(mTotal);
 
         // --- By class (every subject class, all years) ---
-        const { data: links, error: lErr } = await supabase
-          .from('student_class')
-          .select('student_id, classes(class_code, subjects(subject_name))');
-        if (lErr) throw lErr;
+        // student_class has 4500+ rows school-wide, well past Supabase's default
+        // 1000-row response cap, so this has to page through with .range() or it
+        // silently truncates and every class's count comes out wrong.
+        const links = [];
+        const PAGE_SIZE = 1000;
+        for (let from = 0; ; from += PAGE_SIZE) {
+          const { data: page, error: lErr } = await supabase
+            .from('student_class')
+            .select('student_id, classes(class_code, subjects(subject_name))')
+            .range(from, from + PAGE_SIZE - 1);
+          if (lErr) throw lErr;
+          links.push(...page);
+          if (page.length < PAGE_SIZE) break;
+        }
 
         const studentById = new Map(students.map((s) => [s.student_id, s]));
         const bySubjectMap = new Map(); // subject_name -> Map(class_code -> counts)
