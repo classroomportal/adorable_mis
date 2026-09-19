@@ -11,6 +11,7 @@ function StudentsList() {
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [formFilter, setFormFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'left' | ''(all) — defaults to current students
   const [yearFormPairs, setYearFormPairs] = useState([]); // [{year_group, form_class}]
   const [houseScope, setHouseScope] = useState(null);
 
@@ -40,7 +41,8 @@ function StudentsList() {
   async function loadStudents() {
     setLoading(true);
     setError(null);
-    let query = supabase.from('student_summary').select('*').eq('status', 'active').order('last_name', { ascending: true });
+    let query = supabase.from('student_summary').select('*').order('last_name', { ascending: true });
+    if (statusFilter) query = query.eq('status', statusFilter);
     if (yearFilter) query = query.eq('year_group', Number(yearFilter));
     if (formFilter) query = query.eq('form_class', formFilter);
     if (search.trim()) query = query.or(`first_name.ilike.%${search.trim()}%,last_name.ilike.%${search.trim()}%`);
@@ -100,6 +102,14 @@ function StudentsList() {
             {forms.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
         </label>
+        <label>
+          Status
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="active">Current</option>
+            <option value="left">Left</option>
+            <option value="">All</option>
+          </select>
+        </label>
         <button type="submit" disabled={loading}>{loading ? 'Loading...' : 'Load students'}</button>
       </form>
 
@@ -118,6 +128,7 @@ function StudentsList() {
             <th>Name</th>
             <th>Year</th>
             <th>Form</th>
+            {students.some((s) => s.status !== 'active') && <th>Status</th>}
             <th>Net Behaviour</th>
             <th>Latest Avg %</th>
             <th>Primary Contact</th>
@@ -136,6 +147,7 @@ function StudentsList() {
               <td>{s.first_name} {s.last_name}</td>
               <td>{s.year_group}</td>
               <td>{s.form_class}</td>
+              {students.some((x) => x.status !== 'active') && <td>{s.status === 'active' ? 'Current' : 'Left'}</td>}
               <td>{s.net_behaviour_points}</td>
               <td>{s.latest_week_avg_pct ?? '—'}</td>
               <td>{s.primary_contact_name ?? '—'}</td>
