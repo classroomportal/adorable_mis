@@ -138,13 +138,15 @@ const TABS = [
     ],
   },
   {
-    key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school', adminOnly: true,
+    key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school', adminOnly: true, roles: ['head_of_department', 'pastoral'],
     description: 'Manage timetables and class allocations.',
-    items: () => [
+    items: ({ isAdmin }) => [
       { href: '/staff/timetable', label: 'My Timetable' },
       { href: '/admin/block-allocation', label: 'Class Allocation' },
-      { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
-    ],
+      // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
+      // Class Allocation, not this.
+      isAdmin && { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
+    ].filter(Boolean),
   },
   {
     key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school', adminOnly: true,
