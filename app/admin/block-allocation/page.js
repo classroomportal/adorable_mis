@@ -125,6 +125,32 @@ export default function BlockAllocationPage() {
     return out;
   }
 
+  // "Class" blocks (7A, 8A, 9A etc.) bundle every subject a form group takes
+  // together — Art, Business, Computing... — as separate classes so each
+  // keeps its own real teacher/room/timetable from Nova-T, but a student is
+  // never in one of those subjects without the rest, so they're allocated
+  // as one group rather than ticked subject by subject. class_code's prefix
+  // before the "/" (e.g. "7A" from "7A/Ar") is the group.
+  const isGroupBlock = block?.block_name === "Class";
+
+  const groups = isGroupBlock
+    ? (() => {
+        const byPrefix = new Map();
+        for (const c of classes) {
+          const prefix = c.class_code.split("/")[0];
+          if (!byPrefix.has(prefix)) byPrefix.set(prefix, []);
+          byPrefix.get(prefix).push(c);
+        }
+        return [...byPrefix.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([prefix, groupClasses]) => ({
+            prefix,
+            classIds: groupClasses.map((c) => c.class_id),
+            subjectsLabel: groupClasses.map((c) => c.subjects?.subject_name || c.class_code).join(", "),
+          }));
+      })()
+    : [];
+
   function toggle(studentId, classId) {
     setSelections((prev) => {
       const next = cloneSelections(prev);
@@ -136,6 +162,26 @@ export default function BlockAllocationPage() {
       } else {
         if (!isCompound) current.clear(); // single choice per block
         current.add(classId);
+      }
+      next[studentId] = current;
+      return next;
+    });
+  }
+
+  function toggleGroup(studentId, groupClassIds) {
+    setSelections((prev) => {
+      const next = cloneSelections(prev);
+      const current = next[studentId] || new Set();
+      const fullySelected = groupClassIds.every((id) => current.has(id));
+
+      if (fullySelected) {
+        for (const id of groupClassIds) current.delete(id);
+      } else {
+        // Single group choice: drop any other group's classes first.
+        for (const g of groups) {
+          if (g.classIds !== groupClassIds) for (const id of g.classIds) current.delete(id);
+        }
+        for (const id of groupClassIds) current.add(id);
       }
       next[studentId] = current;
       return next;
@@ -262,7 +308,13 @@ export default function BlockAllocationPage() {
         </p>
       )}
 
-      {block?.is_compound && (
+      {isGroupBlock && (
+        <p style={{ background: "#e8f4fd", padding: "0.5rem 0.75rem", borderRadius: 6, fontSize: "0.85rem" }}>
+          Each column is a whole teaching group — ticking one allocates the student to every subject in that group at once (hover a column for the subject list).
+        </p>
+      )}
+
+      {block?.is_compound && !isGroupBlock && (
         <p style={{ background: "#fff7e0", padding: "0.5rem 0.75rem", borderRadius: 6, fontSize: "0.85rem" }}>
           This is a compound block — students can be ticked into more than one class here (e.g. a Pathway bundling several subjects).
         </p>
@@ -282,16 +334,25 @@ export default function BlockAllocationPage() {
                 <tr style={{ background: "#f5f5f5" }}>
                   <th style={thStyle}>Student</th>
                   <th style={thStyle}>Form</th>
-                  {classes.map((c) => (
-                    <th key={c.class_id} style={{ ...thStyle, textAlign: "center" }}>
-                      {c.class_code}
-                      <div style={{ fontWeight: 400, fontSize: "0.7rem", color: "#666" }}>
-                        {c.subjects?.subject_name || ""}
-                        {c.staff ? ` · ${c.staff.first_name?.[0] || ""}${c.staff.last_name || ""}` : ""}
-                        {c.room ? ` · ${c.room}` : ""}
-                      </div>
-                    </th>
-                  ))}
+                  {isGroupBlock
+                    ? groups.map((g) => (
+                        <th key={g.prefix} style={{ ...thStyle, textAlign: "center" }} title={g.subjectsLabel}>
+                          {g.prefix}
+                          <div style={{ fontWeight: 400, fontSize: "0.7rem", color: "#666" }}>
+                            {g.classIds.length} subject{g.classIds.length === 1 ? "" : "s"}
+                          </div>
+                        </th>
+                      ))
+                    : classes.map((c) => (
+                        <th key={c.class_id} style={{ ...thStyle, textAlign: "center" }}>
+                          {c.class_code}
+                          <div style={{ fontWeight: 400, fontSize: "0.7rem", color: "#666" }}>
+                            {c.subjects?.subject_name || ""}
+                            {c.staff ? ` · ${c.staff.first_name?.[0] || ""}${c.staff.last_name || ""}` : ""}
+                            {c.room ? ` · ${c.room}` : ""}
+                          </div>
+                        </th>
+                      ))}
                 </tr>
               </thead>
               <tbody>
@@ -299,16 +360,27 @@ export default function BlockAllocationPage() {
                   <tr key={s.student_id} style={{ background: i % 2 ? "#fafafa" : "#fff" }}>
                     <td style={tdStyle}>{s.last_name}, {s.first_name}</td>
                     <td style={tdStyle}>{s.form_class || ""}</td>
-                    {classes.map((c) => (
-                      <td key={c.class_id} style={{ ...tdStyle, textAlign: "center" }}>
-                        <input
-                          type="checkbox"
-                          checked={selections[s.student_id]?.has(c.class_id) || false}
-                          onChange={() => toggle(s.student_id, c.class_id)}
-                          style={{ width: 18, height: 18 }}
-                        />
-                      </td>
-                    ))}
+                    {isGroupBlock
+                      ? groups.map((g) => (
+                          <td key={g.prefix} style={{ ...tdStyle, textAlign: "center" }}>
+                            <input
+                              type="checkbox"
+                              checked={g.classIds.every((id) => selections[s.student_id]?.has(id)) || false}
+                              onChange={() => toggleGroup(s.student_id, g.classIds)}
+                              style={{ width: 18, height: 18 }}
+                            />
+                          </td>
+                        ))
+                      : classes.map((c) => (
+                          <td key={c.class_id} style={{ ...tdStyle, textAlign: "center" }}>
+                            <input
+                              type="checkbox"
+                              checked={selections[s.student_id]?.has(c.class_id) || false}
+                              onChange={() => toggle(s.student_id, c.class_id)}
+                              style={{ width: 18, height: 18 }}
+                            />
+                          </td>
+                        ))}
                   </tr>
                 ))}
               </tbody>
