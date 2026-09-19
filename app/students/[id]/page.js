@@ -64,6 +64,7 @@ function StudentDetail() {
   const [blocksError, setBlocksError] = useState(null);
   const [boardingHouses, setBoardingHouses] = useState([]);
   const [sportsHouses, setSportsHouses] = useState([]);
+  const [mentorGroups, setMentorGroups] = useState([]);
 
   useEffect(() => {
     async function loadLookups() {
@@ -71,6 +72,8 @@ function StudentDetail() {
       setBoardingHouses((bh || []).map((r) => r.name));
       const { data: sh } = await supabase.from('sports_houses').select('name').order('name');
       setSportsHouses((sh || []).map((r) => r.name));
+      const { data: mg } = await supabase.from('mentor_groups').select('group_name').order('group_name');
+      setMentorGroups((mg || []).map((r) => r.group_name));
     }
     loadLookups();
   }, []);
@@ -440,7 +443,10 @@ function StudentDetail() {
               <input type="number" value={editForm.year_group || ''} onChange={(e) => setEditForm({ ...editForm, year_group: e.target.value })} />
             </label>
             <label>Form class
-              <input value={editForm.form_class || ''} onChange={(e) => setEditForm({ ...editForm, form_class: e.target.value })} />
+              <select value={editForm.form_class || ''} onChange={(e) => setEditForm({ ...editForm, form_class: e.target.value })}>
+                <option value="">—</option>
+                {mentorGroups.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
             </label>
             <label>Admission date
               <input type="date" value={editForm.admission_date || ''} onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })} />
