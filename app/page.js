@@ -109,14 +109,18 @@ const TABS = [
   {
     key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students', adminOnly: true, roles: ['pastoral', 'houseparent', 'smt'],
     description: 'Pastoral oversight — behaviour, detentions and mentor groups.',
-    items: () => [
+    // This card is shared with houseparent/smt, but only the pastoral role
+    // (plus admin) actually has student_class write access (migration 105) —
+    // so Class Allocation only shows for them, not the other two.
+    items: ({ isAdmin, staffRoles }) => [
       { href: '/behaviour', label: 'Behaviour Log' },
       { href: '/detention', label: 'Detentions' },
       { href: '/certificates', label: 'Certificates' },
       { href: '/pastoral/registers-not-done', label: 'Registers Not Done' },
       { href: '/appeals', label: 'Behaviour Appeals' },
       { href: '/staff/mentor-groups', label: 'Mentor Groups' },
-    ],
+      (isAdmin || (staffRoles || []).includes('pastoral')) && { href: '/admin/block-allocation', label: 'Class Allocation' },
+    ].filter(Boolean),
   },
   {
     key: 'reports', label: 'Reports', icon: '📝', accent: 'students',
@@ -296,7 +300,7 @@ export default function Home() {
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ isPastoralOrSmt, isAdmin })}
+              items={t.items({ isPastoralOrSmt, isAdmin, staffRoles })}
               allowedHrefs={demoAllowedHrefs}
             />
           ))}
@@ -343,7 +347,7 @@ export default function Home() {
             label={t.label}
             accent={t.accent}
             description={t.description}
-            items={t.items({ isPastoralOrSmt, isAdmin })}
+            items={t.items({ isPastoralOrSmt, isAdmin, staffRoles })}
           />
         ))}
       </div>
