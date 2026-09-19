@@ -109,14 +109,18 @@ const TABS = [
   {
     key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students', adminOnly: true, roles: ['pastoral', 'houseparent', 'smt'],
     description: 'Pastoral oversight — behaviour, detentions and mentor groups.',
-    items: () => [
+    // This card is shared with houseparent/smt, but only the pastoral role
+    // (plus admin) actually has student_class write access (migration 105) —
+    // so Class Allocation only shows for them, not the other two.
+    items: ({ isAdmin, staffRoles }) => [
       { href: '/behaviour', label: 'Behaviour Log' },
       { href: '/detention', label: 'Detentions' },
       { href: '/certificates', label: 'Certificates' },
       { href: '/pastoral/registers-not-done', label: 'Registers Not Done' },
       { href: '/appeals', label: 'Behaviour Appeals' },
       { href: '/staff/mentor-groups', label: 'Mentor Groups' },
-    ],
+      (isAdmin || (staffRoles || []).includes('pastoral')) && { href: '/admin/block-allocation', label: 'Class Allocation' },
+    ].filter(Boolean),
   },
   {
     key: 'reports', label: 'Reports', icon: '📝', accent: 'students',
@@ -138,13 +142,15 @@ const TABS = [
     ],
   },
   {
-    key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school', adminOnly: true,
+    key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school', adminOnly: true, roles: ['head_of_department', 'pastoral'],
     description: 'Manage timetables and class allocations.',
-    items: () => [
+    items: ({ isAdmin }) => [
       { href: '/staff/timetable', label: 'My Timetable' },
       { href: '/admin/block-allocation', label: 'Class Allocation' },
-      { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
-    ],
+      // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
+      // Class Allocation, not this.
+      isAdmin && { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
+    ].filter(Boolean),
   },
   {
     key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school', adminOnly: true,
@@ -294,7 +300,7 @@ export default function Home() {
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ isPastoralOrSmt, isAdmin })}
+              items={t.items({ isPastoralOrSmt, isAdmin, staffRoles })}
               allowedHrefs={demoAllowedHrefs}
             />
           ))}
@@ -341,7 +347,7 @@ export default function Home() {
             label={t.label}
             accent={t.accent}
             description={t.description}
-            items={t.items({ isPastoralOrSmt, isAdmin })}
+            items={t.items({ isPastoralOrSmt, isAdmin, staffRoles })}
           />
         ))}
       </div>

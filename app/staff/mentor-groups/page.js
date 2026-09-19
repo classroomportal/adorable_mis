@@ -9,6 +9,8 @@ function MentorGroupsInner() {
   const [assignments, setAssignments] = useState({}); // group_name -> [{staff_id, first_name, last_name}]
   const [picking, setPicking] = useState({}); // group_name -> staff_id selected in the dropdown
   const [status, setStatus] = useState(null);
+  const [newGroup, setNewGroup] = useState({ group_name: '', year_group: '', description: '' });
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     const { data: g } = await supabase.from('mentor_groups').select('*').order('group_name');
@@ -52,6 +54,26 @@ function MentorGroupsInner() {
     load();
   }
 
+  async function addGroup() {
+    const name = newGroup.group_name.trim();
+    if (!name) { setStatus('Enter a group name first.'); return; }
+
+    setCreating(true);
+    const { error } = await supabase.from('mentor_groups').insert({
+      group_name: name,
+      year_group: newGroup.year_group ? Number(newGroup.year_group) : null,
+      description: newGroup.description.trim() || null,
+    });
+    setCreating(false);
+    if (error) {
+      setStatus(error.code === '23505' ? `A group called "${name}" already exists.` : `Error: ${error.message}`);
+      return;
+    }
+    setStatus(null);
+    setNewGroup({ group_name: '', year_group: '', description: '' });
+    load();
+  }
+
   async function removeMentor(groupName, staffId) {
     const { error } = await supabase
       .from('staff_roles')
@@ -69,6 +91,36 @@ function MentorGroupsInner() {
       <h1>Mentor Groups</h1>
       <p>Assign one or two staff to each mentor group. Groups list is fixed once set up here — it does not change on Nova-T re-imports.</p>
       {status && <p>{status}</p>}
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', margin: '1rem 0', flexWrap: 'wrap' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem' }}>
+          New group name
+          <input
+            type="text"
+            placeholder="e.g. 10 Charlotte"
+            value={newGroup.group_name}
+            onChange={(e) => setNewGroup((g) => ({ ...g, group_name: e.target.value }))}
+          />
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem' }}>
+          Year group (optional)
+          <input
+            type="number"
+            style={{ width: '5rem' }}
+            value={newGroup.year_group}
+            onChange={(e) => setNewGroup((g) => ({ ...g, year_group: e.target.value }))}
+          />
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem' }}>
+          Description (optional)
+          <input
+            type="text"
+            value={newGroup.description}
+            onChange={(e) => setNewGroup((g) => ({ ...g, description: e.target.value }))}
+          />
+        </label>
+        <button onClick={addGroup} disabled={creating}>{creating ? 'Adding…' : 'Add group'}</button>
+      </div>
 
       <div className="table-scroll"><table>
         <thead>
