@@ -64,11 +64,11 @@ function WriteSubjectCommentsInner() {
 
     const { data: sc } = await supabase
       .from('student_class')
-      .select('students(student_id, first_name, last_name, year_group)')
+      .select('students(student_id, first_name, last_name, year_group, status)')
       .eq('class_id', classId);
     const studentList = (sc || [])
       .map((r) => r.students)
-      .filter(Boolean)
+      .filter((s) => s && s.status === 'active')
       .sort((a, b) => a.last_name.localeCompare(b.last_name));
     setRoster(studentList);
 

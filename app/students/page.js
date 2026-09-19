@@ -40,7 +40,7 @@ function StudentsList() {
   async function loadStudents() {
     setLoading(true);
     setError(null);
-    let query = supabase.from('student_summary').select('*').order('last_name', { ascending: true });
+    let query = supabase.from('student_summary').select('*').eq('status', 'active').order('last_name', { ascending: true });
     if (yearFilter) query = query.eq('year_group', Number(yearFilter));
     if (formFilter) query = query.eq('form_class', formFilter);
     if (search.trim()) query = query.or(`first_name.ilike.%${search.trim()}%,last_name.ilike.%${search.trim()}%`);

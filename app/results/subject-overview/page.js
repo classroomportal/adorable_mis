@@ -101,7 +101,7 @@ function SubjectOverviewInner() {
       return;
     }
     if (isStaff) {
-      supabase.from('students').select('student_id, first_name, last_name, year_group, mentor_group_id').order('last_name')
+      supabase.from('students').select('student_id, first_name, last_name, year_group, mentor_group_id').eq('status', 'active').order('last_name')
         .then(({ data }) => setStudents(data || []));
       supabase.from('mentor_groups').select('mentor_group_id, group_name, year_group').order('group_name')
         .then(({ data }) => setMentorGroups(data || []));

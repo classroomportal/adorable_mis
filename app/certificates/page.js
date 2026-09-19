@@ -18,7 +18,7 @@ function CertificatesInner() {
   async function load() {
     setLoading(true);
     const { data: events } = await supabase.from('behaviour_events').select('student_id, points, type');
-    const { data: students } = await supabase.from('students').select('student_id, first_name, last_name');
+    const { data: students } = await supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active');
     const { data: already } = await supabase.from('certificates_awarded').select('*');
 
     const totals = {};

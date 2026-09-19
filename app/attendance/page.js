@@ -49,11 +49,11 @@ function AttendanceInner() {
     setLoadingRoster(true);
     const { data: sc } = await supabase
       .from('student_class')
-      .select('students(student_id, first_name, last_name)')
+      .select('students(student_id, first_name, last_name, status)')
       .eq('class_id', classId);
     const studentList = (sc || [])
       .map((row) => row.students)
-      .filter(Boolean)
+      .filter((s) => s && s.status === 'active')
       .sort((a, b) => a.last_name.localeCompare(b.last_name));
     setRoster(studentList);
 

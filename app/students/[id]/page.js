@@ -95,6 +95,7 @@ function StudentDetail() {
         .from('students')
         .select('student_id, first_name, last_name, year_group, form_class')
         .eq('family_id', s.family_id)
+        .eq('status', 'active')
         .neq('student_id', id);
       setSiblings(sibs || []);
     } else {

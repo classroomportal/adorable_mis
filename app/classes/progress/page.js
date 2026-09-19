@@ -39,7 +39,7 @@ function ClassProgressInner() {
       const [classes, sc, students, targets, results, gs, subjMeta, myScope] = await Promise.all([
         fetchAll('classes', 'class_id, class_code, subject_id, staff_id, subjects(subject_name), staff(first_name, last_name)', (q) => q.not('subject_id', 'is', null)),
         fetchAll('student_class', 'student_id, class_id'),
-        fetchAll('students', 'student_id, year_group'),
+        fetchAll('students', 'student_id, year_group', (q) => q.eq('status', 'active')),
         fetchAll('target_grades', 'student_id, subject_id, target_grade'),
         fetchAll('results', 'student_id, subject_id, grade, week_start_date'),
         fetchAll('grade_scale', '*'),
@@ -63,6 +63,7 @@ function ClassProgressInner() {
       });
 
       const points = Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)]));
+      const activeStudentIds = new Set((students || []).map((s) => s.student_id));
       const yearByStudent = Object.fromEntries((students || []).map((s) => [s.student_id, s.year_group]));
 
       // most recent grade per student+subject
@@ -78,6 +79,7 @@ function ClassProgressInner() {
 
       const studentsByClass = {};
       (sc || []).forEach((row) => {
+        if (!activeStudentIds.has(row.student_id)) return;
         if (!studentsByClass[row.class_id]) studentsByClass[row.class_id] = [];
         studentsByClass[row.class_id].push(row.student_id);
       });
