@@ -204,10 +204,12 @@ const TABS = [
     ],
   },
   {
-    key: 'register_alerts', label: 'Register Alerts', icon: '⏰', accent: 'admin', adminOnly: true, roles: ['hr', 'school_office'],
-    description: "Follow up with staff who don't take registers on time.",
+    key: 'administration', label: 'Administration', icon: '⏰', accent: 'admin', adminOnly: true, roles: ['hr', 'school_office'],
+    description: "Register follow-ups, lookups and reporting.",
     items: () => [
       { href: '/admin/register-alerts', label: 'Register Alerts' },
+      { href: '/admin/lookups', label: 'Lookups' },
+      { href: '/admin/student-numbers', label: 'Student Numbers by Gender' },
     ],
   },
   {
