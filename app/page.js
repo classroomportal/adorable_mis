@@ -210,6 +210,7 @@ const TABS = [
       { href: '/admin/register-alerts', label: 'Register Alerts' },
       { href: '/admin/lookups', label: 'Lookups' },
       { href: '/admin/student-numbers', label: 'Student Numbers by Gender' },
+      { href: '/admin/class-lists', label: 'Class Lists (Print)' },
     ],
   },
   {
