@@ -11,6 +11,7 @@ function NewStudentInner() {
     first_name: '', last_name: '', middle_name: '', gender: '', year_group: '', form_class: '',
   });
   const [status, setStatus] = useState(null);
+  const [mentorGroups, setMentorGroups] = useState([]);
 
   useEffect(() => {
     async function loadUpn() {
@@ -18,6 +19,11 @@ function NewStudentInner() {
       if (!error) setUpn(data);
     }
     loadUpn();
+    async function loadMentorGroups() {
+      const { data } = await supabase.from('mentor_groups').select('group_name').order('group_name');
+      setMentorGroups((data || []).map((r) => r.group_name));
+    }
+    loadMentorGroups();
   }, []);
 
   async function handleSubmit(e) {
@@ -81,7 +87,10 @@ function NewStudentInner() {
         </label>
         <label>
           Form class / mentor group
-          <input value={form.form_class} onChange={(e) => setForm({ ...form, form_class: e.target.value })} placeholder="e.g. 9 Alesandra" />
+          <select value={form.form_class} onChange={(e) => setForm({ ...form, form_class: e.target.value })}>
+            <option value="">—</option>
+            {mentorGroups.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
         </label>
 
         <button type="submit" style={{ width: 'fit-content' }}>Create student</button>
