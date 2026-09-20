@@ -1,6 +1,6 @@
 # Formwork — orientation for Claude
 
-School MIS for Adorable British College (Next.js 14 App Router + Supabase). Live app at `misform.work`, deployed on Vercel. It has a demo account available on it for training (see `staff_demo` under Conventions below).
+School MIS for Adorable British College (Next.js 14 App Router + Supabase). Live app at `misform.work`, deployed on Vercel.
 
 ## Schema: read `sql/CURRENT_SCHEMA.md` before guessing
 
@@ -17,10 +17,11 @@ When the connector genuinely isn't available, the fallback (used successfully ma
 ## Conventions
 
 - Migrations are numbered sequentially in `migrations/*.sql` (currently up to 086), lowercase SQL, with a comment header explaining *why*, not just what. Follow the existing house style.
-- The `staff_demo` training account (`is_demo_account()`, `is_demo` columns) isolates practice data from real data — see migrations 074–086 for the full mechanism, and `sql/CURRENT_SCHEMA.md`'s "Known gaps" section for what it does and doesn't cover yet (Fees/Communication/Reports are still real, unscoped data reachable by direct URL from that account).
+- The `staff_demo` training account has been **removed** — there is no practice/demo login on the product anymore. Migrations 074–086 and `sql/CURRENT_SCHEMA.md` still document the `is_demo_account()`/`is_demo` mechanism from when it existed; treat those as historical, not current behaviour, and don't build new features assuming a demo account is reachable. If it's reintroduced, it needs a fresh design pass rather than resurrecting the old isolation mechanism as-is.
 - `staff_roles.role_name` values in use: `admin, smt, hr, pastoral, houseparent, assessment_manager, assessment_user, teacher, bursar, school_office, admissions, tuckshop, head_of_department, mentor`. `mentor` is live but not manageable from `/staff/roles` (missing from that page's `ROLE_LABELS`).
 - Almost nothing goes through `app/api` — pages talk to Supabase directly from the client. Business logic that needs to be trustworthy lives in Postgres functions/triggers, not in app code.
 - When building throwaway spreadsheets/exports for staff (HR rosters, boarding lists, tuckshop prices, etc.), pull live data via the Supabase connector rather than guessing — this repo's actual data has real quirks (placeholder rows, missing house assignments, initials-only names) worth surfacing to whoever asked.
+- After finishing and committing a change, open a pull request for it rather than leaving commits sitting un-PR'd on a branch. Never merge a PR — even one you opened yourself — without the user's explicit go-ahead first.
 
 ## Running the app locally / building
 
