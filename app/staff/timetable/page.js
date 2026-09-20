@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
+import { formatTimeRange } from '../../../lib/formatTime';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -71,6 +72,7 @@ function StaffTimetable() {
         subject: c.subjects?.display_name || c.subjects?.subject_name,
         room: c.room,
         classCode: c.class_code,
+        time: formatTimeRange(slot.start_time, slot.end_time),
       };
       cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
     });
@@ -190,7 +192,8 @@ function StaffTimetable() {
                                 title="Open register for this class"
                               >
                                 {e.classCode ? <><strong>{e.classCode}</strong><br /></> : ''}
-                                {e.subject}<br /><span style={{ opacity: 0.6 }}>{e.room}</span>
+                                {e.subject}<br /><span style={{ opacity: 0.6 }}>{e.room}</span><br />
+                                <span style={{ opacity: 0.6, fontSize: '0.85em' }}>{e.time}</span>
                               </div>
                             )
                           )
