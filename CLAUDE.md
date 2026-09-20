@@ -21,6 +21,7 @@ When the connector genuinely isn't available, the fallback (used successfully ma
 - `staff_roles.role_name` values in use: `admin, smt, hr, pastoral, houseparent, assessment_manager, assessment_user, teacher, bursar, school_office, admissions, tuckshop, head_of_department, mentor`. `mentor` is live but not manageable from `/staff/roles` (missing from that page's `ROLE_LABELS`).
 - Almost nothing goes through `app/api` — pages talk to Supabase directly from the client. Business logic that needs to be trustworthy lives in Postgres functions/triggers, not in app code.
 - When building throwaway spreadsheets/exports for staff (HR rosters, boarding lists, tuckshop prices, etc.), pull live data via the Supabase connector rather than guessing — this repo's actual data has real quirks (placeholder rows, missing house assignments, initials-only names) worth surfacing to whoever asked.
+- After finishing and committing a change, open a pull request for it rather than leaving commits sitting un-PR'd on a branch. Never merge a PR — even one you opened yourself — without the user's explicit go-ahead first.
 
 ## Running the app locally / building
 
