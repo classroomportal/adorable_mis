@@ -94,9 +94,10 @@ const TABS = [
   {
     key: 'students', label: 'Students', icon: '🎓', accent: 'students',
     description: 'Core records, behaviour, attendance, results and certificates.',
-    items: ({ isPastoralOrSmt }) => [
+    items: ({ isPastoralOrSmt, isAdmin, staffRoles }) => [
       { href: '/students', label: 'Core Data' },
       { href: '/behaviour', label: 'Behaviour Log' },
+      (isAdmin || (staffRoles || []).includes('school_office')) && { href: '/behaviour/review', label: 'Review Serious Behaviour Events' },
       { href: '/attendance', label: 'Attendance' },
       { href: '/results', label: 'Results' },
       { href: '/results/enter', label: 'Enter Results' },
