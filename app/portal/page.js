@@ -7,6 +7,7 @@ import TermTestScoresDownload from '../components/TermTestScoresDownload';
 import PublishedDocuments from '../components/PublishedDocuments';
 import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload';
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
+import { formatTimeRange } from '../../lib/formatTime';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -102,6 +103,7 @@ function PortalInner() {
         subject: c.subjects?.display_name || c.subjects?.subject_name,
         room: c.room,
         teacher: c.staff ? `${c.staff.first_name} ${c.staff.last_name}` : null,
+        time: formatTimeRange(slot.start_time, slot.end_time),
       };
       cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
     });
@@ -123,7 +125,8 @@ function PortalInner() {
                     ? entries.map((e, i) => (
                         <div key={i} style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}>
                           {e.subject}<br />
-                          <span style={{ opacity: 0.6 }}>{e.room}{e.teacher ? ` · ${e.teacher}` : ''}</span>
+                          <span style={{ opacity: 0.6 }}>{e.room}{e.teacher ? ` · ${e.teacher}` : ''}</span><br />
+                          <span style={{ opacity: 0.6, fontSize: '0.85em' }}>{e.time}</span>
                         </div>
                       ))
                     : ''}

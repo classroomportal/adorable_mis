@@ -9,6 +9,7 @@ import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
 import { classifyGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
+import { formatTimeRange } from '../../../lib/formatTime';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -393,13 +394,14 @@ function StudentDetail() {
     loadAll();
   }
 
-  // Build a lookup: cellMap[day][period_number] = { subject, room }
+  // Build a lookup: cellMap[day][period_number] = { subject, room, time }
   const cellMap = {};
   timetable.forEach((tc) => {
     (tc.classes?.timetable_slots || []).forEach((slot) => {
       cellMap[`${slot.day_of_week}-${slot.period_number}`] = {
         subject: tc.classes?.subjects?.display_name || tc.classes?.subjects?.subject_name,
         room: tc.classes?.room,
+        time: formatTimeRange(slot.start_time, slot.end_time),
       };
     });
   });
@@ -416,7 +418,13 @@ function StudentDetail() {
               const cell = cellMap[`${d}-${p.period_number}`];
               return (
                 <div key={`${d}-${p.period_number}`} className={`tt-cell ${cell ? 'tt-filled' : ''}`}>
-                  {cell ? <>{cell.subject}<br /><span style={{ opacity: 0.6 }}>{cell.room}</span></> : ''}
+                  {cell ? (
+                    <>
+                      {cell.subject}<br />
+                      <span style={{ opacity: 0.6 }}>{cell.room}</span><br />
+                      <span style={{ opacity: 0.6, fontSize: '0.85em' }}>{cell.time}</span>
+                    </>
+                  ) : ''}
                 </div>
               );
             })}
