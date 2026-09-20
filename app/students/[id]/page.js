@@ -33,6 +33,17 @@ function groupClassesByPrefix(classes) {
   return byPrefix;
 }
 
+// A block only needs the group-level (cascade) picker when a prefix's
+// classes are genuinely different subjects, e.g. "9A1/Ar" + "9A1/Bs" +
+// "9A1/Me". A block like "Maths sets" also has several classes sharing a
+// prefix ("9a/Ma1", "9a/Ma2", "9a/Ma3"), but they're all Mathematics —
+// alternative ability sets a student picks one of, not subjects to combine.
+function isCascadeBlock(classes) {
+  return [...groupClassesByPrefix(classes).values()].some(
+    (group) => new Set(group.map((c) => c.subjects?.subject_name || c.subjects?.display_name)).size > 1
+  );
+}
+
 function Collapsible({ title, defaultOpen = false, extra, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -206,8 +217,7 @@ function StudentDetail() {
       const bId = l.classes?.block_id;
       if (!bId) return;
       const blockOptions = byBlock[bId] || [];
-      const grouped = [...groupClassesByPrefix(blockOptions).values()].some((g) => g.length > 1);
-      sel[bId] = grouped ? classPrefix(l.classes.class_code) : l.class_id;
+      sel[bId] = isCascadeBlock(blockOptions) ? classPrefix(l.classes.class_code) : l.class_id;
     });
     setBlockSelections(sel);
 
@@ -712,7 +722,7 @@ function StudentDetail() {
                 {blocks.map((b) => {
                   const options = blockClasses[b.block_id] || [];
                   const byPrefix = groupClassesByPrefix(options);
-                  const grouped = [...byPrefix.values()].some((g) => g.length > 1);
+                  const grouped = isCascadeBlock(options);
                   const currentValue = blockSelections[b.block_id] || '';
                   return (
                     <tr key={b.block_id}>
