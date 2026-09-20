@@ -150,6 +150,7 @@ const TABS = [
       // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
       // Class Allocation, not this.
       isAdmin && { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
+      isAdmin && { href: '/admin/import-staff-commitments', label: 'Import Staff Commitments (NCLASS.DAT)' },
     ].filter(Boolean),
   },
   {

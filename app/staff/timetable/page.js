@@ -14,6 +14,7 @@ function StaffTimetable() {
   const [selectedStaffId, setSelectedStaffId] = useState(null);
   const [periods, setPeriods] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [commitments, setCommitments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [myMissingCount, setMyMissingCount] = useState(0);
 
@@ -39,13 +40,20 @@ function StaffTimetable() {
 
   useEffect(() => {
     async function loadTimetable() {
-      if (!selectedStaffId) { setClasses([]); setLoading(false); return; }
+      if (!selectedStaffId) { setClasses([]); setCommitments([]); setLoading(false); return; }
       setLoading(true);
-      const { data } = await supabase
-        .from('classes')
-        .select('class_id, room, class_code, subjects(subject_name, display_name), timetable_slots(day_of_week, period_number, start_time, end_time)')
-        .eq('staff_id', selectedStaffId);
-      setClasses(data || []);
+      const [{ data: classData }, { data: commitmentData }] = await Promise.all([
+        supabase
+          .from('classes')
+          .select('class_id, room, class_code, subjects(subject_name, display_name), timetable_slots(day_of_week, period_number, start_time, end_time)')
+          .eq('staff_id', selectedStaffId),
+        supabase
+          .from('staff_commitments')
+          .select('day_of_week, period_number, label')
+          .eq('staff_id', selectedStaffId),
+      ]);
+      setClasses(classData || []);
+      setCommitments(commitmentData || []);
       setLoading(false);
     }
     loadTimetable();
@@ -66,6 +74,14 @@ function StaffTimetable() {
       };
       cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
     });
+  });
+  // Commitments (Nova-T NCLASS.DAT — meetings, part-time non-working periods,
+  // etc.) have no class or roster, so they're just a label blocking the slot
+  // out — not clickable like a real class entry.
+  commitments.forEach((cm) => {
+    const key = `${cm.day_of_week}-${cm.period_number}`;
+    const entry = { commitment: true, label: cm.label?.trim() };
+    cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
   });
 
   const DAY_TO_WEEKDAY = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
@@ -158,17 +174,26 @@ function StaffTimetable() {
                       style={entries ? { cursor: 'pointer' } : undefined}
                     >
                       {entries
-                        ? entries.map((e, i) => (
-                            <div
-                              key={i}
-                              onClick={() => goToRegister(e, d, p.period_number)}
-                              style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}
-                              title="Open register for this class"
-                            >
-                              {e.classCode ? <><strong>{e.classCode}</strong><br /></> : ''}
-                              {e.subject}<br /><span style={{ opacity: 0.6 }}>{e.room}</span>
-                            </div>
-                          ))
+                        ? entries.map((e, i) =>
+                            e.commitment ? (
+                              <div
+                                key={i}
+                                style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0, fontStyle: 'italic', opacity: 0.75 }}
+                              >
+                                {e.label}
+                              </div>
+                            ) : (
+                              <div
+                                key={i}
+                                onClick={() => goToRegister(e, d, p.period_number)}
+                                style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}
+                                title="Open register for this class"
+                              >
+                                {e.classCode ? <><strong>{e.classCode}</strong><br /></> : ''}
+                                {e.subject}<br /><span style={{ opacity: 0.6 }}>{e.room}</span>
+                              </div>
+                            )
+                          )
                         : ''}
                     </div>
                   );
