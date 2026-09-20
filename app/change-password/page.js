@@ -2,9 +2,11 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import { useAuth } from '../../lib/AuthContext';
 import { useRouter } from 'next/navigation';
 
 function ChangePasswordInner() {
+  const { profile } = useAuth();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState(null);
@@ -19,6 +21,9 @@ function ChangePasswordInner() {
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
+    if (!error && profile?.must_change_password) {
+      await supabase.rpc('clear_must_change_password');
+    }
     setLoading(false);
     if (error) setError(error.message);
     else {
@@ -30,6 +35,9 @@ function ChangePasswordInner() {
   return (
     <div style={{ maxWidth: 380, margin: '2rem auto' }}>
       <h1>Change Password</h1>
+      {profile?.must_change_password && (
+        <p style={{ color: '#a3232c' }}>You're using a temporary password — set your own before continuing.</p>
+      )}
       <form onSubmit={handleSubmit} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         <label>
           New password
