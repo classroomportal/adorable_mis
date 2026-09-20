@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 
 // --- Parsing -----------------------------------------------------------
@@ -21,6 +21,23 @@ function subjectCodeFromSub(subcode) {
 function yearGroupFromClassCode(classCode) {
   const m = classCode.match(/^(\d{1,2})/);
   return m ? parseInt(m[1], 10) : null;
+}
+
+// This school's Nova-T exports name whole-form-class groups by form LETTER
+// ("9A/Ar"), but some classes were originally created under an older
+// numeric-band scheme ("91/Ar") before that. Both name the exact same real
+// class — so a plain class_code string match would treat "9A/Ar" as brand
+// new and duplicate a class that already has a teacher, room and enrolled
+// students. formLetterFromRowCode/formLetterFromFormClass let the importer
+// recognize that case by cross-checking against who's actually enrolled.
+function formLetterFromRowCode(classCode) {
+  const m = classCode.match(/^\d{1,2}([A-Za-z]+)\d*\//);
+  return m ? m[1].toUpperCase() : null;
+}
+
+function formLetterFromFormClass(formClass) {
+  const m = (formClass || "").match(/^\d{1,2}\s*([A-Za-z])/);
+  return m ? m[1].toUpperCase() : null;
 }
 
 function mostCommon(arr) {
@@ -92,6 +109,19 @@ export default function ImportClassesPage() {
   const [deletingStale, setDeletingStale] = useState(false);
   const [deleteStaleResult, setDeleteStaleResult] = useState(null);
 
+  const fileInputRef = useRef(null);
+
+  function handleCancel() {
+    setError(null);
+    setResult(null);
+    setPreview(null);
+    setCreateResult(null);
+    setNewClassForm({});
+    setDeleteStaleResult(null);
+    setStaleSelections({});
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   function updateNewClassField(classCode, field, value) {
     setNewClassForm((prev) => ({
       ...prev,
@@ -140,6 +170,37 @@ export default function ImportClassesPage() {
       const staffNameById = new Map(staff.map((s) => [s.staff_id, `${s.first_name} ${s.last_name}`]));
       const subjectNameById = new Map(subjects.map((s) => [s.subject_id, s.subject_name]));
 
+      // Work out which form letter each existing class's enrolled students
+      // actually belong to, so a row like "9A/Ar" can be matched against an
+      // existing "91/Ar" class even though the code itself differs.
+      const { data: enrolRows, error: enrolErr } = await supabase
+        .from("student_class")
+        .select("class_id, students(form_class)")
+        .in("class_id", existingClasses.map((c) => c.class_id));
+      if (enrolErr) throw enrolErr;
+
+      const formLetterCountsByClass = new Map();
+      for (const r of enrolRows || []) {
+        const letter = formLetterFromFormClass(r.students?.form_class);
+        if (!letter) continue;
+        if (!formLetterCountsByClass.has(r.class_id)) formLetterCountsByClass.set(r.class_id, new Map());
+        const counts = formLetterCountsByClass.get(r.class_id);
+        counts.set(letter, (counts.get(letter) || 0) + 1);
+      }
+      const primaryFormLetterByClass = new Map();
+      for (const [classId, counts] of formLetterCountsByClass) {
+        let best = null, bestCount = 0;
+        for (const [letter, c] of counts) if (c > bestCount) { best = letter; bestCount = c; }
+        primaryFormLetterByClass.set(classId, best);
+      }
+      const existingByYearSubject = new Map();
+      for (const c of existingClasses) {
+        const key = `${c.year_group}|${c.subject_id}`;
+        if (!existingByYearSubject.has(key)) existingByYearSubject.set(key, []);
+        existingByYearSubject.get(key).push({ ...c, formLetter: primaryFormLetterByClass.get(c.class_id) || null });
+      }
+      const claimedClassIds = new Set();
+
       const updates = [];       // existing class, some field changed
       const unchanged = [];     // existing class, nothing changed
       const newClasses = [];    // class_code not in classes at all
@@ -161,6 +222,43 @@ export default function ImportClassesPage() {
         const existing = classByCode.get(row.class_code);
 
         if (!existing) {
+          let contentMatch = null;
+          const rowFormLetter = formLetterFromRowCode(row.class_code);
+          if (rowFormLetter && subjectId && row.year_group != null) {
+            const key = `${row.year_group}|${subjectId}`;
+            const candidates = (existingByYearSubject.get(key) || []).filter(
+              (c) => !claimedClassIds.has(c.class_id) && c.formLetter === rowFormLetter
+            );
+            if (candidates.length === 1) contentMatch = candidates[0];
+          }
+
+          if (contentMatch) {
+            // Not actually new — this is an existing, enrolled class that
+            // Nova-T now names differently. Treat the class_code itself as
+            // just another field that changed, same as teacher/room/subject.
+            claimedClassIds.add(contentMatch.class_id);
+            const diffs = ["class code"];
+            if (staffId && staffId !== contentMatch.staff_id) diffs.push("teacher");
+            if (row.room && row.room !== contentMatch.room) diffs.push("room");
+            updates.push({
+              class_id: contentMatch.class_id,
+              class_code: row.class_code,
+              old_class_code: contentMatch.class_code,
+              class_code_changed: true,
+              diffs,
+              staff_id: staffId || contentMatch.staff_id,
+              room: row.room || contentMatch.room,
+              subject_id: subjectId || contentMatch.subject_id,
+              old_staff_name: staffNameById.get(contentMatch.staff_id) || "—",
+              new_staff_name: staffNameById.get(staffId || contentMatch.staff_id) || "—",
+              old_room: contentMatch.room || "—",
+              new_room: row.room || contentMatch.room || "—",
+              old_subject_name: subjectNameById.get(contentMatch.subject_id) || "—",
+              new_subject_name: subjectNameById.get(subjectId || contentMatch.subject_id) || "—",
+            });
+            continue;
+          }
+
           newClasses.push({
             class_code: row.class_code,
             staff_id: staffId || null,
@@ -171,6 +269,7 @@ export default function ImportClassesPage() {
           continue;
         }
 
+        claimedClassIds.add(existing.class_id);
         const diffs = [];
         if (staffId && staffId !== existing.staff_id) diffs.push("teacher");
         if (row.room && row.room !== existing.room) diffs.push("room");
@@ -294,7 +393,12 @@ export default function ImportClassesPage() {
       for (const u of preview.updates) {
         const { error: upErr } = await supabase
           .from("classes")
-          .update({ staff_id: u.staff_id, room: u.room, subject_id: u.subject_id })
+          .update({
+            staff_id: u.staff_id,
+            room: u.room,
+            subject_id: u.subject_id,
+            ...(u.class_code_changed ? { class_code: u.class_code } : {}),
+          })
           .eq("class_id", u.class_id);
         if (upErr) throw upErr;
         count++;
@@ -438,14 +542,26 @@ export default function ImportClassesPage() {
         too (e.g. after renaming a block).
       </p>
 
-      <input type="file" multiple accept=".dat,.txt,text/plain,application/octet-stream,*/*" onChange={handleFiles} disabled={busy} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".dat,.txt,text/plain,application/octet-stream,*/*"
+        onChange={handleFiles}
+        disabled={busy}
+      />
 
       {error && <p style={{ color: "crimson", marginTop: "1rem" }}>Error: {error}</p>}
       {busy && <p>Working…</p>}
 
       {preview && (
         <div style={{ marginTop: "1.5rem" }}>
-          <h2>Preview</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <h2 style={{ margin: 0 }}>Preview</h2>
+            <button type="button" className="secondary" onClick={handleCancel} disabled={busy}>
+              Cancel
+            </button>
+          </div>
           <p style={{ padding: "0.6rem 0.8rem", background: "#fff8e1", border: "1px solid #f0c419", borderRadius: 4 }}>
             <strong>Nothing has been saved yet.</strong> This upload would affect{" "}
             <strong>{preview.affectedStaffCount} staff member{preview.affectedStaffCount === 1 ? "" : "s"}</strong> and{" "}
@@ -462,6 +578,13 @@ export default function ImportClassesPage() {
           {preview.updates.length > 0 && (
             <details open>
               <summary>{preview.updates.length} class(es) with changes</summary>
+              {preview.updates.some((u) => u.class_code_changed) && (
+                <p style={{ fontSize: "0.85em", color: "#555" }}>
+                  Rows showing a class code change weren't matched by code at all — they were
+                  matched to an existing class by who's actually enrolled in it. Nova-T appears to
+                  have renamed these since they were last imported, rather than them being new.
+                </p>
+              )}
               <table style={{ width: "100%", marginTop: "0.5rem", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
@@ -475,7 +598,11 @@ export default function ImportClassesPage() {
                 <tbody>
                   {preview.updates.map((u) => (
                     <tr key={u.class_id} style={{ borderTop: "1px solid #eee" }}>
-                      <td>{u.class_code}</td>
+                      <td>
+                        {u.class_code_changed
+                          ? <>{u.old_class_code} → <strong>{u.class_code}</strong></>
+                          : u.class_code}
+                      </td>
                       <td>
                         {u.old_staff_name === u.new_staff_name
                           ? u.old_staff_name
