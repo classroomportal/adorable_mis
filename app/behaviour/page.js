@@ -167,12 +167,19 @@ function BehaviourPageInner() {
   function selectAll() { setSelected(new Set(roster.map((s) => s.student_id))); }
   function selectNone() { setSelected(new Set()); }
 
+  const isSerious = form.type === 'negative' && Number(form.points) <= -4 && form.points !== '';
+
   async function handleSubmit(e) {
     e.preventDefault();
 
     const studentIds = usingGroup ? Array.from(selected) : (singleStudentId ? [Number(singleStudentId)] : []);
     if (studentIds.length === 0) {
       setStatus('Choose at least one student.');
+      return;
+    }
+
+    if (isSerious && !form.description.trim()) {
+      setStatus('This is a serious event (-4/-5 points) — an explanation of what happened is required before it can be saved.');
       return;
     }
 
@@ -348,9 +355,26 @@ function BehaviourPageInner() {
           <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} />
         </label>
 
+        {isSerious && (
+          <div className="card" style={{ borderColor: '#b45309', flexDirection: 'column', alignItems: 'stretch' }}>
+            <strong style={{ color: '#b45309' }}>This is a serious event (-4/-5 points).</strong>
+            <p style={{ margin: '0.3rem 0 0', fontSize: '0.9em' }}>
+              Explain what happened, in your own words, following school protocol.
+              Do not name any other student — describe what they did without
+              identifying them. Write clearly, in good English: a school office
+              reviewer checks this before it's shown to the student's parents.
+            </p>
+          </div>
+        )}
+
         <label>
-          Description
-          <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          {isSerious ? 'Explanation (required)' : 'Description'}
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            required={isSerious}
+            rows={isSerious ? 4 : 2}
+          />
         </label>
 
         <button type="submit" style={{ width: 'fit-content' }}>
