@@ -96,7 +96,7 @@ const TABS = [
     description: 'Core records, behaviour, attendance, results and certificates.',
     items: ({ isPastoralOrSmt }) => [
       { href: '/students', label: 'Core Data' },
-      { href: '/behaviour', label: 'Behaviour' },
+      { href: '/behaviour', label: 'Behaviour Log' },
       { href: '/attendance', label: 'Attendance' },
       { href: '/results', label: 'Results' },
       { href: '/results/enter', label: 'Enter Results' },
@@ -113,7 +113,6 @@ const TABS = [
     // (plus admin) actually has student_class write access (migration 105) —
     // so Class Allocation only shows for them, not the other two.
     items: ({ isAdmin, staffRoles }) => [
-      { href: '/behaviour', label: 'Behaviour Log' },
       { href: '/detention', label: 'Detentions' },
       { href: '/certificates', label: 'Certificates' },
       { href: '/pastoral/registers-not-done', label: 'Registers Not Done' },
