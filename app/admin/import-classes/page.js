@@ -40,6 +40,26 @@ function formLetterFromFormClass(formClass) {
   return m ? m[1].toUpperCase() : null;
 }
 
+// Supabase silently caps an unranged select at 1000 rows (this school's
+// student_class table alone has 4500+) — a plain .select() over "all
+// enrolments for these classes" would quietly return only the first 1000,
+// with no error, and everything after that would just be missing from the
+// result. Page through with .range() until a short page comes back so nothing
+// gets dropped.
+async function fetchAllRows(buildQuery) {
+  const pageSize = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 function mostCommon(arr) {
   const counts = new Map();
   for (const v of arr) {
@@ -173,11 +193,10 @@ export default function ImportClassesPage() {
       // Work out which form letter each existing class's enrolled students
       // actually belong to, so a row like "9A/Ar" can be matched against an
       // existing "91/Ar" class even though the code itself differs.
-      const { data: enrolRows, error: enrolErr } = await supabase
-        .from("student_class")
-        .select("class_id, students(form_class)")
-        .in("class_id", existingClasses.map((c) => c.class_id));
-      if (enrolErr) throw enrolErr;
+      const existingClassIds = existingClasses.map((c) => c.class_id);
+      const enrolRows = await fetchAllRows(() =>
+        supabase.from("student_class").select("class_id, students(form_class)").in("class_id", existingClassIds)
+      );
 
       const formLetterCountsByClass = new Map();
       for (const r of enrolRows || []) {
@@ -308,12 +327,10 @@ export default function ImportClassesPage() {
       let staleClasses = [];
       if (staleCandidates.length > 0) {
         const staleIds = staleCandidates.map((c) => c.class_id);
-        const [{ data: scRows, error: scErr }, { data: tsRows, error: tsErr }] = await Promise.all([
-          supabase.from("student_class").select("class_id").in("class_id", staleIds),
-          supabase.from("timetable_slots").select("class_id").in("class_id", staleIds),
+        const [scRows, tsRows] = await Promise.all([
+          fetchAllRows(() => supabase.from("student_class").select("class_id").in("class_id", staleIds)),
+          fetchAllRows(() => supabase.from("timetable_slots").select("class_id").in("class_id", staleIds)),
         ]);
-        if (scErr) throw scErr;
-        if (tsErr) throw tsErr;
         const studentCounts = new Map();
         for (const r of scRows || []) studentCounts.set(r.class_id, (studentCounts.get(r.class_id) || 0) + 1);
         const slotCounts = new Map();
@@ -343,11 +360,9 @@ export default function ImportClassesPage() {
       const affectedStudentIds = new Set();
       if (updates.length > 0) {
         const updateIds = updates.map((u) => u.class_id);
-        const { data: scRows, error: scErr } = await supabase
-          .from("student_class")
-          .select("class_id, student_id")
-          .in("class_id", updateIds);
-        if (scErr) throw scErr;
+        const scRows = await fetchAllRows(() =>
+          supabase.from("student_class").select("class_id, student_id").in("class_id", updateIds)
+        );
         const studentsByClass = new Map();
         for (const r of scRows || []) {
           if (!studentsByClass.has(r.class_id)) studentsByClass.set(r.class_id, []);
