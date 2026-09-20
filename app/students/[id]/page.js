@@ -12,6 +12,27 @@ import { classifyGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
+// A curriculum block like "Class" holds many subjects for the same teaching
+// group (e.g. "9A1/Ar", "9A1/Bs", ... "9A1/Me") alongside the other groups'
+// versions of the same subjects ("9C1/Ar", "9G1/Ar", ...). The class_code
+// prefix before the last "/" identifies the teaching group — picking a group
+// should enrol the student in every subject under that prefix at once,
+// rather than in just the one class_id a plain dropdown would pick.
+function classPrefix(code) {
+  const idx = code.lastIndexOf('/');
+  return idx === -1 ? code : code.slice(0, idx);
+}
+
+function groupClassesByPrefix(classes) {
+  const byPrefix = new Map();
+  for (const c of classes) {
+    const prefix = classPrefix(c.class_code);
+    if (!byPrefix.has(prefix)) byPrefix.set(prefix, []);
+    byPrefix.get(prefix).push(c);
+  }
+  return byPrefix;
+}
+
 function Collapsible({ title, defaultOpen = false, extra, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -151,6 +172,7 @@ function StudentDetail() {
     const { data: ng } = await supabase.from('ngrt_results').select('*').eq('student_id', id).order('test_date', { ascending: false });
     setNgrt(ng || []);
 
+    let byBlock = {};
     if (s.year_group) {
       const { data: cb, error: cbErr } = await supabase
         .from('curriculum_blocks')
@@ -164,7 +186,6 @@ function StudentDetail() {
       } else {
         setBlocksError(null);
         setBlocks(cb || []);
-        const byBlock = {};
         (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; });
         setBlockClasses(byBlock);
       }
@@ -178,12 +199,15 @@ function StudentDetail() {
     // student_class, so it goes stale whenever a class gets linked to a block afterwards.
     const { data: currentLinks } = await supabase
       .from('student_class')
-      .select('class_id, classes(block_id)')
+      .select('class_id, classes(class_code, block_id)')
       .eq('student_id', id);
     const sel = {};
     (currentLinks || []).forEach((l) => {
       const bId = l.classes?.block_id;
-      if (bId) sel[bId] = l.class_id;
+      if (!bId) return;
+      const blockOptions = byBlock[bId] || [];
+      const grouped = [...groupClassesByPrefix(blockOptions).values()].some((g) => g.length > 1);
+      sel[bId] = grouped ? classPrefix(l.classes.class_code) : l.class_id;
     });
     setBlockSelections(sel);
 
@@ -313,6 +337,46 @@ function StudentDetail() {
       if (error) {
         setBlockSaveStatus(`Error: ${error.message}`);
         return;
+      }
+    }
+    setBlockSaveStatus('Saved.');
+    loadAll();
+  }
+
+  // For a block like "Class" that holds several subjects per teaching group
+  // (e.g. "9A1/Ar", "9A1/Bs", ... "9A1/Me"), picking a group enrols the
+  // student in every one of that group's classes at once, rather than in
+  // just a single class_id the way handleBlockChange does for a normal
+  // single-subject block.
+  async function handleGroupBlockChange(blockId, newPrefix) {
+    setBlockSaveStatus('Saving...');
+    setBlockSelections((prev) => ({ ...prev, [blockId]: newPrefix || null }));
+
+    const allClassIds = (blockClasses[blockId] || []).map((c) => c.class_id);
+    if (allClassIds.length > 0) {
+      const { error } = await supabase
+        .from('student_class')
+        .delete()
+        .eq('student_id', id)
+        .in('class_id', allClassIds);
+      if (error) {
+        setBlockSaveStatus(`Error: ${error.message}`);
+        return;
+      }
+    }
+
+    if (newPrefix) {
+      const newClassIds = (blockClasses[blockId] || [])
+        .filter((c) => classPrefix(c.class_code) === newPrefix)
+        .map((c) => c.class_id);
+      if (newClassIds.length > 0) {
+        const { error } = await supabase
+          .from('student_class')
+          .insert(newClassIds.map((class_id) => ({ student_id: id, class_id })));
+        if (error) {
+          setBlockSaveStatus(`Error: ${error.message}`);
+          return;
+        }
       }
     }
     setBlockSaveStatus('Saved.');
@@ -647,26 +711,44 @@ function StudentDetail() {
               <tbody>
                 {blocks.map((b) => {
                   const options = blockClasses[b.block_id] || [];
-                  const currentClassId = blockSelections[b.block_id] || '';
+                  const byPrefix = groupClassesByPrefix(options);
+                  const grouped = [...byPrefix.values()].some((g) => g.length > 1);
+                  const currentValue = blockSelections[b.block_id] || '';
                   return (
                     <tr key={b.block_id}>
                       <td>{b.block_name}{b.band && b.band !== 'a' ? ` (${b.band})` : ''}</td>
                       <td>
                         {isAdmin ? (
-                          <select
-                            value={currentClassId}
-                            onChange={(e) => handleBlockChange(b.block_id, e.target.value || null)}
-                          >
-                            <option value="">— Not allocated —</option>
-                            {options.map((c) => (
-                              <option key={c.class_id} value={c.class_id}>
-                                {c.class_code} — {c.subjects?.display_name || c.subjects?.subject_name || ''}
-                                {c.staff ? ` (${c.staff.first_name} ${c.staff.last_name})` : ''}
-                              </option>
-                            ))}
-                          </select>
+                          grouped ? (
+                            <select
+                              value={currentValue}
+                              onChange={(e) => handleGroupBlockChange(b.block_id, e.target.value || null)}
+                            >
+                              <option value="">— Not allocated —</option>
+                              {[...byPrefix.entries()].map(([prefix, classes]) => (
+                                <option key={prefix} value={prefix}>
+                                  {prefix} — {classes.length} subject{classes.length === 1 ? '' : 's'}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <select
+                              value={currentValue}
+                              onChange={(e) => handleBlockChange(b.block_id, e.target.value || null)}
+                            >
+                              <option value="">— Not allocated —</option>
+                              {options.map((c) => (
+                                <option key={c.class_id} value={c.class_id}>
+                                  {c.class_code} — {c.subjects?.display_name || c.subjects?.subject_name || ''}
+                                  {c.staff ? ` (${c.staff.first_name} ${c.staff.last_name})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          )
+                        ) : grouped ? (
+                          currentValue || 'Not allocated'
                         ) : (
-                          options.find((c) => String(c.class_id) === String(currentClassId))?.class_code || 'Not allocated'
+                          options.find((c) => String(c.class_id) === String(currentValue))?.class_code || 'Not allocated'
                         )}
                       </td>
                     </tr>
