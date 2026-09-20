@@ -82,7 +82,7 @@ export default function PrintTimetablesPage() {
     <div style={{ padding: '1rem', maxWidth: 900, margin: '0 auto', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>Print Timetables</h1>
       <p style={{ color: '#555', marginTop: 0, marginBottom: '1rem' }}>
-        Pick a year group to print every active student's timetable, one small compact sheet per page.
+        Pick a year group to print every active student's timetable, four to an A4 page.
       </p>
 
       <div className="no-print" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '1rem' }}>
@@ -107,38 +107,47 @@ export default function PrintTimetablesPage() {
 
       {error && <p className="no-print" style={{ color: 'crimson' }}>{error}</p>}
 
-      {students.map((s) => (
-        <div key={s.student_id} className="timetable-batch-item" style={{ marginBottom: '1.5rem' }}>
-          <h2>{s.first_name} {s.last_name}</h2>
-          <p>{s.form_class || ''}</p>
-          <div className="timetable-grid">
-            <div className="tt-head"></div>
-            {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
-            {periods.map((p) => (
-              <Fragment key={p.period_number}>
-                <div className="tt-cell tt-period-label">{p.period_name}</div>
-                {DAYS.map((d) => {
-                  const entries = s.cellMap[`${d}-${p.period_number}`];
-                  return (
-                    <div key={`${d}-${p.period_number}`} className={`tt-cell ${entries ? 'tt-filled' : ''}`}>
-                      {entries
-                        ? entries.map((e, i) => (
-                            <div key={i} style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}>
-                              {e.subject}<br />
-                              <span style={{ opacity: 0.6 }}>{e.room}{e.teacher ? ` · ${e.teacher}` : ''}</span>
-                            </div>
-                          ))
-                        : ''}
-                    </div>
-                  );
-                })}
-              </Fragment>
-            ))}
-          </div>
+      {students.length > 0 && (
+        <p className="tt-quad-legend">
+          {periods.map((p) => `${p.period_number}=${p.period_name}`).join('  ·  ')}
+        </p>
+      )}
+
+      {chunk(students, 4).map((group, i) => (
+        <div key={i} className="timetable-quad-page">
+          {group.map((s) => (
+            <div key={s.student_id} className="timetable-quad-card">
+              <div className="tt-quad-name">{s.first_name} {s.last_name}</div>
+              <div className="tt-quad-form">{s.form_class || ''}</div>
+              <div className="timetable-grid tt-quad-grid">
+                <div className="tt-head"></div>
+                {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
+                {periods.map((p) => (
+                  <Fragment key={p.period_number}>
+                    <div className="tt-cell tt-period-label">{p.period_number}</div>
+                    {DAYS.map((d) => {
+                      const entries = s.cellMap[`${d}-${p.period_number}`];
+                      return (
+                        <div key={`${d}-${p.period_number}`} className={`tt-cell ${entries ? 'tt-filled' : ''}`}>
+                          {entries ? entries.map((e) => e.subject).join(', ') : ''}
+                        </div>
+                      );
+                    })}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       ))}
     </div>
   );
+}
+
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
 }
 
 const selectStyle = { padding: '0.4rem', fontSize: '0.9rem', marginTop: '0.25rem', minWidth: 160 };
