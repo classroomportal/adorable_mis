@@ -194,6 +194,14 @@ function ImportStaffCommitmentsInner() {
       {preview && (
         <div style={{ marginTop: '1.5rem' }}>
           <h2>Preview</h2>
+          <p style={{ padding: '0.6rem 0.8rem', background: '#fff8e1', border: '1px solid #f0c419', borderRadius: 4 }}>
+            <strong>Nothing has been saved yet.</strong> This would affect{' '}
+            <strong>{new Set(preview.matched.map((m) => m.staff_id)).size} staff member{new Set(preview.matched.map((m) => m.staff_id)).size === 1 ? '' : 's'}</strong>{' '}
+            {preview.staleCommitments.length > 0 && (
+              <>and remove {preview.staleCommitments.length} commitment{preview.staleCommitments.length === 1 ? '' : 's'} that no longer appear in this file </>
+            )}
+            — review the table{preview.staleCommitments.length > 0 ? 's' : ''} below before importing anything.
+          </p>
           <ul>
             <li>Total rows parsed: {preview.totalParsed}</li>
             <li>Matched to a staff member: {preview.matched.length}</li>
