@@ -331,9 +331,10 @@ input, select { width: 100%; }
 }
 
 @media print {
-  .timetable-print h2 { font-size: 1rem; margin: 0 0 0.15rem; }
-  .timetable-print p { font-size: 0.75rem; margin: 0 0 0.5rem; color: #444; }
-  .timetable-print .timetable-grid {
+  .timetable-print h2, .timetable-batch-item h2 { font-size: 1rem; margin: 0 0 0.15rem; }
+  .timetable-print p, .timetable-batch-item p { font-size: 0.75rem; margin: 0 0 0.5rem; color: #444; }
+  .timetable-print .timetable-grid,
+  .timetable-batch-item .timetable-grid {
     min-width: 0;
     width: 100%;
     background: #fff;
@@ -341,7 +342,10 @@ input, select { width: 100%; }
   }
   .timetable-print .tt-cell,
   .timetable-print .tt-head,
-  .timetable-print .tt-period-label {
+  .timetable-print .tt-period-label,
+  .timetable-batch-item .tt-cell,
+  .timetable-batch-item .tt-head,
+  .timetable-batch-item .tt-period-label {
     border: 1px solid #999;
     background: #fff !important;
     color: #000 !important;
@@ -349,8 +353,11 @@ input, select { width: 100%; }
     padding: 0.2rem 0.3rem;
     min-height: 0;
   }
-  .timetable-print .tt-head { font-weight: 700; text-align: center; }
-  .timetable-print .tt-period-label { font-weight: 600; }
+  .timetable-print .tt-head, .timetable-batch-item .tt-head { font-weight: 700; text-align: center; }
+  .timetable-print .tt-period-label, .timetable-batch-item .tt-period-label { font-weight: 600; }
+
+  .timetable-batch-item { page-break-after: always; break-after: page; }
+  .timetable-batch-item:last-child { page-break-after: auto; break-after: auto; }
 }
 .certificate-border {
   border: 6px double var(--brand-700);
