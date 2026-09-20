@@ -320,12 +320,37 @@ input, select { width: 100%; }
 .core-data-fields p { margin: 0.3rem 0; }
 
 .certificate-print { display: none; }
+.timetable-print { display: none; }
 @media print {
   .no-print { display: none !important; }
   .certificate-print { display: block !important; }
+  .timetable-print { display: block !important; }
   nav, .navbar, header { display: none !important; }
   main { padding: 0 !important; max-width: none !important; margin: 0 !important; }
   body { margin: 0; }
+}
+
+@media print {
+  .timetable-print h2 { font-size: 1rem; margin: 0 0 0.15rem; }
+  .timetable-print p { font-size: 0.75rem; margin: 0 0 0.5rem; color: #444; }
+  .timetable-print .timetable-grid {
+    min-width: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #999;
+  }
+  .timetable-print .tt-cell,
+  .timetable-print .tt-head,
+  .timetable-print .tt-period-label {
+    border: 1px solid #999;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.3rem;
+    min-height: 0;
+  }
+  .timetable-print .tt-head { font-weight: 700; text-align: center; }
+  .timetable-print .tt-period-label { font-weight: 600; }
 }
 .certificate-border {
   border: 6px double var(--brand-700);

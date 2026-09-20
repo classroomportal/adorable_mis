@@ -25,6 +25,7 @@ function PortalInner() {
   const [periods, setPeriods] = useState([]);
   const [timetableClasses, setTimetableClasses] = useState([]);
   const [timetableLoading, setTimetableLoading] = useState(true);
+  const [studentName, setStudentName] = useState('');
 
   async function load() {
     if (!studentId) return;
@@ -62,6 +63,15 @@ function PortalInner() {
     loadTimetable();
   }, [studentId]);
 
+  useEffect(() => {
+    async function loadStudentName() {
+      if (!studentId) { setStudentName(''); return; }
+      const { data } = await supabase.from('students').select('first_name, last_name').eq('student_id', studentId).single();
+      setStudentName(data ? `${data.first_name} ${data.last_name}` : '');
+    }
+    loadStudentName();
+  }, [studentId]);
+
   useEffect(() => { load(); }, [studentId]);
 
   function appealFor(eventId) {
@@ -97,6 +107,35 @@ function PortalInner() {
     });
   });
 
+  function renderTimetableGrid() {
+    return (
+      <div className="timetable-grid">
+        <div className="tt-head"></div>
+        {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
+        {periods.map((p) => (
+          <Fragment key={p.period_number}>
+            <div className="tt-cell tt-period-label">{p.period_name}</div>
+            {DAYS.map((d) => {
+              const entries = cellMap[`${d}-${p.period_number}`];
+              return (
+                <div key={`${d}-${p.period_number}`} className={`tt-cell ${entries ? 'tt-filled' : ''}`}>
+                  {entries
+                    ? entries.map((e, i) => (
+                        <div key={i} style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}>
+                          {e.subject}<br />
+                          <span style={{ opacity: 0.6 }}>{e.room}{e.teacher ? ` · ${e.teacher}` : ''}</span>
+                        </div>
+                      ))
+                    : ''}
+                </div>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1>My Grades & Behaviour</h1>
@@ -106,40 +145,29 @@ function PortalInner() {
       <PublishedDocuments studentId={studentId} />
 
       <div className="card">
-        <h2>My Timetable</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h2 style={{ margin: 0 }}>My Timetable</h2>
+          {timetableClasses.length > 0 && (
+            <button className="secondary no-print" onClick={() => window.print()}>Print</button>
+          )}
+        </div>
         {timetableLoading ? (
           <p>Loading…</p>
         ) : timetableClasses.length === 0 ? (
           <p>No timetable found yet.</p>
         ) : (
           <div className="table-scroll">
-            <div className="timetable-grid">
-              <div className="tt-head"></div>
-              {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
-              {periods.map((p) => (
-                <Fragment key={p.period_number}>
-                  <div className="tt-cell tt-period-label">{p.period_name}</div>
-                  {DAYS.map((d) => {
-                    const entries = cellMap[`${d}-${p.period_number}`];
-                    return (
-                      <div key={`${d}-${p.period_number}`} className={`tt-cell ${entries ? 'tt-filled' : ''}`}>
-                        {entries
-                          ? entries.map((e, i) => (
-                              <div key={i} style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}>
-                                {e.subject}<br />
-                                <span style={{ opacity: 0.6 }}>{e.room}{e.teacher ? ` · ${e.teacher}` : ''}</span>
-                              </div>
-                            ))
-                          : ''}
-                      </div>
-                    );
-                  })}
-                </Fragment>
-              ))}
-            </div>
+            {renderTimetableGrid()}
           </div>
         )}
       </div>
+
+      {timetableClasses.length > 0 && (
+        <div className="timetable-print">
+          <h2>{studentName}</h2>
+          {renderTimetableGrid()}
+        </div>
+      )}
 
       <div className="card">
         <h2>Results vs Target</h2>
