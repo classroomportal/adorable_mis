@@ -330,6 +330,28 @@ function StudentDetail() {
     });
   });
 
+  function renderTimetableGrid() {
+    return (
+      <div className="timetable-grid">
+        <div className="tt-head"></div>
+        {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
+        {periods.map((p) => (
+          <Fragment key={p.period_number}>
+            <div className="tt-cell tt-period-label">{p.period_name}</div>
+            {DAYS.map((d) => {
+              const cell = cellMap[`${d}-${p.period_number}`];
+              return (
+                <div key={`${d}-${p.period_number}`} className={`tt-cell ${cell ? 'tt-filled' : ''}`}>
+                  {cell ? <>{cell.subject}<br /><span style={{ opacity: 0.6 }}>{cell.room}</span></> : ''}
+                </div>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+    );
+  }
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
   if (!student) return <p>Student not found (id: {id}).</p>;
@@ -600,27 +622,20 @@ function StudentDetail() {
         )}
       </Collapsible>
 
-      <Collapsible title="Timetable">
+      <Collapsible
+        title="Timetable"
+        extra={<button className="secondary" onClick={() => window.print()}>Print</button>}
+      >
         <div className="table-scroll">
-          <div className="timetable-grid">
-            <div className="tt-head"></div>
-            {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
-            {periods.map((p) => (
-              <Fragment key={p.period_number}>
-                <div className="tt-cell tt-period-label">{p.period_name}</div>
-                {DAYS.map((d) => {
-                  const cell = cellMap[`${d}-${p.period_number}`];
-                  return (
-                    <div key={`${d}-${p.period_number}`} className={`tt-cell ${cell ? 'tt-filled' : ''}`}>
-                      {cell ? <>{cell.subject}<br /><span style={{ opacity: 0.6 }}>{cell.room}</span></> : ''}
-                    </div>
-                  );
-                })}
-              </Fragment>
-            ))}
-          </div>
+          {renderTimetableGrid()}
         </div>
       </Collapsible>
+
+      <div className="timetable-print">
+        <h2>{student.first_name} {student.last_name}</h2>
+        <p>{student.form_class || ''}{student.form_class && student.year_group ? ' · ' : ''}{student.year_group ? `Year ${student.year_group}` : ''}</p>
+        {renderTimetableGrid()}
+      </div>
 
       <Collapsible title="Curriculum Blocks" extra={blockSaveStatus && <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>{blockSaveStatus}</span>}>
         {blocks.length === 0 ? (

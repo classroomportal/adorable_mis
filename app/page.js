@@ -213,6 +213,7 @@ const TABS = [
       { href: '/admin/lookups', label: 'Lookups' },
       { href: '/admin/student-numbers', label: 'Student Numbers by Gender' },
       { href: '/admin/class-lists', label: 'Class Lists (Print)' },
+      { href: '/admin/print-timetables', label: 'Print Timetables (Print)' },
     ],
   },
   {

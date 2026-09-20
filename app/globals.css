@@ -320,12 +320,89 @@ input, select { width: 100%; }
 .core-data-fields p { margin: 0.3rem 0; }
 
 .certificate-print { display: none; }
+.timetable-print { display: none; }
 @media print {
   .no-print { display: none !important; }
   .certificate-print { display: block !important; }
+  .timetable-print { display: block !important; }
   nav, .navbar, header { display: none !important; }
   main { padding: 0 !important; max-width: none !important; margin: 0 !important; }
   body { margin: 0; }
+}
+
+@media print {
+  .timetable-print h2 { font-size: 1rem; margin: 0 0 0.15rem; }
+  .timetable-print p { font-size: 0.75rem; margin: 0 0 0.5rem; color: #444; }
+  .timetable-print .timetable-grid {
+    min-width: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #999;
+  }
+  .timetable-print .tt-cell,
+  .timetable-print .tt-head,
+  .timetable-print .tt-period-label {
+    border: 1px solid #999;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.3rem;
+    min-height: 0;
+  }
+  .timetable-print .tt-head { font-weight: 700; text-align: center; }
+  .timetable-print .tt-period-label { font-weight: 600; }
+}
+
+/* 4-up timetable print: two columns x two rows of compact cards per A4 page. */
+.timetable-quad-page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.timetable-quad-card {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.4rem;
+  overflow: hidden;
+}
+.tt-quad-name { font-weight: 700; font-size: 0.8rem; }
+.tt-quad-form { font-size: 0.7rem; color: #555; margin-bottom: 0.2rem; }
+.tt-quad-legend { font-size: 0.65rem; color: #666; margin: 0 0 0.75rem; }
+.tt-quad-grid {
+  grid-template-columns: 18px repeat(5, 1fr);
+  gap: 1px;
+  min-width: 0;
+  margin-top: 0.25rem;
+}
+.tt-quad-grid .tt-cell,
+.tt-quad-grid .tt-head,
+.tt-quad-grid .tt-period-label {
+  font-size: 0.5rem;
+  padding: 0.08rem 0.15rem;
+  min-height: 0;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media print {
+  .timetable-quad-page {
+    page-break-after: always;
+    break-after: page;
+    gap: 0.3rem;
+  }
+  .timetable-quad-page:last-of-type { page-break-after: auto; break-after: auto; }
+  .timetable-quad-card { border: 1px solid #999; }
+  .tt-quad-grid { background: #fff; }
+  .tt-quad-grid .tt-cell,
+  .tt-quad-grid .tt-head,
+  .tt-quad-grid .tt-period-label {
+    border: 1px solid #bbb;
+    background: #fff !important;
+    color: #000 !important;
+  }
 }
 .certificate-border {
   border: 6px double var(--brand-700);
