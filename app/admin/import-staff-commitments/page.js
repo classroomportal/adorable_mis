@@ -17,6 +17,10 @@ function decodeSlot(slotStr) {
   return { day_of_week: DAYS[dayIndex], period_number: periodNumber };
 }
 
+function commitmentKey(staffId, dayOfWeek, periodNumber) {
+  return `${staffId}|${dayOfWeek}|${periodNumber}`;
+}
+
 async function parseFile(file) {
   const text = await file.text();
   const lines = text.split(/\r\n|\n/).map((l) => l.trim()).filter(Boolean);
@@ -37,11 +41,16 @@ function ImportStaffCommitmentsInner() {
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
+  const [staleSelections, setStaleSelections] = useState({});
+  const [deletingStale, setDeletingStale] = useState(false);
+  const [deleteStaleResult, setDeleteStaleResult] = useState(null);
 
   async function handleFile(e) {
     setError(null);
     setResult(null);
     setPreview(null);
+    setDeleteStaleResult(null);
+    setStaleSelections({});
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -57,12 +66,14 @@ function ImportStaffCommitmentsInner() {
 
       const matched = [];
       const unmatchedStaff = new Set();
+      const staffIdsInFile = new Set();
       for (const row of rows) {
         const s = staffByCode.get(row.staff_code);
         if (!s) {
           unmatchedStaff.add(row.staff_code);
           continue;
         }
+        staffIdsInFile.add(s.staff_id);
         matched.push({
           staff_id: s.staff_id,
           staff_name: `${s.first_name} ${s.last_name}`,
@@ -72,10 +83,39 @@ function ImportStaffCommitmentsInner() {
         });
       }
 
+      // Nova-T data gets corrected sometimes (e.g. a staff member removed
+      // from a meeting that shouldn't have had them). A commitment already
+      // in the database for a staff member THIS FILE covers, but that isn't
+      // one of the rows this upload produced for them, is stale — flag it
+      // for removal instead of leaving last import's mistake in place
+      // forever. (Staff not mentioned anywhere in this file are left alone —
+      // this file might just not cover them.)
+      let staleCommitments = [];
+      if (staffIdsInFile.size > 0) {
+        const { data: existing, error: exErr } = await supabase
+          .from('staff_commitments')
+          .select('commitment_id, staff_id, day_of_week, period_number, label, staff(first_name, last_name)')
+          .in('staff_id', [...staffIdsInFile]);
+        if (exErr) throw exErr;
+
+        const newKeys = new Set(matched.map((m) => commitmentKey(m.staff_id, m.day_of_week, m.period_number)));
+        staleCommitments = (existing || []).filter(
+          (e) => !newKeys.has(commitmentKey(e.staff_id, e.day_of_week, e.period_number))
+        );
+
+        // A stale commitment has nothing else depending on it (no roster, no
+        // register), so it's safe to default-select for removal — unlike
+        // stale classes, there's no "students still linked" caution needed.
+        const defaults = {};
+        for (const c of staleCommitments) defaults[c.commitment_id] = true;
+        setStaleSelections(defaults);
+      }
+
       setPreview({
         totalParsed: rows.length,
         matched,
         unmatchedStaff: [...unmatchedStaff],
+        staleCommitments,
       });
     } catch (err) {
       setError(err.message || String(err));
@@ -104,6 +144,33 @@ function ImportStaffCommitmentsInner() {
       setError(err.message || String(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  function toggleStaleSelection(commitmentId) {
+    setStaleSelections((prev) => ({ ...prev, [commitmentId]: !prev[commitmentId] }));
+  }
+
+  async function deleteStaleCommitments() {
+    const selectedIds = (preview?.staleCommitments || [])
+      .filter((c) => staleSelections[c.commitment_id])
+      .map((c) => c.commitment_id);
+    if (selectedIds.length === 0) return;
+
+    setDeletingStale(true);
+    setError(null);
+    try {
+      const { error: delErr } = await supabase.from('staff_commitments').delete().in('commitment_id', selectedIds);
+      if (delErr) throw delErr;
+      setDeleteStaleResult({ deleted: selectedIds.length });
+      setPreview((prev) => ({
+        ...prev,
+        staleCommitments: prev.staleCommitments.filter((c) => !selectedIds.includes(c.commitment_id)),
+      }));
+    } catch (err) {
+      setError(err.message || String(err));
+    } finally {
+      setDeletingStale(false);
     }
   }
 
@@ -165,6 +232,54 @@ function ImportStaffCommitmentsInner() {
                 {preview.unmatchedStaff.length} staff code(s) not found — those rows were skipped
               </summary>
               <pre style={{ whiteSpace: 'pre-wrap' }}>{preview.unmatchedStaff.join(', ')}</pre>
+            </details>
+          )}
+
+          {preview.staleCommitments && preview.staleCommitments.length > 0 && (
+            <details open style={{ marginTop: '1rem' }}>
+              <summary style={{ color: 'crimson' }}>
+                {preview.staleCommitments.length} commitment(s) already saved for staff in this file, but not in it anymore — review before removing
+              </summary>
+              <p style={{ fontSize: '0.9em', color: '#555' }}>
+                Typically a correction (e.g. someone removed from a meeting
+                they shouldn't have been on). Ticked ones will be deleted.
+              </p>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr><th></th><th>Staff</th><th>Day</th><th>Period</th><th>Label</th></tr>
+                  </thead>
+                  <tbody>
+                    {preview.staleCommitments.map((c) => (
+                      <tr key={c.commitment_id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={!!staleSelections[c.commitment_id]}
+                            onChange={() => toggleStaleSelection(c.commitment_id)}
+                          />
+                        </td>
+                        <td>{c.staff?.first_name} {c.staff?.last_name}</td>
+                        <td>{c.day_of_week}</td>
+                        <td>{c.period_number}</td>
+                        <td>{c.label}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button
+                onClick={deleteStaleCommitments}
+                disabled={deletingStale || preview.staleCommitments.every((c) => !staleSelections[c.commitment_id])}
+                style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}
+              >
+                {deletingStale
+                  ? 'Deleting…'
+                  : `Delete ${preview.staleCommitments.filter((c) => staleSelections[c.commitment_id]).length} selected commitment(s)`}
+              </button>
+              {deleteStaleResult && (
+                <p style={{ marginTop: '0.5rem', color: 'green' }}>Deleted {deleteStaleResult.deleted} commitment(s).</p>
+              )}
             </details>
           )}
         </div>
