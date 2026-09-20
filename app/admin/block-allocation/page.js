@@ -335,24 +335,38 @@ export default function BlockAllocationPage() {
                   <th style={thStyle}>Student</th>
                   <th style={thStyle}>Form</th>
                   {isGroupBlock
-                    ? groups.map((g) => (
-                        <th key={g.prefix} style={{ ...thStyle, textAlign: "center" }} title={g.subjectsLabel}>
-                          {g.prefix}
-                          <div style={{ fontWeight: 400, fontSize: "0.7rem", color: "#666" }}>
-                            {g.classIds.length} subject{g.classIds.length === 1 ? "" : "s"}
-                          </div>
-                        </th>
-                      ))
-                    : classes.map((c) => (
-                        <th key={c.class_id} style={{ ...thStyle, textAlign: "center" }}>
-                          {c.class_code}
-                          <div style={{ fontWeight: 400, fontSize: "0.7rem", color: "#666" }}>
-                            {c.subjects?.subject_name || ""}
-                            {c.staff ? ` · ${c.staff.first_name?.[0] || ""}${c.staff.last_name || ""}` : ""}
-                            {c.room ? ` · ${c.room}` : ""}
-                          </div>
-                        </th>
-                      ))}
+                    ? groups.map((g) => {
+                        const count = students.filter((s) =>
+                          g.classIds.every((id) => selections[s.student_id]?.has(id))
+                        ).length;
+                        return (
+                          <th key={g.prefix} style={{ ...thStyle, textAlign: "center" }} title={g.subjectsLabel}>
+                            {g.prefix}
+                            <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>
+                              {count} student{count === 1 ? "" : "s"}
+                            </div>
+                            <div style={{ fontWeight: 400, fontSize: "0.7rem", color: "#666" }}>
+                              {g.classIds.length} subject{g.classIds.length === 1 ? "" : "s"}
+                            </div>
+                          </th>
+                        );
+                      })
+                    : classes.map((c) => {
+                        const count = students.filter((s) => selections[s.student_id]?.has(c.class_id)).length;
+                        return (
+                          <th key={c.class_id} style={{ ...thStyle, textAlign: "center" }}>
+                            {c.class_code}
+                            <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>
+                              {count} student{count === 1 ? "" : "s"}
+                            </div>
+                            <div style={{ fontWeight: 400, fontSize: "0.7rem", color: "#666" }}>
+                              {c.subjects?.subject_name || ""}
+                              {c.staff ? ` · ${c.staff.first_name?.[0] || ""}${c.staff.last_name || ""}` : ""}
+                              {c.room ? ` · ${c.room}` : ""}
+                            </div>
+                          </th>
+                        );
+                      })}
                 </tr>
               </thead>
               <tbody>
