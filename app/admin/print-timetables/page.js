@@ -82,7 +82,7 @@ export default function PrintTimetablesPage() {
     <div style={{ padding: '1rem', maxWidth: 900, margin: '0 auto', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>Print Timetables</h1>
       <p style={{ color: '#555', marginTop: 0, marginBottom: '1rem' }}>
-        Pick a year group to print every active student's timetable, four to an A4 page.
+        Pick a year group to print every active student's timetable, eight to an A4 page.
       </p>
 
       <div className="no-print" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '1rem' }}>
@@ -113,7 +113,7 @@ export default function PrintTimetablesPage() {
         </p>
       )}
 
-      {chunk(students, 4).map((group, i) => (
+      {chunk(students, 8).map((group, i) => (
         <div key={i} className="timetable-quad-page">
           {group.map((s) => (
             <div key={s.student_id} className="timetable-quad-card">
