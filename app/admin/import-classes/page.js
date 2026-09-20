@@ -137,6 +137,8 @@ export default function ImportClassesPage() {
       const classByCode = new Map(existingClasses.map((c) => [c.class_code, c]));
       const staffByCode = new Map(staff.map((s) => [s.staff_code, s.staff_id]));
       const subjectByCode = new Map(subjects.map((s) => [s.subject_code, s.subject_id]));
+      const staffNameById = new Map(staff.map((s) => [s.staff_id, `${s.first_name} ${s.last_name}`]));
+      const subjectNameById = new Map(subjects.map((s) => [s.subject_id, s.subject_name]));
 
       const updates = [];       // existing class, some field changed
       const unchanged = [];     // existing class, nothing changed
@@ -182,6 +184,12 @@ export default function ImportClassesPage() {
             staff_id: staffId || existing.staff_id,
             room: row.room || existing.room,
             subject_id: subjectId || existing.subject_id,
+            old_staff_name: staffNameById.get(existing.staff_id) || '—',
+            new_staff_name: staffNameById.get(staffId || existing.staff_id) || '—',
+            old_room: existing.room || '—',
+            new_room: row.room || existing.room || '—',
+            old_subject_name: subjectNameById.get(existing.subject_id) || '—',
+            new_subject_name: subjectNameById.get(subjectId || existing.subject_id) || '—',
           });
         } else {
           unchanged.push(row.class_code);
@@ -225,15 +233,50 @@ export default function ImportClassesPage() {
         setStaleSelections(defaults);
       }
 
+      // Before anything is written: who does this actually touch? A field
+      // changing on a class isn't just an abstract diff — it's a real
+      // teacher's timetable changing and real students sitting in that
+      // class. Count students currently enrolled on each class being
+      // updated, and roll up a plain-English "N staff, M students" summary
+      // so that's visible before the Apply button, not after.
+      let updatesWithStudentCounts = updates;
+      const affectedStaffIds = new Set();
+      const affectedStudentIds = new Set();
+      if (updates.length > 0) {
+        const updateIds = updates.map((u) => u.class_id);
+        const { data: scRows, error: scErr } = await supabase
+          .from("student_class")
+          .select("class_id, student_id")
+          .in("class_id", updateIds);
+        if (scErr) throw scErr;
+        const studentsByClass = new Map();
+        for (const r of scRows || []) {
+          if (!studentsByClass.has(r.class_id)) studentsByClass.set(r.class_id, []);
+          studentsByClass.get(r.class_id).push(r.student_id);
+        }
+        updatesWithStudentCounts = updates.map((u) => ({
+          ...u,
+          studentCount: (studentsByClass.get(u.class_id) || []).length,
+        }));
+        for (const u of updates) {
+          affectedStaffIds.add(u.staff_id);
+          for (const sid of studentsByClass.get(u.class_id) || []) affectedStudentIds.add(sid);
+        }
+      }
+      for (const c of newClasses) if (c.staff_id) affectedStaffIds.add(c.staff_id);
+      for (const c of staleClasses) if (staleSelections[c.class_id] !== false) affectedStaffIds.add(c.staff_id);
+
       setPreview({
         totalParsed: parsedClasses.length,
-        updates,
+        updates: updatesWithStudentCounts,
         unchangedCount: unchanged.length,
         newClasses,
         unmatchedStaff: [...unmatchedStaff],
         unmatchedSubjects: [...unmatchedSubjects],
         staleClasses,
         yearGroupsInFile: [...yearGroupsInFile].sort((a, b) => a - b),
+        affectedStaffCount: affectedStaffIds.size,
+        affectedStudentCount: affectedStudentIds.size,
       });
     } catch (err) {
       setError(err.message || String(err));
@@ -403,6 +446,12 @@ export default function ImportClassesPage() {
       {preview && (
         <div style={{ marginTop: "1.5rem" }}>
           <h2>Preview</h2>
+          <p style={{ padding: "0.6rem 0.8rem", background: "#fff8e1", border: "1px solid #f0c419", borderRadius: 4 }}>
+            <strong>Nothing has been saved yet.</strong> This upload would affect{" "}
+            <strong>{preview.affectedStaffCount} staff member{preview.affectedStaffCount === 1 ? "" : "s"}</strong> and{" "}
+            <strong>{preview.affectedStudentCount} student{preview.affectedStudentCount === 1 ? "" : "s"}</strong> currently
+            enrolled in a changed class. Review who's affected below before applying anything.
+          </p>
           <ul>
             <li>Total classes parsed from file: {preview.totalParsed}</li>
             <li>Unchanged (matches DB already): {preview.unchangedCount}</li>
@@ -417,14 +466,32 @@ export default function ImportClassesPage() {
                 <thead>
                   <tr>
                     <th style={{ textAlign: "left" }}>Class</th>
-                    <th style={{ textAlign: "left" }}>Changed fields</th>
+                    <th style={{ textAlign: "left" }}>Teacher</th>
+                    <th style={{ textAlign: "left" }}>Room</th>
+                    <th style={{ textAlign: "left" }}>Subject</th>
+                    <th style={{ textAlign: "left" }}>Students enrolled</th>
                   </tr>
                 </thead>
                 <tbody>
                   {preview.updates.map((u) => (
-                    <tr key={u.class_id}>
+                    <tr key={u.class_id} style={{ borderTop: "1px solid #eee" }}>
                       <td>{u.class_code}</td>
-                      <td>{u.diffs.join(", ")}</td>
+                      <td>
+                        {u.old_staff_name === u.new_staff_name
+                          ? u.old_staff_name
+                          : <>{u.old_staff_name} → <strong>{u.new_staff_name}</strong></>}
+                      </td>
+                      <td>
+                        {u.old_room === u.new_room
+                          ? u.old_room
+                          : <>{u.old_room} → <strong>{u.new_room}</strong></>}
+                      </td>
+                      <td>
+                        {u.old_subject_name === u.new_subject_name
+                          ? u.old_subject_name
+                          : <>{u.old_subject_name} → <strong>{u.new_subject_name}</strong></>}
+                      </td>
+                      <td style={{ fontWeight: u.studentCount > 0 ? "bold" : "normal" }}>{u.studentCount}</td>
                     </tr>
                   ))}
                 </tbody>
