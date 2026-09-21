@@ -15,10 +15,31 @@ have no UI anywhere and aren't linked from `/admin/permissions` at all.
 
 The two systems are completely independent. A role can have a tile granted
 in `role_permissions` and still hit a wall the instant it tries to save
-anything, because the table underneath only allows admin (or some other
-role) to write. That mismatch is real and current — see below.
+anything, because the table underneath only allows a narrower set of roles
+to write. Five such mismatches were found and have now been fixed
+(migration 112) — see below.
 
-## Caveats before reading the table
+## Fixes applied (migration 112)
+
+1. **`school_office` — edit core data.** Can now insert/update `students`
+   and `parents`, and fully manage `student_parent` (parent-student links).
+   Delete on `students`/`parents` stays admin-only.
+2. **`hr` — assign roles, except admin.** Can now insert/update/delete
+   `staff_roles` rows for any role except `'admin'` — cannot grant, edit or
+   remove an admin-role assignment.
+3. **`assessment_user` — import results.** Can now insert/update `results`
+   and `target_grades` (the role's own description is *"Imports results and
+   target grades"* — both tables were part of the same gap).
+4. **`assessment_manager` — import CAT4/NGRT.** Can now fully manage
+   `cat4_results` and `ngrt_results`, matching the delete-and-reimport
+   rights it already had on `target_grades`/`transcript_grades`.
+5. **`attendance` — tightened an over-broad policy.**
+   `staff_write_attendance`/`staff_update_attendance` checked only "logged
+   in," not "staff" — despite the names. Narrowed to any staff role (which
+   includes `school_office`) plus admin; parents/students keep their
+   existing read-only access.
+
+## Caveats before reading the tables
 
 - **`is_demo`/`is_demo_account()`** appears in a lot of `qual` clauses
   (`is_demo = is_demo_account()`). The demo account mechanism has been
@@ -38,77 +59,75 @@ role) to write. That mismatch is real and current — see below.
   automatically pass unless a policy explicitly ORs `is_admin()` alongside
   it. `user_has_staff_role(roles[])` has the admin bypass built in. Every
   current usage of the bare `has_staff_role()` happens to pair it with
-  `is_admin() OR` correctly, but it's an easy trap for the next migration
-  that reaches for it — worth remembering as a name that looks like its
-  sibling but isn't.
+  `is_admin() OR` correctly (or is used for a role-specific grant added in
+  migration 112, where admin is already covered by a separate policy), but
+  it's an easy trap for the next migration that reaches for it.
 - `is_pastoral_or_smt()` (the Postgres function) mirrors the frontend's
   `isPastoralOrSmt` naming exactly, including the same quirk: it checks
   `smt`/`houseparent`, **not** `pastoral`. Anywhere you see "pastoral or
   smt" below via this function, the `pastoral` role itself is not actually
   included unless a separate clause adds it.
 
-## Known mismatches: tile access vs. actual write access
+## Full reference, grouped by dashboard tile
 
-These are roles that can now reach a tile (correctly, per migration 111)
-but whose actual database write is narrower than the tile — or in one case,
-a write policy that's broader than its name claims:
+Merged with the same section labels used in `resources.section` (migration
+111), so this document and `/admin/permissions` describe the app using one
+shared organisation. "Read" / "Write" describe SELECT vs
+INSERT/UPDATE/DELETE/ALL. Admin can always do both unless noted otherwise.
 
-1. **`school_office`** — the role's own description is *"Edits student &
-   parent core data, manages parent-student links"*, and it holds the
-   Parents tiles. But `students`, `parents`, and `student_parent` are all
-   `admin_write_*` (admin-only) for INSERT/UPDATE/DELETE. `school_office`
-   can view every one of these but cannot save a change to any of them —
-   the role can't do the one thing its description says it's for.
-2. **`hr`** — holds the Staff & Roles tile. Both `staff` and `staff_roles`
-   are admin-only writes. HR can view staff records and role assignments
-   but cannot edit either.
-3. **`assessment_user`** — description is *"Imports results and target
-   grades"*, and holds the import tiles for exactly that. But `results` and
-   `target_grades` only allow `is_assessment_manager()` (admin or
-   `assessment_manager`) to INSERT/UPDATE — not `assessment_user`. Their
-   imports would be rejected by RLS.
-4. **`assessment_manager`** — holds "Import CAT4/NGRT". `cat4_results` and
-   `ngrt_results` are both admin-only writes (`ALL` restricted to
-   `is_admin()`) — `assessment_manager` can't write there either.
-5. **`attendance` is over-permissive, not under**: `staff_write_attendance`
-   (INSERT) and `staff_update_attendance` (UPDATE) both check only
-   `auth.role() = 'authenticated'` — not staff-scoped at all, despite the
-   policy names. Any authenticated account (a parent or student login,
-   not just staff) can currently write attendance rows.
-
-None of these were introduced by this session's changes — they predate it.
-Flagging them, not fixing them, since narrowing or widening a live RLS
-policy is the actual security boundary and deserves its own deliberate
-pass rather than a drive-by edit.
-
-## Full reference, grouped by dashboard section
-
-"Read" / "Write" describe SELECT vs INSERT/UPDATE/DELETE/ALL. Admin can
-always do both unless noted otherwise (every table below either has an
-explicit `admin_write_*`/`is_admin()` policy or admin is folded into a
-helper function like `user_has_staff_role`/`is_assessment_manager`).
-
-### Students & Pastoral
+### Dashboard
 
 | Table | Read | Write | Notes |
 |---|---|---|---|
-| `students` | any staff, own parent, own student | **admin only** | see mismatch #1 |
-| `parents` | admin, own parent, pastoral/smt | **admin only** | see mismatch #1 |
-| `student_parent` | own parent, pastoral/smt | **admin only** | see mismatch #1 |
-| `families` | any authenticated | admin only | |
-| `behaviour_events` | any staff, own parent (if `visible_to_parents`), own student | any staff (insert/update); **admin only** (delete) | |
-| `behaviour_appeals` | pastoral/smt (not `pastoral` role itself — see caveat), own student | student inserts own; pastoral/smt updates | no delete policy at all |
-| `behaviour_categories` | any authenticated | admin only | |
-| `detentions` | pastoral/smt | pastoral/smt (update only) | no insert/delete policy — rows likely come from a trigger off `behaviour_events`, not direct writes |
-| `certificates_awarded` | any staff | any staff (insert/update/delete) | not role-scoped — every staff role can award/edit/delete certificates |
-| `attendance` | any staff, own parent | **any authenticated** (insert/update) | see mismatch #5 |
-| `attendance_codes` | any authenticated | admin only | |
-| `register_alerts` | hr/school_office/admin | hr/school_office/admin (update only) | no insert/delete policy — alerts are generated (migration 086), not manually created |
-| `student_documents` | any staff, own parent, own student | admin/smt/assessment_manager | |
-| `student_class` | any authenticated | admin, pastoral, head_of_department (`can_allocate_classes()`) | matches migration 105 |
-| `mentor_groups` | any authenticated | **admin only** | the Mentor Groups *tile* is granted to pastoral/houseparent/smt — worth checking what that page actually writes to if it needs edit access here |
+| `calendar_events` | any authenticated | admin only | the Calendar tile is universal-read for every role, but only admin can add/edit events |
 
-### Academic
+### Students
+
+| Table | Read | Write | Notes |
+|---|---|---|---|
+| `students` | any staff, own parent, own student | admin, `school_office` (insert/update) | school_office write added in migration 112. Delete stays admin-only |
+| `families` | any authenticated | admin only | |
+| `behaviour_events` | any staff, own parent (if `visible_to_parents`), own student | any staff (insert/update); admin only (delete) | |
+| `behaviour_appeals` | pastoral/smt (not `pastoral` role itself — see caveats), own student | student inserts own; pastoral/smt updates | no delete policy |
+| `certificates_awarded` | any staff | any staff (insert/update/delete) | not role-scoped — every staff role can award/edit/delete certificates |
+| `detentions` | pastoral/smt | pastoral/smt (update only) | no insert/delete policy — rows likely come from a trigger off `behaviour_events` |
+| `attendance` | any staff, own parent | any staff, incl. `school_office` (insert/update) | narrowed in migration 112 — previously any authenticated account could write |
+| `results` | any staff, own parent, own student | `assessment_manager`, `assessment_user` (insert/update) | assessment_user write added in migration 112 |
+
+### Pastoral
+
+| Table | Read | Write | Notes |
+|---|---|---|---|
+| `mentor_groups` | any authenticated | admin only | the Mentor Groups *tile* is granted to pastoral/houseparent/smt — worth checking what that page actually saves if it needs edit access here |
+| `student_class` | any authenticated | admin, pastoral, head_of_department | matches migration 105 (class allocation) |
+
+### Reports
+
+| Table | Read | Write | Notes |
+|---|---|---|---|
+| `report_subject_comments` | own author, assigned checker, admin/smt | own author (insert/update own draft); checker and admin/smt can also update | no delete policy |
+| `report_pastoral_comments` | same shape as subject comments | same shape | no delete policy |
+| `report_periods` | admin/smt/assessment_manager only (no broader read policy) | admin/smt/assessment_manager | ordinary teachers can't read this table directly |
+| `report_checkers` | own assignment | admin/smt | |
+| `student_documents` | any staff, own parent, own student | admin/smt/assessment_manager | |
+
+### Communication
+
+| Table | Read | Write | Notes |
+|---|---|---|---|
+| `messages` | own sent/received | no direct write policy | comms/compose likely calls a function, not a direct insert |
+| `message_recipients` | own | no direct write policy | same as `messages` |
+
+### Timetable
+
+| Table | Read | Write | Notes |
+|---|---|---|---|
+| `classes` | any authenticated | admin only | |
+| `curriculum_blocks` | any authenticated | admin only | |
+| `timetable_slots` | any authenticated | admin only | |
+| `staff_commitments` | any staff | admin only | |
+
+### Assessment
 
 | Table | Read | Write | Notes |
 |---|---|---|---|
@@ -117,21 +136,13 @@ helper function like `user_has_staff_role`/`is_assessment_manager`).
 | `subject_key_stages` | any authenticated | any staff | |
 | `subject_grade_boundaries` | any authenticated | any staff | |
 | `grade_scale` | any authenticated | admin only | |
-| `classes` | any authenticated | admin only | |
-| `curriculum_blocks` | any authenticated | admin only | |
-| `timetable_slots` | any authenticated | admin only | |
 | `departments` | any authenticated | admin only | |
-| `results` | any staff, own parent, own student | **assessment_manager only** (insert/update) | see mismatch #3 |
-| `target_grades` | any staff, own parent, own student | **assessment_manager only** (insert/update/delete) | see mismatch #3 |
-| `transcript_grades` | any staff, own parent, own student | assessment_manager only (insert/update/delete) | same shape as `target_grades` |
-| `cat4_results` | any authenticated | **admin only** | see mismatch #4 |
-| `ngrt_results` | any authenticated | **admin only** | see mismatch #4 |
-| `report_periods` | admin/smt/assessment_manager only (no broader read policy) | admin/smt/assessment_manager | ordinary teachers can't read this table directly |
-| `report_subject_comments` | own author, assigned checker, admin/smt | own author inserts/updates own draft; checker and admin/smt can also update | no delete policy |
-| `report_pastoral_comments` | same shape as subject comments | same shape | no delete policy |
-| `report_checkers` | own assignment | admin/smt | |
+| `target_grades` | any staff, own parent, own student | `assessment_manager` (insert/update/delete); `assessment_user` (insert/update) | assessment_user write added in migration 112 |
+| `transcript_grades` | any staff, own parent, own student | assessment_manager only (insert/update/delete) | |
+| `cat4_results` | any authenticated | admin, `assessment_manager` | assessment_manager write added in migration 112 |
+| `ngrt_results` | any authenticated | admin, `assessment_manager` | assessment_manager write added in migration 112 |
 
-### Fees & Tuckshop
+### Fees & Bills
 
 | Table | Read | Write | Notes |
 |---|---|---|---|
@@ -145,35 +156,51 @@ helper function like `user_has_staff_role`/`is_assessment_manager`).
 | `student_discounts` | bursar/smt | bursar | |
 | `student_invoices` | bursar/smt, own parent (if published) | bursar (insert only) | no update/delete — same immutable-ledger pattern |
 | `invoice_line_items` | bursar/smt, own parent (if published) | bursar (insert/delete) | no update — corrections are delete + re-insert |
+
+### Tuckshop
+
+| Table | Read | Write | Notes |
+|---|---|---|---|
 | `tuckshop_items` | any authenticated | tuckshop/bursar | |
 | `tuckshop_preorders` | tuckshop/bursar/smt, own student/family | tuckshop/bursar; students can also create their own | |
 | `tuckshop_preorder_items` | tuckshop/bursar/smt, own student/family | tuckshop/bursar/smt or the student's own preorder | |
 | `tuckshop_purchases` | tuckshop/bursar/smt, own student/family | tuckshop/bursar | |
 | `tuckshop_purchase_items` | tuckshop/bursar/smt, own student/family | tuckshop/bursar | |
 
-### Staff & system
+### Staff & Access
 
 | Table | Read | Write | Notes |
 |---|---|---|---|
-| `staff` | any staff | **admin only** | see mismatch #2 |
-| `staff_roles` | any authenticated | **admin only** | see mismatch #2 |
-| `staff_commitments` | any staff | admin only | |
+| `staff` | any staff | admin only | |
+| `staff_roles` | any authenticated | admin; `hr` (any role except admin) | hr write added in migration 112 — hr cannot grant, edit or remove an admin-role row |
 | `roles` | any authenticated | admin only | |
 | `resources` | any authenticated | admin only | |
 | `role_permissions` | any authenticated | admin only | |
+| `parents` | admin, own parent, pastoral/smt | admin, `school_office` (insert/update) | school_office write added in migration 112 |
+| `student_parent` | own parent, pastoral/smt | admin, `school_office` (full manage) | school_office write added in migration 112 |
 | `boarding_houses` | any authenticated | admin only | |
 | `sports_houses` | any authenticated | admin only | |
-| `calendar_events` | any authenticated | **admin only** | the Calendar tile is universal-read for every role, but only admin can actually add/edit events |
-| `periods` | any authenticated | no write policy found | |
-| `terms` | any authenticated | admin only | |
+| `behaviour_categories` | any authenticated | admin only | |
+| `attendance_codes` | any authenticated | admin only | |
+
+### Administration
+
+| Table | Read | Write | Notes |
+|---|---|---|---|
+| `register_alerts` | hr/school_office/admin | hr/school_office/admin (update only) | no insert/delete policy — alerts are generated (migration 086), not manually created |
+
+### System / not tied to a specific tile
+
+| Table | Read | Write | Notes |
+|---|---|---|---|
 | `profiles` | own profile, admin (all) | no direct write policy | profile changes happen via trigger (e.g. migration 110's auto-provisioning), not client writes |
-| `messages` | own sent/received | no direct write policy | comms/compose likely calls a function, not a direct insert |
-| `message_recipients` | own | no direct write policy | same as `messages` |
+| `terms` | any authenticated | admin only | |
+| `periods` | any authenticated | no write policy found | |
 
 ## What this doesn't cover
 
 This is read vs. write at the *table* level. Several policies are also
-row-scoped in ways the table above doesn't spell out (e.g. a parent only
+row-scoped in ways the tables above don't spell out (e.g. a parent only
 sees invoices where `fee_terms.published_to_parents = true`, a report
 comment author can only update their own comment while `status = 'draft'`).
 Read the actual `qual`/`with_check` text in `pg_policies` for the precise
