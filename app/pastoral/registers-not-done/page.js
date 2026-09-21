@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function RegistersNotDoneInner() {
   const [rows, setRows] = useState([]);
@@ -59,5 +60,5 @@ function RegistersNotDoneInner() {
 }
 
 export default function RegistersNotDonePage() {
-  return <RequireAuth><RegistersNotDoneInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/pastoral/registers-not-done"><RegistersNotDoneInner /></RequireResource></RequireAuth>;
 }

@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 const YEARS = [7, 8, 9, 10, 11, 12];
 
-export default function ClassListsPage() {
+function ClassListsInner() {
   const [year, setYear] = useState('');
   const [subjects, setSubjects] = useState([]); // [{subject_id, subject_name}]
   const [subjectId, setSubjectId] = useState('');
@@ -221,3 +223,13 @@ const tdStyle = {
   borderBottom: '1px solid #eee',
   whiteSpace: 'nowrap',
 };
+
+export default function ClassListsPage() {
+  return (
+    <RequireAuth>
+      <RequireResource resourceKey="/admin/class-lists">
+        <ClassListsInner />
+      </RequireResource>
+    </RequireAuth>
+  );
+}

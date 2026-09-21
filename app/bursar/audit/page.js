@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -129,8 +130,8 @@ function AuditInner() {
 
 export default function AuditPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/bursar/audit">
       <AuditInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

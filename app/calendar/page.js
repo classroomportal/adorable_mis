@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
 
@@ -243,5 +244,5 @@ function CalendarInner() {
 }
 
 export default function CalendarPage() {
-  return <RequireAuth><CalendarInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/calendar"><CalendarInner /></RequireResource></RequireAuth>;
 }

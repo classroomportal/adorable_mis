@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 // Recognized CSV columns (all optional except first_name, last_name, dob, year_group).
@@ -140,5 +141,5 @@ function ImportInner() {
 }
 
 export default function ImportPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/students/import"><ImportInner /></RequireResource></RequireAuth>;
 }

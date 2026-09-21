@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import RequireAuth from "../../RequireAuth";
+import RequireResource from "../../RequireResource";
 
 const YEARS = [7, 8, 9, 10, 11, 12];
 
-export default function BlockAllocationPage() {
+function BlockAllocationInner() {
   const [year, setYear] = useState("");
   const [blocks, setBlocks] = useState([]);
   const [blockId, setBlockId] = useState("");
@@ -448,3 +450,13 @@ const tdStyle = {
   borderBottom: "1px solid #eee",
   whiteSpace: "nowrap",
 };
+
+export default function BlockAllocationPage() {
+  return (
+    <RequireAuth>
+      <RequireResource resourceKey="/admin/block-allocation">
+        <BlockAllocationInner />
+      </RequireResource>
+    </RequireAuth>
+  );
+}

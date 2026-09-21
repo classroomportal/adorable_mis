@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 
 function ParentsInner() {
   const [parents, setParents] = useState([]);
@@ -67,5 +68,5 @@ function ParentsInner() {
 }
 
 export default function ParentsPage() {
-  return <RequireAuth><ParentsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/parents"><ParentsInner /></RequireResource></RequireAuth>;
 }

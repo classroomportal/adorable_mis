@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 
@@ -346,8 +347,8 @@ function SubjectOverviewInner() {
 
 export default function SubjectOverviewPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/results/subject-overview">
       <SubjectOverviewInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

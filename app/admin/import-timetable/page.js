@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import RequireAuth from "../../RequireAuth";
+import RequireResource from "../../RequireResource";
 // If your Supabase client lives elsewhere/has a different export name,
 // adjust the import above (e.g. `import supabase from "../../../lib/supabase"`).
 
@@ -71,7 +73,7 @@ const STAGES = [
   { n: 4, label: "Done" },
 ];
 
-export default function ImportTimetablePage() {
+function ImportTimetableInner() {
   const [stage, setStage] = useState(1);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -576,5 +578,15 @@ function Stepper({ stage }) {
         );
       })}
     </div>
+  );
+}
+
+export default function ImportTimetablePage() {
+  return (
+    <RequireAuth>
+      <RequireResource resourceKey="/admin/import-timetable">
+        <ImportTimetableInner />
+      </RequireResource>
+    </RequireAuth>
   );
 }

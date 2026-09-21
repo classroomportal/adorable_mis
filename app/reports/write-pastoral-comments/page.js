@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 
@@ -263,5 +264,5 @@ function WritePastoralCommentsInner() {
 }
 
 export default function WritePastoralCommentsPage() {
-  return <RequireAuth><WritePastoralCommentsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/reports/write-pastoral-comments"><WritePastoralCommentsInner /></RequireResource></RequireAuth>;
 }

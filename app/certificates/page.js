@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 
 const MILESTONES = [
   { value: 500, label: 'Gold' },
@@ -139,5 +140,5 @@ function CertificatesInner() {
 }
 
 export default function CertificatesPage() {
-  return <RequireAuth><CertificatesInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/certificates"><CertificatesInner /></RequireResource></RequireAuth>;
 }

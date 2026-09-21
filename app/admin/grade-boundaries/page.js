@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function ImportInner() {
   const [subjects, setSubjects] = useState([]);
@@ -167,5 +168,5 @@ function ImportInner() {
 }
 
 export default function GradeBoundariesPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/admin/grade-boundaries"><ImportInner /></RequireResource></RequireAuth>;
 }

@@ -4,6 +4,7 @@ import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
 import { buildWeekColumns } from '../../../lib/generateTermTestScores';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 // Columns that are NOT subject score columns in the weekly gradebook export.
 const METADATA_COLUMNS = new Set([
@@ -380,5 +381,5 @@ function ImportInner() {
 }
 
 export default function ImportGradebookPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/results/import-gradebook"><ImportInner /></RequireResource></RequireAuth>;
 }

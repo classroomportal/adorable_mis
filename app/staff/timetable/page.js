@@ -3,6 +3,7 @@ import { useEffect, useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatTimeRange } from '../../../lib/formatTime';
 
@@ -212,8 +213,8 @@ function StaffTimetable() {
 
 export default function Page() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/staff/timetable">
       <StaffTimetable />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

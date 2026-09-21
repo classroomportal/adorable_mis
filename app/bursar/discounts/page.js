@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -225,8 +226,8 @@ function DiscountsInner() {
 
 export default function DiscountsPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/bursar/discounts">
       <DiscountsInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

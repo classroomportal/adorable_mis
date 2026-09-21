@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 // Nova-T's NCLASS.DAT rows: "Meeting ,38,CBT,    " = label, slot number,
 // staff code, room (always blank — a commitment has no room booking here).
@@ -303,5 +304,5 @@ function ImportStaffCommitmentsInner() {
 }
 
 export default function ImportStaffCommitmentsPage() {
-  return <RequireAuth><ImportStaffCommitmentsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/admin/import-staff-commitments"><ImportStaffCommitmentsInner /></RequireResource></RequireAuth>;
 }

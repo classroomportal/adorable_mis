@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 
@@ -263,5 +264,5 @@ function CheckReportsInner() {
 }
 
 export default function CheckReportsPage() {
-  return <RequireAuth><CheckReportsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/reports/check"><CheckReportsInner /></RequireResource></RequireAuth>;
 }

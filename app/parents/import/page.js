@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 // Matches the SIMS parent export: a header row (Title, Forename, Surname, phones, emails, blank UPN)
@@ -158,5 +159,5 @@ function ImportInner() {
 }
 
 export default function ImportPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/parents/import"><ImportInner /></RequireResource></RequireAuth>;
 }

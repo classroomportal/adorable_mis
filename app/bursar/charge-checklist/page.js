@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -287,8 +288,8 @@ function ChargeChecklistInner() {
 
 export default function ChargeChecklistPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/bursar/charge-checklist">
       <ChargeChecklistInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

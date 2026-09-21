@@ -80,95 +80,101 @@ function ModuleCard({ icon, label, accent, description, items, allowedHrefs }) {
   );
 }
 
+// Tab visibility and item filtering both come from hasAccess() (backed by
+// the resources/role_permissions tables an admin edits at
+// /admin/permissions), instead of the hardcoded adminOnly/roles arrays this
+// used to carry. ModuleCard already hides a tab once its items list is
+// empty, so a tab with no accessible items just disappears — no separate
+// tab-level gate needed.
 const TABS = [
   {
     key: 'home', label: 'Dashboard', icon: '🏠', accent: 'myinfo',
     description: 'Your day-to-day — timetable, family, calendar and messages.',
-    items: () => [
+    items: ({ hasAccess }) => [
       { href: '/staff/timetable', label: 'My Timetable' },
       { href: '/parent-portal', label: 'My Children' },
       { href: '/calendar', label: 'Calendar' },
       { href: '/inbox', label: 'Inbox' },
-    ],
+    ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'students', label: 'Students', icon: '🎓', accent: 'students',
     description: 'Core records, behaviour, attendance, results and certificates.',
-    items: ({ isPastoralOrSmt, isAdmin, staffRoles }) => [
+    items: ({ hasAccess }) => [
       { href: '/students', label: 'Core Data' },
       { href: '/behaviour', label: 'Behaviour Log' },
-      (isAdmin || (staffRoles || []).includes('school_office')) && { href: '/behaviour/review', label: 'Review Serious Behaviour Events' },
+      { href: '/behaviour/review', label: 'Review Serious Behaviour Events' },
       { href: '/attendance', label: 'Attendance' },
       { href: '/results', label: 'Results' },
       { href: '/results/enter', label: 'Enter Results' },
       { href: '/results/subject-overview', label: 'Subject Overview' },
       { href: '/certificates', label: 'Certificates' },
       { href: '/detention', label: 'Detention List' },
-      isPastoralOrSmt && { href: '/appeals', label: 'Behaviour Appeals' },
-    ].filter(Boolean),
+      { href: '/appeals', label: 'Behaviour Appeals' },
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students', adminOnly: true, roles: ['pastoral', 'houseparent', 'smt'],
+    key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students',
     description: 'Pastoral oversight — behaviour, detentions and mentor groups.',
-    // This card is shared with houseparent/smt, but only the pastoral role
-    // (plus admin) actually has student_class write access (migration 105) —
-    // so Class Allocation only shows for them, not the other two.
-    items: ({ isAdmin, staffRoles }) => [
+    // Class Allocation only goes to pastoral/head_of_department in
+    // role_permissions — only the pastoral role (plus admin) actually has
+    // student_class write access (migration 105), houseparent/smt don't.
+    items: ({ hasAccess }) => [
       { href: '/detention', label: 'Detentions' },
       { href: '/certificates', label: 'Certificates' },
       { href: '/pastoral/registers-not-done', label: 'Registers Not Done' },
       { href: '/appeals', label: 'Behaviour Appeals' },
       { href: '/staff/mentor-groups', label: 'Mentor Groups' },
-      (isAdmin || (staffRoles || []).includes('pastoral')) && { href: '/admin/block-allocation', label: 'Class Allocation' },
-    ].filter(Boolean),
+      { href: '/admin/block-allocation', label: 'Class Allocation' },
+    ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'reports', label: 'Reports', icon: '📝', accent: 'students',
     description: 'Write, check and generate student reports.',
-    items: ({ isAdmin }) => [
+    items: ({ hasAccess }) => [
       { href: '/reports/write-subject-comments', label: 'Write Subject Comments' },
       { href: '/reports/write-pastoral-comments', label: 'Write Pastoral Comments' },
       { href: '/reports/check', label: 'Check Reports' },
-      isAdmin && { href: '/reports/periods', label: 'Manage Report Periods' },
-      isAdmin && { href: '/reports/generate', label: 'Generate Reports' },
-    ].filter(Boolean),
+      { href: '/reports/periods', label: 'Manage Report Periods' },
+      { href: '/reports/generate', label: 'Generate Reports' },
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'comms', label: 'Communication', icon: '💬', accent: 'family', adminOnly: true, roles: ['smt', 'pastoral', 'school_office'],
+    key: 'comms', label: 'Communication', icon: '💬', accent: 'family',
     description: 'Send announcements to parents and track read receipts.',
-    items: () => [
+    items: ({ hasAccess }) => [
       { href: '/comms/compose', label: 'Send Announcements to Parents / Groups' },
       { href: '/comms/history', label: 'Message History & Read Receipts' },
-    ],
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school', adminOnly: true, roles: ['head_of_department', 'pastoral'],
+    key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school',
     description: 'Manage timetables and class allocations.',
-    items: ({ isAdmin }) => [
+    items: ({ hasAccess }) => [
       { href: '/staff/timetable', label: 'My Timetable' },
       { href: '/admin/block-allocation', label: 'Class Allocation' },
       // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
       // Class Allocation, not this.
-      isAdmin && { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
-      isAdmin && { href: '/admin/import-staff-commitments', label: 'Import Staff Commitments (NCLASS.DAT)' },
-    ].filter(Boolean),
+      { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
+      { href: '/admin/import-staff-commitments', label: 'Import Staff Commitments (NCLASS.DAT)' },
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school', adminOnly: true,
+    key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school',
     description: 'Import results, target grades and manage grading setup.',
-    items: () => [
+    items: ({ hasAccess }) => [
       { href: '/results/import-gradebook', label: 'Import Weekly Results' },
       { href: '/target-grades/import', label: 'Import Target Grades' },
       { href: '/classes/progress', label: 'Class Progress' },
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries' },
       { href: '/admin/subject-settings', label: 'Subject Settings' },
       { href: '/assessments/import', label: 'Import CAT4/NGRT' },
-    ],
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family', adminOnly: true, roles: ['bursar', 'smt'],
+    key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
     description: 'Charges, payments, discounts and the debtors list.',
-    items: () => [
+    items: ({ hasAccess }) => [
       { href: '/bursar/charge-checklist', label: 'Charge Checklist' },
       { href: '/bursar/fee-items', label: 'Fee Items (Prices)' },
       { href: '/bursar/discounts', label: 'Discounts' },
@@ -177,23 +183,23 @@ const TABS = [
       { href: '/bursar/debtors', label: 'Debtors List' },
       { href: '/bursar/audit', label: 'Audit' },
       { href: '/smt/fees-dashboard', label: 'SMT Dashboard' },
-    ],
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'tuckshop', label: 'Tuckshop', icon: '🍭', accent: 'family', adminOnly: true, roles: ['tuckshop', 'bursar'],
+    key: 'tuckshop', label: 'Tuckshop', icon: '🍭', accent: 'family',
     description: 'Sell items, top up balances and manage stock.',
-    items: () => [
+    items: ({ hasAccess }) => [
       { href: '/tuckshop/purchase', label: 'Sell Items' },
       { href: '/tuckshop/topup', label: 'Top Up Balance' },
       { href: '/tuckshop/balances', label: 'Balances' },
       { href: '/tuckshop/preorders', label: 'Preorders' },
       { href: '/tuckshop/items', label: 'Items & Prices' },
-    ],
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'staff', label: 'Staff & Access', icon: '🔐', accent: 'admin', adminOnly: true,
+    key: 'staff', label: 'Staff & Access', icon: '🔐', accent: 'admin',
     description: 'Staff accounts, roles, permissions and parent records.',
-    items: () => [
+    items: ({ hasAccess }) => [
       { href: '/staff/roles', label: 'Staff & Roles' },
       { href: '/staff/import-emails', label: 'Bulk Import Staff Emails' },
       { href: '/admin/permissions', label: 'Permissions' },
@@ -202,33 +208,33 @@ const TABS = [
       { href: '/parents', label: 'Parents' },
       { href: '/parents/welcome-emails', label: 'Send Parent Welcome Emails' },
       { href: '/parents/import', label: 'Import Parents' },
-    ],
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'administration', label: 'Administration', icon: '⏰', accent: 'admin', adminOnly: true, roles: ['hr', 'school_office'],
+    key: 'administration', label: 'Administration', icon: '⏰', accent: 'admin',
     description: "Register follow-ups, lookups and reporting.",
-    items: () => [
+    items: ({ hasAccess }) => [
       { href: '/admin/register-alerts', label: 'Register Alerts' },
       { href: '/behaviour/review', label: 'Review Serious Behaviour Events' },
       { href: '/admin/lookups', label: 'Lookups' },
       { href: '/admin/student-numbers', label: 'Student Numbers by Gender' },
       { href: '/admin/class-lists', label: 'Class Lists (Print)' },
       { href: '/admin/print-timetables', label: 'Print Timetables (Print)' },
-    ],
+    ].filter((it) => hasAccess(it.href)),
   },
   {
-    key: 'setup', label: 'Initial Setup', icon: '📥', accent: 'setup', adminOnly: true,
+    key: 'setup', label: 'Initial Setup', icon: '📥', accent: 'setup',
     description: 'One-off imports for getting a new school set up.',
-    items: () => [
+    items: ({ hasAccess }) => [
       { href: '/students/import', label: 'Import Students' },
       { href: '/students/photos/import', label: 'Import Photos' },
       { href: '/admin/import-timetable', label: 'Import Student Class Allocations' },
-    ],
+    ].filter((it) => hasAccess(it.href)),
   },
 ];
 
 export default function Home() {
-  const { session, profile, isPastoralOrSmt, staffRoles } = useAuth();
+  const { session, profile, staffRoles, hasAccess } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const [showSplash, setShowSplash] = useState(false);
 
@@ -289,9 +295,6 @@ export default function Home() {
       '/staff/timetable', '/calendar', '/inbox',
       '/students', '/behaviour', '/attendance', '/results', '/certificates', '/detention', '/appeals',
     ]);
-    const demoTabs = TABS.filter((t) =>
-      !t.adminOnly || isAdmin || (t.roles && t.roles.some((r) => (staffRoles || []).includes(r)))
-    );
     return (
       <div>
         <div className="card" style={{ borderLeft: '4px solid #c07d1f', background: '#fff7e0' }}>
@@ -299,14 +302,14 @@ export default function Home() {
         </div>
         <h1>Welcome — Training Account</h1>
         <div className="module-card-grid">
-          {demoTabs.map((t) => (
+          {TABS.map((t) => (
             <ModuleCard
               key={t.key}
               icon={t.icon}
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ isPastoralOrSmt, isAdmin, staffRoles })}
+              items={t.items({ hasAccess })}
               allowedHrefs={demoAllowedHrefs}
             />
           ))}
@@ -330,7 +333,7 @@ export default function Home() {
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ isPastoralOrSmt, isAdmin })}
+              items={t.items({ hasAccess })}
             />
           ))}
         </div>
@@ -338,22 +341,18 @@ export default function Home() {
     );
   }
 
-  const visibleTabs = TABS.filter((t) =>
-    !t.adminOnly || isAdmin || (t.roles && t.roles.some((r) => (staffRoles || []).includes(r)))
-  );
-
   return (
     <div>
       <DashboardStats isDemoAccount={profile?.is_demo_account} />
       <div className="module-card-grid">
-        {visibleTabs.map((t) => (
+        {TABS.map((t) => (
           <ModuleCard
             key={t.key}
             icon={t.icon}
             label={t.label}
             accent={t.accent}
             description={t.description}
-            items={t.items({ isPastoralOrSmt, isAdmin, staffRoles })}
+            items={t.items({ hasAccess })}
           />
         ))}
       </div>

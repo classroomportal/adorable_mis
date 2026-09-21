@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 const TARGET_TYPES = [
@@ -195,5 +196,5 @@ function ComposeInner() {
 }
 
 export default function ComposePage() {
-  return <RequireAuth><ComposeInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/comms/compose"><ComposeInner /></RequireResource></RequireAuth>;
 }

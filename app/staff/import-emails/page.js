@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 function ImportInner() {
@@ -123,5 +124,5 @@ function ImportInner() {
 }
 
 export default function StaffEmailImportPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/staff/import-emails"><ImportInner /></RequireResource></RequireAuth>;
 }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 // Maps the raw CSV column header -> clean subject name stored in `subjects`.
@@ -150,5 +151,5 @@ function ImportInner() {
 }
 
 export default function ImportPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/target-grades/import"><ImportInner /></RequireResource></RequireAuth>;
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 function PermissionsInner() {
@@ -56,6 +57,12 @@ function PermissionsInner() {
     <div>
       <h1>Permissions</h1>
       <p>Choose a role, then tick which tiles/pages it can access. Changes save instantly.</p>
+      <p style={{ color: '#5a6b8c', fontSize: '0.9rem' }}>
+        This controls which tiles a role can <em>see</em> — not what it can actually save once there.
+        Whether a role can edit or only view the data behind a tile is a separate, database-level rule
+        (a teacher can view Core Data but not edit it, for example) and isn&apos;t editable here. See{' '}
+        <code>sql/RLS_ACCESS_SUMMARY.md</code> in the repo for the full read/write breakdown per table.
+      </p>
 
       <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
         {roles.map((r) => (
@@ -105,5 +112,5 @@ function PermissionsInner() {
 }
 
 export default function PermissionsPage() {
-  return <RequireAuth><PermissionsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/admin/permissions"><PermissionsInner /></RequireResource></RequireAuth>;
 }

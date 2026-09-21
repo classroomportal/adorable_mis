@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
 
@@ -412,10 +413,10 @@ function BehaviourPageInner() {
 
 export default function BehaviourPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/behaviour">
       <Suspense fallback={<p>Loading...</p>}>
         <BehaviourPageInner />
       </Suspense>
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

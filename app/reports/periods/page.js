@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 const ALL_YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
@@ -238,8 +239,8 @@ function ManagePeriodsInner() {
 
 export default function ManagePeriodsPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/reports/periods">
       <ManagePeriodsInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

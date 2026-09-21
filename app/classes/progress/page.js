@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { classifyAverage, isWaecGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
 
 function gradeScaleOf(grade) {
@@ -195,5 +196,5 @@ function ClassProgressInner() {
 }
 
 export default function ClassProgressPage() {
-  return <RequireAuth><ClassProgressInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/classes/progress"><ClassProgressInner /></RequireResource></RequireAuth>;
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 const ROLE_LABELS = {
   admin: 'Admin',
@@ -17,6 +18,7 @@ const ROLE_LABELS = {
   admissions: 'Admissions',
   tuckshop: 'Tuckshop',
   head_of_department: 'Head of Dept',
+  mentor: 'Mentor',
 };
 const ALL_ROLES = Object.keys(ROLE_LABELS);
 
@@ -165,19 +167,22 @@ function StaffRolesInner() {
         style={{ marginBottom: '0.75rem', maxWidth: '20rem' }}
       />
 
-      <div className="table-scroll"><table className="roles-table">
+      <table className="roles-table">
         <thead>
           <tr>
             <th>Name</th>
             <th>Code</th>
             <th>Email</th>
-            {ALL_ROLES.map((r) => <th key={r}>{ROLE_LABELS[r]}</th>)}
+            <th>Roles</th>
           </tr>
         </thead>
         <tbody>
           {staff
             .filter((s) => `${s.first_name} ${s.last_name}`.toLowerCase().includes(nameFilter.toLowerCase()))
-            .map((s) => (
+            .map((s) => {
+              const assigned = [...(roleMap[s.staff_id] || [])];
+              const unassigned = ALL_ROLES.filter((r) => !assigned.includes(r));
+              return (
             <tr key={s.staff_id}>
               <td>
                 <input
@@ -213,43 +218,73 @@ function StaffRolesInner() {
                   style={{ width: '100%', boxSizing: 'border-box' }}
                 />
               </td>
-              {ALL_ROLES.map((r) => (
-                <td key={r} style={{ textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={roleMap[s.staff_id]?.has(r) || false}
-                    onChange={(e) => toggleRole(s.staff_id, r, e.target.checked)}
-                  />
-                  {r === 'head_of_department' && roleMap[s.staff_id]?.has('head_of_department') && (
+              <td style={{ minWidth: '16rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.4rem' }}>
+                  {assigned.length === 0 && <span style={{ color: '#999', fontSize: '0.85rem' }}>Class Teacher (default)</span>}
+                  {assigned.map((r) => (
+                    <span key={r} className="role-chip" style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                      background: '#eef1fb', border: '1px solid #d3d9f0', borderRadius: '999px',
+                      padding: '0.15rem 0.5rem', fontSize: '0.8rem',
+                    }}>
+                      {ROLE_LABELS[r]}
+                      <button
+                        type="button"
+                        onClick={() => toggleRole(s.staff_id, r, false)}
+                        title={`Remove ${ROLE_LABELS[r]}`}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, color: '#667' }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                {assigned.includes('head_of_department') && (
+                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.3rem' }}>
+                    Department:{' '}
                     <select
                       value={deptScopeMap[s.staff_id] || ''}
                       onChange={(e) => setDepartmentScope(s.staff_id, e.target.value)}
-                      style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.75rem' }}
                     >
                       <option value="">-- department --</option>
                       {departments.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
-                  )}
-                  {r === 'houseparent' && roleMap[s.staff_id]?.has('houseparent') && (
+                  </label>
+                )}
+                {assigned.includes('houseparent') && (
+                  <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.3rem' }}>
+                    House:{' '}
                     <select
                       value={houseScopeMap[s.staff_id] || ''}
                       onChange={(e) => setHouseScope(s.staff_id, e.target.value)}
-                      style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.75rem' }}
                     >
                       <option value="">-- house --</option>
                       {houses.map((h) => <option key={h} value={h}>{h}</option>)}
                     </select>
-                  )}
-                </td>
-              ))}
+                  </label>
+                )}
+
+                {unassigned.length > 0 && (
+                  <select
+                    value=""
+                    onChange={(e) => { if (e.target.value) toggleRole(s.staff_id, e.target.value, true); }}
+                    style={{ fontSize: '0.8rem' }}
+                  >
+                    <option value="">+ Add role...</option>
+                    {unassigned.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                  </select>
+                )}
+              </td>
             </tr>
-          ))}
+              );
+            })}
         </tbody>
-      </table></div>
+      </table>
     </div>
   );
 }
 
 export default function StaffRolesPage() {
-  return <RequireAuth><StaffRolesInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/staff/roles"><StaffRolesInner /></RequireResource></RequireAuth>;
 }

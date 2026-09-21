@@ -54,5 +54,8 @@ function InboxInner() {
 }
 
 export default function InboxPage() {
+  // Not gated by RequireResource: parents (who hold no staff role/resource
+  // grant at all) are linked here directly from the parent portal — see
+  // the same reasoning on app/parent-portal/page.js.
   return <RequireAuth><InboxInner /></RequireAuth>;
 }
