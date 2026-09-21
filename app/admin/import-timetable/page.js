@@ -37,6 +37,27 @@ async function parseTimetableFile(file) {
   return pairs;
 }
 
+// Supabase silently caps an unranged select at 1000 rows (this school's
+// student_class table alone has 4500+) — a plain .select() over "existing
+// links for these students" would quietly return only the first 1000, with
+// no error, and rows after that would just be missing from the result. On a
+// full Nova-T re-import that means real set changes get misread as brand-new
+// links and fail on uq_student_class_block instead of being swapped. Page
+// through with .range() until a short page comes back so nothing gets dropped.
+async function fetchAllRows(buildQuery) {
+  const pageSize = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 // --- Component -------------------------------------------------------------
 
 export default function ImportTimetablePage() {
@@ -116,13 +137,14 @@ export default function ImportTimetablePage() {
       // student_class does carry its own is_compound column (copied at
       // link time), so this one's fine as-is.
       const affectedStudentIds = [...new Set(wantedLinks.map((l) => l.student_id))];
-      const { data: existingLinks, error: elErr } = await supabase
-        .from("student_class")
-        .select("student_id, class_id, block_id, is_compound")
-        .in("student_id", affectedStudentIds)
-        .not("block_id", "is", null)
-        .eq("is_compound", false);
-      if (elErr) throw elErr;
+      const existingLinks = await fetchAllRows(() =>
+        supabase
+          .from("student_class")
+          .select("student_id, class_id, block_id, is_compound")
+          .in("student_id", affectedStudentIds)
+          .not("block_id", "is", null)
+          .eq("is_compound", false)
+      );
 
       const existingByStudentBlock = new Map(
         existingLinks.map((l) => [`${l.student_id}:${l.block_id}`, l.class_id])
