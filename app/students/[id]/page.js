@@ -34,17 +34,6 @@ function groupClassesByPrefix(classes) {
   return byPrefix;
 }
 
-// A block only needs the group-level (cascade) picker when a prefix's
-// classes are genuinely different subjects, e.g. "9A1/Ar" + "9A1/Bs" +
-// "9A1/Me". A block like "Maths sets" also has several classes sharing a
-// prefix ("9a/Ma1", "9a/Ma2", "9a/Ma3"), but they're all Mathematics —
-// alternative ability sets a student picks one of, not subjects to combine.
-function isCascadeBlock(classes) {
-  return [...groupClassesByPrefix(classes).values()].some(
-    (group) => new Set(group.map((c) => c.subjects?.subject_name || c.subjects?.display_name)).size > 1
-  );
-}
-
 function Collapsible({ title, defaultOpen = false, extra, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -185,10 +174,11 @@ function StudentDetail() {
     setNgrt(ng || []);
 
     let byBlock = {};
+    let compoundByBlock = {};
     if (s.year_group) {
       const { data: cb, error: cbErr } = await supabase
         .from('curriculum_blocks')
-        .select('block_id, block_name, band, classes!classes_block_id_fkey(class_id, class_code, room, subjects(subject_name, display_name), staff(first_name, last_name))')
+        .select('block_id, block_name, band, is_compound, classes!classes_block_id_fkey(class_id, class_code, room, subjects(subject_name, display_name), staff(first_name, last_name))')
         .eq('year_group', s.year_group)
         .order('block_name');
       if (cbErr) {
@@ -198,7 +188,7 @@ function StudentDetail() {
       } else {
         setBlocksError(null);
         setBlocks(cb || []);
-        (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; });
+        (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; compoundByBlock[b.block_id] = b.is_compound; });
         setBlockClasses(byBlock);
       }
     } else {
@@ -217,8 +207,7 @@ function StudentDetail() {
     (currentLinks || []).forEach((l) => {
       const bId = l.classes?.block_id;
       if (!bId) return;
-      const blockOptions = byBlock[bId] || [];
-      sel[bId] = isCascadeBlock(blockOptions) ? classPrefix(l.classes.class_code) : l.class_id;
+      sel[bId] = compoundByBlock[bId] ? classPrefix(l.classes.class_code) : l.class_id;
     });
     setBlockSelections(sel);
 
@@ -730,7 +719,13 @@ function StudentDetail() {
                 {blocks.map((b) => {
                   const options = blockClasses[b.block_id] || [];
                   const byPrefix = groupClassesByPrefix(options);
-                  const grouped = isCascadeBlock(options);
+                  // Whether a class's prefix bundles several distinct subjects a
+                  // student takes together (e.g. Pathway "101" = Bi+Ch+Co+Cv+Ph)
+                  // is exactly what curriculum_blocks.is_compound already records
+                  // — MFL/Option classes can share a prefix too (it's just the
+                  // form code, e.g. "10a"), but that's one choice among them, not
+                  // a bundle, so is_compound (not prefix grouping) is the signal.
+                  const grouped = !!b.is_compound;
                   const currentValue = blockSelections[b.block_id] || '';
                   return (
                     <tr key={b.block_id}>
