@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 // If your Supabase client lives elsewhere/has a different export name,
 // adjust the import above (e.g. `import supabase from "../../../lib/supabase"`).
@@ -60,12 +60,46 @@ async function fetchAllRows(buildQuery) {
 
 // --- Component -------------------------------------------------------------
 
+// The four screens this wizard steps through. Kept as a plain ordered list
+// (not a set of booleans) so "what's next" and "what's done" are always
+// unambiguous from a single number, and so a stray click can't land the
+// admin on two stages' content at once.
+const STAGES = [
+  { n: 1, label: "Upload" },
+  { n: 2, label: "Review matches" },
+  { n: 3, label: "Confirm & import" },
+  { n: 4, label: "Done" },
+];
+
 export default function ImportTimetablePage() {
+  const [stage, setStage] = useState(1);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(null); // { done, total }
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  // Back to stage 1 with a clean slate — used both by "Start another
+  // import" after a successful run and by "Choose a different file" while
+  // still reviewing a preview.
+  function resetToUpload() {
+    setError(null);
+    setResult(null);
+    setPreview(null);
+    setProgress(null);
+    setStage(1);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function goToConfirm() {
+    setStage(3);
+  }
+
+  function goBackToPreview() {
+    setError(null);
+    setStage(2);
+  }
 
   async function handleFile(e) {
     setError(null);
@@ -214,6 +248,7 @@ export default function ImportTimetablePage() {
         alreadyLinkedCount: alreadyLinked.length,
         ambiguous,
       });
+      setStage(2);
     } catch (err) {
       setError(err.message || String(err));
     } finally {
@@ -295,6 +330,7 @@ export default function ImportTimetablePage() {
         alreadyLinked: preview.alreadyLinkedCount,
         failed,
       });
+      setStage(4);
     } catch (err) {
       setError(err.message || String(err));
     } finally {
@@ -308,30 +344,39 @@ export default function ImportTimetablePage() {
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", padding: "1rem" }}>
       <h1>Import Timetable (SIMS export)</h1>
-      <p style={{ color: "#555" }}>
-        Upload the UPN/Class export. It'll be parsed, matched against
-        existing students and classes, and previewed before anything is
-        written. Existing links are never duplicated — and if a student has
-        moved to a different set within the same subject block, the old
-        link is swapped out rather than causing a conflict.
-      </p>
 
-      <input type="file" accept=".csv" onChange={handleFile} disabled={busy} />
+      <Stepper stage={stage} />
 
       {error && (
         <p style={{ color: "crimson", marginTop: "1rem" }}>Error: {error}</p>
       )}
 
-      {busy && !progress && <p>Working…</p>}
-      {progress && (
-        <p>
-          Importing… {progress.done} / {progress.total}
-        </p>
+      {stage === 1 && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <p style={{ color: "#555" }}>
+            Upload the UPN/Class export. It'll be parsed, matched against
+            existing students and classes, and previewed on the next screen
+            before anything is written. Existing links are never duplicated —
+            and if a student has moved to a different set within the same
+            subject block, the old link is swapped out rather than causing a
+            conflict.
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFile}
+            disabled={busy}
+          />
+
+          {busy && <p style={{ marginTop: "1rem" }}>Parsing and matching…</p>}
+        </div>
       )}
 
-      {preview && (
+      {stage === 2 && preview && (
         <div style={{ marginTop: "1.5rem" }}>
-          <h2>Preview</h2>
+          <h2>Review matches</h2>
           <ul>
             <li>Total rows parsed: {preview.totalRows}</li>
             <li>
@@ -408,20 +453,68 @@ export default function ImportTimetablePage() {
             </details>
           )}
 
-          <button
-            onClick={handleImport}
-            disabled={busy || totalToApply === 0}
-            style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}
-          >
-            Import {totalToApply} change(s)
-          </button>
+          <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem" }}>
+            <button onClick={resetToUpload} disabled={busy} style={{ padding: "0.5rem 1rem" }}>
+              ← Choose a different file
+            </button>
+            <button
+              onClick={goToConfirm}
+              disabled={busy}
+              style={{ padding: "0.5rem 1rem", fontWeight: "bold" }}
+            >
+              Continue to confirm →
+            </button>
+          </div>
         </div>
       )}
 
-      {result && (
-        <div style={{ marginTop: "1rem" }}>
+      {stage === 3 && preview && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <h2>Confirm & import</h2>
+          <p style={{ color: "#555" }}>
+            Nothing has been written yet. This will apply:
+          </p>
+          <ul>
+            <li>{preview.toInsert.length} new link(s)</li>
+            <li>{preview.toSwap.length} set change(s) (old link removed, new one added)</li>
+            {preview.ambiguous.length > 0 && (
+              <li style={{ color: "#b45309" }}>{preview.ambiguous.length} ambiguous row(s) — skipped</li>
+            )}
+            {preview.unmatchedUpns.length > 0 && (
+              <li style={{ color: "#b45309" }}>{preview.unmatchedUpns.length} unmatched UPN(s) — skipped</li>
+            )}
+            {preview.unmatchedCodes.length > 0 && (
+              <li style={{ color: "#b45309" }}>{preview.unmatchedCodes.length} unmatched class code(s) — skipped</li>
+            )}
+            <li>{preview.alreadyLinkedCount} row(s) already matched — no change needed</li>
+          </ul>
+
+          {progress && (
+            <p>
+              Importing… {progress.done} / {progress.total}
+            </p>
+          )}
+
+          <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem" }}>
+            <button onClick={goBackToPreview} disabled={busy} style={{ padding: "0.5rem 1rem" }}>
+              ← Back to review
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={busy || totalToApply === 0}
+              style={{ padding: "0.5rem 1rem", fontWeight: "bold" }}
+            >
+              {busy ? "Importing…" : `Import ${totalToApply} change(s)`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {stage === 4 && result && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <h2>Done</h2>
           <div style={{ color: "green" }}>
-            Done. Added {result.inserted} new link(s), applied {result.swapped} set change(s),
+            Added {result.inserted} new link(s), applied {result.swapped} set change(s),
             {" "}{result.alreadyLinked} row(s) already matched and needed no change.
           </div>
           {result.failed.length > 0 && (
@@ -442,8 +535,46 @@ export default function ImportTimetablePage() {
               </p>
             </details>
           )}
+
+          <button onClick={resetToUpload} style={{ marginTop: "1.5rem", padding: "0.5rem 1rem" }}>
+            Start another import
+          </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// --- Stepper -----------------------------------------------------------
+
+function Stepper({ stage }) {
+  return (
+    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem", flexWrap: "wrap" }}>
+      {STAGES.map((s, i) => {
+        const isCurrent = s.n === stage;
+        const isDone = s.n < stage;
+        return (
+          <div key={s.n} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.25rem 0.6rem",
+                borderRadius: 999,
+                fontSize: "0.85em",
+                fontWeight: isCurrent ? "bold" : "normal",
+                color: isCurrent ? "#fff" : isDone ? "#2e7d32" : "#888",
+                background: isCurrent ? "#1a73e8" : isDone ? "#e6f4ea" : "#f1f1f1",
+                border: isDone ? "1px solid #2e7d32" : "1px solid transparent",
+              }}
+            >
+              {isDone ? "✓" : s.n}. {s.label}
+            </span>
+            {i < STAGES.length - 1 && <span style={{ color: "#ccc" }}>→</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }
