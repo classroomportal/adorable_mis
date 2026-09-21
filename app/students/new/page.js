@@ -8,7 +8,7 @@ function NewStudentInner() {
   const router = useRouter();
   const [upn, setUpn] = useState('');
   const [form, setForm] = useState({
-    first_name: '', last_name: '', middle_name: '', gender: '', year_group: '', form_class: '',
+    first_name: '', last_name: '', middle_name: '', gender: '', year_group: '', form_class: '', dob: '',
   });
   const [status, setStatus] = useState(null);
   const [mentorGroups, setMentorGroups] = useState([]);
@@ -32,6 +32,10 @@ function NewStudentInner() {
       setStatus('First and last name are required.');
       return;
     }
+    if (!form.dob) {
+      setStatus('Date of birth is required.');
+      return;
+    }
     setStatus('Creating...');
     const { data, error } = await supabase
       .from('students')
@@ -43,6 +47,7 @@ function NewStudentInner() {
         gender: form.gender || null,
         year_group: form.year_group ? Number(form.year_group) : null,
         form_class: form.form_class || null,
+        dob: form.dob,
         status: 'active',
       })
       .select('student_id')
@@ -80,6 +85,10 @@ function NewStudentInner() {
         <label>
           Gender
           <input value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} />
+        </label>
+        <label>
+          Date of birth
+          <input type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} required />
         </label>
         <label>
           Year group
