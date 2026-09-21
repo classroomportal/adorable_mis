@@ -17,6 +17,18 @@ import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 // Required secret (Dashboard > Edge Functions > Secrets, or
 // `supabase secrets set`): GMAIL_APP_PASSWORD
 // Optional secret: GMAIL_SENDER (defaults to mis@abc.sch.ng if unset)
+//
+// Per the principal's policy, no system email may reach parents — only
+// @abc.sch.ng addresses. Rather than trust each of the four Postgres call
+// sites to only ever pass in-domain recipients, this is enforced here as
+// the single choke point: any recipient outside @abc.sch.ng is silently
+// dropped before sending. If that empties the recipient list, the call
+// still returns ok:true (callers fire-and-forget via pg_net and don't
+// depend on the email having actually gone out).
+const SCHOOL_DOMAIN = "@abc.sch.ng";
+function isSchoolAddress(addr: string) {
+  return addr.trim().toLowerCase().endsWith(SCHOOL_DOMAIN);
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -41,6 +53,13 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "to, subject, and text or html are required" }), { status: 400 });
   }
 
+  const recipients = (Array.isArray(to) ? to : [to]).filter(isSchoolAddress);
+  if (recipients.length === 0) {
+    return new Response(JSON.stringify({ ok: true, skipped: "no @abc.sch.ng recipients" }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const client = new SMTPClient({
     connection: {
       hostname: "smtp.gmail.com",
@@ -53,7 +72,7 @@ Deno.serve(async (req: Request) => {
   try {
     await client.send({
       from: sender,
-      to,
+      to: recipients,
       subject,
       // denomailer requires plain-text `content` even for an HTML send —
       // fall back to a stripped version of the HTML when only html is given.
