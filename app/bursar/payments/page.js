@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { formatUKDate } from '../../../lib/formatDate';
 import { useAuth } from '../../../lib/AuthContext';
 import { generateInvoicePdfForStudent } from '../../../lib/generateInvoicePdf';
@@ -369,10 +370,10 @@ function RecordPaymentInner() {
 
 export default function RecordPaymentPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/bursar/payments">
       <Suspense fallback={<p className="p-5 text-sm text-neutral-500">Loading…</p>}>
         <RecordPaymentInner />
       </Suspense>
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

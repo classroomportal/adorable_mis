@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 
 const STATUS_OPTIONS = ['scheduled', 'attended', 'missed', 'cancelled'];
 
@@ -112,5 +113,5 @@ function DetentionInner() {
 }
 
 export default function DetentionPage() {
-  return <RequireAuth><DetentionInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/detention"><DetentionInner /></RequireResource></RequireAuth>;
 }

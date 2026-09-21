@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 
@@ -181,8 +182,8 @@ function ReviewInner() {
 
 export default function BehaviourReviewPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/behaviour/review">
       <ReviewInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

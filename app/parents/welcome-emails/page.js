@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 function WelcomeEmailsInner() {
@@ -129,5 +130,5 @@ Adorable British College`;
 }
 
 export default function WelcomeEmailsPage() {
-  return <RequireAuth><WelcomeEmailsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/parents/welcome-emails"><WelcomeEmailsInner /></RequireResource></RequireAuth>;
 }

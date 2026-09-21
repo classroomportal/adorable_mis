@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -98,8 +99,8 @@ function PreordersInner() {
 
 export default function PreordersPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/tuckshop/preorders">
       <PreordersInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

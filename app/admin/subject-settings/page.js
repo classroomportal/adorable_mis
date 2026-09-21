@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 const KEY_STAGES = ['KS3', 'KS4', 'KS5'];
 
@@ -238,5 +239,5 @@ function ImportInner() {
 }
 
 export default function SubjectSettingsPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/admin/subject-settings"><ImportInner /></RequireResource></RequireAuth>;
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -119,8 +120,8 @@ function BalancesInner() {
 
 export default function BalancesPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/tuckshop/balances">
       <BalancesInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

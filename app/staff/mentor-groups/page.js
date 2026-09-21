@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function MentorGroupsInner() {
   const [groups, setGroups] = useState([]);
@@ -171,5 +172,5 @@ function MentorGroupsInner() {
 }
 
 export default function MentorGroupsPage() {
-  return <RequireAuth><MentorGroupsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/staff/mentor-groups"><MentorGroupsInner /></RequireResource></RequireAuth>;
 }

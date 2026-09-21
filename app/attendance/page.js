@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 import Link from 'next/link';
 import { formatUKDate } from '../../lib/formatDate';
 
@@ -244,10 +245,10 @@ function AttendanceInner() {
 
 export default function AttendancePage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/attendance">
       <Suspense fallback={<p>Loading...</p>}>
         <AttendanceInner />
       </Suspense>
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

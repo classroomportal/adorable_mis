@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 
@@ -238,5 +239,5 @@ function EnterResultsInner() {
 }
 
 export default function EnterResultsPage() {
-  return <RequireAuth><EnterResultsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/results/enter"><EnterResultsInner /></RequireResource></RequireAuth>;
 }

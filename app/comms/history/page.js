@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 function ComposeInner() {
@@ -67,5 +68,5 @@ function ComposeInner() {
 }
 
 export default function HistoryPage() {
-  return <RequireAuth><ComposeInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/comms/history"><ComposeInner /></RequireResource></RequireAuth>;
 }

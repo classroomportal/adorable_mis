@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 
 function StudentsList() {
   const [students, setStudents] = useState([]);
@@ -162,5 +163,5 @@ function StudentsList() {
 }
 
 export default function Page() {
-  return <RequireAuth><StudentsList /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/students"><StudentsList /></RequireResource></RequireAuth>;
 }

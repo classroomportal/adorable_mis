@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function FeeItemsInner() {
   const [items, setItems] = useState([]);
@@ -174,8 +175,8 @@ function FeeItemsInner() {
 
 export default function FeeItemsPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/bursar/fee-items">
       <FeeItemsInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

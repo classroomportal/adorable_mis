@@ -432,5 +432,9 @@ export function ParentPortalInner() {
 }
 
 export default function ParentPortalPage() {
+  // Not gated by RequireResource: ParentPortalInner is also rendered directly
+  // for profile.role === 'parent' (see app/page.js), and parents themselves
+  // never hold a staff role/resource grant — gating this route would lock
+  // them out of their own portal if they ever land on it directly.
   return <RequireAuth><ParentPortalInner /></RequireAuth>;
 }

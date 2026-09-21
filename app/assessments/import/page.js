@@ -3,6 +3,7 @@ import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 // Matches the CoreSats "StudentData" export format exactly.
@@ -165,5 +166,5 @@ function ImportInner() {
 }
 
 export default function ImportPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/assessments/import"><ImportInner /></RequireResource></RequireAuth>;
 }

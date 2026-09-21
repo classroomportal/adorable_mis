@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 const ROLE_LABELS = {
   admin: 'Admin',
@@ -251,5 +252,5 @@ function StaffRolesInner() {
 }
 
 export default function StaffRolesPage() {
-  return <RequireAuth><StaffRolesInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/staff/roles"><StaffRolesInner /></RequireResource></RequireAuth>;
 }

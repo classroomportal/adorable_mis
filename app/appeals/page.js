@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 
 function AppealsInner() {
@@ -96,5 +97,5 @@ function AppealsInner() {
 }
 
 export default function AppealsPage() {
-  return <RequireAuth><AppealsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/appeals"><AppealsInner /></RequireResource></RequireAuth>;
 }

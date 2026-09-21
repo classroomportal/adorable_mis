@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function LookupList({ title, table, idField }) {
   const [items, setItems] = useState([]);
@@ -165,5 +166,5 @@ function LookupsInner() {
 }
 
 export default function LookupsPage() {
-  return <RequireAuth><LookupsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/admin/lookups"><LookupsInner /></RequireResource></RequireAuth>;
 }

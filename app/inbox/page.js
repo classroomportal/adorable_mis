@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 
 function InboxInner() {
@@ -54,5 +55,5 @@ function InboxInner() {
 }
 
 export default function InboxPage() {
-  return <RequireAuth><InboxInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/inbox"><InboxInner /></RequireResource></RequireAuth>;
 }

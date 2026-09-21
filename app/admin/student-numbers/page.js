@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 const YEARS = [7, 8, 9, 10, 11, 12];
 
@@ -65,7 +67,7 @@ function CountsTable({ title, rows, totalCounts }) {
   );
 }
 
-export default function StudentNumbersPage() {
+function StudentNumbersInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -249,3 +251,13 @@ const tdStyle = {
   borderBottom: '1px solid #eee',
   whiteSpace: 'nowrap',
 };
+
+export default function StudentNumbersPage() {
+  return (
+    <RequireAuth>
+      <RequireResource resourceKey="/admin/student-numbers">
+        <StudentNumbersInner />
+      </RequireResource>
+    </RequireAuth>
+  );
+}

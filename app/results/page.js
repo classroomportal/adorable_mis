@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
+import RequireResource from '../RequireResource';
 import { formatUKDate } from '../../lib/formatDate';
 import { classifyGrade, STYLE, LABEL } from '../../lib/gradeCompare';
 
@@ -171,5 +172,5 @@ function ResultsPageInner() {
 }
 
 export default function ResultsPage() {
-  return <RequireAuth><ResultsPageInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/results"><ResultsPageInner /></RequireResource></RequireAuth>;
 }

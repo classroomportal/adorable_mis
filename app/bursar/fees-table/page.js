@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 const STATUS_STYLES = {
   paid: 'bg-green-50 text-green-700 border-green-200',
@@ -288,8 +289,8 @@ function FeesTableInner() {
 
 export default function FeesTablePage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/bursar/fees-table">
       <FeesTableInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

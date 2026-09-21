@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 function RegisterAlertsInner() {
   const [rows, setRows] = useState([]);
@@ -68,5 +69,5 @@ function RegisterAlertsInner() {
 }
 
 export default function RegisterAlertsPage() {
-  return <RequireAuth><RegisterAlertsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/admin/register-alerts"><RegisterAlertsInner /></RequireResource></RequireAuth>;
 }

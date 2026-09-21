@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 function naira(n) {
@@ -239,8 +240,8 @@ function FeesDashboardInner() {
 
 export default function FeesDashboardPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/smt/fees-dashboard">
       <FeesDashboardInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

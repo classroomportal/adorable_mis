@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 function PermissionsInner() {
@@ -105,5 +106,5 @@ function PermissionsInner() {
 }
 
 export default function PermissionsPage() {
-  return <RequireAuth><PermissionsInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/admin/permissions"><PermissionsInner /></RequireResource></RequireAuth>;
 }

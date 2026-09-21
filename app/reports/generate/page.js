@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { publishTermTestScores } from '../../../lib/generateTermTestScores';
 import { publishKeyStageTranscript, KEY_STAGE_GROUP_OPTIONS } from '../../../lib/generateKeyStageTranscript';
@@ -130,8 +131,8 @@ function GenerateReportsInner() {
 
 export default function GenerateReportsPage() {
   return (
-    <RequireAuth>
+    <RequireAuth><RequireResource resourceKey="/reports/generate">
       <GenerateReportsInner />
-    </RequireAuth>
+    </RequireResource></RequireAuth>
   );
 }

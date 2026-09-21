@@ -1,11 +1,13 @@
 'use client';
 import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import RequireAuth from '../../RequireAuth';
+import RequireResource from '../../RequireResource';
 
 const YEARS = [7, 8, 9, 10, 11, 12, 13];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-export default function PrintTimetablesPage() {
+function PrintTimetablesInner() {
   const [year, setYear] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -151,3 +153,13 @@ function chunk(arr, size) {
 }
 
 const selectStyle = { padding: '0.4rem', fontSize: '0.9rem', marginTop: '0.25rem', minWidth: 160 };
+
+export default function PrintTimetablesPage() {
+  return (
+    <RequireAuth>
+      <RequireResource resourceKey="/admin/print-timetables">
+        <PrintTimetablesInner />
+      </RequireResource>
+    </RequireAuth>
+  );
+}

@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import RequireAuth from "../../RequireAuth";
+import RequireResource from "../../RequireResource";
 
 // --- Parsing -----------------------------------------------------------
 // Nova-T TBTRA.DAT .. TBTRF.DAT rows (one file per year group), CSV-ish:
@@ -108,7 +110,7 @@ async function parseFiles(files) {
 
 // --- Component -----------------------------------------------------------
 
-export default function ImportClassesPage() {
+function ImportClassesInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -874,5 +876,15 @@ export default function ImportClassesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ImportClassesPage() {
+  return (
+    <RequireAuth>
+      <RequireResource resourceKey="/admin/import-classes">
+        <ImportClassesInner />
+      </RequireResource>
+    </RequireAuth>
   );
 }

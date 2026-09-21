@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import RequireAuth from '../../../RequireAuth';
+import RequireResource from '../../../RequireResource';
 import { useAuth } from '../../../../lib/AuthContext';
 
 function ImportInner() {
@@ -107,5 +108,5 @@ function ImportInner() {
 }
 
 export default function ImportPage() {
-  return <RequireAuth><ImportInner /></RequireAuth>;
+  return <RequireAuth><RequireResource resourceKey="/students/photos/import"><ImportInner /></RequireResource></RequireAuth>;
 }
