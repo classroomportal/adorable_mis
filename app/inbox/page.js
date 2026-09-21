@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
-import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 
 function InboxInner() {
@@ -55,5 +54,8 @@ function InboxInner() {
 }
 
 export default function InboxPage() {
-  return <RequireAuth><RequireResource resourceKey="/inbox"><InboxInner /></RequireResource></RequireAuth>;
+  // Not gated by RequireResource: parents (who hold no staff role/resource
+  // grant at all) are linked here directly from the parent portal — see
+  // the same reasoning on app/parent-portal/page.js.
+  return <RequireAuth><InboxInner /></RequireAuth>;
 }
