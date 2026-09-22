@@ -79,8 +79,13 @@ jobs:
             -H "Content-Type: application/gzip" \
             --data-binary "@${{ steps.pkg.outputs.file }}"
 
-      - name: Prune backups older than 14 days
+      # Tiered retention, per docs/BACKUP_POLICY.md: recent days in full, then
+      # Sundays, then month-firsts. A flat window loses the ability to go back
+      # to before a data error that nobody spotted for a term.
+      - name: Apply the retention schedule
         env:
           SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RETENTION_DAYS: '14'
+          DAILY_DAYS: '14'
+          WEEKLY_WEEKS: '8'
+          MONTHLY_MONTHS: '12'
         run: ./scripts/prune-backups.sh
