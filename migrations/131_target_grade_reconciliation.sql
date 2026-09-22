@@ -55,41 +55,61 @@ where subject_name in (
 -- security_invoker so the caller's RLS applies — the three views fixed in the
 -- earlier security sweep were exactly this mistake. Active students only:
 -- leavers keep whatever they had.
+--
+-- A target already held against the subject itself is always legitimate, even
+-- where a fallback mapping exists. That matters: mapping Civics at Sociology
+-- would otherwise turn the 60 Civics targets already recorded into orphans and
+-- offer them up for deletion. A mapping is a place to read a target FROM when
+-- the subject has none of its own, never a reason to discard one somebody set.
 
 create or replace view target_grade_gaps
 with (security_invoker = true) as
-with expected as (
-  -- what each student should hold a target in: every target-carrying subject
-  -- they are timetabled for, resolved through the fallback mapping
+with studied as (
   select distinct
     sc.student_id,
-    coalesce(sub.target_fallback_subject_id, c.subject_id) as subject_id
+    c.subject_id,
+    sub.target_fallback_subject_id
   from student_class sc
   join students st on st.student_id = sc.student_id and st.status = 'active'
   join classes c on c.class_id = sc.class_id
   join subjects sub on sub.subject_id = c.subject_id
   where sub.carries_target_grade
+),
+-- every subject a target may legitimately sit against: the subject studied,
+-- and the subject its target may be read from
+acceptable as (
+  select student_id, subject_id from studied
+  union
+  select student_id, target_fallback_subject_id from studied
+  where target_fallback_subject_id is not null
 )
-select e.student_id, e.subject_id, 'missing'::text as gap, null::text as target_grade
-from expected e
+select distinct
+  s.student_id,
+  -- reported against the mapped subject where there is one, since that is
+  -- where a new target should be entered
+  coalesce(s.target_fallback_subject_id, s.subject_id) as subject_id,
+  'missing'::text as gap,
+  null::text as target_grade
+from studied s
 where not exists (
   select 1 from target_grades t
-  where t.student_id = e.student_id and t.subject_id = e.subject_id
+  where t.student_id = s.student_id
+    and t.subject_id in (s.subject_id, s.target_fallback_subject_id)
 )
 union all
 select t.student_id, t.subject_id, 'orphan'::text, t.target_grade
 from target_grades t
 join students st on st.student_id = t.student_id and st.status = 'active'
 where not exists (
-  select 1 from expected e
-  where e.student_id = t.student_id and e.subject_id = t.subject_id
+  select 1 from acceptable a
+  where a.student_id = t.student_id and a.subject_id = t.subject_id
 );
 
 comment on view target_grade_gaps is
   'One row per target grade problem for an active student. "missing" = studies '
-  'the subject, holds no target. "orphan" = holds a target for a subject they '
-  'do not study. Mapping a subject via target_fallback_subject_id resolves both '
-  'sides at once without writing any rows.';
+  'the subject and holds no target for it or for the subject it is mapped to. '
+  '"orphan" = holds a target for a subject they neither study nor map to. '
+  'Setting target_fallback_subject_id resolves both sides at once, writing no rows.';
 
 -- 3. Removals are staged, counted and reversible --------------------------
 
