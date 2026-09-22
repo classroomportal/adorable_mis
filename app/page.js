@@ -194,6 +194,7 @@ const TABS = [
       { href: '/tuckshop/balances', label: 'Balances' },
       { href: '/tuckshop/preorders', label: 'Preorders' },
       { href: '/tuckshop/items', label: 'Items & Prices' },
+      { href: '/tuckshop/ordering', label: 'Open / Close Ordering' },
     ].filter((it) => hasAccess(it.href)),
   },
   {
