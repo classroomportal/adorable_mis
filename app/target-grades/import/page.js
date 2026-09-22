@@ -33,22 +33,6 @@ const SUBJECT_COLUMNS = {
   'Spanish': 'Spanish',
 };
 
-// Supabase caps unpaginated selects at 1000 rows; student_class is well past
-// that, so page through rather than read a silent slice of the timetable.
-async function fetchAll(table, columns) {
-  const PAGE = 1000;
-  let from = 0;
-  let all = [];
-  while (true) {
-    const { data, error } = await supabase.from(table).select(columns).range(from, from + PAGE - 1);
-    if (error) { console.error(`fetchAll ${table}:`, error.message); break; }
-    all = all.concat(data || []);
-    if (!data || data.length < PAGE) break;
-    from += PAGE;
-  }
-  return all;
-}
-
 function ImportInner() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
@@ -86,59 +70,20 @@ function ImportInner() {
   async function handleImport() {
     setStatus('Loading lookups...');
     const { data: students } = await supabase.from('students').select('student_id, upn');
-    const { data: subjects } = await supabase.from('subjects').select('subject_id, subject_name, target_fallback_subject_id');
+    const { data: subjects } = await supabase.from('subjects').select('subject_id, subject_name');
     const studentByUpn = Object.fromEntries((students || []).map((s) => [s.upn, s.student_id]));
     const subjectByName = Object.fromEntries((subjects || []).map((s) => [s.subject_name.toLowerCase(), s.subject_id]));
-    const fallbackFor = Object.fromEntries(
-      (subjects || []).filter((s) => s.target_fallback_subject_id).map((s) => [s.subject_id, s.target_fallback_subject_id])
-    );
-
-    // What each student actually studies. CAT4 predicts a grade for its whole
-    // basket regardless of option choices, so without this the import writes a
-    // target for every subject in the file to every student in it — which is
-    // how 3,188 targets for subjects nobody takes got here in the first place.
-    // student_class is 4000+ rows, past the 1000-row cap, so page through it.
-    const enrolled = {};
-    {
-      const classes = await fetchAll('classes', 'class_id, subject_id');
-      const subjectByClass = Object.fromEntries((classes || []).map((c) => [c.class_id, c.subject_id]));
-      const links = await fetchAll('student_class', 'student_id, class_id');
-      for (const l of links) {
-        const subjectId = subjectByClass[l.class_id];
-        if (!subjectId) continue;
-        if (!enrolled[l.student_id]) enrolled[l.student_id] = new Set();
-        enrolled[l.student_id].add(fallbackFor[subjectId] || subjectId);
-      }
-    }
 
     const problems = [];
     const upserts = [];
-    const skippedBySubject = {};
     for (const r of rows) {
       const studentId = studentByUpn[r.upn];
       if (!studentId) { problems.push(`${r.name || r.upn}: no student found with UPN ${r.upn}`); continue; }
-      const studies = enrolled[studentId];
       for (const [subjectName, grade] of Object.entries(r.targets)) {
         const subjectId = subjectByName[subjectName.toLowerCase()];
         if (!subjectId) { problems.push(`${r.name}: subject "${subjectName}" not found — run migration 028 first`); continue; }
-        // A student with no class links at all is a timetabling gap, not a
-        // signal that they study nothing, so their targets are written as
-        // before rather than silently dropped.
-        if (studies && studies.size > 0 && !studies.has(subjectId)) {
-          skippedBySubject[subjectName] = (skippedBySubject[subjectName] || 0) + 1;
-          continue;
-        }
         upserts.push({ student_id: studentId, subject_id: subjectId, target_grade: grade });
       }
-    }
-
-    const skippedTotal = Object.values(skippedBySubject).reduce((a, b) => a + b, 0);
-    if (skippedTotal > 0) {
-      problems.push(
-        `Skipped ${skippedTotal} target(s) for subjects the student is not timetabled for: `
-        + Object.entries(skippedBySubject).sort((a, b) => b[1] - a[1]).map(([s, n]) => `${s} (${n})`).join(', ')
-        + '. If a subject here should have been written, the student is missing that class on their timetable.'
-      );
     }
 
     setStatus(`Saving ${upserts.length} target grades...`);
@@ -165,7 +110,6 @@ function ImportInner() {
 
       <div className="card">
         <p>Expects the CAT4-derived target grades export: one row per student (matched by <code>UPN</code>), with a column per subject holding a target letter grade.</p>
-        <p>CAT4 predicts a grade for every subject in its basket, whether or not the student takes it. Only subjects the student is timetabled for are written; anything skipped is listed after the import.</p>
         <p>Run migration <code>028_target_grades.sql</code> first — it creates the target grades table and the grade scale used for red/amber/green comparisons.</p>
         <input type="file" accept=".csv" onChange={handleFile} />
       </div>
