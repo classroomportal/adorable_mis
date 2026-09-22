@@ -50,16 +50,16 @@ Please log in at misform.work and change your password on first login.
 Kind regards,
 Adorable British College`;
 
-  const GMAIL_MAIL_MERGE_INSTRUCTIONS = `Sending via info@abc.sch.ng (Google Workspace mail merge)
+  const GMAIL_MAIL_MERGE_INSTRUCTIONS = `Sending via mis@abc.sch.ng (Google Workspace mail merge)
 
 1. Open Google Sheets → File → Import → upload the CSV you just downloaded. Keep the header row (staff_name, email, temp_password).
 2. In Gmail, compose a new email and click the mail-merge icon in the compose toolbar (only shows if multi-send mode is on).
    Not showing? Settings → See all settings → Advanced → Multi-Send Mode → Enable.
 3. Link the Google Sheet you just made as the recipient source.
-4. Write the email using {{staff_name}}, {{email}}, {{temp_password}} as merge fields (see the Resend template above for wording — swap {{ }} for the merge fields).
+4. Write the email using {{staff_name}}, {{email}}, {{temp_password}} as merge fields (see the template above for wording — swap {{ }} for the merge fields).
 5. Preview a few, then send. Workspace allows up to 2,000 recipients/day, so the whole staff list can go in one send.`;
 
-  const OVER_DAILY_CAP = rows.length > 90;
+  const OVER_DAILY_CAP = rows.length > 2000;
 
   async function handleSend() {
     setSending(true);
@@ -106,18 +106,18 @@ Adorable British College`;
 
           {OVER_DAILY_CAP && (
             <p style={{ color: '#b45309', fontWeight: 600 }}>
-              {rows.length} is over Resend's 100/day free-tier cap — sending now will fail partway through.
+              {rows.length} is over Google Workspace's ~2,000/day send limit — sending now will fail partway through.
               Export the CSV below and mail-merge it through the school office's own email instead.
             </p>
           )}
 
           <button onClick={handleExportCsv} style={{ marginRight: '0.5rem' }}>Download CSV for mail merge</button>
           <button onClick={handleSend} disabled={sending || OVER_DAILY_CAP}>
-            {sending ? 'Sending...' : `Send ${rows.length} emails via Resend`}
+            {sending ? 'Sending...' : `Send ${rows.length} emails from mis@abc.sch.ng`}
           </button>
 
           <details style={{ marginTop: '0.75rem' }} open={OVER_DAILY_CAP}>
-            <summary>How to send via info@abc.sch.ng (Google Workspace mail merge)</summary>
+            <summary>How to send via mis@abc.sch.ng (Google Workspace mail merge)</summary>
             <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{GMAIL_MAIL_MERGE_INSTRUCTIONS}</pre>
           </details>
 
