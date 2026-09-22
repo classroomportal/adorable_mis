@@ -23,7 +23,8 @@
 --
 --        section  md5 as of 22 September 2026
 --        views    41bfd52a164405d5a704d8bc6420b725
---        tables   d28d960c54525cf1b439639af65c39d9
+--        tables   d28d960c54525cf1b439639af65c39d9  (stale: predates the
+--                 check-constraints column added after migration 131)
 --        funcs    974e65e9edaacbdfef7f5e9f4a1e62e2
 --
 -- The header, "Quick facts" and "Known gaps" sections of the markdown file are
@@ -87,6 +88,20 @@ fks as (
   join pg_class cf on cf.oid = con.confrelid
   group by t.relname
 ),
+checks as (
+  -- Added after migration 131: this section did not exist, so CURRENT_SCHEMA.md
+  -- documented columns, foreign keys, triggers and policies but never CHECK
+  -- constraints. Migration 128 was written against that file and missed
+  -- staff_roles_role_name_check, which silently made the new `nurse` role
+  -- impossible to assign to anybody. A value-list constraint is exactly the
+  -- kind of thing a migration needs to know about.
+  select t.relname as tbl,
+    string_agg(format('- `%s`: `%s`', con.conname, pg_get_constraintdef(con.oid)),
+      E'\n' order by con.conname) as body
+  from t
+  join pg_constraint con on con.conrelid = t.oid and con.contype = 'c'
+  group by t.relname
+),
 trg as (
   select t.relname as tbl,
     string_agg(format('- `%s`: `%s`', g.tgname, pg_get_triggerdef(g.oid)),
@@ -105,15 +120,17 @@ pol as (
   group by p.tablename
 )
 select string_agg(
-         format(E'### `%s`\n\n| Column | Type | Nullable | Default |\n|---|---|---|---|\n%s\n%s%s%s',
+         format(E'### `%s`\n\n| Column | Type | Nullable | Default |\n|---|---|---|---|\n%s\n%s%s%s%s',
            t.relname, cols.body,
            coalesce(E'\nForeign keys: ' || fks.body || E'\n', ''),
+           coalesce(E'\nCheck constraints:\n' || checks.body || E'\n', ''),
            coalesce(E'\nTriggers:\n'      || trg.body || E'\n', ''),
            coalesce(E'\nRLS policies:\n'  || pol.body || E'\n', '')),
          E'\n\n' order by t.relname) as md
 from t
 join cols on cols.tbl = t.relname
 left join fks on fks.tbl = t.relname
+left join checks on checks.tbl = t.relname
 left join trg on trg.tbl = t.relname
 left join pol on pol.tbl = t.relname;
 
