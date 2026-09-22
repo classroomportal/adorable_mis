@@ -230,6 +230,9 @@ function ImportInner() {
           student_id: student.student_id,
           subject_id: subjectId,
           week_start_date: weekStart,
+          // Sent explicitly because it is part of the conflict target below:
+          // a gradebook row belongs to a week, not to a named result set.
+          result_set_event_id: null,
           score,
           max_score: 100,
           grade,
@@ -244,7 +247,12 @@ function ImportInner() {
       setStatus(`Importing batch ${i + 1} of ${batches.length} (${successCount} of ${toUpsert.length} results written so far)...`);
       const { error: upErr } = await supabase
         .from('results')
-        .upsert(batch, { onConflict: 'student_id,subject_id,week_start_date' });
+        // Migration 130 widened the weekly uniqueness rule to include
+        // result_set_event_id (NULLS NOT DISTINCT), so that a teacher entering
+        // a result set no longer collides with an imported row for the same
+        // week. Re-importing a week still updates in place: these rows all
+        // carry a null result set, and null collides with null.
+        .upsert(batch, { onConflict: 'student_id,subject_id,week_start_date,result_set_event_id' });
       if (upErr) problems.push(`Batch write failed: ${upErr.message}`);
       else successCount += batch.length;
     }
