@@ -571,3 +571,114 @@ input, select { width: 100%; }
   padding-top: 0.35rem;
   font-weight: 600;
 }
+
+/* --- Clinic: student roster cards, roomy forms, visit cards ------------- */
+
+/* A roster that shows the face as well as the name — the nurse recognises
+   the child at the door long before they recall the form class. */
+.student-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.student-card {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.7rem;
+  background: white;
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.student-card:hover {
+  border-color: var(--brand-600);
+  box-shadow: 0 2px 8px rgba(15,23,42,0.10);
+}
+
+/* Two columns on a desktop, one on a phone. Long-answer fields (textareas)
+   take the full width so a care plan is not typed through a letterbox. */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 1rem;
+}
+
+@media (min-width: 720px) {
+  .form-grid { grid-template-columns: repeat(3, 1fr); }
+  .form-grid label:has(textarea) { grid-column: 1 / -1; }
+}
+
+.check-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem 1rem;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 720px) {
+  .check-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* A sick bay visit has a dozen fields. As table columns they were squeezed
+   to a few characters each; as a card each one gets a label and room to
+   breathe, and nothing had to be dropped to make it fit. */
+.visit-card {
+  background: white;
+  border: 1px solid var(--slate-200);
+  border-left: 4px solid var(--slate-200);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.visit-card.is-urgent { border-left-color: #a3232c; }
+.visit-card.is-followup { border-left-color: #c07d1f; }
+
+.visit-card-head {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.visit-card-who { display: flex; gap: 0.7rem; align-items: flex-start; min-width: 0; }
+
+.visit-card-reason {
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 0.55rem 0 0.15rem;
+}
+
+/* The detail grid: each fact keeps its label, so a blank one reads as
+   "not recorded" rather than as a missing column. */
+.visit-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.55rem 1.1rem;
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--slate-100);
+}
+
+.visit-detail-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.visit-detail-value { font-size: 0.9rem; overflow-wrap: anywhere; }
+
+.visit-card-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.7rem; }
