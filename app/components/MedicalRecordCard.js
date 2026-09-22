@@ -2,6 +2,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatUKDate } from '../../lib/formatDate';
+import {
+  BLOOD_GROUPS, GENOTYPES, CONDITION_KINDS, SEVERITIES,
+  VISIT_CATEGORIES, VISIT_OUTCOMES, labelFor, bmiBand,
+  formatDateTime, isoToday, localDateTimeValue,
+} from '../../lib/medical';
+import { Chip, Stat, Field } from './MedicalChips';
 
 // The student medical record — standing profile, allergies/conditions, the
 // growth (height/weight/BMI) record, the sick bay day book and
@@ -18,80 +24,6 @@ const TABS = [
   { key: 'clinic', label: 'Sick Bay' },
   { key: 'immunisations', label: 'Immunisations' },
 ];
-
-const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-const GENOTYPES = ['AA', 'AS', 'SS', 'AC', 'SC', 'CC'];
-const CONDITION_KINDS = [
-  { value: 'allergy', label: 'Allergy' },
-  { value: 'condition', label: 'Condition' },
-  { value: 'medication', label: 'Regular medication' },
-  { value: 'dietary', label: 'Dietary' },
-];
-const SEVERITIES = [
-  { value: 'mild', label: 'Mild' },
-  { value: 'moderate', label: 'Moderate' },
-  { value: 'severe', label: 'Severe' },
-  { value: 'life_threatening', label: 'Life-threatening' },
-];
-const VISIT_CATEGORIES = [
-  { value: 'illness', label: 'Illness' },
-  { value: 'injury', label: 'Injury' },
-  { value: 'medication', label: 'Medication round' },
-  { value: 'routine', label: 'Routine check' },
-  { value: 'mental_health', label: 'Mental health' },
-  { value: 'other', label: 'Other' },
-];
-const VISIT_OUTCOMES = [
-  { value: 'returned_to_class', label: 'Returned to class' },
-  { value: 'rested_in_sick_bay', label: 'Rested in sick bay' },
-  { value: 'sent_home', label: 'Sent home' },
-  { value: 'referred_to_hospital', label: 'Referred to hospital' },
-  { value: 'other', label: 'Other' },
-];
-
-// WHO BMI-for-age (5–19) reads the z-score, not the adult 18.5/25/30 bands,
-// which are wrong for every student here (they are 9–18). A z-score only
-// exists once bmi_for_age_reference has been loaded — until then the app
-// shows the BMI number alone rather than inventing a category.
-function bmiBand(z) {
-  if (z === null || z === undefined) return null;
-  if (z < -3) return { label: 'Severe thinness', tone: 'bad' };
-  if (z < -2) return { label: 'Thinness', tone: 'bad' };
-  if (z <= 1) return { label: 'Healthy weight', tone: 'good' };
-  if (z <= 2) return { label: 'Overweight', tone: 'warn' };
-  return { label: 'Obesity', tone: 'bad' };
-}
-
-const TONE_STYLE = {
-  good: { background: '#dcf5e3', color: '#1a7a3d' },
-  warn: { background: '#fdecad', color: '#7a5a10' },
-  bad: { background: '#fbdede', color: '#a3232c' },
-  neutral: { background: 'var(--slate-100)', color: 'var(--ink-soft)' },
-};
-
-function Chip({ children, tone = 'neutral', title }) {
-  return (
-    <span className="badge" style={{ ...TONE_STYLE[tone], marginRight: '0.4rem' }} title={title}>
-      {children}
-    </span>
-  );
-}
-
-function Field({ label, children }) {
-  return (
-    <label style={{ display: 'block', marginBottom: '0.6rem' }}>
-      <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--ink-soft)', fontWeight: 600 }}>{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function formatDateTime(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 const EMPTY_PROFILE = {
   blood_group: '', genotype: '', gp_name: '', gp_phone: '',
@@ -187,7 +119,7 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
   async function markReviewed() {
     setStatus('Saving...');
     const result = await supabase.from('student_medical').upsert(
-      { student_id: studentId, last_reviewed_on: new Date().toISOString().slice(0, 10), last_reviewed_by: await currentUserId() },
+      { student_id: studentId, last_reviewed_on: isoToday(), last_reviewed_by: await currentUserId() },
       { onConflict: 'student_id' }
     );
     if (report(result, 'Marked as reviewed today.')) load();
@@ -287,7 +219,7 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
   const alerts = activeConditions.filter((c) => c.severity === 'severe' || c.severity === 'life_threatening');
   const latest = growth[0] || null;
   const previous = growth[1] || null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoToday();
   const overdue = immunisations.filter((i) => i.next_due_on && i.next_due_on < today);
 
   // Live preview only — the stored BMI is the generated column the database
@@ -463,12 +395,12 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
                         <tbody>
                           {conditions.map((c) => (
                             <tr key={c.condition_id} style={{ opacity: c.active ? 1 : 0.5 }}>
-                              <td>{CONDITION_KINDS.find((k) => k.value === c.kind)?.label || c.kind}</td>
+                              <td>{labelFor(CONDITION_KINDS, c.kind)}</td>
                               <td>{c.label}{!c.active && ' (resolved)'}</td>
                               <td>
                                 {c.severity
                                   ? <Chip tone={c.severity === 'life_threatening' || c.severity === 'severe' ? 'bad' : c.severity === 'moderate' ? 'warn' : 'neutral'}>
-                                      {SEVERITIES.find((s) => s.value === c.severity)?.label}
+                                      {labelFor(SEVERITIES, c.severity)}
                                     </Chip>
                                   : '—'}
                               </td>
@@ -615,11 +547,11 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
                           {visits.map((v) => (
                             <tr key={v.visit_id}>
                               <td>{formatDateTime(v.visited_at)}</td>
-                              <td>{VISIT_CATEGORIES.find((c) => c.value === v.category)?.label || '—'}</td>
+                              <td>{labelFor(VISIT_CATEGORIES, v.category) || '—'}</td>
                               <td>{v.reason}{v.follow_up_needed && <> <Chip tone="warn">follow-up</Chip></>}</td>
                               <td>{v.temperature_c ? `${v.temperature_c}°C` : '—'}</td>
                               <td>{[v.treatment, v.medication_given, v.dose_given].filter(Boolean).join(' · ') || '—'}</td>
-                              <td>{VISIT_OUTCOMES.find((o) => o.value === v.outcome)?.label || '—'}</td>
+                              <td>{labelFor(VISIT_OUTCOMES, v.outcome) || '—'}</td>
                               <td>{v.parent_notified ? <Chip tone="good">Yes</Chip> : <Chip tone="bad">No</Chip>}</td>
                             </tr>
                           ))}
@@ -633,7 +565,7 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
                       type="button"
                       style={{ marginTop: '0.6rem' }}
                       onClick={() => setNewVisit({
-                        visited_at: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+                        visited_at: localDateTimeValue(),
                         category: 'illness', reason: '', temperature_c: '', observations: '', treatment: '',
                         medication_given: '', dose_given: '', outcome: 'returned_to_class',
                         parent_notified: false, follow_up_needed: false,
@@ -746,16 +678,6 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value, sub }) {
-  return (
-    <div style={{ background: 'var(--slate-50)', border: '1px solid var(--slate-200)', borderRadius: 10, padding: '0.6rem 0.85rem', minWidth: '7.5rem' }}>
-      <div style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-      <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{value}</div>
-      {sub && <div style={{ fontSize: '0.7rem', color: 'var(--ink-soft)' }}>{sub}</div>}
     </div>
   );
 }
