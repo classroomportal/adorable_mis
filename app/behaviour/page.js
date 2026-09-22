@@ -63,10 +63,14 @@ function BehaviourPageInner() {
   });
   const [status, setStatus] = useState(null);
 
+  // behaviour_events has two FKs to staff (staff_id and protocol_reviewed_by),
+  // so a bare staff(...) embed is ambiguous: PostgREST rejects the whole query
+  // and these lists came back empty while the homepage count (no embed) didn't.
+  // Always name the FK.
   async function loadEvents() {
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, type, category, points, students(student_id, first_name, last_name, boarding_house), staff(first_name, last_name)')
+      .select('event_id, event_date, type, category, points, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('is_demo', !!profile?.is_demo_account)
       .order('event_date', { ascending: false })
       .limit(20);
@@ -78,7 +82,7 @@ function BehaviourPageInner() {
     since.setDate(since.getDate() - 7);
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, category, points, students(student_id, first_name, last_name, boarding_house), staff(first_name, last_name)')
+      .select('event_id, event_date, category, points, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('type', 'negative')
       .eq('is_demo', !!profile?.is_demo_account)
       .gte('event_date', since.toISOString().slice(0, 10))
