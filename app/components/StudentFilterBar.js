@@ -34,13 +34,13 @@ export function useStudentFilterOptions() {
 
 export default function StudentFilterBar({
   filter, onChange, options, extra, resultCount, totalCount,
-  onLoad, loading, dirty,
+  onLoad, loading, dirty, embedded,
 }) {
   const set = (patch) => onChange({ ...filter, ...patch });
   const active = Object.entries(filter).some(([, v]) => v !== '');
 
   return (
-    <div className="card">
+    <div className={embedded ? 'filter-bar-embedded' : 'card'}>
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label style={{ maxWidth: '9rem' }}>Year group
           <select value={filter.yearGroup} onChange={(e) => set({ yearGroup: e.target.value })}>

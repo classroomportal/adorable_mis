@@ -470,8 +470,8 @@ function ScreeningForm({ student, photo, termId, termName, existing, onClose, on
                 ['genotype_confirmed', 'Genotype confirmed'],
                 ['immunisations_up_to_date', 'Immunisations up to date'],
               ].map(([key, label]) => (
-                <label key={key} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
-                  <input type="checkbox" style={{ width: 'auto' }} checked={!!form[key]} onChange={(e) => set({ [key]: e.target.checked })} />
+                <label key={key} className="checkbox-row">
+                  <input type="checkbox" checked={!!form[key]} onChange={(e) => set({ [key]: e.target.checked })} />
                   {label}
                 </label>
               ))}
@@ -541,8 +541,8 @@ function ScreeningForm({ student, photo, termId, termName, existing, onClose, on
                 <textarea rows={2} style={{ width: '100%' }} value={form.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
               </Field>
             </div>
-            <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
-              <input type="checkbox" style={{ width: 'auto' }} checked={form.referral_needed} onChange={(e) => set({ referral_needed: e.target.checked })} />
+            <label className="checkbox-row">
+              <input type="checkbox" checked={form.referral_needed} onChange={(e) => set({ referral_needed: e.target.checked })} />
               Referral to a doctor or hospital needed
             </label>
             <button type="submit">{existing ? 'Update screening' : 'Save screening'}</button>{' '}
