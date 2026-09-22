@@ -57,7 +57,11 @@ function VisitsInner() {
   const [visits, setVisits] = useState([]);
   const [photos, setPhotos] = useState({});
   const [students, setStudents] = useState([]);
-  const [studentFilter, setStudentFilter] = useState('');
+  // The picker gets its own copy of the filter: narrowing the log you are
+  // reading and narrowing the list you are picking from are different jobs,
+  // and a nurse recording a visit should not have their view of the log
+  // rearranged underneath them.
+  const [pickerFilter, setPickerFilter] = useState({ ...EMPTY_STUDENT_FILTER });
   const [draft, setDraft] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -93,7 +97,7 @@ function VisitsInner() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('students')
-        .select('student_id, first_name, last_name, year_group, form_class')
+        .select('student_id, first_name, last_name, year_group, form_class, gender, boarding_house, admission_number')
         .eq('status', 'active').order('last_name');
       setStudents(data || []);
     })();
@@ -148,7 +152,7 @@ function VisitsInner() {
     if (err) { setStatus(`Could not save: ${err.message}`); return; }
     setStatus('Visit recorded.');
     setDraft(null);
-    setStudentFilter('');
+    setPickerFilter({ ...EMPTY_STUDENT_FILTER });
     load();
   }
 
@@ -169,9 +173,11 @@ function VisitsInner() {
     load();
   }
 
-  const matchingStudents = students.filter((s) =>
-    studentName(s).toLowerCase().includes(studentFilter.toLowerCase())
-  ).slice(0, 50);
+  // 274 students is too many to scroll, so the same year/form/gender/house
+  // filters narrow the picker. No slice: once filtered to a form class the
+  // list is short, and silently truncating it would hide a student the
+  // nurse is looking straight at.
+  const matchingStudents = students.filter((s) => matchesStudentFilter(s, pickerFilter));
 
   return (
     <main style={{ padding: '1.25rem', maxWidth: 1100, margin: '0 auto' }}>
@@ -220,25 +226,33 @@ function VisitsInner() {
         <div className="card">
           <h2>Record a visit</h2>
           <form onSubmit={save}>
-            <Field label="Student">
-              <input
-                placeholder="Type a name to search..."
-                value={studentFilter}
-                onChange={(e) => { setStudentFilter(e.target.value); setDraft({ ...draft, student_id: '' }); }}
+            <fieldset style={{ border: '1px solid var(--slate-200)', borderRadius: 8, padding: '0.6rem 0.8rem', marginBottom: '0.9rem' }}>
+              <legend style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', fontWeight: 600 }}>Student</legend>
+              <StudentFilterBar
+                embedded
+                filter={pickerFilter}
+                onChange={(f) => { setPickerFilter(f); setDraft((d) => ({ ...d, student_id: '' })); }}
+                options={options}
               />
               <select
                 value={draft.student_id}
                 onChange={(e) => setDraft({ ...draft, student_id: e.target.value })}
-                style={{ marginTop: '0.3rem' }}
+                size={matchingStudents.length > 1 && matchingStudents.length <= 10 ? matchingStudents.length + 1 : undefined}
+                style={{ marginTop: '0.5rem' }}
               >
-                <option value="">— pick a student —</option>
+                <option value="">
+                  {matchingStudents.length === 0 ? '— no students match these filters —' : '— pick a student —'}
+                </option>
                 {matchingStudents.map((s) => (
                   <option key={s.student_id} value={s.student_id}>
-                    {studentName(s)} ({s.form_class || `Y${s.year_group}`})
+                    {studentName(s)} ({s.form_class || `Y${s.year_group}`}{s.boarding_house ? ` · ${s.boarding_house}` : ''})
                   </option>
                 ))}
               </select>
-            </Field>
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', margin: '0.35rem 0 0' }}>
+                {matchingStudents.length} of {students.length} students
+              </p>
+            </fieldset>
             <div className="form-grid">
               <Field label="When">
                 <input type="datetime-local" value={draft.visited_at} onChange={(e) => setDraft({ ...draft, visited_at: e.target.value })} />
@@ -273,12 +287,12 @@ function VisitsInner() {
               </Field>
             </div>
             <div className="check-grid">
-              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
-                <input type="checkbox" style={{ width: 'auto' }} checked={draft.parent_notified} onChange={(e) => setDraft({ ...draft, parent_notified: e.target.checked })} />
+              <label className="checkbox-row">
+                <input type="checkbox" checked={draft.parent_notified} onChange={(e) => setDraft({ ...draft, parent_notified: e.target.checked })} />
                 Parent / guardian notified
               </label>
-              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
-                <input type="checkbox" style={{ width: 'auto' }} checked={draft.follow_up_needed} onChange={(e) => setDraft({ ...draft, follow_up_needed: e.target.checked })} />
+              <label className="checkbox-row">
+                <input type="checkbox" checked={draft.follow_up_needed} onChange={(e) => setDraft({ ...draft, follow_up_needed: e.target.checked })} />
                 Follow-up needed
               </label>
             </div>

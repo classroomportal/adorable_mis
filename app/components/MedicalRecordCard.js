@@ -355,8 +355,8 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
                           ['consent_emergency_treatment', 'Emergency treatment if parents cannot be reached'],
                           ['carries_own_medication', 'Student carries their own medication (inhaler, EpiPen…)'],
                         ].map(([key, label]) => (
-                          <label key={key} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.3rem', fontSize: '0.85rem' }}>
-                            <input type="checkbox" style={{ width: 'auto' }} checked={!!profileDraft[key]} onChange={(e) => setProfileDraft({ ...profileDraft, [key]: e.target.checked })} />
+                          <label key={key} className="checkbox-row">
+                            <input type="checkbox" checked={!!profileDraft[key]} onChange={(e) => setProfileDraft({ ...profileDraft, [key]: e.target.checked })} />
                             {label}
                           </label>
                         ))}
@@ -607,12 +607,12 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
                           {VISIT_OUTCOMES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                       </Field>
-                      <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
-                        <input type="checkbox" style={{ width: 'auto' }} checked={newVisit.parent_notified} onChange={(e) => setNewVisit({ ...newVisit, parent_notified: e.target.checked })} />
+                      <label className="checkbox-row">
+                        <input type="checkbox" checked={newVisit.parent_notified} onChange={(e) => setNewVisit({ ...newVisit, parent_notified: e.target.checked })} />
                         Parent / guardian notified
                       </label>
-                      <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
-                        <input type="checkbox" style={{ width: 'auto' }} checked={newVisit.follow_up_needed} onChange={(e) => setNewVisit({ ...newVisit, follow_up_needed: e.target.checked })} />
+                      <label className="checkbox-row">
+                        <input type="checkbox" checked={newVisit.follow_up_needed} onChange={(e) => setNewVisit({ ...newVisit, follow_up_needed: e.target.checked })} />
                         Follow-up needed
                       </label>
                       <button type="submit">Save visit</button>{' '}
