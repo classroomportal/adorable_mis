@@ -661,15 +661,43 @@ input, select { width: 100%; }
 }
 
 /* The detail grid: each fact keeps its label, so a blank one reads as
-   "not recorded" rather than as a missing column. */
+   "not recorded" rather than as a missing column.
+   Short facts only — one tidy row of them. The prose fields go in
+   .visit-notes-grid below, because sharing a grid with them left
+   "Flushed, no rash, chest clear" in an 11rem column while three empty
+   columns sat beside it. */
 .visit-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: 0.55rem 1.1rem;
   margin-top: 0.7rem;
   padding-top: 0.7rem;
   border-top: 1px solid var(--slate-100);
 }
+
+/* Observations and treatment are sentences, not values — half a card each
+   on a desktop, full width on a phone. */
+.visit-notes-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem 1.1rem;
+  margin-top: 0.55rem;
+}
+
+@media (min-width: 720px) {
+  .visit-notes-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Right-aligned beside the name on a desktop; under it, left-aligned, on a
+   phone, where a right-aligned block reads as a stray. */
+.visit-card-meta { font-size: 0.8rem; color: var(--ink-soft); text-align: left; }
+
+@media (min-width: 720px) {
+  .visit-card-meta { text-align: right; }
+}
+
+/* From/To belong together — without this they wrap onto separate rows. */
+.filter-date-pair { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: nowrap; }
 
 .visit-detail-label {
   font-size: 0.68rem;

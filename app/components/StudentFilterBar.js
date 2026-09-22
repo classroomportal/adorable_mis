@@ -32,7 +32,10 @@ export function useStudentFilterOptions() {
   return options;
 }
 
-export default function StudentFilterBar({ filter, onChange, options, extra, resultCount, totalCount }) {
+export default function StudentFilterBar({
+  filter, onChange, options, extra, resultCount, totalCount,
+  onLoad, loading, dirty,
+}) {
   const set = (patch) => onChange({ ...filter, ...patch });
   const active = Object.entries(filter).some(([, v]) => v !== '');
 
@@ -72,10 +75,26 @@ export default function StudentFilterBar({ filter, onChange, options, extra, res
 
         {extra}
 
+        {/* Load is the primary action when a screen has server-side filters:
+            the ones above narrow rows already in the browser, but a date
+            range or a search term has to go back to the database, and doing
+            that on every keystroke is both slow and surprising. */}
+        {onLoad && (
+          <button type="button" onClick={onLoad} disabled={loading}>
+            {loading ? 'Loading...' : 'Load'}
+          </button>
+        )}
+
         {active && (
-          <button type="button" onClick={() => onChange({ ...EMPTY_STUDENT_FILTER })}>Clear</button>
+          <button type="button" className="secondary" onClick={() => onChange({ ...EMPTY_STUDENT_FILTER })}>Clear</button>
         )}
       </div>
+
+      {dirty && (
+        <p style={{ fontSize: '0.8rem', color: '#7a5a10', margin: '0.6rem 0 0', fontWeight: 600 }}>
+          Filters changed — press Load to fetch them.
+        </p>
+      )}
 
       {resultCount !== undefined && (
         <p style={{ fontSize: '0.8rem', color: 'var(--ink-soft)', margin: '0.6rem 0 0' }}>
