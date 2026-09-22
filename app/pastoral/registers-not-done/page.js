@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { schoolClock } from '../../../lib/schoolTime';
+import { formatLateness } from '../../components/AttendanceSummary';
 
 function RegistersNotDoneInner() {
   const [rows, setRows] = useState([]);
@@ -27,7 +29,16 @@ function RegistersNotDoneInner() {
   return (
     <div>
       <h1>Registers Not Done</h1>
-      <p>Periods that started more than 15 minutes ago with no register submitted, within the last 3 hours.</p>
+      <p>
+        Every register still outstanding today: periods that started more than 15 minutes ago
+        with nothing submitted. They stay listed until the register is taken, rather than ageing
+        off the list unnoticed.
+      </p>
+      {/* School time, stated plainly: the figures are Lagos wall-clock, and a
+          laptop set to another zone would otherwise make them look wrong. */}
+      <p style={{ color: '#5b6472', fontSize: '0.85rem' }}>
+        School time now: <strong>{schoolClock()}</strong> (Lagos)
+      </p>
 
       <div className="card">
         {loading ? <p>Loading...</p> : rows.length === 0 ? <p>All registers are up to date.</p> : (
@@ -38,7 +49,7 @@ function RegistersNotDoneInner() {
                 <th>Class</th>
                 <th>Period</th>
                 <th>Started</th>
-                <th>Minutes late</th>
+                <th>Outstanding for</th>
               </tr>
             </thead>
             <tbody>
@@ -46,9 +57,12 @@ function RegistersNotDoneInner() {
                 <tr key={r.slot_id}>
                   <td>{r.teacher_name}</td>
                   <td>{r.class_code}</td>
-                  <td>{r.period_number}</td>
-                  <td>{r.start_time}</td>
-                  <td>{Math.round(r.minutes_since_start)}</td>
+                  {/* The school's period names are offset from period_number —
+                      number 3 is "Period 2" — so printing the number made the
+                      start time look wrong against it. Show what staff call it. */}
+                  <td>{r.period_name || `Period ${r.period_number}`}</td>
+                  <td>{(r.start_time || '').slice(0, 5)}</td>
+                  <td>{formatLateness(Math.round(r.minutes_since_start))}</td>
                 </tr>
               ))}
             </tbody>

@@ -6,6 +6,7 @@ import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import Link from 'next/link';
 import { formatUKDate } from '../../lib/formatDate';
+import { formatTimeRange } from '../../lib/formatTime';
 import { schoolToday, minutesSinceSchoolTime } from '../../lib/schoolTime';
 import { useAuth } from '../../lib/AuthContext';
 
@@ -22,7 +23,7 @@ function AttendanceInner() {
   const [roster, setRoster] = useState([]);
   const [marks, setMarks] = useState({}); // student_id -> code
   const [lateMinutes, setLateMinutes] = useState({}); // student_id -> minutes late, as typed
-  const [slotStart, setSlotStart] = useState(null); // start_time of this class's slot in this period
+  const [slot, setSlot] = useState(null); // {start_time, end_time} of this class's slot in this period
   const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
   const [status, setStatus] = useState(null);
   const [loadingRoster, setLoadingRoster] = useState(false);
@@ -107,19 +108,19 @@ function AttendanceInner() {
   // can sit in the same period on more than one day; only the slot for the
   // day being registered is relevant.
   useEffect(() => {
-    async function loadSlotStart() {
-      if (!classId || !date) { setSlotStart(null); return; }
+    async function loadSlot() {
+      if (!classId || !date) { setSlot(null); return; }
       const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short' });
       const { data } = await supabase
         .from('timetable_slots')
-        .select('start_time')
+        .select('start_time, end_time')
         .eq('class_id', classId)
         .eq('period_number', periodNumber)
         .eq('day_of_week', dayLabel)
         .maybeSingle();
-      setSlotStart(data?.start_time || null);
+      setSlot(data || null);
     }
-    loadSlotStart();
+    loadSlot();
   }, [classId, date, periodNumber]);
 
   function statusColor(status) {
@@ -134,15 +135,29 @@ function AttendanceInner() {
     return !!code && codeToStatus[code] === 'late';
   }
 
+  // periods.period_number is offset from the lesson number — Registration is
+  // number 1, so number 2 is Lesson 1 — which made the old "P{number}" badges
+  // read a lesson ahead of what they meant. short_label is the school's own
+  // abbreviation (M, L1..L6), kept in the database rather than derived here.
+  const periodByNumber = Object.fromEntries(periods.map((p) => [p.period_number, p]));
+  function periodShort(n) {
+    return periodByNumber[n]?.short_label || `P${n}`;
+  }
+  function periodLabel(n) {
+    return periodByNumber[n]?.period_name || `Period ${n}`;
+  }
+
   // Marking someone late is almost always done as they walk in, so offer the
-  // minutes elapsed since the period started as a starting figure. Only when
-  // the register is for today and the clock is inside a plausible range —
-  // otherwise the teacher types it themselves rather than being handed a
-  // number they'd have to notice was nonsense.
+  // minutes elapsed since the period started as a starting figure — but only
+  // while the lesson is actually running. A register written up afterwards was
+  // offering absurdities ("a late mark starts at 166 min" for a 45-minute
+  // lesson); past the bell the teacher types the real figure instead.
   const suggestedLateMinutes = (() => {
-    if (date !== schoolToday() || !slotStart) return null;
-    const elapsed = minutesSinceSchoolTime(slotStart);
-    if (elapsed === null || elapsed < 1 || elapsed > 240) return null;
+    if (date !== schoolToday() || !slot?.start_time || !slot?.end_time) return null;
+    const elapsed = minutesSinceSchoolTime(slot.start_time);
+    const remaining = minutesSinceSchoolTime(slot.end_time);
+    if (elapsed === null || remaining === null) return null;
+    if (elapsed < 1 || remaining > 0) return null; // before it starts, or after it ends
     return String(elapsed);
   })();
 
@@ -282,9 +297,9 @@ function AttendanceInner() {
                   Log behaviour for this class
                 </Link>
               </div>
-              {slotStart && (
+              {slot?.start_time && (
                 <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: '#666' }}>
-                  This period starts at {slotStart.slice(0, 5)}. Minutes late are counted from then
+                  {periodLabel(periodNumber)} runs {formatTimeRange(slot.start_time, slot.end_time)}. Minutes late are counted from the start
                   {suggestedLateMinutes !== null && `, and a late mark starts at ${suggestedLateMinutes} min — change it if that isn't right`}.
                 </p>
               )}
@@ -302,7 +317,7 @@ function AttendanceInner() {
                             {todaySoFar[s.student_id].map((row) => (
                               <span
                                 key={row.period_number}
-                                title={`Period ${row.period_number}: ${row.code}${row.minutes_late ? ` — ${row.minutes_late} minutes late` : ''}`}
+                                title={`${periodLabel(row.period_number)}: ${row.code}${row.minutes_late ? ` — ${row.minutes_late} minutes late` : ''}`}
                                 style={{
                                   fontSize: '0.75em',
                                   fontWeight: 600,
@@ -312,7 +327,7 @@ function AttendanceInner() {
                                   padding: '1px 6px',
                                 }}
                               >
-                                P{row.period_number}:{row.code}{row.minutes_late ? ` +${row.minutes_late}m` : ''}
+                                {periodShort(row.period_number)}:{row.code}{row.minutes_late ? ` +${row.minutes_late}m` : ''}
                               </span>
                             ))}
                           </div>
