@@ -47,13 +47,13 @@ function CheckReportsInner() {
 
     const { data: subjectRows } = await supabase
       .from('report_subject_comments')
-      .select('id, student_id, subject_id, comment, effort_grade, status, students(first_name, last_name), subjects(subject_name), staff(first_name, last_name)')
+      .select('id, student_id, subject_id, comment, effort_grade, status, students(first_name, last_name), subjects(subject_name), staff!report_subject_comments_staff_id_fkey(first_name, last_name)')
       .eq('report_period_id', periodId)
       .eq('status', 'submitted');
 
     const { data: pastoralRows } = await supabase
       .from('report_pastoral_comments')
-      .select('id, student_id, comment_type, comment, status, students(first_name, last_name), staff(first_name, last_name)')
+      .select('id, student_id, comment_type, comment, status, students(first_name, last_name), staff!report_pastoral_comments_staff_id_fkey(first_name, last_name)')
       .eq('report_period_id', periodId)
       .eq('status', 'submitted');
 

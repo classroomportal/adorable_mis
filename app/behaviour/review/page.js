@@ -28,7 +28,7 @@ function ReviewInner() {
       supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active'),
       supabase
         .from('behaviour_events')
-        .select('event_id, event_date, category, points, description, student_id, students(first_name, last_name), staff(first_name, last_name)')
+        .select('event_id, event_date, category, points, description, student_id, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
         .eq('type', 'negative')
         .lte('points', -4)
         .eq('visible_to_parents', false)
