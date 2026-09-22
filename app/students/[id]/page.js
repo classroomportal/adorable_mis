@@ -34,8 +34,12 @@ function groupClassesByPrefix(classes) {
   return byPrefix;
 }
 
-function Collapsible({ title, defaultOpen = false, extra, children }) {
+// `extra` renders in the header, which is visible while the section is shut —
+// so a button there (Edit) has to be able to open the section, otherwise
+// clicking it appears to do nothing.
+function Collapsible({ title, defaultOpen = false, forceOpen = false, extra, children }) {
   const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
   return (
     <div className="card">
       <div
@@ -54,8 +58,9 @@ function Collapsible({ title, defaultOpen = false, extra, children }) {
 function StudentDetail() {
   const params = useParams();
   const id = params.id;
-  const { profile } = useAuth();
+  const { profile, staffRoles } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  const canEditAssessment = isAdmin || (staffRoles || []).includes('assessment_manager');
 
   const [student, setStudent] = useState(null);
   const [parents, setParents] = useState([]);
@@ -68,6 +73,20 @@ function StudentDetail() {
   const [targetList, setTargetList] = useState([]); // all target grades for this student, incl. subjects with no results yet
   const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(new Set()); // subject_ids this student is timetabled for
   const [gradePoints, setGradePoints] = useState({}); // grade -> points
+  const [gradeList, setGradeList] = useState([]); // grades, best first, for the target dropdown
+  const [subjectsById, setSubjectsById] = useState({}); // subject_id -> display name
+
+  // Assessment staff maintain targets and the CAT4/NGRT standardised scores.
+  // As everywhere else in this app the real boundary is RLS — target_grades,
+  // cat4_results and ngrt_results all carry assessment-manager write policies
+  // — so this only decides whether the Edit buttons render.
+  const [editingTargets, setEditingTargets] = useState(false);
+  const [targetDraft, setTargetDraft] = useState({}); // subject_id -> grade ('' clears)
+  const [targetStatus, setTargetStatus] = useState(null);
+  const [editingScores, setEditingScores] = useState(false);
+  const [cat4Draft, setCat4Draft] = useState([]);
+  const [ngrtDraft, setNgrtDraft] = useState([]);
+  const [scoreStatus, setScoreStatus] = useState(null);
   const [photoStatus, setPhotoStatus] = useState(null);
   const [cat4, setCat4] = useState([]);
   const [ngrt, setNgrt] = useState([]);
@@ -167,6 +186,14 @@ function StudentDetail() {
     setTargetMap(Object.fromEntries((tg || []).map((t) => [t.subject_id, t.target_grade])));
     const { data: gs } = await supabase.from('grade_scale').select('*');
     setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
+    // Best grade first, so the dropdown reads A* → U rather than alphabetically.
+    setGradeList((gs || []).slice().sort((a, b) => Number(b.points) - Number(a.points)).map((g) => g.grade));
+
+    // Needed to offer a target for a subject the student takes but has no
+    // target row for yet — those subjects are absent from target_grades, so
+    // the joined name isn't available from the query above.
+    const { data: subs } = await supabase.from('subjects').select('subject_id, subject_name, display_name');
+    setSubjectsById(Object.fromEntries((subs || []).map((s2) => [s2.subject_id, s2.display_name || s2.subject_name])));
 
     const { data: c4 } = await supabase.from('cat4_results').select('*').eq('student_id', id).order('test_date', { ascending: false });
     setCat4(c4 || []);
@@ -217,6 +244,102 @@ function StudentDetail() {
   }
 
   useEffect(() => { loadAll(); }, [id]);
+
+  // The subjects the Target Grades panel offers: what the student is
+  // timetabled for, plus anything they already carry a target or a result in
+  // so an existing row is never hidden from the person trying to correct it.
+  function targetEditableSubjectIds() {
+    const ids = new Set(enrolledSubjectIds);
+    targetList.forEach((t) => ids.add(t.subject_id));
+    results.forEach((r) => ids.add(r.subject_id));
+    return [...ids].sort((a, b) => (subjectsById[a] || '').localeCompare(subjectsById[b] || ''));
+  }
+
+  function startEditingTargets() {
+    setTargetDraft(Object.fromEntries(targetList.map((t) => [t.subject_id, t.target_grade])));
+    setTargetStatus(null);
+    setEditingTargets(true);
+  }
+
+  async function saveTargets() {
+    setTargetStatus('Saving...');
+    const current = Object.fromEntries(targetList.map((t) => [t.subject_id, t.target_grade]));
+    const upserts = [];
+    const clears = [];
+    for (const [key, grade] of Object.entries(targetDraft)) {
+      const subjectId = Number(key);
+      const was = current[subjectId];
+      if (grade) {
+        if (grade !== was) upserts.push({ student_id: Number(id), subject_id: subjectId, target_grade: grade });
+      } else if (was) {
+        clears.push(subjectId);
+      }
+    }
+
+    if (upserts.length === 0 && clears.length === 0) {
+      setTargetStatus('No changes.');
+      setEditingTargets(false);
+      return;
+    }
+
+    if (upserts.length > 0) {
+      const { error } = await supabase.from('target_grades').upsert(upserts, { onConflict: 'student_id,subject_id' });
+      if (error) { setTargetStatus(`Error: ${error.message}`); return; }
+    }
+    if (clears.length > 0) {
+      const { error } = await supabase.from('target_grades').delete().eq('student_id', id).in('subject_id', clears);
+      if (error) { setTargetStatus(`Error: ${error.message}`); return; }
+    }
+
+    setEditingTargets(false);
+    setTargetStatus(`Saved — ${upserts.length} set, ${clears.length} cleared.`);
+    await loadAll();
+  }
+
+  function startEditingScores() {
+    setCat4Draft(cat4.map((c) => ({ ...c })));
+    setNgrtDraft(ngrt.map((n) => ({ ...n })));
+    setScoreStatus(null);
+    setEditingScores(true);
+  }
+
+  // '' means "not recorded" for every one of these columns, all of which are
+  // nullable — sending an empty string instead would fail the numeric ones and
+  // silently store a blank in the text ones.
+  function blankToNull(value) {
+    return value === '' || value === undefined ? null : value;
+  }
+
+  async function saveScores() {
+    setScoreStatus('Saving...');
+    let saved = 0;
+    for (const row of cat4Draft) {
+      const before = cat4.find((c) => c.cat4_id === row.cat4_id);
+      const patch = {};
+      for (const f of ['test_date', 'level', 'mean_sas', 'verbal_sas', 'non_verbal_sas', 'quantitative_sas', 'spatial_sas', 'profile']) {
+        if (String(row[f] ?? '') !== String(before?.[f] ?? '')) patch[f] = blankToNull(row[f]);
+      }
+      if (Object.keys(patch).length === 0) continue;
+      const { error } = await supabase.from('cat4_results').update(patch).eq('cat4_id', row.cat4_id);
+      if (error) { setScoreStatus(`Error saving CAT4 row: ${error.message}`); return; }
+      saved++;
+    }
+    for (const row of ngrtDraft) {
+      const before = ngrt.find((n) => n.ngrt_id === row.ngrt_id);
+      const patch = {};
+      for (const f of ['test_date', 'form', 'sas', 'pc_stanine', 'sc_stanine', 'overall_stanine', 'reading_age']) {
+        if (String(row[f] ?? '') !== String(before?.[f] ?? '')) patch[f] = blankToNull(row[f]);
+      }
+      if (Object.keys(patch).length === 0) continue;
+      const { error } = await supabase.from('ngrt_results').update(patch).eq('ngrt_id', row.ngrt_id);
+      if (error) { setScoreStatus(`Error saving NGRT row: ${error.message}`); return; }
+      saved++;
+    }
+
+    setEditingScores(false);
+    setScoreStatus(saved === 0 ? 'No changes.' : `Saved ${saved} row${saved === 1 ? '' : 's'}.`);
+    if (saved > 0) await loadAll();
+  }
 
   async function handleSave(e) {
     e.preventDefault();
@@ -819,8 +942,52 @@ function StudentDetail() {
         )}
       </Collapsible>
 
-      <Collapsible title="Target Grades">
-        {(() => {
+      <Collapsible
+        title="Target Grades"
+        forceOpen={editingTargets}
+        extra={canEditAssessment && (editingTargets ? (
+          <>
+            <button onClick={saveTargets}>Save targets</button>{' '}
+            <button className="secondary" onClick={() => { setEditingTargets(false); setTargetStatus(null); }}>Cancel</button>
+          </>
+        ) : (
+          <button className="secondary" onClick={startEditingTargets}>Edit</button>
+        ))}
+      >
+        {targetStatus && <p>{targetStatus}</p>}
+        {editingTargets ? (
+          <>
+            <p>
+              Every subject {student.first_name} is timetabled for is listed, so a blank can be filled in.
+              Clearing a target removes it.
+            </p>
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Subject</th><th>Target</th><th>Most recent grade</th></tr></thead>
+                <tbody>
+                  {targetEditableSubjectIds().map((subjectId) => {
+                    const latestResult = results.find((r) => r.subject_id === subjectId);
+                    return (
+                      <tr key={subjectId}>
+                        <td>{subjectsById[subjectId] || `Subject ${subjectId}`}</td>
+                        <td>
+                          <select
+                            value={targetDraft[subjectId] ?? ''}
+                            onChange={(e) => setTargetDraft({ ...targetDraft, [subjectId]: e.target.value })}
+                          >
+                            <option value="">—</option>
+                            {gradeList.map((g) => <option key={g} value={g}>{g}</option>)}
+                          </select>
+                        </td>
+                        <td>{latestResult?.grade ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (() => {
           // Narrowed to the subjects this student actually takes — see
           // visibleTargets for why enrolment rather than "has a result".
           // classifyGrade returns undefined without an actual grade, so a
@@ -878,20 +1045,60 @@ function StudentDetail() {
         )}
       </Collapsible>
 
-      <Collapsible title="Predictive Assessment Data (CAT4 / NGRT)">
+      <Collapsible
+        title="Predictive Assessment Data (CAT4 / NGRT)"
+        forceOpen={editingScores}
+        extra={canEditAssessment && (cat4.length > 0 || ngrt.length > 0) && (editingScores ? (
+          <>
+            <button onClick={saveScores}>Save scores</button>{' '}
+            <button className="secondary" onClick={() => { setEditingScores(false); setScoreStatus(null); }}>Cancel</button>
+          </>
+        ) : (
+          <button className="secondary" onClick={startEditingScores}>Edit</button>
+        ))}
+      >
+        {scoreStatus && <p>{scoreStatus}</p>}
         {cat4.length === 0 && ngrt.length === 0 ? <p>No assessment data recorded.</p> : (
           <>
+            {editingScores && (
+              <p>
+                Correcting what was recorded for a sitting. To add a sitting, use the
+                assessment import — Mean SAS is stored as reported, not recalculated from
+                the four batteries.
+              </p>
+            )}
             {cat4.length > 0 && (
               <>
                 <h3 style={{ fontSize: '1rem' }}>CAT4</h3>
                 <div className="table-scroll">
                   <table>
-                    <thead><tr><th>Date</th><th>Level</th><th>Mean SAS</th><th>Verbal</th><th>Non-verbal</th><th>Quantitative</th><th>Spatial</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Level</th><th>Mean SAS</th><th>Verbal</th><th>Non-verbal</th><th>Quantitative</th><th>Spatial</th><th>Profile</th></tr></thead>
                     <tbody>
-                      {cat4.map((c) => (
+                      {editingScores ? cat4Draft.map((c, i) => (
                         <tr key={c.cat4_id}>
-                          <td>{c.test_date}</td><td>{c.level}</td><td>{c.mean_sas}</td>
+                          {[['test_date', 'date', '9rem'], ['level', 'text', '4rem'], ['mean_sas', 'number', '5rem'],
+                            ['verbal_sas', 'number', '5rem'], ['non_verbal_sas', 'number', '5rem'],
+                            ['quantitative_sas', 'number', '5rem'], ['spatial_sas', 'number', '5rem'],
+                            ['profile', 'text', '11rem']].map(([field, type, width]) => (
+                            <td key={field}>
+                              <input
+                                type={type}
+                                style={{ width }}
+                                value={c[field] ?? ''}
+                                onChange={(e) => {
+                                  const next = cat4Draft.slice();
+                                  next[i] = { ...next[i], [field]: e.target.value };
+                                  setCat4Draft(next);
+                                }}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      )) : cat4.map((c) => (
+                        <tr key={c.cat4_id}>
+                          <td>{c.test_date ?? '—'}</td><td>{c.level ?? '—'}</td><td>{c.mean_sas}</td>
                           <td>{c.verbal_sas}</td><td>{c.non_verbal_sas}</td><td>{c.quantitative_sas}</td><td>{c.spatial_sas}</td>
+                          <td>{c.profile ?? '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -906,9 +1113,28 @@ function StudentDetail() {
                   <table>
                     <thead><tr><th>Date</th><th>Form</th><th>SAS</th><th>PC Stanine</th><th>SC Stanine</th><th>Overall Stanine</th><th>Reading Age</th></tr></thead>
                     <tbody>
-                      {ngrt.map((n) => (
+                      {editingScores ? ngrtDraft.map((n, i) => (
                         <tr key={n.ngrt_id}>
-                          <td>{n.test_date}</td><td>{n.form}</td><td>{n.sas}</td>
+                          {[['test_date', 'date', '9rem'], ['form', 'text', '4rem'], ['sas', 'number', '5rem'],
+                            ['pc_stanine', 'number', '5rem'], ['sc_stanine', 'number', '5rem'],
+                            ['overall_stanine', 'number', '5rem'], ['reading_age', 'text', '6rem']].map(([field, type, width]) => (
+                            <td key={field}>
+                              <input
+                                type={type}
+                                style={{ width }}
+                                value={n[field] ?? ''}
+                                onChange={(e) => {
+                                  const next = ngrtDraft.slice();
+                                  next[i] = { ...next[i], [field]: e.target.value };
+                                  setNgrtDraft(next);
+                                }}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      )) : ngrt.map((n) => (
+                        <tr key={n.ngrt_id}>
+                          <td>{n.test_date ?? '—'}</td><td>{n.form}</td><td>{n.sas}</td>
                           <td>{n.pc_stanine}</td><td>{n.sc_stanine}</td><td>{n.overall_stanine}</td><td>{n.reading_age}</td>
                         </tr>
                       ))}
