@@ -220,6 +220,7 @@ const TABS = [
       { href: '/admin/student-numbers', label: 'Student Numbers by Gender' },
       { href: '/admin/class-lists', label: 'Class Lists (Print)' },
       { href: '/admin/print-timetables', label: 'Print Timetables (Print)' },
+      { href: '/admin/backup', label: 'Run a Backup' },
     ].filter((it) => hasAccess(it.href)),
   },
   {
