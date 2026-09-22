@@ -8,10 +8,18 @@ import PublishedDocuments from '../components/PublishedDocuments';
 import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload';
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
 import { visibleTargets } from '../../lib/gradeCompare';
+import { formatUKDate } from '../../lib/formatDate';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
+import { schoolToday, schoolWeekdayShort } from '../../lib/schoolTime';
+import {
+  AttendanceScopeCards,
+  AttendanceTodayTable,
+  AttendanceRecentTable,
+  attendanceTodayLessons,
+  formatLateness,
+} from '../components/AttendanceSummary';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const ATTENDANCE_LABEL = { present: 'Present', absent: 'Absent', late: 'Late', authorized_absence: 'Authorised absence' };
 
 export function ParentPortalInner() {
   const { profile } = useAuth();
@@ -33,7 +41,9 @@ export function ParentPortalInner() {
   const [timetableClasses, setTimetableClasses] = useState([]);
   const [timetableLoading, setTimetableLoading] = useState(true);
 
-  const [attendance, setAttendance] = useState([]);
+  const [attendance, setAttendance] = useState([]); // most recent marks, newest first
+  const [attendanceToday, setAttendanceToday] = useState([]); // today's marks, lesson by lesson
+  const [attendanceSummary, setAttendanceSummary] = useState([]); // today / week / year, counted in the DB
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
 
   // A parent login already has profile.parent_id set. A staff member who is
@@ -94,7 +104,25 @@ export function ParentPortalInner() {
       setBehaviour(b || []);
       const { data: gs } = await supabase.from('grade_scale').select('*');
       setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
-      const { data: att } = await supabase.from('attendance').select('attend_date, status, code').eq('student_id', selectedId).order('attend_date', { ascending: false });
+      // Counted in Postgres rather than pulled row by row: a full academic year
+      // runs to well over a thousand marks per child, past PostgREST's default
+      // page size, so totalling here would quietly under-report.
+      const { data: attSummary } = await supabase.rpc('student_attendance_summary', { p_student_id: selectedId });
+      setAttendanceSummary(attSummary || []);
+      const { data: attToday } = await supabase
+        .from('attendance')
+        .select('attendance_id, period_number, code, status, minutes_late')
+        .eq('student_id', selectedId)
+        .eq('attend_date', schoolToday())
+        .order('period_number');
+      setAttendanceToday(attToday || []);
+      const { data: att } = await supabase
+        .from('attendance')
+        .select('attendance_id, attend_date, period_number, status, code, minutes_late')
+        .eq('student_id', selectedId)
+        .order('attend_date', { ascending: false })
+        .order('period_number', { ascending: true })
+        .limit(60);
       setAttendance(att || []);
       const { data: bal } = await supabase.rpc('get_tuckshop_balance', { p_student_id: selectedId });
       setTuckshopBalance(bal);
@@ -154,9 +182,12 @@ export function ParentPortalInner() {
   // second copy of the rule.
   const shownTargets = visibleTargets(targets, results, enrolledSubjectIds);
 
-  const presentLike = attendance.filter((a) => a.status === 'present' || a.status === 'late').length;
-  const attendancePct = attendance.length > 0 ? Math.round((presentLike / attendance.length) * 100) : null;
-  const attendanceCounts = attendance.reduce((acc, a) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc; }, {});
+  const attendanceYear = attendanceSummary.find((r) => r.scope === 'year');
+  const attendanceSessions = Number(attendanceYear?.sessions || 0);
+  const attendancePct = attendanceSessions > 0
+    ? Math.round(((Number(attendanceYear.present) + Number(attendanceYear.late)) / attendanceSessions) * 100)
+    : null;
+  const attendanceLateMinutes = Number(attendanceYear?.late_minutes || 0);
 
   const totalDue = feeLineItems.reduce((sum, li) => sum + Number(li.amount), 0);
   const totalPaid = feePayments.reduce((sum, p) => sum + Number(p.amount), 0);
@@ -174,6 +205,18 @@ export function ParentPortalInner() {
       };
       cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
     });
+  });
+
+  const periodName = (n) => periods.find((p) => p.period_number === n)?.period_name || (n ? `Period ${n}` : '—');
+
+  // A child can be down for more than one class in a period (option blocks are
+  // stored per subject), so cellMap holds a list. The register is taken once
+  // per period, so name the first and let the timetable view show the rest.
+  const todayDayLabel = schoolWeekdayShort();
+  const attendanceTodayList = attendanceTodayLessons({
+    periods,
+    marks: attendanceToday,
+    lessonFor: (n) => (cellMap[`${todayDayLabel}-${n}`] || [])[0],
   });
 
   const selectedChild = children.find((c) => c.student_id === selectedId);
@@ -234,7 +277,11 @@ export function ParentPortalInner() {
                 <button type="button" className="dashboard-tile" onClick={() => setActiveView('attendance')}>
                   <span className="dashboard-tile-label">Attendance</span>
                   <span className="dashboard-tile-icon">📊</span>
-                  <span className="dashboard-tile-sub">{attendancePct === null ? 'No data yet' : `${attendancePct}% present`}</span>
+                  <span className="dashboard-tile-sub">
+                    {attendancePct === null
+                      ? 'No data yet'
+                      : `${attendancePct}% this year${attendanceLateMinutes > 0 ? ` · ${formatLateness(attendanceLateMinutes)} late` : ''}`}
+                  </span>
                 </button>
 
                 {feeTerm && (
@@ -336,17 +383,21 @@ export function ParentPortalInner() {
           {activeView === 'attendance' && (
             <div className="card">
               <h2>Attendance</h2>
-              {attendance.length === 0 ? <p>No attendance recorded yet.</p> : (
+              {attendanceSummary.length === 0 && attendance.length === 0 ? <p>No attendance recorded yet.</p> : (
                 <>
-                  <p><strong>{attendancePct}%</strong> present or late overall ({attendance.length} session{attendance.length === 1 ? '' : 's'} recorded)</p>
-                  <div className="table-scroll table-compact"><table>
-                    <thead><tr><th>Status</th><th>Count</th></tr></thead>
-                    <tbody>
-                      {Object.entries(attendanceCounts).map(([status, count]) => (
-                        <tr key={status}><td>{ATTENDANCE_LABEL[status] || status}</td><td>{count}</td></tr>
-                      ))}
-                    </tbody>
-                  </table></div>
+                  <AttendanceScopeCards summary={attendanceSummary} />
+
+                  <h3 style={{ margin: '0 0 0.4rem' }}>Today, lesson by lesson</h3>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: '#5b6472' }}>
+                    {formatUKDate(schoolToday())}
+                    {attendanceTodayList.length === 0 && ' — nothing timetabled and no register taken.'}
+                  </p>
+                  <AttendanceTodayTable lessons={attendanceTodayList} />
+
+                  <h3 style={{ margin: '1.25rem 0 0.4rem' }}>Recent marks</h3>
+                  {attendance.length === 0
+                    ? <p>No marks recorded yet.</p>
+                    : <AttendanceRecentTable marks={attendance} periodName={periodName} />}
                 </>
               )}
             </div>

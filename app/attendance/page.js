@@ -6,18 +6,23 @@ import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import Link from 'next/link';
 import { formatUKDate } from '../../lib/formatDate';
+import { schoolToday, minutesSinceSchoolTime } from '../../lib/schoolTime';
+import { useAuth } from '../../lib/AuthContext';
 
 function AttendanceInner() {
   const searchParams = useSearchParams();
+  const { profile } = useAuth();
   const [periods, setPeriods] = useState([]);
   const [mentorClasses, setMentorClasses] = useState([]);
   const [subjectClasses, setSubjectClasses] = useState([]);
   const [codes, setCodes] = useState([]);
-  const [date, setDate] = useState(searchParams.get('date') || new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(searchParams.get('date') || schoolToday());
   const [periodNumber, setPeriodNumber] = useState(Number(searchParams.get('period')) || 1); // default: Registration
   const [classId, setClassId] = useState(searchParams.get('classId') || '');
   const [roster, setRoster] = useState([]);
   const [marks, setMarks] = useState({}); // student_id -> code
+  const [lateMinutes, setLateMinutes] = useState({}); // student_id -> minutes late, as typed
+  const [slotStart, setSlotStart] = useState(null); // start_time of this class's slot in this period
   const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
   const [status, setStatus] = useState(null);
   const [loadingRoster, setLoadingRoster] = useState(false);
@@ -62,17 +67,24 @@ function AttendanceInner() {
     if (ids.length > 0) {
       const { data: existing } = await supabase
         .from('attendance')
-        .select('student_id, code')
+        .select('student_id, code, minutes_late')
         .eq('attend_date', date)
         .eq('period_number', periodNumber)
         .in('student_id', ids);
       const prefill = {};
-      (existing || []).forEach((row) => { if (row.code) prefill[row.student_id] = row.code; });
+      const prefillMinutes = {};
+      (existing || []).forEach((row) => {
+        if (row.code) prefill[row.student_id] = row.code;
+        if (row.minutes_late !== null && row.minutes_late !== undefined) {
+          prefillMinutes[row.student_id] = String(row.minutes_late);
+        }
+      });
       setMarks(prefill);
+      setLateMinutes(prefillMinutes);
 
       const { data: today } = await supabase
         .from('attendance_today')
-        .select('student_id, period_number, code, status')
+        .select('student_id, period_number, code, status, minutes_late')
         .in('student_id', ids);
       const byStudent = {};
       (today || [])
@@ -84,10 +96,31 @@ function AttendanceInner() {
       setTodaySoFar(byStudent);
     } else {
       setMarks({});
+      setLateMinutes({});
       setTodaySoFar({});
     }
     setLoadingRoster(false);
   }
+
+  // The slot's start time is what "how late" is measured from, so it anchors
+  // the hint next to the minutes box and seeds the suggested figure. A class
+  // can sit in the same period on more than one day; only the slot for the
+  // day being registered is relevant.
+  useEffect(() => {
+    async function loadSlotStart() {
+      if (!classId || !date) { setSlotStart(null); return; }
+      const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short' });
+      const { data } = await supabase
+        .from('timetable_slots')
+        .select('start_time')
+        .eq('class_id', classId)
+        .eq('period_number', periodNumber)
+        .eq('day_of_week', dayLabel)
+        .maybeSingle();
+      setSlotStart(data?.start_time || null);
+    }
+    loadSlotStart();
+  }, [classId, date, periodNumber]);
 
   function statusColor(status) {
     if (status === 'present') return '#1a7f37';
@@ -96,30 +129,89 @@ function AttendanceInner() {
     return '#6b6b6b'; // authorized_absence and anything else
   }
 
+  const codeToStatus = Object.fromEntries(codes.map((c) => [c.code, c.status]));
+  function isLateCode(code) {
+    return !!code && codeToStatus[code] === 'late';
+  }
+
+  // Marking someone late is almost always done as they walk in, so offer the
+  // minutes elapsed since the period started as a starting figure. Only when
+  // the register is for today and the clock is inside a plausible range —
+  // otherwise the teacher types it themselves rather than being handed a
+  // number they'd have to notice was nonsense.
+  const suggestedLateMinutes = (() => {
+    if (date !== schoolToday() || !slotStart) return null;
+    const elapsed = minutesSinceSchoolTime(slotStart);
+    if (elapsed === null || elapsed < 1 || elapsed > 240) return null;
+    return String(elapsed);
+  })();
+
   useEffect(() => { loadRoster(); }, [classId, date, periodNumber]);
 
   function setMark(studentId, code) {
     setMarks((m) => ({ ...m, [studentId]: code }));
+    setLateMinutes((lm) => {
+      if (!isLateCode(code)) {
+        // The DB clears minutes_late for anything that isn't late anyway; drop
+        // it here too so the box doesn't hold a figure that won't be saved.
+        const { [studentId]: _dropped, ...rest } = lm;
+        return rest;
+      }
+      if (lm[studentId] !== undefined) return lm;
+      return suggestedLateMinutes === null ? lm : { ...lm, [studentId]: suggestedLateMinutes };
+    });
+  }
+
+  function setLateMinutesFor(studentId, value) {
+    setLateMinutes((lm) => ({ ...lm, [studentId]: value }));
   }
 
   function markAllPresent() {
     const all = {};
     roster.forEach((s) => { all[s.student_id] = '/'; });
     setMarks(all);
+    setLateMinutes({});
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const codeToStatus = Object.fromEntries(codes.map((c) => [c.code, c.status]));
-    const rows = Object.entries(marks)
-      .filter(([, code]) => code)
-      .map(([student_id, code]) => ({
+    const marked = Object.entries(marks).filter(([, code]) => code);
+
+    const missingMinutes = marked.filter(([student_id, code]) =>
+      isLateCode(code) && !String(lateMinutes[student_id] ?? '').trim()
+    );
+    if (missingMinutes.length > 0) {
+      const names = missingMinutes
+        .map(([student_id]) => roster.find((s) => String(s.student_id) === String(student_id)))
+        .filter(Boolean)
+        .map((s) => `${s.first_name} ${s.last_name}`);
+      setStatus(`Enter how many minutes late: ${names.join(', ')}.`);
+      return;
+    }
+
+    // Nothing has ever written staff_id, so there was no record of who took a
+    // register. Only send it when this login actually maps to a staff record —
+    // an upsert only touches the columns it carries, so leaving the key out
+    // keeps whoever marked it first rather than blanking them. Every row in a
+    // batch must carry the same keys, which holds: it's one teacher saving.
+    const attributeTo = profile?.staff_id ? { staff_id: profile.staff_id } : {};
+
+    const rows = marked.map(([student_id, code]) => {
+      const late = isLateCode(code);
+      const typed = Number(lateMinutes[student_id]);
+      return {
         student_id: Number(student_id),
         attend_date: date,
         period_number: periodNumber,
         code,
         status: codeToStatus[code],
-      }));
+        // Out-of-range values are rejected by the DB check constraint; clamping
+        // a fat-fingered "700" to null would quietly lose the fact of lateness,
+        // so let the error surface instead.
+        minutes_late: late && Number.isFinite(typed) ? Math.round(typed) : null,
+        ...attributeTo,
+      };
+    });
     if (rows.length === 0) {
       setStatus('Mark at least one student.');
       return;
@@ -190,8 +282,14 @@ function AttendanceInner() {
                   Log behaviour for this class
                 </Link>
               </div>
+              {slotStart && (
+                <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: '#666' }}>
+                  This period starts at {slotStart.slice(0, 5)}. Minutes late are counted from then
+                  {suggestedLateMinutes !== null && `, and a late mark starts at ${suggestedLateMinutes} min — change it if that isn't right`}.
+                </p>
+              )}
               <div className="table-scroll"><table>
-                <thead><tr><th>Student</th><th>Today so far</th><th>Code</th></tr></thead>
+                <thead><tr><th>Student</th><th>Today so far</th><th>Code</th><th>Minutes late</th></tr></thead>
                 <tbody>
                   {roster.map((s) => (
                     <tr key={s.student_id}>
@@ -204,7 +302,7 @@ function AttendanceInner() {
                             {todaySoFar[s.student_id].map((row) => (
                               <span
                                 key={row.period_number}
-                                title={`Period ${row.period_number}: ${row.code}`}
+                                title={`Period ${row.period_number}: ${row.code}${row.minutes_late ? ` — ${row.minutes_late} minutes late` : ''}`}
                                 style={{
                                   fontSize: '0.75em',
                                   fontWeight: 600,
@@ -214,7 +312,7 @@ function AttendanceInner() {
                                   padding: '1px 6px',
                                 }}
                               >
-                                P{row.period_number}:{row.code}
+                                P{row.period_number}:{row.code}{row.minutes_late ? ` +${row.minutes_late}m` : ''}
                               </span>
                             ))}
                           </div>
@@ -227,6 +325,27 @@ function AttendanceInner() {
                             <option key={c.code} value={c.code}>{c.code} — {c.description}</option>
                           ))}
                         </select>
+                      </td>
+                      <td>
+                        {isLateCode(marks[s.student_id]) ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.3rem' }}>
+                            <input
+                              type="number"
+                              min="0"
+                              max="600"
+                              step="1"
+                              inputMode="numeric"
+                              required
+                              aria-label={`Minutes late — ${s.first_name} ${s.last_name}`}
+                              value={lateMinutes[s.student_id] ?? ''}
+                              onChange={(e) => setLateMinutesFor(s.student_id, e.target.value)}
+                              style={{ width: '5rem' }}
+                            />
+                            <span style={{ fontSize: '0.8em', color: '#666' }}>min</span>
+                          </span>
+                        ) : (
+                          <span style={{ color: '#999', fontSize: '0.85em' }}>—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

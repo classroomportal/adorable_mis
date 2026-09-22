@@ -10,6 +10,13 @@ import PublishedDocuments from '../../components/PublishedDocuments';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
 import { classifyGrade, STYLE, LABEL, visibleTargets } from '../../../lib/gradeCompare';
 import { formatTimeRange } from '../../../lib/formatTime';
+import { schoolToday, schoolWeekdayShort } from '../../../lib/schoolTime';
+import {
+  AttendanceScopeCards,
+  AttendanceTodayTable,
+  AttendanceRecentTable,
+  attendanceTodayLessons,
+} from '../../components/AttendanceSummary';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -67,7 +74,9 @@ function StudentDetail() {
   const [timetable, setTimetable] = useState([]);
   const [periods, setPeriods] = useState([]);
   const [behaviour, setBehaviour] = useState([]);
-  const [attendance, setAttendance] = useState([]);
+  const [attendance, setAttendance] = useState([]); // most recent marks, newest first
+  const [attendanceToday, setAttendanceToday] = useState([]); // today's marks, lesson by lesson
+  const [attendanceSummary, setAttendanceSummary] = useState([]); // today / week / year, counted in the DB
   const [results, setResults] = useState([]);
   const [targetMap, setTargetMap] = useState({}); // subject_id -> target grade
   const [targetList, setTargetList] = useState([]); // all target grades for this student, incl. subjects with no results yet
@@ -171,8 +180,23 @@ function StudentDetail() {
       .select('*')
       .eq('student_id', id)
       .order('attend_date', { ascending: false })
-      .limit(30);
+      .order('period_number', { ascending: true })
+      .limit(60);
     setAttendance(att || []);
+
+    const { data: attToday } = await supabase
+      .from('attendance')
+      .select('attendance_id, period_number, code, status, minutes_late, notes')
+      .eq('student_id', id)
+      .eq('attend_date', schoolToday())
+      .order('period_number');
+    setAttendanceToday(attToday || []);
+
+    // Counted in Postgres rather than in the browser: a full academic year is
+    // well over a thousand marks per student, past PostgREST's default page
+    // size, so totalling client-side would quietly under-report.
+    const { data: attSummary } = await supabase.rpc('student_attendance_summary', { p_student_id: Number(id) });
+    setAttendanceSummary(attSummary || []);
 
     const { data: r } = await supabase
       .from('results')
@@ -518,6 +542,15 @@ function StudentDetail() {
         time: formatTimeRange(slot.start_time, slot.end_time),
       };
     });
+  });
+
+  const periodName = (n) => periods.find((p) => p.period_number === n)?.period_name || (n ? `Period ${n}` : '—');
+
+  const todayDayLabel = schoolWeekdayShort();
+  const todayLessons = attendanceTodayLessons({
+    periods,
+    marks: attendanceToday,
+    lessonFor: (n) => cellMap[`${todayDayLabel}-${n}`],
   });
 
   function renderTimetableGrid() {
@@ -899,24 +932,21 @@ function StudentDetail() {
       </Collapsible>
 
       <Collapsible title="Attendance">
-        {attendance.length === 0 ? <p>No attendance recorded.</p> : (
+        {attendanceSummary.length === 0 && attendance.length === 0 ? <p>No attendance recorded.</p> : (
           <>
-            <p>
-              <strong>{attendance.filter(a => a.status === 'present').length}</strong> present, {' '}
-              <strong>{attendance.filter(a => a.status === 'late').length}</strong> late, {' '}
-              <strong>{attendance.filter(a => a.status === 'authorized_absence').length}</strong> authorized absence, {' '}
-              <strong>{attendance.filter(a => a.status === 'absent').length}</strong> unauthorized absence
+            <AttendanceScopeCards summary={attendanceSummary} />
+
+            <h3 style={{ margin: '0 0 0.4rem' }}>Today, lesson by lesson</h3>
+            <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: '#5b6472' }}>
+              {formatUKDate(schoolToday())}
+              {todayLessons.length === 0 && ' — nothing timetabled and no register taken.'}
             </p>
-            <div className="table-scroll">
-              <table>
-                <thead><tr><th>Date</th><th>Status</th></tr></thead>
-                <tbody>
-                  {attendance.map((a) => (
-                    <tr key={a.attendance_id}><td>{a.attend_date}</td><td>{a.status}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <AttendanceTodayTable lessons={todayLessons} />
+
+            <h3 style={{ margin: '1.25rem 0 0.4rem' }}>Recent marks</h3>
+            {attendance.length === 0
+              ? <p>No marks recorded yet.</p>
+              : <AttendanceRecentTable marks={attendance} periodName={periodName} />}
           </>
         )}
       </Collapsible>
