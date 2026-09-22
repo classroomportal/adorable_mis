@@ -21,7 +21,7 @@ function ImportInner() {
   async function load() {
     const { data } = await supabase
       .from('subjects')
-      .select('subject_id, subject_name, display_name, target_fallback_subject_id, department_name')
+      .select('subject_id, subject_name, subject_code, display_name, target_fallback_subject_id, department_name')
       .order('subject_name');
     setSubjects(data || []);
 
@@ -101,12 +101,33 @@ function ImportInner() {
   }
 
   async function saveAll() {
+    // subjects.subject_code is UNIQUE, and the class importer matches on it
+    // case-insensitively -- so "ps" and "PS" would resolve to each other's
+    // subject while still satisfying the constraint. Catch clashes here,
+    // where we can name both subjects, rather than letting one row's update
+    // fail with a raw constraint error and leaving the rest saved.
+    const seen = new Map();
+    for (const row of subjects) {
+      const code = (row.subject_code || '').trim();
+      if (!code) continue;
+      const key = code.toLowerCase();
+      if (seen.has(key)) {
+        setStatus(
+          `Not saved: subject code "${code}" is on both ${seen.get(key)} and ${row.subject_name}. ` +
+          `Codes must be unique (case doesn't matter to the importer).`
+        );
+        return;
+      }
+      seen.set(key, row.subject_name);
+    }
+
     setStatus('Saving...');
     const updates = subjects.map((row) =>
       supabase
         .from('subjects')
         .update({
-          display_name: row.display_name || null,
+          subject_code: (row.subject_code || '').trim() || null,
+          display_name: (row.display_name || '').trim() || null,
           target_fallback_subject_id: row.target_fallback_subject_id || null,
           department_name: row.department_name || null,
         })
@@ -125,6 +146,16 @@ function ImportInner() {
     <div>
       <h1>Subject Settings</h1>
       <div className="card">
+        <p>
+          <strong>Nova-T code</strong> is how the class importer works out which subject a teaching
+          group belongs to. It takes the group code, drops the set number, and looks up what's left
+          here — so <code>10LI/El</code> and <code>12a/El1</code> both resolve via <code>El</code>.
+          Case doesn't matter. A subject with no code here is never matched by a class import: fine
+          for subjects that are only assessed (Add Maths, CCA, Extended), but a subject that appears
+          in the Nova-T timetable needs its code set or its classes will keep whatever subject they
+          already had. Getting it wrong is not cosmetic — a wrong code silently reassigns real
+          classes on the next import.
+        </p>
         <p>
           <strong>Display name</strong> overrides how a subject appears in the UI without changing the
           underlying Nova-T source name (e.g. "Mu" can display as "Music"). Leave blank to show the raw name.
@@ -158,12 +189,21 @@ function ImportInner() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Subject (source)</th><th>Display name</th><th>Department</th><th>Use targets from</th><th>Key stages</th><th>Aliases</th></tr>
+              <tr><th>Subject (source)</th><th>Nova-T code</th><th>Display name</th><th>Department</th><th>Use targets from</th><th>Key stages</th><th>Aliases</th></tr>
             </thead>
             <tbody>
               {filtered.map((s) => (
                 <tr key={s.subject_id}>
                   <td>{s.subject_name}</td>
+                  <td>
+                    <input
+                      type="text"
+                      placeholder="(none)"
+                      value={s.subject_code || ''}
+                      onChange={(e) => updateField(s.subject_id, 'subject_code', e.target.value)}
+                      style={{ width: '5rem' }}
+                    />
+                  </td>
                   <td>
                     <input
                       type="text"
