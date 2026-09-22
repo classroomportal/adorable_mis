@@ -7,6 +7,17 @@ import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
 
+// boarding_room_number is text, so a plain sort puts "10" before "2". Sort the
+// numeric ones by value and leave anything non-numeric (e.g. "3A") after them.
+function compareRooms(a, b) {
+  const na = Number(a);
+  const nb = Number(b);
+  if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+  if (Number.isFinite(na)) return -1;
+  if (Number.isFinite(nb)) return 1;
+  return String(a).localeCompare(String(b));
+}
+
 function BehaviourPageInner() {
   const { isPastoralOrSmt, profile } = useAuth();
   const searchParams = useSearchParams();
@@ -31,6 +42,7 @@ function BehaviourPageInner() {
   const [boardingHouse, setBoardingHouse] = useState('');
   const [restaurant, setRestaurant] = useState('');
   const [yearFilter, setYearFilter] = useState('');
+  const [roomFilter, setRoomFilter] = useState(new Set()); // rooms within the chosen house; empty = whole house
 
   const [roster, setRoster] = useState([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
@@ -80,6 +92,26 @@ function BehaviourPageInner() {
   const scopedAlerts = activeHouseScope ? alerts.filter((a) => a.students?.boarding_house === activeHouseScope) : alerts;
   const scopedAllStudents = activeHouseScope ? allStudents.filter((s) => s.boarding_house === activeHouseScope) : allStudents;
 
+  // Room numbers restart at 1 in every house — there is a room 1 in Birmingham
+  // and a room 1 in Buckingham — so the list is always derived from the house
+  // currently chosen, and the roster below filters on house AND room.
+  const roomsInHouse = boardingHouse
+    ? [...new Set(
+        allStudents
+          .filter((s) => s.boarding_house === boardingHouse)
+          .map((s) => s.boarding_room_number)
+          .filter(Boolean)
+      )].sort(compareRooms)
+    : [];
+
+  function toggleRoom(room) {
+    setRoomFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(room)) next.delete(room); else next.add(room);
+      return next;
+    });
+  }
+
   useEffect(() => {
     async function loadOptions() {
       const { data: c } = await supabase
@@ -89,7 +121,7 @@ function BehaviourPageInner() {
         .order('class_code');
       setMentorClasses((c || []).filter((cl) => cl.curriculum_blocks?.block_name === 'Mentor'));
 
-      const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, restaurant, year_group').eq('status', 'active').order('last_name');
+      const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, boarding_room_number, restaurant, year_group').eq('status', 'active').order('last_name');
       const list = s || [];
       setAllStudents(list);
       setBoardingHouses([...new Set(list.map((x) => x.boarding_house).filter(Boolean))].sort());
@@ -130,7 +162,9 @@ function BehaviourPageInner() {
     }
     if (groupType === 'boarding' && boardingHouse) {
       const studentList = allStudents
-        .filter((s) => s.boarding_house === boardingHouse && (!yearFilter || String(s.year_group) === yearFilter))
+        .filter((s) => s.boarding_house === boardingHouse
+          && (!yearFilter || String(s.year_group) === yearFilter)
+          && (roomFilter.size === 0 || roomFilter.has(s.boarding_room_number)))
         .sort((a, b) => a.last_name.localeCompare(b.last_name));
       setRoster(studentList);
       setSelected(new Set(studentList.map((s) => s.student_id)));
@@ -148,7 +182,7 @@ function BehaviourPageInner() {
     setSelected(new Set());
   }
 
-  useEffect(() => { loadRoster(); }, [groupType, classId, boardingHouse, restaurant, yearFilter, allStudents]);
+  useEffect(() => { loadRoster(); }, [groupType, classId, boardingHouse, restaurant, yearFilter, roomFilter, allStudents]);
 
   // Coming back to the house-only view drops any group picked while the whole
   // school was visible, which the locked pickers could otherwise not clear.
@@ -163,6 +197,7 @@ function BehaviourPageInner() {
   function handleGroupTypeChange(newType) {
     setGroupType(newType);
     setClassId(''); setBoardingHouse(''); setRestaurant(''); setYearFilter('');
+    setRoomFilter(new Set());
   }
 
   const usingGroup = groupType && (classId || boardingHouse || restaurant);
@@ -301,7 +336,11 @@ function BehaviourPageInner() {
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
             <label style={{ flex: 1, minWidth: '160px' }}>
               Boarding house
-              <select value={boardingHouse} onChange={(e) => setBoardingHouse(e.target.value)} disabled={!!activeHouseScope}>
+              <select
+                value={boardingHouse}
+                onChange={(e) => { setBoardingHouse(e.target.value); setRoomFilter(new Set()); }}
+                disabled={!!activeHouseScope}
+              >
                 <option value="">Select...</option>
                 {(activeHouseScope ? [activeHouseScope] : boardingHouses).map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
@@ -313,6 +352,40 @@ function BehaviourPageInner() {
                 {yearGroups.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </label>
+          </div>
+        )}
+
+        {groupType === 'boarding' && boardingHouse && roomsInHouse.length > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <div style={{ fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+              Rooms (optional — tick none for the whole house)
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
+              {roomsInHouse.map((room) => (
+                <label
+                  key={room}
+                  style={{
+                    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.3rem', margin: 0,
+                    border: '1px solid #d3d9f0', borderRadius: '999px', padding: '0.15rem 0.6rem',
+                    fontSize: '0.85rem', cursor: 'pointer',
+                    background: roomFilter.has(room) ? '#eef1fb' : 'transparent',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={roomFilter.has(room)}
+                    onChange={() => toggleRoom(room)}
+                    style={{ flex: '0 0 auto', width: 'auto' }}
+                  />
+                  <span>{room}</span>
+                </label>
+              ))}
+              {roomFilter.size > 0 && (
+                <button type="button" className="secondary" onClick={() => setRoomFilter(new Set())} style={{ fontSize: '0.8rem' }}>
+                  Whole house
+                </button>
+              )}
+            </div>
           </div>
         )}
 
