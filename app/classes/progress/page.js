@@ -83,10 +83,14 @@ function buildRows(data, chosenSet) {
     let yearGuess = null;
     roster.forEach((sid) => {
       yearGuess = yearGuess ?? yearByStudent[sid];
-      const targetSubjectId = fallbackFor[c.subject_id] || c.subject_id;
+      // A target set against the subject itself wins over the mapped one.
+      // Mapping Civics at Sociology says where to read a target when Civics
+      // has none, not that the 60 Civics targets already recorded should be
+      // passed over.
       const key = `${sid}-${c.subject_id}`;
-      const targetKey = `${sid}-${targetSubjectId}`;
-      const target = targetByKey[targetKey];
+      const fallbackSubjectId = fallbackFor[c.subject_id];
+      const target = targetByKey[key]
+        ?? (fallbackSubjectId ? targetByKey[`${sid}-${fallbackSubjectId}`] : undefined);
       const latest = gradeByKey[key];
       if (!target || !latest?.grade) return;
       const targetGrade = target;
