@@ -25,6 +25,7 @@ function WritePastoralCommentsInner() {
 
   const [availableTypes, setAvailableTypes] = useState([]); // ['mentor','houseparent','smt']
   const [houseScope, setHouseScope] = useState(null);
+  const [menteeIds, setMenteeIds] = useState([]);
   const [commentType, setCommentType] = useState('');
 
   const [periods, setPeriods] = useState([]);
@@ -47,9 +48,12 @@ function WritePastoralCommentsInner() {
 
     async function resolveScopes() {
       const types = [];
-      const { count: mentorCount } = await supabase
-        .from('students').select('student_id', { count: 'exact', head: true }).eq('mentor_staff_id', staffId);
-      if (mentorCount) types.push('mentor');
+      // Mentees come from the Mentor-block classes this person teaches, not
+      // from students.mentor_staff_id — that column has never been populated,
+      // so counting it meant the Mentor option never appeared (migration 127).
+      const { data: mentees } = await supabase.rpc('my_mentee_ids');
+      const menteeList = (mentees || []).map((m) => (typeof m === 'object' ? m.my_mentee_ids : m));
+      if (menteeList.length > 0) { types.push('mentor'); setMenteeIds(menteeList); }
 
       const { data: scope } = await supabase.rpc('my_house_scope');
       if (scope) { types.push('houseparent'); setHouseScope(scope); }
@@ -74,12 +78,12 @@ function WritePastoralCommentsInner() {
     const yearGroups = selectedPeriod.year_groups || [];
     let query = supabase
       .from('students')
-      .select('student_id, first_name, last_name, year_group, form_class, boarding_house, mentor_staff_id')
+      .select('student_id, first_name, last_name, year_group, form_class, boarding_house')
       .in('year_group', yearGroups.length ? yearGroups : [-1])
       .eq('status', 'active')
       .order('last_name');
 
-    if (commentType === 'mentor') query = query.eq('mentor_staff_id', staffId);
+    if (commentType === 'mentor') query = query.in('student_id', menteeIds.length ? menteeIds : [-1]);
     if (commentType === 'houseparent') query = query.eq('boarding_house', houseScope);
     if (commentType === 'smt') {
       if (yearFilter) query = query.eq('year_group', Number(yearFilter));
@@ -107,7 +111,7 @@ function WritePastoralCommentsInner() {
     }
     setRows(nextRows);
     setLoadingRoster(false);
-  }, [periodId, commentType, selectedPeriod, staffId, houseScope, yearFilter, search]);
+  }, [periodId, commentType, selectedPeriod, menteeIds, houseScope, yearFilter, search]);
 
   useEffect(() => { loadRosterAndExisting(); }, [loadRosterAndExisting]);
 
