@@ -6,6 +6,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatTimeRange } from '../../../lib/formatTime';
+import { schoolToday } from '../../../lib/schoolTime';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -96,7 +97,10 @@ function StaffTimetable() {
   }
   function dateForDay(dayLabel) {
     const target = DAY_TO_WEEKDAY[dayLabel];
-    const today = new Date();
+    // The school's today, not the device's: a laptop in another zone, or the
+    // hour either side of midnight, would otherwise open the register on the
+    // wrong date. Parsed at local midnight so getDay() reads that calendar day.
+    const today = new Date(`${schoolToday()}T00:00:00`);
     let diff = target - today.getDay();
     if (diff < 0) diff += 7;
     const d = new Date(today);

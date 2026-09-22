@@ -39,6 +39,7 @@ Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase proj
 - `attendance` gained `minutes_late` (integer, 0–600, `attendance_minutes_late_check`) and the trigger `trg_clear_minutes_late_unless_late`, which nulls it for any mark that isn't `late`.
 - New functions `school_today()` and `school_now()` pin Africa/Lagos. **The database's own `TimeZone` is UTC**, so `current_date`/`now()` are an hour behind the school and name the wrong day between midnight and 01:00 Lagos — use these instead anywhere a timetable, a register or a school day is involved.
 - `registers_not_done` now measures against `school_now()`/`school_today()` (it was firing an hour late), and decides a register is done by looking for marks against the class's enrolled students rather than matching `attendance.staff_id` to the class teacher. Nothing had ever written `staff_id`, so every slot counted as un-registered; `/attendance` now writes it, but the view no longer depends on it.
+- Migration 124: `registers_not_done` gained `period_name` and **dropped its 3-hour upper bound** — a register nobody ever took used to vanish from the list three hours after the period started. It now stays listed for the rest of the school day. `capture_register_alerts()`'s per-slot-per-day guard means the longer window cannot duplicate alerts.
 - `capture_register_alerts()` stamps `register_alerts.period_date` with `school_today()` rather than the UTC `current_date`.
 - New function `student_attendance_summary(integer)` — today / this week / this academic year counts plus total minutes late for one student, invoker-rights so `attendance` RLS still applies. Backs the Attendance section of `/students/[id]`; counting in the DB avoids PostgREST's 1,000-row page limit, which a year of marks (~1,700 per student) exceeds.
 
@@ -95,18 +96,22 @@ CREATE VIEW registers_not_done AS  SELECT ts.slot_id,
     (s.first_name || ' '::text) || s.last_name AS teacher_name,
     c.class_code,
     ts.period_number,
+    p.period_name,
     ts.start_time,
     EXTRACT(epoch FROM school_now() - (school_today() + ts.start_time)) / 60::numeric AS minutes_since_start
    FROM timetable_slots ts
      JOIN classes c ON c.class_id = ts.class_id
      JOIN staff s ON s.staff_id = c.staff_id
-  WHERE ts.day_of_week = to_char(school_today()::timestamp with time zone, 'Dy'::text) AND school_now() > (school_today() + ts.start_time + '00:15:00'::interval) AND school_now() < (school_today() + ts.start_time + '03:00:00'::interval) AND (EXISTS ( SELECT 1
+     LEFT JOIN periods p ON p.period_number = ts.period_number
+  WHERE ts.day_of_week = to_char(school_today()::timestamp with time zone, 'Dy'::text) AND school_now() > (school_today() + ts.start_time + '00:15:00'::interval) AND (EXISTS ( SELECT 1
            FROM terms t
           WHERE school_today() >= t.start_date AND school_today() <= t.end_date)) AND NOT (EXISTS ( SELECT 1
            FROM attendance a
              JOIN student_class sc ON sc.student_id = a.student_id
           WHERE sc.class_id = ts.class_id AND a.period_number = ts.period_number AND a.attend_date = school_today()));
 ```
+
+**`periods.period_name` is offset from `period_number`** — number 2 is "Period 1", number 3 is "Period 2", and so on, because number 1 is Registration. Anything showing a period to staff must use `period_name`; printing the number next to a start time reads as a clock error (migration 124).
 
 ### `student_summary`
 ```sql
