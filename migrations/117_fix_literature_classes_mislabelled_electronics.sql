@@ -4,14 +4,14 @@
 -- (and the Year 12 option set) rendered as "Electronics" on student and
 -- staff timetables, printed timetables and the parent portal.
 --
--- Where it came from: sql/013_novacurr_timetable_import.sql decoded the
--- Nova-T group codes 10LI/El, 11LI/El and 12a/El1 by expanding the "El"
--- suffix to a subject name, and picked "Electronics" rather than English
--- Literature. The school does not teach Electronics at all -- subject 98
--- exists only because that import invented it, and those three groups are
--- the only classes ever attached to it.
+-- "El" is the school's own Nova-T code for Literature (confirmed by the
+-- principal). sql/013_novacurr_timetable_import.sql did not know that: it
+-- expanded each code suffix to a full subject name by guesswork, and guessed
+-- "Electronics" for 10LI/El, 11LI/El and 12a/El1. The school teaches no
+-- Electronics at all -- subject 98 exists only because that import invented
+-- it, and those three groups are the only classes ever attached to it.
 --
--- Why "El" is certainly Literature here, not Electronics:
+-- Corroborating what the code means, from the data itself:
 --   * all three groups are taught by English teachers, each in the room
 --     they teach their own English sets in -- EIO/AG1 (also 10a/En4,
 --     11w/En1, 12a/En1), ECE/AG4 (10a/En1, 8C1/En, 9G1/En) and UIS/AT2
@@ -41,7 +41,13 @@ set display_name = 'Literature'
 where subject_name = 'English Lit'
   and display_name is null;
 
--- "Electronics" is now an orphan -- no classes, no results, no targets, no
--- key stages. It is left in place rather than deleted because deleting it
--- would take its 50 subject_grade_boundaries rows with it; removing it is a
--- separate call for whoever owns the subject list.
+-- "Electronics" is now an orphan, and the only subject in the database with
+-- neither classes nor any results, targets or transcripts -- every other
+-- class-less subject (Add Maths, CCA, Extended, Social Science, ...) is
+-- assessed without being timetabled. It is left in place rather than deleted
+-- because deleting it would take its 50 subject_grade_boundaries rows with
+-- it; removing it is a separate call for whoever owns the subject list.
+--
+-- Every other code suffix in classes.class_code was audited against the
+-- subject it resolves to at the same time: each maps to exactly one subject,
+-- and no other expansion is wrong. "El" was the only one.
