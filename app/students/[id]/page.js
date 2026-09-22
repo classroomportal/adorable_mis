@@ -7,6 +7,7 @@ import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
+import MedicalRecordCard from '../../components/MedicalRecordCard';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
 import { classifyGrade, STYLE, LABEL, visibleTargets } from '../../../lib/gradeCompare';
 import { formatTimeRange } from '../../../lib/formatTime';
@@ -65,9 +66,16 @@ function Collapsible({ title, defaultOpen = false, forceOpen = false, extra, chi
 function StudentDetail() {
   const params = useParams();
   const id = params.id;
-  const { profile, staffRoles } = useAuth();
+  const { profile, staffRoles, hasAccess } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const canEditAssessment = isAdmin || (staffRoles || []).includes('assessment_manager');
+  // The medical record is gated on its own resource key so
+  // /admin/permissions can move it between roles. Writing is narrower
+  // than seeing it: only the nurse (and admin) pass the RLS policies in
+  // migration 128, so anyone else gets a read-only card rather than
+  // buttons that fail on save.
+  const canSeeMedical = hasAccess('/students/medical');
+  const canEditMedical = isAdmin || (staffRoles || []).includes('nurse');
 
   const [student, setStudent] = useState(null);
   const [parents, setParents] = useState([]);
@@ -810,6 +818,10 @@ function StudentDetail() {
         )}
         </div>
       </div>
+
+      {canSeeMedical && (
+        <MedicalRecordCard studentId={student.student_id} canEdit={canEditMedical} />
+      )}
 
       {siblings.length > 0 && (
         <Collapsible title="Siblings">
