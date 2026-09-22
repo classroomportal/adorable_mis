@@ -19,6 +19,7 @@ const ROLE_LABELS = {
   tuckshop: 'Tuckshop',
   head_of_department: 'Head of Dept',
   mentor: 'Mentor',
+  nurse: 'Nurse / Sick Bay',
 };
 const ALL_ROLES = Object.keys(ROLE_LABELS);
 
