@@ -133,6 +133,7 @@ const TABS = [
     description: 'Sick bay log, height & weight rounds and immunisations.',
     items: ({ hasAccess }) => [
       { href: '/clinic', label: 'Sick Bay Dashboard' },
+      { href: '/clinic/screenings', label: 'Resumption Screening' },
       { href: '/clinic/visits', label: 'Sick Bay Log' },
       { href: '/clinic/measurements', label: 'Height & Weight Round' },
       { href: '/clinic/immunisations', label: 'Immunisations' },

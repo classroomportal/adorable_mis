@@ -1,20 +1,28 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { Chip, Field } from '../../components/MedicalChips';
+import StudentFilterBar, { useStudentFilterOptions, StudentPhoto } from '../../components/StudentFilterBar';
 import { formatUKDate } from '../../../lib/formatDate';
 import {
   VISIT_CATEGORIES, VISIT_OUTCOMES, labelFor, formatDateTime,
   localDateTimeValue, isoDateOffset, isoToday, studentName,
+  matchesStudentFilter, EMPTY_STUDENT_FILTER,
 } from '../../../lib/medical';
 
 // The sick bay log across the whole school, and the quickest way to add to
-// it: a visit gets recorded while the student is standing there, so the
-// form takes a student rather than making the nurse navigate to them first.
+// it: a visit gets recorded while the student is standing there, so the form
+// takes a student rather than making the nurse navigate to them first.
+//
+// Each visit is a card rather than a table row. A visit carries a dozen
+// fields — observations, treatment, medication, dose, outcome, who was told
+// — and as columns they were squeezed to a few characters each. A card gives
+// every field a label and room, without dropping any of them.
 
-const STUDENT_COLS = 'students(student_id, first_name, last_name, year_group, form_class, boarding_house)';
+const STUDENT_COLS =
+  'students(student_id, first_name, last_name, year_group, form_class, gender, boarding_house, admission_number)';
 
 const EMPTY_VISIT = {
   student_id: '', visited_at: '', category: 'illness', reason: '', temperature_c: '',
@@ -22,11 +30,23 @@ const EMPTY_VISIT = {
   outcome: 'returned_to_class', parent_notified: false, follow_up_needed: false,
 };
 
+function Detail({ label, children }) {
+  return (
+    <div>
+      <div className="visit-detail-label">{label}</div>
+      <div className="visit-detail-value">{children || '—'}</div>
+    </div>
+  );
+}
+
 function VisitsInner() {
+  const options = useStudentFilterOptions();
   const [from, setFrom] = useState(isoDateOffset(-7));
   const [to, setTo] = useState(isoToday());
   const [category, setCategory] = useState('');
+  const [filter, setFilter] = useState({ ...EMPTY_STUDENT_FILTER });
   const [visits, setVisits] = useState([]);
+  const [photos, setPhotos] = useState({});
   const [students, setStudents] = useState([]);
   const [studentFilter, setStudentFilter] = useState('');
   const [draft, setDraft] = useState(null);
@@ -37,7 +57,7 @@ function VisitsInner() {
   const load = useCallback(async () => {
     setLoading(true);
     let query = supabase.from('student_clinic_visits')
-      .select(`visit_id, visited_at, category, reason, temperature_c, treatment, medication_given, dose_given, outcome, parent_notified, follow_up_needed, ${STUDENT_COLS}`)
+      .select(`visit_id, visited_at, category, reason, temperature_c, observations, treatment, medication_given, dose_given, outcome, parent_notified, parent_notified_at, follow_up_needed, ${STUDENT_COLS}`)
       .gte('visited_at', new Date(`${from}T00:00:00`).toISOString())
       .lte('visited_at', new Date(`${to}T23:59:59.999`).toISOString())
       .order('visited_at', { ascending: false })
@@ -56,11 +76,32 @@ function VisitsInner() {
     (async () => {
       const { data } = await supabase.from('students')
         .select('student_id, first_name, last_name, year_group, form_class')
-        .eq('status', 'active')
-        .order('last_name');
+        .eq('status', 'active').order('last_name');
       setStudents(data || []);
     })();
   }, []);
+
+  // The student filters run over what is already loaded, so changing them is
+  // instant and does not re-query.
+  const filtered = useMemo(
+    () => visits.filter((v) => matchesStudentFilter(v.students, filter)),
+    [visits, filter]
+  );
+
+  // Photos are ~28 kB each, so only the students actually on screen.
+  useEffect(() => {
+    const missing = Array.from(new Set(filtered.map((v) => v.students?.student_id).filter(Boolean)))
+      .filter((id) => !(id in photos)).slice(0, 80);
+    if (missing.length === 0) return;
+    (async () => {
+      const { data } = await supabase.from('students').select('student_id, photo_base64').in('student_id', missing);
+      setPhotos((p) => ({
+        ...p,
+        ...Object.fromEntries(missing.map((id) => [id, null])),
+        ...Object.fromEntries((data || []).map((r) => [r.student_id, r.photo_base64])),
+      }));
+    })();
+  }, [filtered, photos]);
 
   async function save(e) {
     e.preventDefault();
@@ -91,8 +132,6 @@ function VisitsInner() {
     load();
   }
 
-  // Marking the parent as told is a one-click job that happens after the
-  // fact, so it does not need the whole form reopened.
   async function markNotified(visitId) {
     const { error: err } = await supabase.from('student_clinic_visits')
       .update({ parent_notified: true, parent_notified_at: new Date().toISOString() })
@@ -119,28 +158,38 @@ function VisitsInner() {
       <a className="dashboard-back" href="/clinic">← Clinic</a>
       <h1>Sick bay log</h1>
 
-      <div className="card">
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <label style={{ maxWidth: '10rem' }}>From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </label>
-          <label style={{ maxWidth: '10rem' }}>To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </label>
-          <label style={{ maxWidth: '12rem' }}>Type
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All</option>
-              {VISIT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
-          </label>
-          {!draft && (
-            <button type="button" onClick={() => { setDraft({ ...EMPTY_VISIT, visited_at: localDateTimeValue() }); setStatus(null); }}>
-              Record a visit
-            </button>
-          )}
+      <StudentFilterBar
+        filter={filter}
+        onChange={setFilter}
+        options={options}
+        resultCount={filtered.length}
+        totalCount={visits.length}
+        extra={
+          <>
+            <label style={{ maxWidth: '9.5rem' }}>From
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </label>
+            <label style={{ maxWidth: '9.5rem' }}>To
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            </label>
+            <label style={{ maxWidth: '10rem' }}>Visit type
+              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option value="">All</option>
+                {VISIT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </label>
+          </>
+        }
+      />
+
+      {!draft && (
+        <div style={{ marginBottom: '1rem' }}>
+          <button type="button" onClick={() => { setDraft({ ...EMPTY_VISIT, visited_at: localDateTimeValue() }); setStatus(null); }}>
+            Record a visit
+          </button>
+          {status && <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)', marginLeft: '0.6rem' }}>{status}</span>}
         </div>
-        {status && <p style={{ fontSize: '0.8rem', color: 'var(--ink-soft)', marginBottom: 0 }}>{status}</p>}
-      </div>
+      )}
 
       {draft && (
         <div className="card">
@@ -155,7 +204,6 @@ function VisitsInner() {
               <select
                 value={draft.student_id}
                 onChange={(e) => setDraft({ ...draft, student_id: e.target.value })}
-                size={studentFilter && !draft.student_id ? Math.min(6, matchingStudents.length || 1) : undefined}
                 style={{ marginTop: '0.3rem' }}
               >
                 <option value="">— pick a student —</option>
@@ -166,47 +214,54 @@ function VisitsInner() {
                 ))}
               </select>
             </Field>
-            <Field label="When">
-              <input type="datetime-local" value={draft.visited_at} onChange={(e) => setDraft({ ...draft, visited_at: e.target.value })} />
-            </Field>
-            <Field label="Type">
-              <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
-                {VISIT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
-            </Field>
-            <Field label="Presenting complaint">
-              <input value={draft.reason} onChange={(e) => setDraft({ ...draft, reason: e.target.value })} />
-            </Field>
-            <Field label="Temperature (°C)">
-              <input type="number" step="0.1" min="30" max="45" value={draft.temperature_c} onChange={(e) => setDraft({ ...draft, temperature_c: e.target.value })} />
-            </Field>
-            <Field label="Observations">
-              <textarea rows={2} style={{ width: '100%' }} value={draft.observations} onChange={(e) => setDraft({ ...draft, observations: e.target.value })} />
-            </Field>
-            <Field label="Treatment given">
-              <textarea rows={2} style={{ width: '100%' }} value={draft.treatment} onChange={(e) => setDraft({ ...draft, treatment: e.target.value })} />
-            </Field>
-            <Field label="Medication given">
-              <input value={draft.medication_given} onChange={(e) => setDraft({ ...draft, medication_given: e.target.value })} />
-            </Field>
-            <Field label="Dose given">
-              <input value={draft.dose_given} onChange={(e) => setDraft({ ...draft, dose_given: e.target.value })} />
-            </Field>
-            <Field label="Outcome">
-              <select value={draft.outcome} onChange={(e) => setDraft({ ...draft, outcome: e.target.value })}>
-                {VISIT_OUTCOMES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </Field>
-            <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
-              <input type="checkbox" style={{ width: 'auto' }} checked={draft.parent_notified} onChange={(e) => setDraft({ ...draft, parent_notified: e.target.checked })} />
-              Parent / guardian notified
-            </label>
-            <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
-              <input type="checkbox" style={{ width: 'auto' }} checked={draft.follow_up_needed} onChange={(e) => setDraft({ ...draft, follow_up_needed: e.target.checked })} />
-              Follow-up needed
-            </label>
-            <button type="submit">Save visit</button>{' '}
-            <button type="button" onClick={() => { setDraft(null); setStatus(null); }}>Cancel</button>
+            <div className="form-grid">
+              <Field label="When">
+                <input type="datetime-local" value={draft.visited_at} onChange={(e) => setDraft({ ...draft, visited_at: e.target.value })} />
+              </Field>
+              <Field label="Type">
+                <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
+                  {VISIT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Temperature (°C)">
+                <input type="number" step="0.1" min="30" max="45" value={draft.temperature_c} onChange={(e) => setDraft({ ...draft, temperature_c: e.target.value })} />
+              </Field>
+              <Field label="Medication given">
+                <input value={draft.medication_given} onChange={(e) => setDraft({ ...draft, medication_given: e.target.value })} />
+              </Field>
+              <Field label="Dose given">
+                <input value={draft.dose_given} onChange={(e) => setDraft({ ...draft, dose_given: e.target.value })} />
+              </Field>
+              <Field label="Outcome">
+                <select value={draft.outcome} onChange={(e) => setDraft({ ...draft, outcome: e.target.value })}>
+                  {VISIT_OUTCOMES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Presenting complaint">
+                <textarea rows={2} style={{ width: '100%' }} value={draft.reason} onChange={(e) => setDraft({ ...draft, reason: e.target.value })} />
+              </Field>
+              <Field label="Observations">
+                <textarea rows={2} style={{ width: '100%' }} value={draft.observations} onChange={(e) => setDraft({ ...draft, observations: e.target.value })} />
+              </Field>
+              <Field label="Treatment given">
+                <textarea rows={2} style={{ width: '100%' }} value={draft.treatment} onChange={(e) => setDraft({ ...draft, treatment: e.target.value })} />
+              </Field>
+            </div>
+            <div className="check-grid">
+              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
+                <input type="checkbox" style={{ width: 'auto' }} checked={draft.parent_notified} onChange={(e) => setDraft({ ...draft, parent_notified: e.target.checked })} />
+                Parent / guardian notified
+              </label>
+              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
+                <input type="checkbox" style={{ width: 'auto' }} checked={draft.follow_up_needed} onChange={(e) => setDraft({ ...draft, follow_up_needed: e.target.checked })} />
+                Follow-up needed
+              </label>
+            </div>
+            <div style={{ marginTop: '0.75rem' }}>
+              <button type="submit">Save visit</button>{' '}
+              <button type="button" onClick={() => { setDraft(null); setStatus(null); }}>Cancel</button>
+              {status && <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)', marginLeft: '0.6rem' }}>{status}</span>}
+            </div>
           </form>
         </div>
       )}
@@ -222,46 +277,71 @@ function VisitsInner() {
       )}
 
       {!loading && !error && (
-        <div className="card">
-          <h2>{visits.length} visit{visits.length === 1 ? '' : 's'} · {formatUKDate(from)} to {formatUKDate(to)}</h2>
-          {visits.length === 0 ? (
-            <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>No visits in this range.</p>
-          ) : (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr><th>When</th><th>Student</th><th>Type</th><th>Reason</th><th>Temp</th><th>Treatment / medication</th><th>Outcome</th><th>Parent told</th><th></th></tr>
-                </thead>
-                <tbody>
-                  {visits.map((v) => (
-                    <tr key={v.visit_id}>
-                      <td>{formatDateTime(v.visited_at)}</td>
-                      <td>
-                        {v.students
-                          ? <a href={`/students/${v.students.student_id}`}>{studentName(v.students)}</a>
-                          : 'Unknown student'}
-                        <div style={{ fontSize: '0.75rem', color: 'var(--ink-soft)' }}>
-                          {v.students?.form_class || (v.students ? `Y${v.students.year_group}` : '')}
-                          {v.students?.boarding_house ? ` · ${v.students.boarding_house}` : ''}
-                        </div>
-                      </td>
-                      <td>{labelFor(VISIT_CATEGORIES, v.category) || '—'}</td>
-                      <td>{v.reason}{v.follow_up_needed && <> <Chip tone="warn">follow-up</Chip></>}</td>
-                      <td>{v.temperature_c ? `${v.temperature_c}°C` : '—'}</td>
-                      <td>{[v.treatment, v.medication_given, v.dose_given].filter(Boolean).join(' · ') || '—'}</td>
-                      <td>{labelFor(VISIT_OUTCOMES, v.outcome) || '—'}</td>
-                      <td>{v.parent_notified ? <Chip tone="good">Yes</Chip> : <Chip tone="bad">No</Chip>}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        {!v.parent_notified && <button type="button" onClick={() => markNotified(v.visit_id)}>Parent told</button>}
-                        {v.follow_up_needed && <> <button type="button" onClick={() => clearFollowUp(v.visit_id)}>Close</button></>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <>
+          <h2 style={{ margin: '0 0 0.7rem' }}>
+            {filtered.length} visit{filtered.length === 1 ? '' : 's'} · {formatUKDate(from)} to {formatUKDate(to)}
+          </h2>
+
+          {filtered.length === 0 && (
+            <div className="card"><p style={{ margin: 0 }}>No visits match these filters.</p></div>
           )}
-        </div>
+
+          {filtered.map((v) => {
+            const s = v.students;
+            const urgent = v.outcome === 'sent_home' || v.outcome === 'referred_to_hospital';
+            const cls = `visit-card${urgent ? ' is-urgent' : v.follow_up_needed ? ' is-followup' : ''}`;
+            return (
+              <div key={v.visit_id} className={cls}>
+                <div className="visit-card-head">
+                  <div className="visit-card-who">
+                    <StudentPhoto student={{ ...s, photo_base64: photos[s?.student_id] }} size={48} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700 }}>
+                        {s ? <a href={`/students/${s.student_id}`}>{studentName(s)}</a> : 'Unknown student'}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--ink-soft)' }}>
+                        {s?.form_class || (s ? `Year ${s.year_group}` : '')}
+                        {s?.boarding_house ? ` · ${s.boarding_house}` : ''}
+                        {s?.gender ? ` · ${s.gender}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
+                    <div>{formatDateTime(v.visited_at)}</div>
+                    <div style={{ marginTop: '0.3rem' }}>
+                      <Chip tone="neutral">{labelFor(VISIT_CATEGORIES, v.category) || 'Unspecified'}</Chip>
+                      {v.follow_up_needed && <Chip tone="warn">Follow-up</Chip>}
+                      {urgent && <Chip tone="bad">{labelFor(VISIT_OUTCOMES, v.outcome)}</Chip>}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="visit-card-reason">{v.reason}</p>
+
+                <div className="visit-detail-grid">
+                  <Detail label="Temperature">{v.temperature_c ? `${v.temperature_c} °C` : null}</Detail>
+                  <Detail label="Outcome">{labelFor(VISIT_OUTCOMES, v.outcome)}</Detail>
+                  <Detail label="Medication">{v.medication_given}</Detail>
+                  <Detail label="Dose">{v.dose_given}</Detail>
+                  <Detail label="Observations">{v.observations}</Detail>
+                  <Detail label="Treatment">{v.treatment}</Detail>
+                  <Detail label="Parent told">
+                    {v.parent_notified
+                      ? <Chip tone="good">Yes{v.parent_notified_at ? ` · ${formatUKDate(v.parent_notified_at.slice(0, 10))}` : ''}</Chip>
+                      : <Chip tone="bad">No</Chip>}
+                  </Detail>
+                </div>
+
+                {(!v.parent_notified || v.follow_up_needed) && (
+                  <div className="visit-card-actions">
+                    {!v.parent_notified && <button type="button" onClick={() => markNotified(v.visit_id)}>Mark parent told</button>}
+                    {v.follow_up_needed && <button type="button" onClick={() => clearFollowUp(v.visit_id)}>Close follow-up</button>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </>
       )}
     </main>
   );

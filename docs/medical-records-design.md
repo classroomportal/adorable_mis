@@ -99,6 +99,55 @@ with its own migration, not something to fall into.
 `students.medical_notes` is left alone; it can be retired once the structured
 record is in use.
 
+## Resumption screening (migration 130)
+
+Every term begins with 274 children arriving from eight weeks the school
+knows nothing about. The resumption check is how that gap closes: the form
+from home is collected, the child is examined, medication brought from home
+is handed in, and someone decides whether they are fit to resume.
+
+`student_medical_screenings` holds one row per student per term — vitals,
+bedside/lab results (PCV, malaria, urinalysis), the paperwork, and the
+fitness decision. `student_screening_findings` holds one row per body system
+examined.
+
+Three choices worth calling out:
+
+**Findings are a child table, not twenty more columns.** A screening works
+through a dozen systems and that list is not fixed forever — adding "Mood &
+emotional state" to the round should be an app-side edit, not a migration.
+The `system` column is free text and the authoritative list lives in
+`SCREENING_SYSTEMS` in `lib/medical.js`. It also makes "who has an abnormal
+finding this term" a plain query rather than a twenty-column `OR`.
+
+**Height and weight are deliberately not columns here.** They already live in
+`student_growth_measurements`, where BMI is generated. Duplicating them would
+mean two heights for one child on one day with nothing to say which is right.
+The screening form writes straight to the growth table and reads BMI back.
+
+**`fitness` defaults to `pending`, not `fit`.** A screening that has been
+started but not concluded must not read as a clean bill of health.
+
+The item list is modelled on the resumption medical check commonly used by
+Nigerian boarding schools. **It is a starting point to confirm against this
+school's own form, not a published standard** — trim or extend
+`SCREENING_SYSTEMS` as needed, no migration required.
+
+## Filtering and photos
+
+`StudentFilterBar` (year group, form class, gender, boarding house, name) is
+shared by the screening roster and the sick bay log. Two things it has to
+get right:
+
+- **Gender is messy live data**: 130 rows say `M`, 129 say `F`, 14 are NULL
+  and exactly one says `Male`. A filter written as `gender = 'M'` silently
+  drops that student, so every gender filter goes through the variant lists
+  in `GENDER_FILTERS`. Students with no gender recorded are excluded from a
+  gender filter rather than guessed at, and the bar says so on screen.
+- **Photos are ~7 MB across the roster** (256 of 274 students, averaging
+  28 kB). They are fetched only for the students actually on screen and
+  cached, never all at once.
+
 ## Deliberate follow-ups
 
 1. **Load the WHO 5–19 BMI-for-age LMS table** into `bmi_for_age_reference`.
@@ -108,9 +157,8 @@ record is in use.
    access decision.
 3. **Houseparent read access**, scoped by the existing `my_house_scope()`,
    so the adult on duty overnight can see what a boarder is allergic to.
-4. **A `/medical` sick bay dashboard** — today's visits, students currently
-   resting, follow-ups outstanding, immunisations due this month. The card
-   is per-student; the nurse also needs a whole-school view.
+4. ~~A sick bay dashboard~~ — **done** (migration 129): the Clinic tile,
+   `/clinic` and its pages.
 5. **Parent portal** — read-only first, then parent-submitted updates that
    staff approve. Ruled out for v1 on purpose while the RLS settles.
 6. **Growth charts.** A BMI/height trend line per student, and a
@@ -120,6 +168,10 @@ record is in use.
    medical records is arguably the one that matters. Note that
    `behaviour_event_audit` is existing scaffolding that was never finished —
    worth doing once, properly, for both.
-8. **Bulk entry.** Height and weight get taken for a whole year group in one
-   session; typing them one student at a time will not survive contact with
-   the nurse.
+8. ~~Bulk entry~~ — **done** (migration 129): `/clinic/measurements` takes a
+   whole form class or year group in one pass.
+9. **Print a screening.** A resumption check is often wanted on paper, for a
+   parent or a referral letter. Nothing prints yet.
+10. **Carry findings forward.** An abnormal finding at resumption should
+    surface in the sick bay when that child next comes in; today the two
+    records sit side by side without talking.
