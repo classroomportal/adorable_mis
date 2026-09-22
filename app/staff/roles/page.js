@@ -135,6 +135,15 @@ function StaffRolesInner() {
     }
   }
 
+  // Adding the Houseparent role writes the role row on its own — the house is
+  // only stored once someone picks one from the House dropdown. A houseparent
+  // with no house is scoped to nothing, so /students and /behaviour show them
+  // the whole school and they never get the Houseparent view. Surface that
+  // rather than letting it sit unnoticed.
+  const houseparentsMissingHouse = staff.filter(
+    (s) => roleMap[s.staff_id]?.has('houseparent') && !houseScopeMap[s.staff_id]
+  );
+
   return (
     <div>
       <h1>Staff &amp; Roles</h1>
@@ -144,6 +153,15 @@ function StaffRolesInner() {
         hidden internal ID that never changes, so renaming a code here won't break anything.
       </p>
       {status && <p>{status}</p>}
+
+      {houseparentsMissingHouse.length > 0 && (
+        <p style={{ background: '#fde2e2', border: '1px solid #e0a0a0', padding: '0.5rem 0.7rem', borderRadius: '4px' }}>
+          <strong>Houseparent with no house set:</strong>{' '}
+          {houseparentsMissingHouse.map((s) => `${s.first_name.trim()} ${s.last_name}`).join(', ')}.{' '}
+          Until a house is chosen they are not scoped to one at all — Students and Behaviour show
+          them the whole school rather than the Houseparent view. Pick a house below.
+        </p>
+      )}
 
       <form onSubmit={addStaff} className="card" style={{ flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
         <strong style={{ width: '100%' }}>Add new staff member</strong>
@@ -258,10 +276,14 @@ function StaffRolesInner() {
                     <select
                       value={houseScopeMap[s.staff_id] || ''}
                       onChange={(e) => setHouseScope(s.staff_id, e.target.value)}
+                      style={houseScopeMap[s.staff_id] ? undefined : { border: '2px solid #c00', background: '#fde2e2' }}
                     >
                       <option value="">-- house --</option>
                       {houses.map((h) => <option key={h} value={h}>{h}</option>)}
                     </select>
+                    {!houseScopeMap[s.staff_id] && (
+                      <span style={{ color: '#c00', marginLeft: '0.4rem' }}>not scoped — sees the whole school</span>
+                    )}
                   </label>
                 )}
 
