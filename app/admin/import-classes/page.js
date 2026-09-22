@@ -188,7 +188,18 @@ function ImportClassesInner() {
 
       const classByCode = new Map(existingClasses.map((c) => [c.class_code, c]));
       const staffByCode = new Map(staff.map((s) => [s.staff_code, s.staff_id]));
-      const subjectByCode = new Map(subjects.map((s) => [s.subject_code, s.subject_id]));
+      // Keyed on the lower-cased code: subjects.subject_code is maintained by
+      // hand in SQL (it isn't editable from /admin/subject-settings), so its
+      // casing drifts from what Nova-T writes in the group name. "Personal
+      // Study" was stored as "PS" while the export writes 12a/Ps1, and an
+      // exact-match lookup quietly dropped those classes into the "subject
+      // code not found" list for months. Match case-insensitively; the codes
+      // are all distinct regardless of case.
+      const subjectByCode = new Map(
+        subjects
+          .filter((s) => s.subject_code)
+          .map((s) => [s.subject_code.toLowerCase(), s.subject_id])
+      );
       const staffNameById = new Map(staff.map((s) => [s.staff_id, `${s.first_name} ${s.last_name}`]));
       const subjectNameById = new Map(subjects.map((s) => [s.subject_id, s.subject_name]));
 
@@ -237,7 +248,7 @@ function ImportClassesInner() {
         const staffId = row.staff_code ? staffByCode.get(row.staff_code) : null;
         if (row.staff_code && !staffId) unmatchedStaff.add(row.staff_code);
 
-        const subjectId = row.subject_code ? subjectByCode.get(row.subject_code) : null;
+        const subjectId = row.subject_code ? subjectByCode.get(row.subject_code.toLowerCase()) : null;
         if (row.subject_code && !subjectId) unmatchedSubjects.add(row.subject_code);
 
         const existing = classByCode.get(row.class_code);
