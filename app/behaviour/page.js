@@ -23,6 +23,7 @@ function BehaviourPageInner() {
   const searchParams = useSearchParams();
 
   const [mentorClasses, setMentorClasses] = useState([]);
+  const [myClasses, setMyClasses] = useState([]); // timetabled lessons this person teaches
   const [allStudents, setAllStudents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
@@ -111,11 +112,12 @@ function BehaviourPageInner() {
       )].sort(compareRooms)
     : [];
 
-  // Mentor groups, plus the timetabled lesson the viewer followed a link from
-  // (which lives in a different curriculum block and so is not in the list).
-  const classOptions = linkedClass && !mentorClasses.some((c) => c.class_id === linkedClass.class_id)
-    ? [linkedClass, ...mentorClasses]
-    : mentorClasses;
+  // The lesson followed in from /attendance may be someone else's class (a
+  // cover lesson), so it is offered even when it is in neither list.
+  const knownClass = (id) => myClasses.some((c) => c.class_id === id) || mentorClasses.some((c) => c.class_id === id);
+  const extraClasses = linkedClass && !knownClass(linkedClass.class_id) ? [linkedClass] : [];
+  const hasClassOptions = myClasses.length + mentorClasses.length + extraClasses.length > 0;
+  const classLabel = (c) => (c.subjects?.subject_name ? `${c.class_code} — ${c.subjects.subject_name}` : c.class_code || `Class ${c.class_id}`);
 
   function toggleRoom(room) {
     setRoomFilter((prev) => {
@@ -129,10 +131,16 @@ function BehaviourPageInner() {
     async function loadOptions() {
       const { data: c } = await supabase
         .from('classes')
-        .select('class_id, class_code, curriculum_blocks(block_name)')
+        .select('class_id, class_code, staff_id, subjects(subject_name), curriculum_blocks(block_name)')
         .not('class_code', 'is', null)
         .order('class_code');
-      setMentorClasses((c || []).filter((cl) => cl.curriculum_blocks?.block_name === 'Mentor'));
+      const allClasses = c || [];
+      setMentorClasses(allClasses.filter((cl) => cl.curriculum_blocks?.block_name === 'Mentor'));
+      // A teacher's own timetabled lessons. Without these the picker offered
+      // mentor groups only, so the group a teacher actually wanted — the class
+      // they had just taught — could not be chosen here at all.
+      setMyClasses(allClasses.filter((cl) => cl.staff_id === profile?.staff_id
+        && cl.curriculum_blocks?.block_name !== 'Mentor'));
 
       const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, boarding_room_number, restaurant, year_group').eq('status', 'active').order('last_name');
       const list = s || [];
@@ -171,18 +179,21 @@ function BehaviourPageInner() {
     loadOptions();
     loadEvents();
     loadAlerts();
-  }, []);
+    // profile arrives after the first render, and staff_id decides which
+    // classes are "mine", so this re-runs once it lands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.staff_id]);
 
   async function loadRoster() {
     if (groupType === 'mentor' && classId) {
       setLoadingRoster(true);
       const { data: sc } = await supabase
         .from('student_class')
-        .select('students(student_id, first_name, last_name)')
+        .select('students(student_id, first_name, last_name, status)')
         .eq('class_id', classId);
       const studentList = (sc || [])
         .map((row) => row.students)
-        .filter(Boolean)
+        .filter((s) => s && s.status === 'active')
         .sort((a, b) => a.last_name.localeCompare(b.last_name));
       setRoster(studentList);
       setSelected(new Set(studentList.map((s) => s.student_id)));
@@ -348,7 +359,7 @@ function BehaviourPageInner() {
           Group (optional — pick to log for several students at once)
           <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)} disabled={!!activeHouseScope}>
             <option value="">No group — pick one student below</option>
-            <option value="mentor">Mentor group</option>
+            <option value="mentor">My lesson or mentor group</option>
             <option value="boarding">Boarding house</option>
             <option value="restaurant">Restaurant</option>
           </select>
@@ -359,10 +370,29 @@ function BehaviourPageInner() {
             Class or mentor group
             <select value={classId} onChange={(e) => setClassId(e.target.value)}>
               <option value="">Select...</option>
-              {classOptions.map((c) => (
-                <option key={c.class_id} value={c.class_id}>{c.class_code || `Class ${c.class_id}`}</option>
+              {extraClasses.map((c) => (
+                <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
               ))}
+              {myClasses.length > 0 && (
+                <optgroup label="My lessons">
+                  {myClasses.map((c) => (
+                    <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
+                  ))}
+                </optgroup>
+              )}
+              {mentorClasses.length > 0 && (
+                <optgroup label="Mentor groups">
+                  {mentorClasses.map((c) => (
+                    <option key={c.class_id} value={c.class_id}>{c.class_code}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
+            {!hasClassOptions && (
+              <span style={{ color: '#5a6b8c', fontSize: '0.85rem' }}>
+                You have no timetabled lessons or mentor groups.
+              </span>
+            )}
           </label>
         )}
 
