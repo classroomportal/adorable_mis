@@ -1,138 +1,195 @@
 'use client';
-import { useState } from 'react';
-import Papa from 'papaparse';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
+// Supabase Auth rate-limits /recover (it shows up in the auth logs as
+// over_email_send_rate_limit). Sending the whole list in a tight loop trips
+// it partway through, so space the sends out and report what actually landed.
+const SEND_SPACING_MS = 1500;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function StaffWelcomeEmailsInner() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
-  const [csvText, setCsvText] = useState('');
   const [rows, setRows] = useState([]);
-  const [status, setStatus] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [sending, setSending] = useState(false);
+  const [progress, setProgress] = useState(null);
+  const [results, setResults] = useState([]);
 
-  function handleParse() {
-    const parsed = Papa.parse(csvText.trim(), { header: true, skipEmptyLines: true });
-    const valid = (parsed.data || []).filter((r) => r.email && r.temp_password && !r.temp_password.startsWith('('));
-    setRows(valid);
-    setStatus(`${valid.length} staff member(s) ready to email (skipped rows without a real password).`);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    const { data, error } = await supabase.rpc('staff_never_signed_in');
+    if (error) {
+      setLoadError(error.message);
+      setRows([]);
+    } else {
+      setRows(data || []);
+      setSelected(new Set((data || []).map((r) => r.email)));
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin) load();
+  }, [isAdmin, load]);
+
+  function toggle(email) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(email)) next.delete(email);
+      else next.add(email);
+      return next;
+    });
   }
-
-  function handleExportCsv() {
-    const csv = Papa.unparse(rows.map((r) => ({
-      staff_name: r.staff_name || '',
-      email: r.email,
-      temp_password: r.temp_password,
-    })));
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `staff-welcome-emails-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const MAIL_MERGE_TEMPLATE = `Subject: Your Formwork staff login
-
-Dear {{staff_name}},
-
-Your Formwork staff account is ready.
-
-Login email: {{email}}
-Temporary password: {{temp_password}}
-
-Please log in at misform.work and change your password on first login.
-
-Kind regards,
-Adorable British College`;
-
-  const GMAIL_MAIL_MERGE_INSTRUCTIONS = `Sending via info@abc.sch.ng (Google Workspace mail merge)
-
-1. Open Google Sheets → File → Import → upload the CSV you just downloaded. Keep the header row (staff_name, email, temp_password).
-2. In Gmail, compose a new email and click the mail-merge icon in the compose toolbar (only shows if multi-send mode is on).
-   Not showing? Settings → See all settings → Advanced → Multi-Send Mode → Enable.
-3. Link the Google Sheet you just made as the recipient source.
-4. Write the email using {{staff_name}}, {{email}}, {{temp_password}} as merge fields (see the Resend template above for wording — swap {{ }} for the merge fields).
-5. Preview a few, then send. Workspace allows up to 2,000 recipients/day, so the whole staff list can go in one send.`;
-
-  const OVER_DAILY_CAP = rows.length > 90;
 
   async function handleSend() {
+    const targets = rows.filter((r) => selected.has(r.email));
+    if (targets.length === 0) return;
     setSending(true);
-    let sent = 0;
-    const problems = [];
-    for (const r of rows) {
-      const { error } = await supabase.rpc('send_staff_welcome_email', {
-        p_email: r.email,
-        p_name: r.staff_name || r.email,
-        p_temp_password: r.temp_password,
+    setResults([]);
+    const out = [];
+    for (let i = 0; i < targets.length; i += 1) {
+      const r = targets[i];
+      setProgress(`Sending ${i + 1} of ${targets.length} — ${r.email}`);
+      // Same call as /login/forgot, so staff get the ordinary reset link and
+      // set their own password. No temporary password is generated or emailed.
+      const { error } = await supabase.auth.resetPasswordForEmail(r.email, {
+        redirectTo: 'https://misform.work/change-password',
       });
-      if (error) problems.push(`${r.email}: ${error.message}`);
-      else sent += 1;
-      setStatus(`Sending... ${sent + problems.length}/${rows.length}`);
+      out.push({ email: r.email, staff_name: r.staff_name, error: error ? error.message : null });
+      setResults([...out]);
+      if (i < targets.length - 1) await sleep(SEND_SPACING_MS);
     }
+    setProgress(null);
     setSending(false);
-    setStatus(`Sent ${sent} of ${rows.length}.${problems.length ? ' Issues: ' + problems.slice(0, 10).join('; ') : ''}`);
   }
 
-  if (!isAdmin) return <p>Only admin can send welcome emails.</p>;
+  if (!isAdmin) return <p>Only admin can send staff login emails.</p>;
+
+  const sentOk = results.filter((r) => !r.error).length;
+  const failed = results.filter((r) => r.error);
 
   return (
     <div>
-      <h1>Send Staff Welcome Emails</h1>
+      <h1>Staff Login Emails</h1>
+
       <div className="card">
         <p>
-          First run <code>select * from create_staff_logins();</code> in the Supabase SQL editor — it creates a
-          login for every staff member with an email who doesn't already have one, and returns the CSV to paste below.
+          Staff logins are created automatically as soon as a staff record is given an email
+          address, so there is nothing to create here. This page is for staff whose account exists
+          but who have <strong>never signed in</strong> — it sends them a link to set their own
+          password.
         </p>
-        <p>Paste the CSV that <code>create_staff_logins()</code> returned (columns: <code>staff_name,email,temp_password</code>). Rows marked "skipped" are ignored automatically.</p>
-        <textarea
-          rows={8}
-          style={{ width: '100%' }}
-          value={csvText}
-          onChange={(e) => setCsvText(e.target.value)}
-          placeholder="staff_name,email,temp_password&#10;Chris TERRY,chris@classroomportal.org,0b575c25d5&#10;..."
-        />
-        <button onClick={handleParse} style={{ marginTop: '0.5rem' }}>Parse</button>
+        <p style={{ fontSize: '0.9rem', color: '#555' }}>
+          This is the same reset link as &quot;Forgot password?&quot; on the sign-in page, so it goes
+          out through Supabase Auth using the sender configured under Authentication → Emails. That
+          is separate from the <code>mis@abc.sch.ng</code> Workspace sender the app&apos;s other
+          emails use — send one to yourself first if you are unsure which address staff will see.
+        </p>
       </div>
 
-      {rows.length > 0 && (
+      {loading && <p>Loading...</p>}
+      {loadError && <p style={{ color: '#a3232c' }}>Could not load staff: {loadError}</p>}
+
+      {!loading && !loadError && rows.length === 0 && (
         <div className="card">
-          <p>{rows.length} staff member(s) will receive an email with their login and temporary password.</p>
-
-          {OVER_DAILY_CAP && (
-            <p style={{ color: '#b45309', fontWeight: 600 }}>
-              {rows.length} is over Resend's 100/day free-tier cap — sending now will fail partway through.
-              Export the CSV below and mail-merge it through the school office's own email instead.
-            </p>
-          )}
-
-          <button onClick={handleExportCsv} style={{ marginRight: '0.5rem' }}>Download CSV for mail merge</button>
-          <button onClick={handleSend} disabled={sending || OVER_DAILY_CAP}>
-            {sending ? 'Sending...' : `Send ${rows.length} emails via Resend`}
-          </button>
-
-          <details style={{ marginTop: '0.75rem' }} open={OVER_DAILY_CAP}>
-            <summary>How to send via info@abc.sch.ng (Google Workspace mail merge)</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{GMAIL_MAIL_MERGE_INSTRUCTIONS}</pre>
-          </details>
-
-          <details style={{ marginTop: '0.5rem' }}>
-            <summary>Mail-merge email template (copy for Word/Outlook)</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{MAIL_MERGE_TEMPLATE}</pre>
-          </details>
+          <p>Every staff member with an email has signed in at least once. Nothing to send.</p>
         </div>
       )}
 
-      {status && <p>{status}</p>}
+      {rows.length > 0 && (
+        <div className="card">
+          <p>{rows.length} staff member(s) have never signed in.</p>
+          <table>
+            <thead>
+              <tr>
+                <th />
+                <th>Name</th>
+                <th>Login email</th>
+                <th>Account created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.email}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(r.email)}
+                      onChange={() => toggle(r.email)}
+                      disabled={sending}
+                    />
+                  </td>
+                  <td>{r.staff_name}</td>
+                  <td>{r.email}</td>
+                  <td>{r.account_created ? String(r.account_created).slice(0, 10) : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <button
+            onClick={handleSend}
+            disabled={sending || selected.size === 0}
+            style={{ marginTop: '0.75rem' }}
+          >
+            {sending ? 'Sending...' : `Send password-set link to ${selected.size} staff`}
+          </button>
+
+          <button onClick={load} disabled={sending} style={{ marginLeft: '0.5rem' }}>
+            Refresh list
+          </button>
+        </div>
+      )}
+
+      {progress && <p>{progress}</p>}
+
+      {results.length > 0 && !sending && (
+        <div className="card">
+          <p>
+            Sent {sentOk} of {results.length}.
+          </p>
+          {failed.length > 0 && (
+            <>
+              <p style={{ color: '#b45309', fontWeight: 600 }}>
+                {failed.length} did not send. Supabase Auth rate-limits reset emails — if that is
+                what these say, wait a few minutes and send just those again.
+              </p>
+              <ul>
+                {failed.map((f) => (
+                  <li key={f.email}>
+                    {f.email}: {f.error}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p style={{ fontSize: '0.9rem', color: '#555' }}>
+            Staff stay on this list until they actually sign in, so &quot;Refresh list&quot; is the
+            way to see who still has not used their link.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function StaffWelcomeEmailsPage() {
-  return <RequireAuth><RequireResource resourceKey="/staff/welcome-emails"><StaffWelcomeEmailsInner /></RequireResource></RequireAuth>;
+  return (
+    <RequireAuth>
+      <RequireResource resourceKey="/staff/welcome-emails">
+        <StaffWelcomeEmailsInner />
+      </RequireResource>
+    </RequireAuth>
+  );
 }
