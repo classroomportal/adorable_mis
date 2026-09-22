@@ -140,7 +140,14 @@ function EnterResultsInner() {
       .upsert(toSave, { onConflict: 'student_id,subject_id,result_set_event_id' });
 
     if (error) {
-      setStatus(`Error: ${error.message}`);
+      // A row-level security refusal means this isn't a class they teach, which
+      // the raw Postgres wording ("new row violates row-level security policy")
+      // tells a teacher nothing useful about.
+      setStatus(
+        error.code === '42501' || /row-level security/i.test(error.message || '')
+          ? "You can only enter results for classes you are the teacher of record for. If this is your class, ask an admin to check who it's assigned to."
+          : `Error: ${error.message}`
+      );
     } else {
       setStatus(`Saved ${toSave.length} result(s).`);
       loadRosterAndExisting();
