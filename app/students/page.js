@@ -15,6 +15,10 @@ function StudentsList() {
   const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'left' | ''(all) — defaults to current students
   const [yearFormPairs, setYearFormPairs] = useState([]); // [{year_group, form_class}]
   const [houseScope, setHouseScope] = useState(null);
+  // Assume locked until my_house_access() says otherwise, so a slow RPC never
+  // flashes the whole school at a house-only houseparent.
+  const [houseScopeExclusive, setHouseScopeExclusive] = useState(true);
+  const [showAllHouses, setShowAllHouses] = useState(false);
 
   // On mount, only fetch the small distinct year/form lists needed to
   // populate the filter dropdowns — not the full student list or photos.
@@ -22,14 +26,23 @@ function StudentsList() {
     async function loadFilterOptions() {
       const { data } = await supabase.from('students').select('year_group, form_class');
       setYearFormPairs(data || []);
-      // NULL means unscoped (admin, SMT, etc.) — see everyone, same as today.
-      // A non-null value means the viewer is a Houseparent scoped to that
-      // boarding house, so the student list narrows to their house only.
-      const { data: scope } = await supabase.rpc('my_house_scope');
-      setHouseScope(scope || null);
+      // house NULL means unscoped (admin, SMT, etc.) — see everyone, same as
+      // today. A house means the viewer is a Houseparent, and that house is
+      // their default view. exclusive says whether it is all they may see: it
+      // is false for a houseparent who also teaches or mentors, who meets
+      // students from every house during the day and can switch to the whole
+      // school (migration 126).
+      const { data: access } = await supabase.rpc('my_house_access');
+      setHouseScope(access?.house || null);
+      setHouseScopeExclusive(!!access?.exclusive);
     }
     loadFilterOptions();
   }, []);
+
+  // A houseparent who also teaches can widen to the whole school; one whose
+  // only role is the house cannot, so the switch is not offered to them.
+  const canWidenScope = !!houseScope && !houseScopeExclusive;
+  const activeHouseScope = houseScope && !(canWidenScope && showAllHouses) ? houseScope : null;
 
   const years = [...new Set(yearFormPairs.map((s) => s.year_group))].sort((a, b) => a - b);
   // Form class options narrow to whatever Year group is currently selected.
@@ -38,6 +51,13 @@ function StudentsList() {
       .filter((s) => !yearFilter || String(s.year_group) === yearFilter)
       .map((s) => s.form_class)
   )].filter(Boolean).sort();
+
+  // Flipping the house switch re-runs the query straight away, rather than
+  // leaving a stale list on screen until the viewer presses Load students.
+  useEffect(() => {
+    if (hasLoaded) loadStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeHouseScope]);
 
   async function loadStudents() {
     setLoading(true);
@@ -50,8 +70,8 @@ function StudentsList() {
 
     // student_summary has no boarding_house column, so a Houseparent's scope
     // is applied by first resolving matching student_ids from students directly.
-    if (houseScope) {
-      const { data: houseStudents } = await supabase.from('students').select('student_id').eq('boarding_house', houseScope);
+    if (activeHouseScope) {
+      const { data: houseStudents } = await supabase.from('students').select('student_id').eq('boarding_house', activeHouseScope);
       const ids = (houseStudents || []).map((s) => s.student_id);
       query = query.in('student_id', ids.length ? ids : [-1]);
     }
@@ -78,9 +98,22 @@ function StudentsList() {
     <div>
       <h1>Students</h1>
       <p><a href="/students/new">+ Add a new student</a></p>
-      {houseScope && (
+      {houseScope && !canWidenScope && (
         <p style={{ background: '#fdecad', padding: '0.4rem 0.6rem', borderRadius: '4px', display: 'inline-block' }}>
           Showing {houseScope} students only (Houseparent view)
+        </p>
+      )}
+      {canWidenScope && (
+        <p style={{ background: '#fdecad', padding: '0.4rem 0.6rem', borderRadius: '4px' }}>
+          <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+            <input
+              type="checkbox"
+              checked={!showAllHouses}
+              onChange={(e) => setShowAllHouses(!e.target.checked)}
+              style={{ flex: '0 0 auto', width: 'auto' }}
+            />
+            <span>{houseScope} students only (Houseparent view) — untick to search the whole school</span>
+          </label>
         </p>
       )}
 
