@@ -28,7 +28,12 @@ name: Nightly database backup
 
 on:
   schedule:
-    - cron: '0 2 * * *' # 02:00 UTC = ~03:00 Lagos time
+    # 01:00 UTC = 02:00 Lagos (WAT is UTC+1 all year, no DST).
+    # NOTE: GitHub queues scheduled runs on shared runners and has been
+    # delivering this one ~5 hours late, so the backup actually lands in
+    # the morning rather than at 02:00. The time below is the earliest
+    # GitHub will consider running it, not a guarantee.
+    - cron: '0 1 * * *'
   workflow_dispatch: {}
 
 env:
