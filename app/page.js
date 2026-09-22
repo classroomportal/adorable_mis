@@ -212,6 +212,7 @@ const TABS = [
     key: 'staff', label: 'Staff & Access', icon: '🔐', accent: 'admin',
     description: 'Staff accounts, roles, permissions and parent records.',
     items: ({ hasAccess }) => [
+      { href: '/staff/records', label: 'Staff Records' },
       { href: '/staff/roles', label: 'Staff & Roles' },
       { href: '/staff/import-emails', label: 'Bulk Import Staff Emails' },
       { href: '/admin/permissions', label: 'Permissions' },
