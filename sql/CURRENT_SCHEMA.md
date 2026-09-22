@@ -15,7 +15,7 @@ Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase proj
 
 ## Quick facts
 
-- 65 tables, 4 views, 60 functions, 21 triggers, 166 RLS policies, 65 tables with RLS enabled
+- 65 tables, 4 views, 67 functions, 22 triggers, 166 RLS policies, 65 tables with RLS enabled
 - Extensions: pg_cron 1.6.4, pg_net 0.20.4, pg_stat_statements 1.11, pgcrypto 1.3, plpgsql 1.0, supabase_vault 0.3.1, uuid-ossp 1.1
 - Scheduled jobs (`pg_cron`):
   - `capture-register-alerts` — `*/15 * * * *` — `SELECT capture_register_alerts();` (active)
@@ -33,6 +33,14 @@ Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase proj
 - `students` gained three triggers (`trg_remove_class_links_on_student_leave`, `trg_student_auto_login`, `trg_sync_mentor_group_from_form_class`) and an FK `form_class → mentor_groups.group_name`.
 - `student_class` writes moved from `is_admin()` to `can_allocate_classes()` (admin, head_of_department, pastoral).
 - `attendance_today`, `registers_not_done` and `student_summary` are now `security_invoker=true`.
+
+### Since migration 123 (22 September 2026)
+
+- `attendance` gained `minutes_late` (integer, 0–600, `attendance_minutes_late_check`) and the trigger `trg_clear_minutes_late_unless_late`, which nulls it for any mark that isn't `late`.
+- New functions `school_today()` and `school_now()` pin Africa/Lagos. **The database's own `TimeZone` is UTC**, so `current_date`/`now()` are an hour behind the school and name the wrong day between midnight and 01:00 Lagos — use these instead anywhere a timetable, a register or a school day is involved.
+- `registers_not_done` now measures against `school_now()`/`school_today()` (it was firing an hour late), and decides a register is done by looking for marks against the class's enrolled students rather than matching `attendance.staff_id` to the class teacher. Nothing had ever written `staff_id`, so every slot counted as un-registered; `/attendance` now writes it, but the view no longer depends on it.
+- `capture_register_alerts()` stamps `register_alerts.period_date` with `school_today()` rather than the UTC `current_date`.
+- New function `student_attendance_summary(integer)` — today / this week / this academic year counts plus total minutes late for one student, invoker-rights so `attendance` RLS still applies. Backs the Attendance section of `/students/[id]`; counting in the DB avoids PostgREST's 1,000-row page limit, which a year of marks (~1,700 per student) exceeds.
 
 ## Known gaps / dead ends (so nobody re-discovers these the hard way)
 
@@ -56,10 +64,11 @@ CREATE VIEW attendance_today AS  SELECT a.student_id,
     a.code,
     ac.description,
     a.status,
-    (a.status = 'present'::text) AS is_present
-   FROM (attendance a
-     JOIN attendance_codes ac ON ((ac.code = a.code)))
-  WHERE ((a.attend_date = CURRENT_DATE) AND ((a.is_demo = is_demo_account()) OR is_admin()));
+    a.status = 'present'::text AS is_present,
+    a.minutes_late
+   FROM attendance a
+     JOIN attendance_codes ac ON ac.code = a.code
+  WHERE a.attend_date = school_today() AND (a.is_demo = is_demo_account() OR is_admin());
 ```
 
 ### `message_read_status`
@@ -83,19 +92,20 @@ CREATE VIEW message_read_status AS  SELECT mr.message_id,
 ```sql
 CREATE VIEW registers_not_done AS  SELECT ts.slot_id,
     c.staff_id,
-    ((s.first_name || ' '::text) || s.last_name) AS teacher_name,
+    (s.first_name || ' '::text) || s.last_name AS teacher_name,
     c.class_code,
     ts.period_number,
     ts.start_time,
-    (EXTRACT(epoch FROM (now() - ((CURRENT_DATE + ts.start_time))::timestamp with time zone)) / (60)::numeric) AS minutes_since_start
-   FROM ((timetable_slots ts
-     JOIN classes c ON ((c.class_id = ts.class_id)))
-     JOIN staff s ON ((s.staff_id = c.staff_id)))
-  WHERE ((ts.day_of_week = to_char((CURRENT_DATE)::timestamp with time zone, 'Dy'::text)) AND (now() > ((CURRENT_DATE + ts.start_time) + '00:15:00'::interval)) AND (now() < ((CURRENT_DATE + ts.start_time) + '03:00:00'::interval)) AND (EXISTS ( SELECT 1
+    EXTRACT(epoch FROM school_now() - (school_today() + ts.start_time)) / 60::numeric AS minutes_since_start
+   FROM timetable_slots ts
+     JOIN classes c ON c.class_id = ts.class_id
+     JOIN staff s ON s.staff_id = c.staff_id
+  WHERE ts.day_of_week = to_char(school_today()::timestamp with time zone, 'Dy'::text) AND school_now() > (school_today() + ts.start_time + '00:15:00'::interval) AND school_now() < (school_today() + ts.start_time + '03:00:00'::interval) AND (EXISTS ( SELECT 1
            FROM terms t
-          WHERE ((CURRENT_DATE >= t.start_date) AND (CURRENT_DATE <= t.end_date)))) AND (NOT (EXISTS ( SELECT 1
+          WHERE school_today() >= t.start_date AND school_today() <= t.end_date)) AND NOT (EXISTS ( SELECT 1
            FROM attendance a
-          WHERE ((a.staff_id = c.staff_id) AND (a.period_number = ts.period_number) AND (a.attend_date = CURRENT_DATE))))));
+             JOIN student_class sc ON sc.student_id = a.student_id
+          WHERE sc.class_id = ts.class_id AND a.period_number = ts.period_number AND a.attend_date = school_today()));
 ```
 
 ### `student_summary`
@@ -149,11 +159,17 @@ CREATE VIEW student_summary AS  SELECT s.student_id,
 | `notes` | text | YES |  |
 | `code` | text | YES |  |
 | `is_demo` | boolean | NO | false |
+| `minutes_late` | integer | YES |  |
 
 Foreign keys: `student_id` → `students.student_id`, `period_number` → `periods.period_number`, `staff_id` → `staff.staff_id`, `code` → `attendance_codes.code`
 
+Check constraints: `attendance_status_check` (status in present/absent/late/authorized_absence), `attendance_minutes_late_check` (`minutes_late is null or (minutes_late >= 0 and minutes_late <= 600)`)
+
+Unique: `(student_id, attend_date, period_number)` — the conflict target `/attendance` upserts on.
+
 Triggers:
 - `trg_set_is_demo`: `CREATE TRIGGER trg_set_is_demo BEFORE INSERT ON public.attendance FOR EACH ROW EXECUTE FUNCTION set_is_demo()`
+- `trg_clear_minutes_late_unless_late`: `CREATE TRIGGER trg_clear_minutes_late_unless_late BEFORE INSERT OR UPDATE ON public.attendance FOR EACH ROW EXECUTE FUNCTION clear_minutes_late_unless_late()`
 
 RLS policies:
 - `parent_read_own_attendance` (SELECT) USING ((EXISTS ( SELECT 1
@@ -1495,7 +1511,7 @@ RLS policies:
 - `Tuckshop purchases readable by staff or own family` (SELECT) USING (can_view_student_tuckshop(student_id))
 - `Tuckshop purchases writable by tuckshop staff` (ALL) USING (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text])) WITH CHECK (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]))
 
-## Functions (60)
+## Functions (67)
 
 Full definitions. `SECURITY DEFINER` functions run with the privileges of the function owner regardless of caller — check the body for its own permission checks (e.g. `is_admin()`, `user_has_staff_role(...)`) rather than assuming RLS protects them.
 
@@ -1676,16 +1692,33 @@ CREATE OR REPLACE FUNCTION public.capture_register_alerts()
  SECURITY DEFINER
  SET search_path TO 'public', 'pg_temp'
 AS $function$
-BEGIN
-  INSERT INTO register_alerts (timetable_slot_id, staff_id, period_date, minutes_late, resolved, is_demo)
-  SELECT rnd.slot_id, rnd.staff_id, current_date, round(rnd.minutes_since_start), false, ts.is_demo
-  FROM registers_not_done rnd
-  JOIN timetable_slots ts ON ts.slot_id = rnd.slot_id
-  WHERE NOT EXISTS (
-    SELECT 1 FROM register_alerts ra
-    WHERE ra.timetable_slot_id = rnd.slot_id AND ra.period_date = current_date
+begin
+  insert into register_alerts (timetable_slot_id, staff_id, period_date, minutes_late, resolved, is_demo)
+  select rnd.slot_id, rnd.staff_id, school_today(), round(rnd.minutes_since_start), false, ts.is_demo
+  from registers_not_done rnd
+  join timetable_slots ts on ts.slot_id = rnd.slot_id
+  where not exists (
+    select 1 from register_alerts ra
+    where ra.timetable_slot_id = rnd.slot_id and ra.period_date = school_today()
   );
-END;
+end;
+$function$
+
+```
+
+### `clear_minutes_late_unless_late()` — SECURITY INVOKER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.clear_minutes_late_unless_late()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+begin
+  if new.status is distinct from 'late' then
+    new.minutes_late := null;
+  end if;
+  return new;
+end;
 $function$
 
 ```
@@ -2797,6 +2830,32 @@ $function$
 
 ```
 
+### `school_now()` — SECURITY INVOKER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.school_now()
+ RETURNS timestamp without time zone
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+  select (now() at time zone 'Africa/Lagos');
+$function$
+
+```
+
+### `school_today()` — SECURITY INVOKER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.school_today()
+ RETURNS date
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+  select (now() at time zone 'Africa/Lagos')::date;
+$function$
+
+```
+
 ### `search_people(p_query text)` — SECURITY INVOKER, sql
 ```sql
 CREATE OR REPLACE FUNCTION public.search_people(p_query text)
@@ -3094,6 +3153,68 @@ begin
   new.updated_at = now();
   return new;
 end;
+$function$
+
+```
+
+### `student_attendance_summary(p_student_id integer)` — SECURITY INVOKER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.student_attendance_summary(p_student_id integer)
+ RETURNS TABLE(scope text, window_start date, sessions bigint, present bigint, late bigint, authorized_absence bigint, absent bigint, late_minutes bigint, late_with_minutes bigint)
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+  with bounds as (
+    select
+      school_today() as today,
+      school_today() - (extract(isodow from school_today())::int - 1) as week_start,
+      case
+        when extract(month from school_today()) >= 8
+          then make_date(extract(year from school_today())::int, 8, 1)
+        else make_date(extract(year from school_today())::int - 1, 8, 1)
+      end as august
+  ),
+  window_starts as (
+    select
+      b.today,
+      b.week_start,
+      coalesce(
+        (select min(t.start_date) from terms t
+          where t.start_date >= b.august and t.start_date < b.august + interval '1 year'),
+        b.august
+      ) as year_start
+    from bounds b
+  ),
+  marks as (
+    select a.attend_date, a.status, a.minutes_late
+    from attendance a, window_starts w
+    where a.student_id = p_student_id
+      and a.attend_date >= w.year_start
+      and a.attend_date <= w.today
+  ),
+  scopes as (
+    select * from (values ('today', 1), ('week', 2), ('year', 3)) as v(scope, ord)
+  )
+  select
+    sc.scope,
+    case sc.scope when 'today' then w.today when 'week' then w.week_start else w.year_start end,
+    count(m.attend_date),
+    count(*) filter (where m.status = 'present'),
+    count(*) filter (where m.status = 'late'),
+    count(*) filter (where m.status = 'authorized_absence'),
+    count(*) filter (where m.status = 'absent'),
+    coalesce(sum(m.minutes_late), 0),
+    count(*) filter (where m.status = 'late' and m.minutes_late is not null)
+  from scopes sc
+  cross join window_starts w
+  left join marks m on (
+    (sc.scope = 'today' and m.attend_date = w.today) or
+    (sc.scope = 'week' and m.attend_date >= w.week_start) or
+    (sc.scope = 'year')
+  )
+  group by sc.scope, sc.ord, w.today, w.week_start, w.year_start
+  order by sc.ord;
 $function$
 
 ```
