@@ -129,6 +129,16 @@ const TABS = [
     ].filter((it) => hasAccess(it.href)),
   },
   {
+    key: 'clinic', label: 'Clinic', icon: '🩺', accent: 'clinic',
+    description: 'Sick bay log, height & weight rounds and immunisations.',
+    items: ({ hasAccess }) => [
+      { href: '/clinic', label: 'Sick Bay Dashboard' },
+      { href: '/clinic/visits', label: 'Sick Bay Log' },
+      { href: '/clinic/measurements', label: 'Height & Weight Round' },
+      { href: '/clinic/immunisations', label: 'Immunisations' },
+    ].filter((it) => hasAccess(it.href)),
+  },
+  {
     key: 'reports', label: 'Reports', icon: '📝', accent: 'students',
     description: 'Write, check and generate student reports.',
     items: ({ hasAccess }) => [

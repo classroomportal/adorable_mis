@@ -428,6 +428,7 @@ input, select { width: 100%; }
 .stat-card.accent-students { --accent-color: #3f8f5f; --accent-bg: #e2f3e8; }
 .stat-card.accent-school   { --accent-color: #7a52a8; --accent-bg: #ede3f7; }
 .stat-card.accent-admin    { --accent-color: #475569; --accent-bg: #e7eaee; }
+.stat-card.accent-clinic   { --accent-color: #0f766e; --accent-bg: #d7efec; }
 
 /* Dashboard module cards — each module is a card naming what it's for,
    with its destinations listed as pill buttons rather than a link list. */
@@ -491,6 +492,7 @@ input, select { width: 100%; }
 .module-card.accent-students { --accent-color: #3f8f5f; --accent-bg: #e2f3e8; }
 .module-card.accent-school   { --accent-color: #7a52a8; --accent-bg: #ede3f7; }
 .module-card.accent-admin    { --accent-color: #475569; --accent-bg: #e7eaee; }
+.module-card.accent-clinic   { --accent-color: #0f766e; --accent-bg: #d7efec; }
 .module-card.accent-setup    { --accent-color: #94a3b8; --accent-bg: #f1f4f7; }
 
 /* Centred welcome card for the signed-out landing page */
