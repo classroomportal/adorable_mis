@@ -35,10 +35,17 @@ function BehaviourPageInner() {
   // Assume locked until my_house_access() answers, so a slow RPC never briefly
   // shows other houses to a house-only houseparent.
   const [houseScopeExclusive, setHouseScopeExclusive] = useState(true);
-  const [showAllHouses, setShowAllHouses] = useState(false);
+  const [showAllHouses, setShowAllHouses] = useState(!!searchParams.get('classId'));
 
-  const [groupType, setGroupType] = useState(searchParams.get('groupType') || (searchParams.get('classId') ? 'mentor' : ''));
-  const [classId, setClassId] = useState(searchParams.get('classId') || ''); // mentor group class_id
+  // /attendance links here as ?classId=<lesson>&date=<date> ("Log behaviour for
+  // this class"). That class is a timetabled lesson, not a mentor group, and
+  // the link has to survive the Houseparent defaults below — arriving from a
+  // lesson means the viewer is teaching, not on house duty.
+  const linkedClassId = searchParams.get('classId') || '';
+
+  const [groupType, setGroupType] = useState(searchParams.get('groupType') || (linkedClassId ? 'mentor' : ''));
+  const [classId, setClassId] = useState(linkedClassId); // mentor group or timetabled lesson class_id
+  const [linkedClass, setLinkedClass] = useState(null); // the linked lesson, when it is not a mentor group
   const [boardingHouse, setBoardingHouse] = useState('');
   const [restaurant, setRestaurant] = useState('');
   const [yearFilter, setYearFilter] = useState('');
@@ -104,6 +111,12 @@ function BehaviourPageInner() {
       )].sort(compareRooms)
     : [];
 
+  // Mentor groups, plus the timetabled lesson the viewer followed a link from
+  // (which lives in a different curriculum block and so is not in the list).
+  const classOptions = linkedClass && !mentorClasses.some((c) => c.class_id === linkedClass.class_id)
+    ? [linkedClass, ...mentorClasses]
+    : mentorClasses;
+
   function toggleRoom(room) {
     setRoomFilter((prev) => {
       const next = new Set(prev);
@@ -135,8 +148,24 @@ function BehaviourPageInner() {
       if (access?.house) {
         setHouseScope(access.house);
         setHouseScopeExclusive(!!access.exclusive);
-        setGroupType('boarding');
-        setBoardingHouse(access.house);
+        // Only default to the house when the viewer arrived here cold. A lesson
+        // link already says which group they want.
+        if (!linkedClassId) {
+          setGroupType('boarding');
+          setBoardingHouse(access.house);
+        }
+      }
+
+      // A timetabled lesson is not in mentorClasses, so without this the
+      // dropdown would show "Select..." while the roster below loaded the
+      // right students — looking broken. Fetch it and offer it by name.
+      if (linkedClassId) {
+        const { data: linked } = await supabase
+          .from('classes')
+          .select('class_id, class_code')
+          .eq('class_id', linkedClassId)
+          .maybeSingle();
+        if (linked) setLinkedClass(linked);
       }
     }
     loadOptions();
@@ -185,14 +214,19 @@ function BehaviourPageInner() {
   useEffect(() => { loadRoster(); }, [groupType, classId, boardingHouse, restaurant, yearFilter, roomFilter, allStudents]);
 
   // Coming back to the house-only view drops any group picked while the whole
-  // school was visible, which the locked pickers could otherwise not clear.
-  useEffect(() => {
-    if (!activeHouseScope) return;
+  // school was visible, which the re-locked pickers could otherwise not clear.
+  // This runs from the toggle rather than an effect on activeHouseScope: as an
+  // effect it also fired on first load and wiped a ?classId= lesson link.
+  function handleHouseOnlyChange(houseOnly) {
+    setShowAllHouses(!houseOnly);
+    if (!houseOnly || !houseScope) return;
     setGroupType('boarding');
-    setBoardingHouse(activeHouseScope);
+    setBoardingHouse(houseScope);
     setClassId('');
     setRestaurant('');
-  }, [activeHouseScope]);
+    setYearFilter('');
+    setRoomFilter(new Set());
+  }
 
   function handleGroupTypeChange(newType) {
     setGroupType(newType);
@@ -278,7 +312,7 @@ function BehaviourPageInner() {
             <input
               type="checkbox"
               checked={!showAllHouses}
-              onChange={(e) => setShowAllHouses(!e.target.checked)}
+              onChange={(e) => handleHouseOnlyChange(e.target.checked)}
               style={{ flex: '0 0 auto', width: 'auto' }}
             />
             <span>{houseScope} only (Houseparent view) — untick to log for any student you teach</span>
@@ -322,11 +356,11 @@ function BehaviourPageInner() {
 
         {groupType === 'mentor' && (
           <label style={{ marginTop: '0.5rem' }}>
-            Mentor group
+            Class or mentor group
             <select value={classId} onChange={(e) => setClassId(e.target.value)}>
               <option value="">Select...</option>
-              {mentorClasses.map((c) => (
-                <option key={c.class_id} value={c.class_id}>{c.class_code}</option>
+              {classOptions.map((c) => (
+                <option key={c.class_id} value={c.class_id}>{c.class_code || `Class ${c.class_id}`}</option>
               ))}
             </select>
           </label>
