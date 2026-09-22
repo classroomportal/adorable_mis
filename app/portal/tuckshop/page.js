@@ -26,6 +26,7 @@ function TuckshopInner() {
   const [preorderCart, setPreorderCart] = useState({});
   const [preorderStatus, setPreorderStatus] = useState(null);
   const [myPreorders, setMyPreorders] = useState([]);
+  const [closedUntil, setClosedUntil] = useState(null);
 
   async function load() {
     if (!studentId) return;
@@ -40,6 +41,19 @@ function TuckshopInner() {
     setTuckshopHistory(hist || []);
     const { data: items } = await supabase.from('tuckshop_items').select('id, name, price').eq('active', true).order('name');
     setTuckshopItems(items || []);
+    // system_settings is a single row, readable by any authenticated user.
+    // Ordering is shut while today is before tuckshop_ordering_closed_until;
+    // the same rule is enforced in submit_tuckshop_preorder, this is just so
+    // students see why before filling a basket.
+    const { data: settings } = await supabase
+      .from('system_settings')
+      .select('tuckshop_ordering_closed_until')
+      .maybeSingle();
+    const until = settings?.tuckshop_ordering_closed_until || null;
+    // Local date, not toISOString() — that is UTC, which is an hour behind
+    // Lagos and would keep the notice up past the reopen time.
+    const today = new Date().toLocaleDateString('en-CA');
+    setClosedUntil(until && today < until ? until : null);
     const { data: pre } = await supabase
       .from('tuckshop_preorders')
       .select('id, for_date, status')
@@ -61,6 +75,7 @@ function TuckshopInner() {
   }
 
   async function submitPreorder() {
+    if (closedUntil) return;
     if (Object.keys(preorderCart).length === 0) return;
     setPreorderStatus('Submitting…');
     const payload = Object.entries(preorderCart).map(([itemId, qty]) => ({ item_id: Number(itemId), quantity: qty }));
@@ -94,6 +109,16 @@ function TuckshopInner() {
         </p>
 
         <h3>Preorder for Saturday</h3>
+        {closedUntil ? (
+          <p className="badge badge-negative" style={{ display: 'inline-block' }}>
+            Tuckshop ordering is closed at the moment. It reopens on{' '}
+            {new Date(`${closedUntil}T00:00:00`).toLocaleDateString('en-GB', {
+              weekday: 'long', day: 'numeric', month: 'long',
+            })}
+            .
+          </p>
+        ) : (
+        <>
         <div className="table-scroll">
           <table>
             <thead><tr><th>Item</th><th>Price</th><th>Qty</th></tr></thead>
@@ -120,6 +145,8 @@ function TuckshopInner() {
           Submit preorder
         </button>
         {preorderStatus && <p>{preorderStatus}</p>}
+        </>
+        )}
 
         {myPreorders.length > 0 && (
           <>
