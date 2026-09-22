@@ -7,6 +7,7 @@ import TermTestScoresDownload from '../components/TermTestScoresDownload';
 import PublishedDocuments from '../components/PublishedDocuments';
 import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload';
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
+import { visibleTargets } from '../../lib/gradeCompare';
 import { formatTimeRange } from '../../lib/formatTime';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -27,13 +28,19 @@ function PortalInner() {
   const [timetableClasses, setTimetableClasses] = useState([]);
   const [timetableLoading, setTimetableLoading] = useState(true);
   const [studentName, setStudentName] = useState('');
+  const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(null); // null = enrolment not loaded yet
 
   async function load() {
     if (!studentId) return;
     const { data: r } = await supabase.from('results').select('*, subjects(subject_name, display_name)').eq('student_id', studentId).order('week_start_date', { ascending: false });
     setResults(r || []);
+    // Fetched together with the targets and set in the same tick: the target
+    // table filters on this, and setting it a render later would briefly show
+    // targets for subjects this student doesn't take.
     const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name, display_name)').eq('student_id', studentId);
+    const { data: enrolled } = await supabase.from('student_class').select('classes(subject_id)').eq('student_id', studentId);
     setTargets(tg || []);
+    setEnrolledSubjectIds(new Set((enrolled || []).map((l) => l.classes?.subject_id).filter(Boolean)));
     const { data: gs } = await supabase.from('grade_scale').select('*');
     setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
     const { data: b } = await supabase.from('behaviour_events').select('*').eq('student_id', studentId).order('event_date', { ascending: false });
@@ -174,8 +181,8 @@ function PortalInner() {
 
       <div className="card">
         <h2>Results vs Target</h2>
-        {targets.length === 0 ? <p>No target grades set yet.</p> : (
-          <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} />
+        {visibleTargets(targets, results, enrolledSubjectIds).length === 0 ? <p>No target grades set yet.</p> : (
+          <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} enrolledSubjectIds={enrolledSubjectIds} />
         )}
         <p style={{ marginTop: '0.75rem' }}>
           <a href="/results/subject-overview">View my subject overview (max &amp; average %) →</a>

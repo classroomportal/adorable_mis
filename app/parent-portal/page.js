@@ -7,6 +7,7 @@ import TermTestScoresDownload from '../components/TermTestScoresDownload';
 import PublishedDocuments from '../components/PublishedDocuments';
 import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload';
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
+import { visibleTargets } from '../../lib/gradeCompare';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -21,6 +22,7 @@ export function ParentPortalInner() {
 
   const [results, setResults] = useState([]);
   const [targets, setTargets] = useState([]);
+  const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(null); // null = enrolment not loaded yet
   const [behaviour, setBehaviour] = useState([]);
   const [feeTerm, setFeeTerm] = useState(null);
   const [feeLineItems, setFeeLineItems] = useState([]);
@@ -81,8 +83,13 @@ export function ParentPortalInner() {
       setActiveView(null);
       const { data: r } = await supabase.from('results').select('*, subjects(subject_name, display_name)').eq('student_id', selectedId).order('week_start_date', { ascending: false });
       setResults(r || []);
+      // Fetched together with the targets and set in the same tick: the target
+      // table filters on this, and setting it a render later would briefly show
+      // targets for subjects this child doesn't take.
       const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name, display_name)').eq('student_id', selectedId);
+      const { data: enrolled } = await supabase.from('student_class').select('classes(subject_id)').eq('student_id', selectedId);
       setTargets(tg || []);
+      setEnrolledSubjectIds(new Set((enrolled || []).map((l) => l.classes?.subject_id).filter(Boolean)));
       const { data: b } = await supabase.from('behaviour_events').select('*').eq('student_id', selectedId).order('event_date', { ascending: false });
       setBehaviour(b || []);
       const { data: gs } = await supabase.from('grade_scale').select('*');
@@ -141,12 +148,11 @@ export function ParentPortalInner() {
   const negativeCount = behaviour.filter((b) => b.type === 'negative').length;
   const positiveCount = behaviour.filter((b) => b.type === 'positive').length;
 
-  // target_grades can carry a stray row for every subject the school offers,
-  // not just the ones this child is actually taking — SubjectsTwoColumn
-  // already filters down to targets with a matching result before
-  // rendering, so the tile preview needs the same filter to avoid
-  // advertising a subject count nobody will actually see in the table.
-  const targetsWithResults = targets.filter((t) => results.some((r) => r.subject_id === t.subject_id));
+  // target_grades carries a row for every subject the school offers, not just
+  // the ones this child is actually taking, so the tile has to count what the
+  // table below will really render — hence the shared helper rather than a
+  // second copy of the rule.
+  const shownTargets = visibleTargets(targets, results, enrolledSubjectIds);
 
   const presentLike = attendance.filter((a) => a.status === 'present' || a.status === 'late').length;
   const attendancePct = attendance.length > 0 ? Math.round((presentLike / attendance.length) * 100) : null;
@@ -216,7 +222,7 @@ export function ParentPortalInner() {
                 <button type="button" className="dashboard-tile" onClick={() => setActiveView('assessment')}>
                   <span className="dashboard-tile-label">Assessment</span>
                   <span className="dashboard-tile-icon">⭐</span>
-                  <span className="dashboard-tile-sub">{targetsWithResults.length === 0 ? 'No targets set' : `${targetsWithResults.length} subject${targetsWithResults.length === 1 ? '' : 's'} tracked`}</span>
+                  <span className="dashboard-tile-sub">{shownTargets.length === 0 ? 'No targets set' : `${shownTargets.length} subject${shownTargets.length === 1 ? '' : 's'} tracked`}</span>
                 </button>
 
                 <button type="button" className="dashboard-tile" onClick={() => setActiveView('conduct')}>
@@ -300,8 +306,8 @@ export function ParentPortalInner() {
               <TermTestScoresDownload studentId={selectedId} />
               <KeyStageTranscriptDownload studentId={selectedId} />
               <PublishedDocuments studentId={selectedId} />
-              {targetsWithResults.length === 0 ? <p>No target grades set yet.</p> : (
-                <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} />
+              {shownTargets.length === 0 ? <p>No target grades set yet.</p> : (
+                <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} enrolledSubjectIds={enrolledSubjectIds} />
               )}
             </div>
           )}

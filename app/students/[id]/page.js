@@ -8,7 +8,7 @@ import { formatUKDate } from '../../../lib/formatDate';
 import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
-import { classifyGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
+import { classifyGrade, STYLE, LABEL, visibleTargets } from '../../../lib/gradeCompare';
 import { formatTimeRange } from '../../../lib/formatTime';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -66,6 +66,7 @@ function StudentDetail() {
   const [results, setResults] = useState([]);
   const [targetMap, setTargetMap] = useState({}); // subject_id -> target grade
   const [targetList, setTargetList] = useState([]); // all target grades for this student, incl. subjects with no results yet
+  const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(new Set()); // subject_ids this student is timetabled for
   const [gradePoints, setGradePoints] = useState({}); // grade -> points
   const [photoStatus, setPhotoStatus] = useState(null);
   const [cat4, setCat4] = useState([]);
@@ -201,7 +202,7 @@ function StudentDetail() {
     // student_class, so it goes stale whenever a class gets linked to a block afterwards.
     const { data: currentLinks } = await supabase
       .from('student_class')
-      .select('class_id, classes(class_code, block_id)')
+      .select('class_id, classes(class_code, block_id, subject_id)')
       .eq('student_id', id);
     const sel = {};
     (currentLinks || []).forEach((l) => {
@@ -210,6 +211,7 @@ function StudentDetail() {
       sel[bId] = compoundByBlock[bId] ? classPrefix(l.classes.class_code) : l.class_id;
     });
     setBlockSelections(sel);
+    setEnrolledSubjectIds(new Set((currentLinks || []).map((l) => l.classes?.subject_id).filter(Boolean)));
 
     setLoading(false);
   }
@@ -819,14 +821,19 @@ function StudentDetail() {
 
       <Collapsible title="Target Grades">
         {(() => {
-          const targetsWithResults = targetList.filter((t) => results.some((r) => r.subject_id === t.subject_id));
-          if (targetsWithResults.length === 0) return <p>No target grades set for this student.</p>;
+          // Narrowed to the subjects this student actually takes — see
+          // visibleTargets for why enrolment rather than "has a result".
+          // classifyGrade returns undefined without an actual grade, so a
+          // target with no result yet renders with dashes in the last two
+          // columns rather than being dropped.
+          const sortedTargets = visibleTargets(targetList, results, enrolledSubjectIds);
+          if (sortedTargets.length === 0) return <p>No target grades set for this student.</p>;
           return (
           <div className="table-scroll">
             <table>
               <thead><tr><th>Subject</th><th>Target</th><th>Most recent grade</th><th>vs Target</th></tr></thead>
               <tbody>
-                {targetsWithResults.map((t) => {
+                {sortedTargets.map((t) => {
                   const latestResult = results.find((r) => r.subject_id === t.subject_id);
                   const cmp = classifyGrade(t.target_grade, latestResult?.grade, gradePoints);
                   return (
