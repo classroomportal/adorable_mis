@@ -40,6 +40,7 @@ Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase proj
 - New functions `school_today()` and `school_now()` pin Africa/Lagos. **The database's own `TimeZone` is UTC**, so `current_date`/`now()` are an hour behind the school and name the wrong day between midnight and 01:00 Lagos — use these instead anywhere a timetable, a register or a school day is involved.
 - `registers_not_done` now measures against `school_now()`/`school_today()` (it was firing an hour late), and decides a register is done by looking for marks against the class's enrolled students rather than matching `attendance.staff_id` to the class teacher. Nothing had ever written `staff_id`, so every slot counted as un-registered; `/attendance` now writes it, but the view no longer depends on it.
 - Migration 124: `registers_not_done` gained `period_name` and **dropped its 3-hour upper bound** — a register nobody ever took used to vanish from the list three hours after the period started. It now stays listed for the rest of the school day. `capture_register_alerts()`'s per-slot-per-day guard means the longer window cannot duplicate alerts.
+- Migration 125: `periods.short_label` added (M, L1..L6, OH, EP) — the register page's badges were printing the raw `period_number`, which reads one lesson ahead of what it means. `registers_not_done` also now excludes classes with nobody enrolled: 10 of today's 187 slots had an empty roster and could never clear off the list.
 - `capture_register_alerts()` stamps `register_alerts.period_date` with `school_today()` rather than the UTC `current_date`.
 - New function `student_attendance_summary(integer)` — today / this week / this academic year counts plus total minutes late for one student, invoker-rights so `attendance` RLS still applies. Backs the Attendance section of `/students/[id]`; counting in the DB avoids PostgREST's 1,000-row page limit, which a year of marks (~1,700 per student) exceeds.
 
@@ -97,6 +98,7 @@ CREATE VIEW registers_not_done AS  SELECT ts.slot_id,
     c.class_code,
     ts.period_number,
     p.period_name,
+    p.short_label,
     ts.start_time,
     EXTRACT(epoch FROM school_now() - (school_today() + ts.start_time)) / 60::numeric AS minutes_since_start
    FROM timetable_slots ts
@@ -105,13 +107,15 @@ CREATE VIEW registers_not_done AS  SELECT ts.slot_id,
      LEFT JOIN periods p ON p.period_number = ts.period_number
   WHERE ts.day_of_week = to_char(school_today()::timestamp with time zone, 'Dy'::text) AND school_now() > (school_today() + ts.start_time + '00:15:00'::interval) AND (EXISTS ( SELECT 1
            FROM terms t
-          WHERE school_today() >= t.start_date AND school_today() <= t.end_date)) AND NOT (EXISTS ( SELECT 1
+          WHERE school_today() >= t.start_date AND school_today() <= t.end_date)) AND (EXISTS ( SELECT 1
+           FROM student_class sc
+          WHERE sc.class_id = ts.class_id)) AND NOT (EXISTS ( SELECT 1
            FROM attendance a
              JOIN student_class sc ON sc.student_id = a.student_id
           WHERE sc.class_id = ts.class_id AND a.period_number = ts.period_number AND a.attend_date = school_today()));
 ```
 
-**`periods.period_name` is offset from `period_number`** — number 2 is "Period 1", number 3 is "Period 2", and so on, because number 1 is Registration. Anything showing a period to staff must use `period_name`; printing the number next to a start time reads as a clock error (migration 124).
+Outstanding registers stay listed for the rest of the school day (migration 124 removed a 3-hour cap that made un-taken registers vanish by lunchtime). Classes with an empty roster are excluded — no register can be taken for them, so they could never clear (migration 125).
 
 ### `student_summary`
 ```sql
@@ -739,6 +743,21 @@ RLS policies:
 |---|---|---|---|
 | `period_number` 🔑 | integer | NO |  |
 | `period_name` | text | NO |  |
+| `short_label` | text | NO |  |
+
+**`period_number` is offset from the lesson number**, because Registration is number 1: number 2 is "Period 1"/`L1`, number 3 is "Period 2"/`L2`, and so on. Never derive a label from the number — show `period_name` or `short_label` (migrations 124–125).
+
+| number | `period_name` | `short_label` | typical start |
+|---|---|---|---|
+| 1 | Registration | `M` | 08:00 |
+| 2 | Period 1 | `L1` | 08:20 |
+| 3 | Period 2 | `L2` | 09:10 |
+| 4 | Period 3 | `L3` | 10:00 |
+| 5 | Period 4 | `L4` | 11:10 |
+| 6 | Period 5 | `L5` | 12:05 |
+| 7 | Period 6 | `L6` | 13:20 |
+| 8 | The Other Half | `OH` | 14:05 |
+| 9 | Evening Prep | `EP` | 19:00 |
 
 RLS policies:
 - `read_all_periods` (SELECT) USING ((auth.role() = 'authenticated'::text))
