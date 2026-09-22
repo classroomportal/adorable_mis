@@ -5,7 +5,7 @@
 // recent grade as a coloured badge (above/on/below target, or a fixed WAEC
 // band for Year 12) via the shared lib/gradeCompare classifier.
 
-import { classifyGrade, STYLE } from '../../lib/gradeCompare';
+import { classifyGrade, STYLE, visibleTargets } from '../../lib/gradeCompare';
 
 function SubjectRow({ t, results, gradePoints }) {
   const latest = results.find((r) => r.subject_id === t.subject_id);
@@ -33,11 +33,11 @@ function SubjectTable({ items, results, gradePoints }) {
   );
 }
 
-export default function SubjectsTwoColumn({ targets, results, gradePoints }) {
-  const targetsWithResults = targets.filter((t) => results.some((r) => r.subject_id === t.subject_id));
-  const mid = Math.ceil(targetsWithResults.length / 2);
-  const left = targetsWithResults.slice(0, mid);
-  const right = targetsWithResults.slice(mid);
+export default function SubjectsTwoColumn({ targets, results, gradePoints, enrolledSubjectIds }) {
+  const shown = visibleTargets(targets, results, enrolledSubjectIds);
+  const mid = Math.ceil(shown.length / 2);
+  const left = shown.slice(0, mid);
+  const right = shown.slice(mid);
 
   return (
     <div className="subjects-two-col">
