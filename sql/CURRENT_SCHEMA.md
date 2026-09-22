@@ -1,36 +1,48 @@
 # Formwork — Live Database Schema (Current State)
 
-**This file is a generated snapshot of the actual live Supabase database (introspected via the Supabase MCP connector), not hand-written.** Regenerate it whenever the schema drifts noticeably rather than editing it by hand.
+**This file is a generated snapshot of the actual live Supabase database (introspected via the Supabase MCP connector), not hand-written.** Regenerate it whenever the schema drifts noticeably rather than editing it by hand. `sql/generate_current_schema.sql` holds the queries that produce it.
 
 ## Why this file exists
 
 A large amount of this schema was built directly against the live Supabase instance over time and was **never captured** in `sql/*.sql` or `migrations/*.sql` — those folders are an incomplete, roughly-chronological history, not a reliable source of truth for "what exists right now". This file fills that gap: it is a full introspected dump (tables, columns, constraints, RLS policies, triggers, views, functions, extensions, scheduled jobs) as of the date below.
 
 **Before assuming a table/view/function doesn't exist, or guessing at its shape, check this file first.** Several real incidents this project has already hit came directly from *not* doing that:
-- `student_summary` and `attendance_today` were `SECURITY DEFINER` views that bypassed RLS entirely and leaked every real student's data (including parent phone numbers) to the training/demo account, because nobody knew they existed until a security sweep found them.
+- `student_summary` and `attendance_today` were `SECURITY DEFINER` views that bypassed RLS entirely and leaked every real student's data (including parent phone numbers) to the training/demo account, because nobody knew they existed until a security sweep found them. Both are now `security_invoker=true` — see "Known gaps" for the one view that still isn't.
 - `handle_negative_behaviour()` (a trigger on `behaviour_events`) and `notify_pastoral_on_negative_behaviour()` both existed live, undocumented, and the latter genuinely emails real staff — seeding demo data once accidentally emailed real people before this was discovered.
 - `detentions`, `register_alerts`, `house_assignments`, `behaviour_event_audit` all existed as real tables with real foreign keys, invisible until specifically queried for.
 
-
-Generated: 16 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase project "adorable_mis").
+Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase project "adorable_mis").
 
 ## Quick facts
 
-- 61 tables, 4 views, 48 functions, 13 triggers, 61 tables with RLS enabled
+- 65 tables, 4 views, 60 functions, 21 triggers, 166 RLS policies, 65 tables with RLS enabled
 - Extensions: pg_cron 1.6.4, pg_net 0.20.4, pg_stat_statements 1.11, pgcrypto 1.3, plpgsql 1.0, supabase_vault 0.3.1, uuid-ossp 1.1
 - Scheduled jobs (`pg_cron`):
   - `capture-register-alerts` — `*/15 * * * *` — `SELECT capture_register_alerts();` (active)
-  - `reset-demo-data-nightly` — `0 3 * * *` — `SELECT reset_demo_data();` (active)
-- `staff_roles.role_name` values actually in use: admin, assessment_manager, bursar, head_of_department, houseparent, mentor, smt, teacher
+  - The `reset-demo-data-nightly` job present in the previous snapshot **is gone**, consistent with the demo account having been removed.
+- `staff_roles.role_name` values actually assigned to staff: admin, admissions, assessment_manager, assessment_user, bursar, head_of_department, houseparent, hr, mentor, pastoral, school_office, smt, teacher
   - Note: `mentor` is a live role on some staff records but is **not** in the `ROLE_LABELS` map on `app/staff/roles/page.js` — it can't be assigned/removed from that screen.
-  - `hr` and `school_office` exist as roles referenced by RLS policies (e.g. on `register_alerts`) but had zero staff assigned as of this snapshot.
+  - `tuckshop` exists in the `roles` table and is referenced by ~10 RLS policies across the tuckshop and fees tables, but **zero staff hold it**, so nobody can currently write tuckshop data (admins pass via the `p.role = 'admin'` branch in `user_has_staff_role()`).
+  - `hr` and `school_office` had zero holders in the previous snapshot; both are now in use.
+
+## What changed since the 16 September 2026 snapshot
+
+- Tables 61 → 65: added `staff_commitments`, `student_documents`, `system_settings`, `transcript_grades`.
+- Functions 48 → 60, triggers 13 → 21.
+- `cat4_results` gained `profile` (migration 116); `behaviour_events` gained `visible_to_parents`, `protocol_reviewed_by`, `protocol_reviewed_at`.
+- `students` gained three triggers (`trg_remove_class_links_on_student_leave`, `trg_student_auto_login`, `trg_sync_mentor_group_from_form_class`) and an FK `form_class → mentor_groups.group_name`.
+- `student_class` writes moved from `is_admin()` to `can_allocate_classes()` (admin, head_of_department, pastoral).
+- `attendance_today`, `registers_not_done` and `student_summary` are now `security_invoker=true`.
 
 ## Known gaps / dead ends (so nobody re-discovers these the hard way)
 
-- **`house_assignments`** — has real FKs (`houseparent_staff_id → staff`) but nothing reads or writes it. Houseparent-to-house scoping actually works through `staff_roles.scope_value` (`scope_type='house'`) read by `my_house_scope()`, mirroring `my_department_scope()` for Heads of Department. Treat `house_assignments` as superseded/dead, not a gap to fill.
-- **`behaviour_event_audit`** — has FK wiring (cascades from `behaviour_events`, `profiles`) but nothing inserts into it. Scaffolding for an audit trail that was never finished.
-- **`registers_not_done`** (view) and **`message_read_status`** (view) are `SECURITY DEFINER` and bypass RLS like `student_summary`/`attendance_today` did. They aren't behind any currently-enabled demo-account link, but the same class of leak is possible if that ever changes — check before wiring either into a new page without scoping it.
+- **`message_read_status`** (view) is still **`SECURITY DEFINER`** — it has no `security_invoker` reloption, so it runs with the owner's privileges and bypasses RLS. It exposes recipient email addresses and names for staff, students and parents. Its own `WHERE` clause is the only thing scoping it (`is_admin()`, sender, or `smt`/`pastoral`/`school_office`). The other three views were fixed; this one wasn't. Worth closing the same way.
+- **Four `SECURITY DEFINER` functions hardcode a Supabase JWT** in an `Authorization: Bearer` header — `notify_pastoral_on_negative_behaviour()`, `send_message()`, `send_parent_welcome_email()`, `send_staff_welcome_email()`/`send_student_welcome_email()`. Decoded, its claims are `{"role":"anon"}`: it is the **publishable anon key**, the same one the browser bundle ships, so this is not a secret leak. It is still worth moving to Vault or a setting — the day someone swaps it for a service-role key to "make it work", it becomes one.
+- **`house_assignments`** — has real FKs (`houseparent_staff_id → staff`) but 0 rows, 0 RLS policies (so RLS-enabled and unreadable), and nothing reads or writes it. Houseparent-to-house scoping actually works through `staff_roles.scope_value` (`scope_type='house'`) read by `my_house_scope()`, mirroring `my_department_scope()` for Heads of Department. Treat `house_assignments` as superseded/dead, not a gap to fill.
+- **`behaviour_event_audit`** — has FK wiring (cascades from `behaviour_events`, `profiles`) but 0 rows and 0 policies; nothing inserts into it. Scaffolding for an audit trail that was never finished.
+- **The demo/training mechanism is dormant, not removed.** `is_demo_account()`, `set_is_demo()`, `reset_demo_data()` and the `is_demo` columns on 15 tables all still exist, but there are 0 demo profiles and 0 demo students, and the nightly reset job is gone. Every `is_demo = is_demo_account()` clause in the RLS policies below therefore reduces to `is_demo = false` in practice. Treat this as historical: don't build new features assuming a demo account is reachable, and if one is reintroduced it needs a fresh design pass rather than resurrecting this.
 - **Fees module** (`fee_*`, `student_invoices`, `invoice_line_items`, `student_discounts`) RPCs — `apply_fee_charge_batch`, `apply_student_discount`, `undo_fee_charge_batch`, `set_term_published` — are callable by any authenticated user per Supabase's own advisor (SECURITY DEFINER, no extra grant restriction beyond the internal `user_has_staff_role()` check inside each function body).
+- **`target_grades` has no `year_group` or term dimension.** A CAT4 import writes one row per student per subject for every subject the school offers, so a Year 7 carries targets in subjects they won't sit for years. Anything displaying targets must narrow to the subjects the student actually takes — see `visibleTargets()` in `lib/gradeCompare.js`, which filters on timetabled classes.
 
 ---
 
@@ -38,7 +50,7 @@ Generated: 16 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase proj
 
 ### `attendance_today`
 ```sql
-CREATE VIEW attendance_today AS SELECT a.student_id,
+CREATE VIEW attendance_today AS  SELECT a.student_id,
     a.attend_date,
     a.period_number,
     a.code,
@@ -52,7 +64,7 @@ CREATE VIEW attendance_today AS SELECT a.student_id,
 
 ### `message_read_status`
 ```sql
-CREATE VIEW message_read_status AS SELECT mr.message_id,
+CREATE VIEW message_read_status AS  SELECT mr.message_id,
     mr.profile_id,
     mr.read_at,
     COALESCE(pr.email, par.email, s.student_email) AS recipient_email,
@@ -61,12 +73,15 @@ CREATE VIEW message_read_status AS SELECT mr.message_id,
      JOIN profiles pr ON ((pr.id = mr.profile_id)))
      LEFT JOIN staff stf ON ((stf.staff_id = pr.staff_id)))
      LEFT JOIN students s ON ((s.student_id = pr.student_id)))
-     LEFT JOIN parents par ON ((par.parent_id = pr.parent_id)));
+     LEFT JOIN parents par ON ((par.parent_id = pr.parent_id)))
+  WHERE (is_admin() OR (EXISTS ( SELECT 1
+           FROM messages m
+          WHERE ((m.id = mr.message_id) AND ((m.sent_by = auth.uid()) OR user_has_staff_role(ARRAY['smt'::text, 'pastoral'::text, 'school_office'::text]))))));
 ```
 
 ### `registers_not_done`
 ```sql
-CREATE VIEW registers_not_done AS SELECT ts.slot_id,
+CREATE VIEW registers_not_done AS  SELECT ts.slot_id,
     c.staff_id,
     ((s.first_name || ' '::text) || s.last_name) AS teacher_name,
     c.class_code,
@@ -85,7 +100,7 @@ CREATE VIEW registers_not_done AS SELECT ts.slot_id,
 
 ### `student_summary`
 ```sql
-CREATE VIEW student_summary AS SELECT s.student_id,
+CREATE VIEW student_summary AS  SELECT s.student_id,
     s.first_name,
     s.last_name,
     s.year_group,
@@ -119,8 +134,6 @@ CREATE VIEW student_summary AS SELECT s.student_id,
   GROUP BY s.student_id, s.first_name, s.last_name, s.year_group, s.form_class, s.status;
 ```
 
----
-
 ## Tables
 
 ### `attendance`
@@ -137,15 +150,19 @@ CREATE VIEW student_summary AS SELECT s.student_id,
 | `code` | text | YES |  |
 | `is_demo` | boolean | NO | false |
 
-Foreign keys: `code` → `attendance_codes.code`, `student_id` → `students.student_id`, `period_number` → `periods.period_number`, `staff_id` → `staff.staff_id`
+Foreign keys: `student_id` → `students.student_id`, `period_number` → `periods.period_number`, `staff_id` → `staff.staff_id`, `code` → `attendance_codes.code`
 
 Triggers:
 - `trg_set_is_demo`: `CREATE TRIGGER trg_set_is_demo BEFORE INSERT ON public.attendance FOR EACH ROW EXECUTE FUNCTION set_is_demo()`
 
 RLS policies:
+- `parent_read_own_attendance` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM (profiles p
+     JOIN student_parent sp ON ((sp.parent_id = p.parent_id)))
+  WHERE ((p.id = auth.uid()) AND (sp.student_id = attendance.student_id)))))
 - `staff_read_attendance` (SELECT) USING ((is_staff_or_admin() AND ((is_demo = is_demo_account()) OR is_admin())))
-- `staff_update_attendance` (UPDATE) USING (((auth.role() = 'authenticated'::text) AND (is_demo = is_demo_account())))
-- `staff_write_attendance` (INSERT) WITH CHECK (((auth.role() = 'authenticated'::text) AND (is_demo = is_demo_account())))
+- `staff_update_attendance` (UPDATE) USING ((is_staff_or_admin() AND (is_demo = is_demo_account())))
+- `staff_write_attendance` (INSERT) WITH CHECK ((is_staff_or_admin() AND (is_demo = is_demo_account())))
 
 
 ### `attendance_codes`
@@ -176,7 +193,7 @@ RLS policies:
 | `resolution_notes` | text | YES |  |
 | `is_demo` | boolean | NO | false |
 
-Foreign keys: `student_id` → `students.student_id`, `event_id` → `behaviour_events.event_id`, `reviewed_by` → `staff.staff_id`
+Foreign keys: `student_id` → `students.student_id`, `reviewed_by` → `staff.staff_id`, `event_id` → `behaviour_events.event_id`
 
 Triggers:
 - `trg_void_event_on_upheld_appeal`: `CREATE TRIGGER trg_void_event_on_upheld_appeal AFTER UPDATE ON public.behaviour_appeals FOR EACH ROW EXECUTE FUNCTION void_event_on_upheld_appeal()`
@@ -184,8 +201,13 @@ Triggers:
 RLS policies:
 - `pastoral_read_all_appeals` (SELECT) USING ((is_pastoral_or_smt() AND ((is_demo = is_demo_account()) OR is_admin())))
 - `pastoral_update_appeals` (UPDATE) USING ((is_pastoral_or_smt() AND (is_demo = is_demo_account())))
-- `student_insert_own_appeals` (INSERT) WITH CHECK ((EXISTS ( SELECT 1 FROM (profiles p JOIN behaviour_events be ON (((be.event_id = behaviour_appeals.event_id) AND (be.type = 'negative'::text)))) WHERE ((p.id = auth.uid()) AND (p.student_id = behaviour_appeals.student_id) AND (p.student_id = be.student_id)))))
-- `student_read_own_appeals` (SELECT) USING ((EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id = auth.uid()) AND (p.student_id = behaviour_appeals.student_id)))))
+- `student_insert_own_appeals` (INSERT) WITH CHECK ((EXISTS ( SELECT 1
+   FROM (profiles p
+     JOIN behaviour_events be ON (((be.event_id = behaviour_appeals.event_id) AND (be.type = 'negative'::text))))
+  WHERE ((p.id = auth.uid()) AND (p.student_id = behaviour_appeals.student_id) AND (p.student_id = be.student_id)))))
+- `student_read_own_appeals` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.student_id = behaviour_appeals.student_id)))))
 
 
 ### `behaviour_categories`
@@ -215,8 +237,6 @@ RLS policies:
 
 Foreign keys: `event_id` → `behaviour_events.event_id`, `changed_by` → `profiles.id`
 
-**RLS enabled with zero policies — nobody (except superuser) can read or write this table at all.** Either a dead table, or a bug if something expects it to work.
-
 
 ### `behaviour_events`
 
@@ -232,21 +252,30 @@ Foreign keys: `event_id` → `behaviour_events.event_id`, `changed_by` → `prof
 | `points` | integer | YES |  |
 | `description` | text | YES |  |
 | `is_demo` | boolean | NO | false |
+| `visible_to_parents` | boolean | NO | false |
+| `protocol_reviewed_by` | integer | YES |  |
+| `protocol_reviewed_at` | timestamp with time zone | YES |  |
 
-Foreign keys: `student_id` → `students.student_id`, `staff_id` → `staff.staff_id`
+Foreign keys: `student_id` → `students.student_id`, `staff_id` → `staff.staff_id`, `protocol_reviewed_by` → `staff.staff_id`
 
 Triggers:
+- `behaviour_event_default_visibility`: `CREATE TRIGGER behaviour_event_default_visibility BEFORE INSERT ON public.behaviour_events FOR EACH ROW EXECUTE FUNCTION set_behaviour_event_default_visibility()`
 - `trg_negative_behaviour`: `CREATE TRIGGER trg_negative_behaviour AFTER INSERT ON public.behaviour_events FOR EACH ROW WHEN ((new.points < 0)) EXECUTE FUNCTION handle_negative_behaviour()`
 - `trg_notify_pastoral_on_negative_behaviour`: `CREATE TRIGGER trg_notify_pastoral_on_negative_behaviour AFTER INSERT ON public.behaviour_events FOR EACH ROW WHEN ((new.type = 'negative'::text)) EXECUTE FUNCTION notify_pastoral_on_negative_behaviour()`
 - `trg_set_is_demo`: `CREATE TRIGGER trg_set_is_demo BEFORE INSERT ON public.behaviour_events FOR EACH ROW EXECUTE FUNCTION set_is_demo()`
 
 RLS policies:
 - `admin_delete_behaviour` (DELETE) USING (is_admin())
-- `parent_read_own_behaviour` (SELECT) USING ((EXISTS ( SELECT 1 FROM (profiles p JOIN student_parent sp ON ((sp.parent_id = p.parent_id))) WHERE ((p.id = auth.uid()) AND (sp.student_id = behaviour_events.student_id)))))
+- `parent_read_own_behaviour` (SELECT) USING ((visible_to_parents AND (EXISTS ( SELECT 1
+   FROM (profiles p
+     JOIN student_parent sp ON ((sp.parent_id = p.parent_id)))
+  WHERE ((p.id = auth.uid()) AND (sp.student_id = behaviour_events.student_id))))))
 - `staff_read_behaviour` (SELECT) USING ((is_staff_or_admin() AND ((is_demo = is_demo_account()) OR is_admin())))
-- `staff_update_behaviour` (UPDATE) USING (((auth.role() = 'authenticated'::text) AND (is_demo = is_demo_account())))
-- `staff_write_behaviour` (INSERT) WITH CHECK (((auth.role() = 'authenticated'::text) AND (is_demo = is_demo_account())))
-- `student_read_own_behaviour` (SELECT) USING ((EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id = auth.uid()) AND (p.student_id = behaviour_events.student_id)))))
+- `staff_update_behaviour` (UPDATE) USING ((is_staff_or_admin() AND (is_demo = is_demo_account())))
+- `staff_write_behaviour` (INSERT) WITH CHECK ((is_staff_or_admin() AND (is_demo = is_demo_account())))
+- `student_read_own_behaviour` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.student_id = behaviour_events.student_id)))))
 
 
 ### `boarding_houses`
@@ -290,11 +319,13 @@ RLS policies:
 | `non_verbal_sas` | numeric | YES |  |
 | `quantitative_sas` | numeric | YES |  |
 | `spatial_sas` | numeric | YES |  |
+| `profile` | text | YES |  |
 
 Foreign keys: `student_id` → `students.student_id`
 
 RLS policies:
 - `admin_write_cat4` (ALL) USING (is_admin()) WITH CHECK (is_admin())
+- `assessment_manager_write_cat4` (ALL) USING (has_staff_role(ARRAY['assessment_manager'::text])) WITH CHECK (has_staff_role(ARRAY['assessment_manager'::text]))
 - `read_all_cat4` (SELECT) USING ((auth.role() = 'authenticated'::text))
 
 
@@ -303,7 +334,7 @@ RLS policies:
 | Column | Type | Nullable | Default |
 |---|---|---|---|
 | `student_id` 🔑 | integer | NO |  |
-| `milestone` | integer | NO |  |
+| `milestone` 🔑 | integer | NO |  |
 | `awarded_date` | date | NO | CURRENT_DATE |
 | `is_demo` | boolean | NO | false |
 
@@ -332,7 +363,7 @@ RLS policies:
 | `block_id` | integer | YES |  |
 | `is_demo` | boolean | NO | false |
 
-Foreign keys: `staff_id` → `staff.staff_id`, `subject_id` → `subjects.subject_id`, `block_id` → `curriculum_blocks.block_id`
+Foreign keys: `subject_id` → `subjects.subject_id`, `staff_id` → `staff.staff_id`, `block_id` → `curriculum_blocks.block_id`
 
 RLS policies:
 - `admin_write_classes` (ALL) USING (is_admin()) WITH CHECK (is_admin())
@@ -377,7 +408,7 @@ RLS policies:
 | `created_at` | timestamp with time zone | NO | now() |
 | `is_demo` | boolean | NO | false |
 
-Foreign keys: `behaviour_event_id` → `behaviour_events.event_id`, `student_id` → `students.student_id`
+Foreign keys: `student_id` → `students.student_id`, `behaviour_event_id` → `behaviour_events.event_id`
 
 RLS policies:
 - `pastoral_read_detentions` (SELECT) USING ((is_pastoral_or_smt() AND ((is_demo = is_demo_account()) OR is_admin())))
@@ -404,17 +435,17 @@ RLS policies:
 | `fee_item_id` | bigint | YES |  |
 | `term_id` | bigint | YES |  |
 | `description` | text | YES |  |
-| `amount` | numeric | NO |  |
+| `amount` | numeric(12,2) | NO |  |
 | `target_type` | text | NO |  |
 | `target_value` | text | YES |  |
 | `created_by` | uuid | YES |  |
 | `created_at` | timestamp with time zone | YES | now() |
 
-Foreign keys: `fee_item_id` → `fee_items.id`, `term_id` → `fee_terms.id`
+Foreign keys: `fee_item_id` → `fee_items.id`, `term_id` → `fee_terms.id`, `created_by` → `users.id`
 
 RLS policies:
 - `Fees staff can insert charge batches` (INSERT) WITH CHECK (user_has_staff_role(ARRAY['bursar'::text]))
-- `Fees staff can read charge batches` (SELECT) USING (user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]))
+- `Fees staff can read charge batches` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) AND (NOT is_demo_account())))
 
 
 ### `fee_discount_types`
@@ -424,7 +455,7 @@ RLS policies:
 | `id` 🔑 | bigint | NO | nextval('fee_discount_types_id_seq'::regclass) |
 | `name` | text | NO |  |
 | `calc_type` | text | NO |  |
-| `value` | numeric | NO |  |
+| `value` | numeric(12,2) | NO |  |
 | `applies_to` | text | YES | 'tuition'::text |
 | `created_at` | timestamp with time zone | YES | now() |
 
@@ -441,16 +472,16 @@ RLS policies:
 | `name` | text | NO |  |
 | `category` | text | YES |  |
 | `is_recurring` | boolean | YES | true |
-| `default_amount` | numeric | YES |  |
+| `default_amount` | numeric(12,2) | YES |  |
 | `created_at` | timestamp with time zone | YES | now() |
 | `is_optional` | boolean | YES | false |
 | `display_name` | text | YES |  |
 
 RLS policies:
-- `Authenticated users can read fee items` (SELECT) USING (true)
-- `Fee items readable by all authenticated` (SELECT) USING (true)
 - `Fee items updatable by bursar` (UPDATE) USING (user_has_staff_role(ARRAY['bursar'::text]))
 - `Fee items writable by bursar` (INSERT) WITH CHECK (user_has_staff_role(ARRAY['bursar'::text]))
+- `Fee staff and parents can read fee items` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) OR (EXISTS ( SELECT 1
+   FROM my_parent_ids() my_parent_ids(my_parent_ids)))))
 
 
 ### `fee_payment_plan_installments`
@@ -460,13 +491,13 @@ RLS policies:
 | `id` 🔑 | bigint | NO | nextval('fee_payment_plan_installments_id_seq'::regclass) |
 | `plan_id` | bigint | YES |  |
 | `due_date` | date | NO |  |
-| `amount` | numeric | NO |  |
+| `amount` | numeric(12,2) | NO |  |
 | `status` | text | YES | 'pending'::text |
 
 Foreign keys: `plan_id` → `fee_payment_plans.id`
 
 RLS policies:
-- `Fee staff can read payment plan installments` (SELECT) USING (user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]))
+- `Fee staff can read payment plan installments` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) AND (NOT is_demo_account())))
 - `Fee staff can write payment plan installments` (ALL) USING (user_has_staff_role(ARRAY['bursar'::text])) WITH CHECK (user_has_staff_role(ARRAY['bursar'::text]))
 
 
@@ -479,10 +510,10 @@ RLS policies:
 | `approved_by` | uuid | YES |  |
 | `created_at` | timestamp with time zone | YES | now() |
 
-Foreign keys: `invoice_id` → `student_invoices.id`
+Foreign keys: `invoice_id` → `student_invoices.id`, `approved_by` → `users.id`
 
 RLS policies:
-- `Fee staff can read payment plans` (SELECT) USING (user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]))
+- `Fee staff can read payment plans` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) AND (NOT is_demo_account())))
 - `Fee staff can write payment plans` (ALL) USING (user_has_staff_role(ARRAY['bursar'::text])) WITH CHECK (user_has_staff_role(ARRAY['bursar'::text]))
 
 
@@ -492,20 +523,24 @@ RLS policies:
 |---|---|---|---|
 | `id` 🔑 | bigint | NO | nextval('fee_payments_id_seq'::regclass) |
 | `invoice_id` | bigint | YES |  |
-| `amount` | numeric | NO |  |
+| `amount` | numeric(12,2) | NO |  |
 | `method` | text | YES |  |
 | `reference` | text | YES |  |
 | `paid_date` | date | YES | CURRENT_DATE |
 | `recorded_by` | uuid | YES |  |
 | `created_at` | timestamp with time zone | YES | now() |
 
-Foreign keys: `invoice_id` → `student_invoices.id`
+Foreign keys: `invoice_id` → `student_invoices.id`, `recorded_by` → `users.id`
 
 Triggers:
 - `trg_payments_status`: `CREATE TRIGGER trg_payments_status AFTER INSERT OR DELETE OR UPDATE ON public.fee_payments FOR EACH ROW EXECUTE FUNCTION trg_recalc_invoice_status()`
 
 RLS policies:
-- `Fees staff and parents can read relevant payments` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) OR (invoice_id IN ( SELECT si.id FROM ((student_invoices si JOIN student_parent sp ON ((sp.student_id = si.student_id))) JOIN fee_terms ft ON ((ft.id = si.term_id))) WHERE ((sp.parent_id IN ( SELECT my_parent_ids() AS my_parent_ids)) AND (ft.published_to_parents = true))))))
+- `Fees staff and parents can read relevant payments` (SELECT) USING (((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) AND (NOT is_demo_account())) OR (invoice_id IN ( SELECT si.id
+   FROM ((student_invoices si
+     JOIN student_parent sp ON ((sp.student_id = si.student_id)))
+     JOIN fee_terms ft ON ((ft.id = si.term_id)))
+  WHERE ((sp.parent_id IN ( SELECT my_parent_ids() AS my_parent_ids)) AND (ft.published_to_parents = true))))))
 - `Fees staff can insert payments` (INSERT) WITH CHECK (user_has_staff_role(ARRAY['bursar'::text]))
 
 
@@ -525,7 +560,8 @@ RLS policies:
 Foreign keys: `published_by` → `profiles.id`
 
 RLS policies:
-- `Authenticated users can read fee terms` (SELECT) USING (true)
+- `Fee staff, tuckshop and parents can read fee terms` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text, 'tuckshop'::text]) OR (EXISTS ( SELECT 1
+   FROM my_parent_ids() my_parent_ids(my_parent_ids)))))
 
 
 ### `grade_scale`
@@ -550,8 +586,6 @@ RLS policies:
 
 Foreign keys: `houseparent_staff_id` → `staff.staff_id`
 
-**RLS enabled with zero policies — nobody (except superuser) can read or write this table at all.** Either a dead table, or a bug if something expects it to work.
-
 
 ### `invoice_line_items`
 
@@ -561,19 +595,23 @@ Foreign keys: `houseparent_staff_id` → `staff.staff_id`
 | `invoice_id` | bigint | YES |  |
 | `fee_item_id` | bigint | YES |  |
 | `description` | text | YES |  |
-| `amount` | numeric | NO |  |
+| `amount` | numeric(12,2) | NO |  |
 | `is_extra_charge` | boolean | YES | false |
 | `batch_id` | bigint | YES |  |
 | `added_by` | uuid | YES |  |
 | `created_at` | timestamp with time zone | YES | now() |
 
-Foreign keys: `fee_item_id` → `fee_items.id`, `batch_id` → `fee_charge_batches.id`, `invoice_id` → `student_invoices.id`
+Foreign keys: `invoice_id` → `student_invoices.id`, `fee_item_id` → `fee_items.id`, `batch_id` → `fee_charge_batches.id`, `added_by` → `users.id`
 
 Triggers:
 - `trg_line_items_status`: `CREATE TRIGGER trg_line_items_status AFTER INSERT OR DELETE OR UPDATE ON public.invoice_line_items FOR EACH ROW EXECUTE FUNCTION trg_recalc_invoice_status()`
 
 RLS policies:
-- `Fees staff and parents can read relevant line items` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) OR (invoice_id IN ( SELECT si.id FROM ((student_invoices si JOIN student_parent sp ON ((sp.student_id = si.student_id))) JOIN fee_terms ft ON ((ft.id = si.term_id))) WHERE ((sp.parent_id IN ( SELECT my_parent_ids() AS my_parent_ids)) AND (ft.published_to_parents = true))))))
+- `Fees staff and parents can read relevant line items` (SELECT) USING (((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) AND (NOT is_demo_account())) OR (invoice_id IN ( SELECT si.id
+   FROM ((student_invoices si
+     JOIN student_parent sp ON ((sp.student_id = si.student_id)))
+     JOIN fee_terms ft ON ((ft.id = si.term_id)))
+  WHERE ((sp.parent_id IN ( SELECT my_parent_ids() AS my_parent_ids)) AND (ft.published_to_parents = true))))))
 - `Fees staff can delete line items` (DELETE) USING (user_has_staff_role(ARRAY['bursar'::text]))
 - `Fees staff can insert line items` (INSERT) WITH CHECK (user_has_staff_role(ARRAY['bursar'::text]))
 
@@ -601,7 +639,7 @@ RLS policies:
 | `profile_id` | uuid | YES |  |
 | `read_at` | timestamp with time zone | YES |  |
 
-Foreign keys: `profile_id` → `profiles.id`, `message_id` → `messages.id`
+Foreign keys: `message_id` → `messages.id`, `profile_id` → `profiles.id`
 
 RLS policies:
 - `message_recipients_own` (SELECT) USING ((profile_id = auth.uid()))
@@ -621,8 +659,12 @@ RLS policies:
 | `email_sent` | boolean | NO | false |
 | `sent_at` | timestamp with time zone | NO | now() |
 
+Foreign keys: `sent_by` → `users.id`
+
 RLS policies:
-- `messages_own_or_sent` (SELECT) USING (((sent_by = auth.uid()) OR (EXISTS ( SELECT 1 FROM message_recipients mr WHERE ((mr.message_id = messages.id) AND (mr.profile_id = auth.uid()))))))
+- `messages_own_or_sent` (SELECT) USING (((sent_by = auth.uid()) OR (EXISTS ( SELECT 1
+   FROM message_recipients mr
+  WHERE ((mr.message_id = messages.id) AND (mr.profile_id = auth.uid()))))))
 
 
 ### `ngrt_results`
@@ -643,6 +685,7 @@ Foreign keys: `student_id` → `students.student_id`
 
 RLS policies:
 - `admin_write_ngrt` (ALL) USING (is_admin()) WITH CHECK (is_admin())
+- `assessment_manager_write_ngrt` (ALL) USING (has_staff_role(ARRAY['assessment_manager'::text])) WITH CHECK (has_staff_role(ARRAY['assessment_manager'::text]))
 - `read_all_ngrt` (SELECT) USING ((auth.role() = 'authenticated'::text))
 
 
@@ -660,8 +703,13 @@ RLS policies:
 
 RLS policies:
 - `admin_write_parents` (ALL) USING (is_admin()) WITH CHECK (is_admin())
-- `parent_read_own_contact` (SELECT) USING ((EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id = auth.uid()) AND (p.parent_id = parents.parent_id)))))
+- `parent_read_own_contact` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.parent_id = parents.parent_id)))))
 - `read_parents_pastoral` (SELECT) USING (is_pastoral_or_smt())
+- `school_office_insert_parents` (INSERT) WITH CHECK (user_has_staff_role(ARRAY['school_office'::text]))
+- `school_office_read_parents` (SELECT) USING (user_has_staff_role(ARRAY['school_office'::text]))
+- `school_office_update_parents` (UPDATE) USING (user_has_staff_role(ARRAY['school_office'::text])) WITH CHECK (user_has_staff_role(ARRAY['school_office'::text]))
 
 
 ### `periods`
@@ -686,8 +734,9 @@ RLS policies:
 | `parent_id` | integer | YES |  |
 | `student_id` | integer | YES |  |
 | `is_demo_account` | boolean | NO | false |
+| `must_change_password` | boolean | NO | false |
 
-Foreign keys: `staff_id` → `staff.staff_id`, `student_id` → `students.student_id`, `parent_id` → `parents.parent_id`
+Foreign keys: `id` → `users.id`, `staff_id` → `staff.staff_id`, `parent_id` → `parents.parent_id`, `student_id` → `students.student_id`
 
 Triggers:
 - `trg_link_profile_to_staff`: `CREATE TRIGGER trg_link_profile_to_staff BEFORE INSERT OR UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION link_profile_to_staff()`
@@ -727,10 +776,13 @@ RLS policies:
 | `scope_type` | text | YES |  |
 | `scope_value` | text | YES |  |
 
-Foreign keys: `staff_id` → `staff.staff_id`, `report_period_id` → `report_periods.report_period_id`
+Foreign keys: `report_period_id` → `report_periods.report_period_id`, `staff_id` → `staff.staff_id`
 
 RLS policies:
 - `report_checkers_admin` (ALL) USING (user_has_staff_role(ARRAY['admin'::text, 'smt'::text]))
+- `report_checkers_read_own` (SELECT) USING ((staff_id = ( SELECT profiles.staff_id
+   FROM profiles
+  WHERE (profiles.id = auth.uid()))))
 
 
 ### `report_pastoral_comments`
@@ -749,12 +801,26 @@ RLS policies:
 | `checker_note` | text | YES |  |
 | `updated_at` | timestamp with time zone | YES | now() |
 
-Foreign keys: `checked_by` → `staff.staff_id`, `student_id` → `students.student_id`, `staff_id` → `staff.staff_id`, `report_period_id` → `report_periods.report_period_id`
+Foreign keys: `report_period_id` → `report_periods.report_period_id`, `student_id` → `students.student_id`, `staff_id` → `staff.staff_id`, `checked_by` → `staff.staff_id`
 
 RLS policies:
-- `pastoral_comments_insert` (INSERT) WITH CHECK (((staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid()))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
-- `pastoral_comments_select` (SELECT) USING (((staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid()))) OR (EXISTS ( SELECT 1 FROM report_checkers rc WHERE ((rc.report_period_id = report_pastoral_comments.report_period_id) AND (rc.staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid())))))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
-- `pastoral_comments_update` (UPDATE) USING ((((staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid()))) AND (status = 'draft'::text)) OR (EXISTS ( SELECT 1 FROM report_checkers rc WHERE ((rc.report_period_id = report_pastoral_comments.report_period_id) AND (rc.staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid())))))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
+- `pastoral_comments_insert` (INSERT) WITH CHECK (((staff_id = ( SELECT profiles.staff_id
+   FROM profiles
+  WHERE (profiles.id = auth.uid()))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
+- `pastoral_comments_select` (SELECT) USING (((staff_id = ( SELECT profiles.staff_id
+   FROM profiles
+  WHERE (profiles.id = auth.uid()))) OR (EXISTS ( SELECT 1
+   FROM report_checkers rc
+  WHERE ((rc.report_period_id = report_pastoral_comments.report_period_id) AND (rc.staff_id = ( SELECT profiles.staff_id
+           FROM profiles
+          WHERE (profiles.id = auth.uid())))))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
+- `pastoral_comments_update` (UPDATE) USING ((((staff_id = ( SELECT profiles.staff_id
+   FROM profiles
+  WHERE (profiles.id = auth.uid()))) AND (status = 'draft'::text)) OR (EXISTS ( SELECT 1
+   FROM report_checkers rc
+  WHERE ((rc.report_period_id = report_pastoral_comments.report_period_id) AND (rc.staff_id = ( SELECT profiles.staff_id
+           FROM profiles
+          WHERE (profiles.id = auth.uid())))))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
 
 
 ### `report_periods`
@@ -764,7 +830,7 @@ RLS policies:
 | `report_period_id` 🔑 | integer | NO | nextval('report_periods_report_period_id_seq'::regclass) |
 | `term_id` | integer | YES |  |
 | `name` | text | NO |  |
-| `year_groups` | ARRAY | NO |  |
+| `year_groups` | integer[] | NO |  |
 | `comments_due_date` | date | YES |  |
 | `check_due_date` | date | YES |  |
 | `is_published` | boolean | YES | false |
@@ -772,7 +838,7 @@ RLS policies:
 | `created_by` | uuid | YES |  |
 | `calendar_event_id` | integer | YES |  |
 
-Foreign keys: `calendar_event_id` → `calendar_events.event_id`, `term_id` → `terms.term_id`
+Foreign keys: `term_id` → `terms.term_id`, `calendar_event_id` → `calendar_events.event_id`
 
 RLS policies:
 - `report_periods_admin` (ALL) USING (user_has_staff_role(ARRAY['admin'::text, 'smt'::text, 'assessment_manager'::text]))
@@ -795,12 +861,26 @@ RLS policies:
 | `checker_note` | text | YES |  |
 | `updated_at` | timestamp with time zone | YES | now() |
 
-Foreign keys: `subject_id` → `subjects.subject_id`, `staff_id` → `staff.staff_id`, `checked_by` → `staff.staff_id`, `report_period_id` → `report_periods.report_period_id`, `student_id` → `students.student_id`
+Foreign keys: `report_period_id` → `report_periods.report_period_id`, `student_id` → `students.student_id`, `subject_id` → `subjects.subject_id`, `staff_id` → `staff.staff_id`, `checked_by` → `staff.staff_id`
 
 RLS policies:
-- `subject_comments_insert` (INSERT) WITH CHECK (((staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid()))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
-- `subject_comments_select` (SELECT) USING (((staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid()))) OR (EXISTS ( SELECT 1 FROM report_checkers rc WHERE ((rc.report_period_id = report_subject_comments.report_period_id) AND (rc.staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid())))))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
-- `subject_comments_update` (UPDATE) USING ((((staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid()))) AND (status = 'draft'::text)) OR (EXISTS ( SELECT 1 FROM report_checkers rc WHERE ((rc.report_period_id = report_subject_comments.report_period_id) AND (rc.staff_id = ( SELECT profiles.staff_id FROM profiles WHERE (profiles.id = auth.uid())))))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
+- `subject_comments_insert` (INSERT) WITH CHECK (((staff_id = ( SELECT profiles.staff_id
+   FROM profiles
+  WHERE (profiles.id = auth.uid()))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
+- `subject_comments_select` (SELECT) USING (((staff_id = ( SELECT profiles.staff_id
+   FROM profiles
+  WHERE (profiles.id = auth.uid()))) OR (EXISTS ( SELECT 1
+   FROM report_checkers rc
+  WHERE ((rc.report_period_id = report_subject_comments.report_period_id) AND (rc.staff_id = ( SELECT profiles.staff_id
+           FROM profiles
+          WHERE (profiles.id = auth.uid())))))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
+- `subject_comments_update` (UPDATE) USING ((((staff_id = ( SELECT profiles.staff_id
+   FROM profiles
+  WHERE (profiles.id = auth.uid()))) AND (status = 'draft'::text)) OR (EXISTS ( SELECT 1
+   FROM report_checkers rc
+  WHERE ((rc.report_period_id = report_subject_comments.report_period_id) AND (rc.staff_id = ( SELECT profiles.staff_id
+           FROM profiles
+          WHERE (profiles.id = auth.uid())))))) OR user_has_staff_role(ARRAY['admin'::text, 'smt'::text])))
 
 
 ### `resources`
@@ -843,10 +923,17 @@ Triggers:
 
 RLS policies:
 - `assessment_update_results` (UPDATE) USING (is_assessment_manager())
+- `assessment_user_insert_results` (INSERT) WITH CHECK (has_staff_role(ARRAY['assessment_user'::text]))
+- `assessment_user_update_results` (UPDATE) USING (has_staff_role(ARRAY['assessment_user'::text]))
 - `assessment_write_results` (INSERT) WITH CHECK (is_assessment_manager())
-- `parent_read_own_results` (SELECT) USING ((EXISTS ( SELECT 1 FROM (profiles p JOIN student_parent sp ON ((sp.parent_id = p.parent_id))) WHERE ((p.id = auth.uid()) AND (sp.student_id = results.student_id)))))
+- `parent_read_own_results` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM (profiles p
+     JOIN student_parent sp ON ((sp.parent_id = p.parent_id)))
+  WHERE ((p.id = auth.uid()) AND (sp.student_id = results.student_id)))))
 - `staff_read_results` (SELECT) USING ((is_staff_or_admin() AND ((is_demo = is_demo_account()) OR is_admin())))
-- `student_read_own_results` (SELECT) USING ((EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id = auth.uid()) AND (p.student_id = results.student_id)))))
+- `student_read_own_results` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.student_id = results.student_id)))))
 
 
 ### `role_permissions`
@@ -854,7 +941,7 @@ RLS policies:
 | Column | Type | Nullable | Default |
 |---|---|---|---|
 | `role_name` 🔑 | text | NO |  |
-| `resource_key` | text | NO |  |
+| `resource_key` 🔑 | text | NO |  |
 
 Foreign keys: `role_name` → `roles.role_name`, `resource_key` → `resources.resource_key`
 
@@ -899,9 +986,34 @@ RLS policies:
 | `email` | text | YES |  |
 | `is_demo` | boolean | NO | false |
 
+Triggers:
+- `trg_staff_auto_login`: `CREATE TRIGGER trg_staff_auto_login AFTER INSERT OR UPDATE OF email ON public.staff FOR EACH ROW EXECUTE FUNCTION trg_provision_staff_login()`
+
 RLS policies:
 - `admin_write_staff` (ALL) USING (is_admin()) WITH CHECK (is_admin())
 - `read_all_staff` (SELECT) USING (((auth.role() = 'authenticated'::text) AND ((is_demo = is_demo_account()) OR is_admin())))
+
+
+### `staff_commitments`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| `commitment_id` 🔑 | integer | NO | nextval('staff_commitments_commitment_id_seq'::regclass) |
+| `staff_id` | integer | NO |  |
+| `day_of_week` | text | NO |  |
+| `period_number` | integer | NO |  |
+| `label` | text | NO |  |
+| `is_demo` | boolean | NO | false |
+| `created_at` | timestamp with time zone | NO | now() |
+
+Foreign keys: `staff_id` → `staff.staff_id`, `period_number` → `periods.period_number`
+
+Triggers:
+- `trg_set_is_demo`: `CREATE TRIGGER trg_set_is_demo BEFORE INSERT ON public.staff_commitments FOR EACH ROW EXECUTE FUNCTION set_is_demo()`
+
+RLS policies:
+- `admin_write_commitments` (ALL) USING (is_admin()) WITH CHECK (is_admin())
+- `staff_read_commitments` (SELECT) USING ((is_staff_or_admin() AND ((is_demo = is_demo_account()) OR is_admin())))
 
 
 ### `staff_roles`
@@ -909,7 +1021,7 @@ RLS policies:
 | Column | Type | Nullable | Default |
 |---|---|---|---|
 | `staff_id` 🔑 | integer | NO |  |
-| `role_name` | text | NO |  |
+| `role_name` 🔑 | text | NO |  |
 | `scope_type` | text | YES |  |
 | `scope_value` | text | YES |  |
 
@@ -917,6 +1029,7 @@ Foreign keys: `staff_id` → `staff.staff_id`
 
 RLS policies:
 - `admin_write_staff_roles` (ALL) USING (is_admin()) WITH CHECK (is_admin())
+- `hr_manage_staff_roles` (ALL) USING ((user_has_staff_role(ARRAY['hr'::text]) AND (role_name <> 'admin'::text))) WITH CHECK ((user_has_staff_role(ARRAY['hr'::text]) AND (role_name <> 'admin'::text)))
 - `read_all_staff_roles` (SELECT) USING ((auth.role() = 'authenticated'::text))
 
 
@@ -925,18 +1038,18 @@ RLS policies:
 | Column | Type | Nullable | Default |
 |---|---|---|---|
 | `student_id` 🔑 | integer | NO |  |
-| `class_id` | integer | NO |  |
+| `class_id` 🔑 | integer | NO |  |
 | `block_id` | integer | YES |  |
 | `is_compound` | boolean | NO | false |
 | `is_demo` | boolean | NO | false |
 
-Foreign keys: `block_id` → `curriculum_blocks.block_id`, `class_id` → `classes.class_id`, `student_id` → `students.student_id`
+Foreign keys: `student_id` → `students.student_id`, `class_id` → `classes.class_id`, `block_id` → `curriculum_blocks.block_id`
 
 Triggers:
 - `trg_set_student_class_block_id`: `CREATE TRIGGER trg_set_student_class_block_id BEFORE INSERT OR UPDATE OF class_id ON public.student_class FOR EACH ROW EXECUTE FUNCTION set_student_class_block_id()`
 
 RLS policies:
-- `admin_write_student_class` (ALL) USING (is_admin()) WITH CHECK (is_admin())
+- `admin_write_student_class` (ALL) USING (can_allocate_classes()) WITH CHECK (can_allocate_classes())
 - `read_all_student_class` (SELECT) USING (((auth.role() = 'authenticated'::text) AND ((is_demo = is_demo_account()) OR is_admin())))
 
 
@@ -953,11 +1066,42 @@ RLS policies:
 | `notes` | text | YES |  |
 | `created_at` | timestamp with time zone | YES | now() |
 
-Foreign keys: `student_id` → `students.student_id`, `end_term_id` → `fee_terms.id`, `start_term_id` → `fee_terms.id`, `discount_type_id` → `fee_discount_types.id`
+Foreign keys: `student_id` → `students.student_id`, `discount_type_id` → `fee_discount_types.id`, `start_term_id` → `fee_terms.id`, `end_term_id` → `fee_terms.id`, `approved_by` → `users.id`
 
 RLS policies:
-- `Fee staff can read student discounts` (SELECT) USING (user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]))
+- `Fee staff can read student discounts` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) AND (NOT is_demo_account())))
 - `Fee staff can write student discounts` (ALL) USING (user_has_staff_role(ARRAY['bursar'::text])) WITH CHECK (user_has_staff_role(ARRAY['bursar'::text]))
+
+
+### `student_documents`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| `id` 🔑 | bigint | NO | nextval('student_documents_id_seq'::regclass) |
+| `student_id` | integer | NO |  |
+| `document_type` | text | NO |  |
+| `term_id` | integer | YES |  |
+| `title` | text | NO |  |
+| `storage_path` | text | NO |  |
+| `generated_at` | timestamp with time zone | NO | now() |
+| `generated_by` | uuid | YES |  |
+| `is_demo` | boolean | NO | false |
+
+Foreign keys: `student_id` → `students.student_id`, `term_id` → `terms.term_id`, `generated_by` → `profiles.id`
+
+Triggers:
+- `trg_set_is_demo`: `CREATE TRIGGER trg_set_is_demo BEFORE INSERT ON public.student_documents FOR EACH ROW EXECUTE FUNCTION set_is_demo()`
+
+RLS policies:
+- `parent_read_own_student_documents` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM (profiles p
+     JOIN student_parent sp ON ((sp.parent_id = p.parent_id)))
+  WHERE ((p.id = auth.uid()) AND (sp.student_id = student_documents.student_id)))))
+- `staff_manage_student_documents` (ALL) USING ((user_has_staff_role(ARRAY['admin'::text, 'smt'::text, 'assessment_manager'::text]) AND (NOT is_demo_account()))) WITH CHECK ((user_has_staff_role(ARRAY['admin'::text, 'smt'::text, 'assessment_manager'::text]) AND (NOT is_demo_account())))
+- `staff_read_student_documents` (SELECT) USING ((is_staff_or_admin() AND ((is_demo = is_demo_account()) OR is_admin())))
+- `student_read_own_student_documents` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.student_id = student_documents.student_id)))))
 
 
 ### `student_invoices`
@@ -970,10 +1114,14 @@ RLS policies:
 | `status` | text | YES | 'unpaid'::text |
 | `created_at` | timestamp with time zone | YES | now() |
 
-Foreign keys: `term_id` → `fee_terms.id`, `student_id` → `students.student_id`
+Foreign keys: `student_id` → `students.student_id`, `term_id` → `fee_terms.id`
 
 RLS policies:
-- `Fees staff and parents can read relevant invoices` (SELECT) USING ((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) OR ((student_id IN ( SELECT sp.student_id FROM student_parent sp WHERE (sp.parent_id IN ( SELECT my_parent_ids() AS my_parent_ids)))) AND (term_id IN ( SELECT fee_terms.id FROM fee_terms WHERE (fee_terms.published_to_parents = true))))))
+- `Fees staff and parents can read relevant invoices` (SELECT) USING (((user_has_staff_role(ARRAY['bursar'::text, 'smt'::text]) AND (NOT is_demo_account())) OR ((student_id IN ( SELECT sp.student_id
+   FROM student_parent sp
+  WHERE (sp.parent_id IN ( SELECT my_parent_ids() AS my_parent_ids)))) AND (term_id IN ( SELECT fee_terms.id
+   FROM fee_terms
+  WHERE (fee_terms.published_to_parents = true))))))
 - `Fees staff can insert invoices` (INSERT) WITH CHECK (user_has_staff_role(ARRAY['bursar'::text]))
 
 
@@ -982,14 +1130,18 @@ RLS policies:
 | Column | Type | Nullable | Default |
 |---|---|---|---|
 | `student_id` 🔑 | integer | NO |  |
-| `parent_id` | integer | NO |  |
+| `parent_id` 🔑 | integer | NO |  |
 | `is_primary_contact` | boolean | NO | false |
 
 Foreign keys: `student_id` → `students.student_id`, `parent_id` → `parents.parent_id`
 
 RLS policies:
 - `admin_write_student_parent` (ALL) USING (is_admin()) WITH CHECK (is_admin())
+- `parent_read_own_links` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.parent_id = student_parent.parent_id)))))
 - `read_student_parent_pastoral` (SELECT) USING (is_pastoral_or_smt())
+- `school_office_write_student_parent` (ALL) USING (user_has_staff_role(ARRAY['school_office'::text])) WITH CHECK (user_has_staff_role(ARRAY['school_office'::text]))
 
 
 ### `students`
@@ -1050,16 +1202,26 @@ RLS policies:
 | `mentor_group_id` | integer | YES |  |
 | `is_demo` | boolean | NO | false |
 
-Foreign keys: `family_id` → `families.family_id`, `boarding_house` → `boarding_houses.name`, `sports_house` → `sports_houses.name`, `mentor_staff_id` → `staff.staff_id`, `mentor_group_id` → `mentor_groups.mentor_group_id`
+Foreign keys: `family_id` → `families.family_id`, `mentor_staff_id` → `staff.staff_id`, `mentor_group_id` → `mentor_groups.mentor_group_id`, `boarding_house` → `boarding_houses.name`, `sports_house` → `sports_houses.name`, `form_class` → `mentor_groups.group_name`
 
 Triggers:
 - `trg_auto_set_student_status`: `CREATE TRIGGER trg_auto_set_student_status BEFORE INSERT OR UPDATE ON public.students FOR EACH ROW EXECUTE FUNCTION auto_set_student_status()`
+- `trg_remove_class_links_on_student_leave`: `CREATE TRIGGER trg_remove_class_links_on_student_leave AFTER UPDATE OF status ON public.students FOR EACH ROW EXECUTE FUNCTION remove_class_links_on_student_leave()`
+- `trg_student_auto_login`: `CREATE TRIGGER trg_student_auto_login AFTER INSERT OR UPDATE OF student_email ON public.students FOR EACH ROW EXECUTE FUNCTION trg_provision_student_login()`
+- `trg_sync_mentor_group_from_form_class`: `CREATE TRIGGER trg_sync_mentor_group_from_form_class BEFORE INSERT OR UPDATE OF form_class ON public.students FOR EACH ROW EXECUTE FUNCTION sync_mentor_group_from_form_class()`
 
 RLS policies:
 - `admin_write_students` (ALL) USING (is_admin()) WITH CHECK (is_admin())
-- `parent_read_own_child` (SELECT) USING ((EXISTS ( SELECT 1 FROM (profiles p JOIN student_parent sp ON ((sp.parent_id = p.parent_id))) WHERE ((p.id = auth.uid()) AND (sp.student_id = students.student_id)))))
+- `parent_read_own_child` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM (profiles p
+     JOIN student_parent sp ON ((sp.parent_id = p.parent_id)))
+  WHERE ((p.id = auth.uid()) AND (sp.student_id = students.student_id)))))
+- `school_office_insert_students` (INSERT) WITH CHECK (user_has_staff_role(ARRAY['school_office'::text]))
+- `school_office_update_students` (UPDATE) USING (user_has_staff_role(ARRAY['school_office'::text])) WITH CHECK (user_has_staff_role(ARRAY['school_office'::text]))
 - `staff_read_students` (SELECT) USING ((is_staff_or_admin() AND ((is_demo = is_demo_account()) OR is_admin())))
-- `student_read_self` (SELECT) USING ((EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id = auth.uid()) AND (p.student_id = students.student_id)))))
+- `student_read_self` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.student_id = students.student_id)))))
 
 
 ### `subject_aliases`
@@ -1125,11 +1287,25 @@ RLS policies:
 | `target_fallback_subject_id` | integer | YES |  |
 | `department_name` | text | YES |  |
 
-Foreign keys: `department_name` → `departments.department_name`, `target_fallback_subject_id` → `subjects.subject_id`
+Foreign keys: `target_fallback_subject_id` → `subjects.subject_id`, `department_name` → `departments.department_name`
 
 RLS policies:
 - `admin_write_subjects` (ALL) USING (is_admin()) WITH CHECK (is_admin())
 - `read_all_subjects` (SELECT) USING ((auth.role() = 'authenticated'::text))
+
+
+### `system_settings`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| `id` 🔑 | boolean | NO | true |
+| `parent_emails_paused` | boolean | NO | false |
+| `parent_emails_paused_note` | text | YES |  |
+| `updated_at` | timestamp with time zone | NO | now() |
+
+RLS policies:
+- `system_settings editable by admin` (ALL) USING (is_admin()) WITH CHECK (is_admin())
+- `system_settings readable by all authenticated` (SELECT) USING ((auth.role() = 'authenticated'::text))
 
 
 ### `target_grades`
@@ -1137,7 +1313,7 @@ RLS policies:
 | Column | Type | Nullable | Default |
 |---|---|---|---|
 | `student_id` 🔑 | integer | NO |  |
-| `subject_id` | integer | NO |  |
+| `subject_id` 🔑 | integer | NO |  |
 | `target_grade` | text | NO |  |
 | `is_demo` | boolean | NO | false |
 
@@ -1147,9 +1323,16 @@ RLS policies:
 - `assessment_delete_target_grades` (DELETE) USING ((is_assessment_manager() AND (is_demo = is_demo_account())))
 - `assessment_insert_target_grades` (INSERT) WITH CHECK ((is_assessment_manager() AND (is_demo = is_demo_account())))
 - `assessment_update_target_grades` (UPDATE) USING ((is_assessment_manager() AND (is_demo = is_demo_account())))
-- `parent_read_own_target_grades` (SELECT) USING ((EXISTS ( SELECT 1 FROM (profiles p JOIN student_parent sp ON ((sp.parent_id = p.parent_id))) WHERE ((p.id = auth.uid()) AND (sp.student_id = target_grades.student_id)))))
+- `assessment_user_insert_target_grades` (INSERT) WITH CHECK (has_staff_role(ARRAY['assessment_user'::text]))
+- `assessment_user_update_target_grades` (UPDATE) USING (has_staff_role(ARRAY['assessment_user'::text]))
+- `parent_read_own_target_grades` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM (profiles p
+     JOIN student_parent sp ON ((sp.parent_id = p.parent_id)))
+  WHERE ((p.id = auth.uid()) AND (sp.student_id = target_grades.student_id)))))
 - `read_all_target_grades` (SELECT) USING ((is_staff_or_admin() AND ((is_demo = is_demo_account()) OR is_admin())))
-- `student_read_own_target_grades` (SELECT) USING ((EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id = auth.uid()) AND (p.student_id = target_grades.student_id)))))
+- `student_read_own_target_grades` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.student_id = target_grades.student_id)))))
 
 
 ### `terms`
@@ -1185,6 +1368,38 @@ RLS policies:
 - `read_all_timetable_slots` (SELECT) USING (((auth.role() = 'authenticated'::text) AND ((is_demo = is_demo_account()) OR is_admin())))
 
 
+### `transcript_grades`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| `student_id` 🔑 | integer | NO |  |
+| `subject_id` 🔑 | integer | NO |  |
+| `year_group` 🔑 | smallint | NO |  |
+| `term_number` 🔑 | smallint | NO |  |
+| `grade` | text | NO |  |
+| `is_demo` | boolean | NO | false |
+| `updated_at` | timestamp with time zone | NO | now() |
+| `updated_by` | uuid | YES |  |
+
+Foreign keys: `student_id` → `students.student_id`, `subject_id` → `subjects.subject_id`, `grade` → `grade_scale.grade`, `updated_by` → `profiles.id`
+
+Triggers:
+- `trg_set_is_demo`: `CREATE TRIGGER trg_set_is_demo BEFORE INSERT ON public.transcript_grades FOR EACH ROW EXECUTE FUNCTION set_is_demo()`
+
+RLS policies:
+- `assessment_delete_transcript_grades` (DELETE) USING ((is_assessment_manager() AND (is_demo = is_demo_account())))
+- `assessment_insert_transcript_grades` (INSERT) WITH CHECK ((is_assessment_manager() AND (is_demo = is_demo_account())))
+- `assessment_update_transcript_grades` (UPDATE) USING ((is_assessment_manager() AND (is_demo = is_demo_account())))
+- `parent_read_own_transcript_grades` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM (profiles p
+     JOIN student_parent sp ON ((sp.parent_id = p.parent_id)))
+  WHERE ((p.id = auth.uid()) AND (sp.student_id = transcript_grades.student_id)))))
+- `read_all_transcript_grades` (SELECT) USING ((is_staff_or_admin() AND ((is_demo = is_demo_account()) OR is_admin())))
+- `student_read_own_transcript_grades` (SELECT) USING ((EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND (p.student_id = transcript_grades.student_id)))))
+
+
 ### `tuckshop_items`
 
 | Column | Type | Nullable | Default |
@@ -1212,8 +1427,14 @@ RLS policies:
 Foreign keys: `preorder_id` → `tuckshop_preorders.id`, `tuckshop_item_id` → `tuckshop_items.id`
 
 RLS policies:
-- `Students can add own preorder items` (INSERT) WITH CHECK ((preorder_id IN ( SELECT tp.id FROM tuckshop_preorders tp WHERE (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]) OR (EXISTS ( SELECT 1 FROM profiles pr WHERE ((pr.id = auth.uid()) AND (pr.student_id = tp.student_id))))))))
-- `Tuckshop preorder items readable by staff or own family` (SELECT) USING ((preorder_id IN ( SELECT tuckshop_preorders.id FROM tuckshop_preorders WHERE can_view_student_tuckshop(tuckshop_preorders.student_id))))
+- `Students can add own preorder items` (INSERT) WITH CHECK ((preorder_id IN ( SELECT tp.id
+   FROM tuckshop_preorders tp
+  WHERE (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]) OR (EXISTS ( SELECT 1
+           FROM profiles pr
+          WHERE ((pr.id = auth.uid()) AND (pr.student_id = tp.student_id))))))))
+- `Tuckshop preorder items readable by staff or own family` (SELECT) USING ((preorder_id IN ( SELECT tuckshop_preorders.id
+   FROM tuckshop_preorders
+  WHERE can_view_student_tuckshop(tuckshop_preorders.student_id))))
 
 
 ### `tuckshop_preorders`
@@ -1230,7 +1451,9 @@ RLS policies:
 Foreign keys: `student_id` → `students.student_id`, `purchase_id` → `tuckshop_purchases.id`
 
 RLS policies:
-- `Students can create own preorders` (INSERT) WITH CHECK ((user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]) OR (EXISTS ( SELECT 1 FROM profiles pr WHERE ((pr.id = auth.uid()) AND (pr.student_id = tuckshop_preorders.student_id))))))
+- `Students can create own preorders` (INSERT) WITH CHECK ((user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]) OR (EXISTS ( SELECT 1
+   FROM profiles pr
+  WHERE ((pr.id = auth.uid()) AND (pr.student_id = tuckshop_preorders.student_id))))))
 - `Tuckshop preorders readable by staff or own family` (SELECT) USING (can_view_student_tuckshop(student_id))
 - `Tuckshop staff can update preorders` (UPDATE) USING (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]))
 
@@ -1249,7 +1472,9 @@ RLS policies:
 Foreign keys: `purchase_id` → `tuckshop_purchases.id`, `tuckshop_item_id` → `tuckshop_items.id`
 
 RLS policies:
-- `Tuckshop purchase items readable by staff or own family` (SELECT) USING ((purchase_id IN ( SELECT tuckshop_purchases.id FROM tuckshop_purchases WHERE can_view_student_tuckshop(tuckshop_purchases.student_id))))
+- `Tuckshop purchase items readable by staff or own family` (SELECT) USING ((purchase_id IN ( SELECT tuckshop_purchases.id
+   FROM tuckshop_purchases
+  WHERE can_view_student_tuckshop(tuckshop_purchases.student_id))))
 - `Tuckshop purchase items writable by tuckshop staff` (ALL) USING (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text])) WITH CHECK (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]))
 
 
@@ -1270,10 +1495,7 @@ RLS policies:
 - `Tuckshop purchases readable by staff or own family` (SELECT) USING (can_view_student_tuckshop(student_id))
 - `Tuckshop purchases writable by tuckshop staff` (ALL) USING (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text])) WITH CHECK (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]))
 
-
----
-
-## Functions (48)
+## Functions (60)
 
 Full definitions. `SECURITY DEFINER` functions run with the privileges of the function owner regardless of caller — check the body for its own permission checks (e.g. `is_admin()`, `user_has_staff_role(...)`) rather than assuming RLS protects them.
 
@@ -1284,45 +1506,53 @@ CREATE OR REPLACE FUNCTION public.apply_fee_charge_batch(p_fee_item_id bigint, p
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
-DECLARE
-  v_batch_id BIGINT;
-  v_student_id INTEGER;
-  v_invoice_id BIGINT;
-  v_count INTEGER := 0;
-BEGIN
-  IF p_target_type NOT IN ('individual', 'form_class', 'year_group', 'all') THEN
-    RAISE EXCEPTION 'Invalid target_type: %', p_target_type;
-  END IF;
+declare
+  v_batch_id bigint;
+  v_student_id integer;
+  v_invoice_id bigint;
+  v_count integer := 0;
+begin
+  if is_demo_account() then
+    raise exception 'Fee charges are disabled for the training account.';
+  end if;
 
-  INSERT INTO fee_charge_batches (fee_item_id, term_id, description, amount, target_type, target_value, created_by)
-  VALUES (p_fee_item_id, p_term_id, p_description, p_amount, p_target_type, p_target_value, p_created_by)
-  RETURNING id INTO v_batch_id;
+  if not user_has_staff_role(array['bursar', 'smt']) then
+    raise exception 'Only bursar/SMT can apply fee charges';
+  end if;
 
-  FOR v_student_id IN
-    SELECT s.student_id FROM students s
-    WHERE s.status = 'active'
-      AND (
-        (p_target_type = 'individual' AND s.student_id = p_target_value::INTEGER)
-        OR (p_target_type = 'form_class' AND s.form_class = p_target_value)
-        OR (p_target_type = 'year_group' AND s.year_group = p_target_value::INTEGER)
-        OR (p_target_type = 'all')
+  if p_target_type not in ('individual', 'form_class', 'year_group', 'all') then
+    raise exception 'Invalid target_type: %', p_target_type;
+  end if;
+
+  insert into fee_charge_batches (fee_item_id, term_id, description, amount, target_type, target_value, created_by)
+  values (p_fee_item_id, p_term_id, p_description, p_amount, p_target_type, p_target_value, p_created_by)
+  returning id into v_batch_id;
+
+  for v_student_id in
+    select s.student_id from students s
+    where s.status = 'active'
+      and (
+        (p_target_type = 'individual' and s.student_id = p_target_value::integer)
+        or (p_target_type = 'form_class' and s.form_class = p_target_value)
+        or (p_target_type = 'year_group' and s.year_group = p_target_value::integer)
+        or (p_target_type = 'all')
       )
-  LOOP
-    INSERT INTO student_invoices (student_id, term_id)
-    VALUES (v_student_id, p_term_id)
-    ON CONFLICT (student_id, term_id) DO NOTHING;
+  loop
+    insert into student_invoices (student_id, term_id)
+    values (v_student_id, p_term_id)
+    on conflict (student_id, term_id) do nothing;
 
-    SELECT id INTO v_invoice_id FROM student_invoices
-    WHERE student_id = v_student_id AND term_id = p_term_id;
+    select id into v_invoice_id from student_invoices
+    where student_id = v_student_id and term_id = p_term_id;
 
-    INSERT INTO invoice_line_items (invoice_id, fee_item_id, description, amount, is_extra_charge, batch_id, added_by)
-    VALUES (v_invoice_id, p_fee_item_id, p_description, p_amount, true, v_batch_id, p_created_by);
+    insert into invoice_line_items (invoice_id, fee_item_id, description, amount, is_extra_charge, batch_id, added_by)
+    values (v_invoice_id, p_fee_item_id, p_description, p_amount, true, v_batch_id, p_created_by);
 
     v_count := v_count + 1;
-  END LOOP;
+  end loop;
 
-  RETURN QUERY SELECT v_batch_id, v_count;
-END;
+  return query select v_batch_id, v_count;
+end;
 $function$
 
 ```
@@ -1333,6 +1563,7 @@ CREATE OR REPLACE FUNCTION public.apply_student_discount(p_student_discount_id b
  RETURNS bigint
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_discount RECORD;
@@ -1393,6 +1624,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.auto_set_student_status()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 BEGIN
     IF NEW.leaving_date IS NOT NULL AND NEW.leaving_date <= CURRENT_DATE THEN
@@ -1404,12 +1636,25 @@ $function$
 
 ```
 
+### `can_allocate_classes()` — SECURITY DEFINER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.can_allocate_classes()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+AS $function$
+  SELECT is_admin() OR has_staff_role(ARRAY['head_of_department', 'pastoral']);
+$function$
+
+```
+
 ### `can_view_student_tuckshop(p_student_id integer)` — SECURITY DEFINER, sql
 ```sql
 CREATE OR REPLACE FUNCTION public.can_view_student_tuckshop(p_student_id integer)
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   SELECT
     user_has_staff_role(ARRAY['tuckshop', 'bursar', 'smt'])
@@ -1429,6 +1674,7 @@ CREATE OR REPLACE FUNCTION public.capture_register_alerts()
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 BEGIN
   INSERT INTO register_alerts (timetable_slot_id, staff_id, period_date, minutes_late, resolved, is_demo)
@@ -1444,116 +1690,146 @@ $function$
 
 ```
 
-### `create_parent_logins(only_email text)` — SECURITY DEFINER, plpgsql
+### `clear_must_change_password()` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.clear_must_change_password()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+begin
+  update profiles set must_change_password = false where id = auth.uid();
+end;
+$function$
+
+```
+
+### `create_parent_logins(only_email text DEFAULT NULL::text)` — SECURITY DEFINER, plpgsql
 ```sql
 CREATE OR REPLACE FUNCTION public.create_parent_logins(only_email text DEFAULT NULL::text)
  RETURNS TABLE(parent_name text, email text, temp_password text)
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
 AS $function$
-DECLARE
-  rec RECORD;
-  new_password TEXT;
-  new_user_id UUID;
-BEGIN
-  FOR rec IN
-    SELECT p.parent_id, p.first_name, p.last_name, p.email
-    FROM parents p
-    WHERE p.email IS NOT NULL
-      AND (only_email IS NULL OR p.email = only_email)
-      AND NOT EXISTS (SELECT 1 FROM profiles pr WHERE pr.parent_id = p.parent_id)
-  LOOP
-    BEGIN
+declare
+  rec record;
+  new_password text;
+  new_user_id uuid;
+begin
+  if not is_admin() then
+    raise exception 'Only admin can create parent logins';
+  end if;
+
+  for rec in
+    select p.parent_id, p.first_name, p.last_name, p.email
+    from parents p
+    where p.email is not null
+      and (only_email is null or p.email = only_email)
+      and not exists (select 1 from profiles pr where pr.parent_id = p.parent_id)
+  loop
+    begin
       new_password := substr(md5(random()::text), 1, 10);
       new_user_id := gen_random_uuid();
-      INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change, email_change_token_new) VALUES ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', rec.email, crypt(new_password, gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '');
-      INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES (gen_random_uuid(), new_user_id, new_user_id::text, jsonb_build_object('sub', new_user_id::text, 'email', rec.email), 'email', now(), now(), now());
-      INSERT INTO profiles (id, role, parent_id) VALUES (new_user_id, 'parent', rec.parent_id) ON CONFLICT (id) DO UPDATE SET role = 'parent', parent_id = rec.parent_id;
-      parent_name := COALESCE(rec.first_name, '') || ' ' || COALESCE(rec.last_name, '');
+      insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change, email_change_token_new) values ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', rec.email, crypt(new_password, gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '');
+      insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at) values (gen_random_uuid(), new_user_id, new_user_id::text, jsonb_build_object('sub', new_user_id::text, 'email', rec.email), 'email', now(), now(), now());
+      insert into profiles (id, role, parent_id) values (new_user_id, 'parent', rec.parent_id) on conflict (id) do update set role = 'parent', parent_id = rec.parent_id;
+      parent_name := coalesce(rec.first_name, '') || ' ' || coalesce(rec.last_name, '');
       email := rec.email;
       temp_password := new_password;
-      RETURN NEXT;
-    EXCEPTION WHEN unique_violation THEN
-      parent_name := COALESCE(rec.first_name, '') || ' ' || COALESCE(rec.last_name, '');
+      return next;
+    exception when unique_violation then
+      parent_name := coalesce(rec.first_name, '') || ' ' || coalesce(rec.last_name, '');
       email := rec.email;
       temp_password := '(skipped — email already used by another account, likely a shared family email)';
-      RETURN NEXT;
-    END;
-  END LOOP;
-END;
+      return next;
+    end;
+  end loop;
+end;
 $function$
 
 ```
 
-### `create_staff_logins(only_email text)` — SECURITY DEFINER, plpgsql
+### `create_staff_logins(only_email text DEFAULT NULL::text)` — SECURITY DEFINER, plpgsql
 ```sql
 CREATE OR REPLACE FUNCTION public.create_staff_logins(only_email text DEFAULT NULL::text)
  RETURNS TABLE(staff_name text, email text, temp_password text)
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
 AS $function$
-DECLARE
-  rec RECORD;
-  new_password TEXT;
-  new_user_id UUID;
-BEGIN
-  FOR rec IN
-    SELECT s.staff_id, s.first_name, s.last_name, s.email
-    FROM staff s
-    WHERE s.email IS NOT NULL
-      AND (only_email IS NULL OR s.email = only_email)
-      AND NOT EXISTS (SELECT 1 FROM profiles pr WHERE pr.staff_id = s.staff_id)
-  LOOP
-    BEGIN
+declare
+  rec record;
+  new_password text;
+  new_user_id uuid;
+begin
+  if not is_admin() then
+    raise exception 'Only admin can create staff logins';
+  end if;
+
+  for rec in
+    select s.staff_id, s.first_name, s.last_name, s.email
+    from staff s
+    where s.email is not null
+      and (only_email is null or s.email = only_email)
+      and not exists (select 1 from profiles pr where pr.staff_id = s.staff_id)
+  loop
+    begin
       new_password := substr(md5(random()::text), 1, 10);
       new_user_id := gen_random_uuid();
-      INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change, email_change_token_new) VALUES ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', rec.email, crypt(new_password, gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '');
-      INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at) VALUES (gen_random_uuid(), new_user_id, new_user_id::text, jsonb_build_object('sub', new_user_id::text, 'email', rec.email), 'email', now(), now(), now());
-      INSERT INTO profiles (id, role, staff_id, email) VALUES (new_user_id, 'staff', rec.staff_id, rec.email) ON CONFLICT (id) DO UPDATE SET role = 'staff', staff_id = rec.staff_id, email = rec.email;
-      staff_name := COALESCE(rec.first_name, '') || ' ' || COALESCE(rec.last_name, '');
+      insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change, email_change_token_new) values ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', rec.email, crypt(new_password, gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '');
+      insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at) values (gen_random_uuid(), new_user_id, new_user_id::text, jsonb_build_object('sub', new_user_id::text, 'email', rec.email), 'email', now(), now(), now());
+      insert into profiles (id, role, staff_id, email) values (new_user_id, 'staff', rec.staff_id, rec.email) on conflict (id) do update set role = 'staff', staff_id = rec.staff_id, email = rec.email;
+      staff_name := coalesce(rec.first_name, '') || ' ' || coalesce(rec.last_name, '');
       email := rec.email;
       temp_password := new_password;
-      RETURN NEXT;
-    EXCEPTION WHEN unique_violation THEN
-      staff_name := COALESCE(rec.first_name, '') || ' ' || COALESCE(rec.last_name, '');
+      return next;
+    exception when unique_violation then
+      staff_name := coalesce(rec.first_name, '') || ' ' || coalesce(rec.last_name, '');
       email := rec.email;
       temp_password := '(skipped — email already used by another account)';
-      RETURN NEXT;
-    END;
-  END LOOP;
-END;
+      return next;
+    end;
+  end loop;
+end;
 $function$
 
 ```
 
-### `create_student_logins(only_upn text)` — SECURITY DEFINER, plpgsql
+### `create_student_logins(only_upn text DEFAULT NULL::text)` — SECURITY DEFINER, plpgsql
 ```sql
 CREATE OR REPLACE FUNCTION public.create_student_logins(only_upn text DEFAULT NULL::text)
  RETURNS TABLE(student_name text, upn text, email text, temp_password text)
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
 AS $function$
-DECLARE
-  rec RECORD;
-  new_password TEXT;
-  new_user_id UUID;
-BEGIN
-  FOR rec IN
-    SELECT s.student_id, s.first_name, s.last_name, s.upn, s.student_email
-    FROM students s
-    WHERE s.student_email IS NOT NULL
-      AND (only_upn IS NULL OR s.upn = only_upn)
-      AND NOT EXISTS (SELECT 1 FROM profiles p WHERE p.student_id = s.student_id)
-  LOOP
+declare
+  rec record;
+  new_password text;
+  new_user_id uuid;
+begin
+  if not is_admin() then
+    raise exception 'Only admin can create student logins';
+  end if;
+
+  for rec in
+    select s.student_id, s.first_name, s.last_name, s.upn, s.student_email
+    from students s
+    where s.student_email is not null
+      and (only_upn is null or s.upn = only_upn)
+      and not exists (select 1 from profiles p where p.student_id = s.student_id)
+  loop
     new_password := substr(md5(random()::text), 1, 10);
     new_user_id := gen_random_uuid();
 
-    INSERT INTO auth.users (
+    insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
       raw_app_meta_data, raw_user_meta_data,
       confirmation_token, recovery_token, email_change, email_change_token_new
-    ) VALUES (
+    ) values (
       '00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated',
       rec.student_email, crypt(new_password, gen_salt('bf')),
       now(), now(), now(),
@@ -1561,25 +1837,43 @@ BEGIN
       '', '', '', ''
     );
 
-    INSERT INTO auth.identities (
+    insert into auth.identities (
       id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
-    ) VALUES (
+    ) values (
       gen_random_uuid(), new_user_id, new_user_id::text,
       jsonb_build_object('sub', new_user_id::text, 'email', rec.student_email),
       'email', now(), now(), now()
     );
 
-    INSERT INTO profiles (id, role, student_id)
-    VALUES (new_user_id, 'student', rec.student_id)
-    ON CONFLICT (id) DO UPDATE SET role = 'student', student_id = rec.student_id;
+    insert into profiles (id, role, student_id)
+    values (new_user_id, 'student', rec.student_id)
+    on conflict (id) do update set role = 'student', student_id = rec.student_id;
 
     student_name := rec.first_name || ' ' || rec.last_name;
     upn := rec.upn;
     email := rec.student_email;
     temp_password := new_password;
-    RETURN NEXT;
-  END LOOP;
-END;
+    return next;
+  end loop;
+end;
+$function$
+
+```
+
+### `enforce_abc_domain_login()` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.enforce_abc_domain_login()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+begin
+  if new.email is not null and new.email not ilike '%@abc.sch.ng' then
+    new.banned_until := 'infinity';
+  end if;
+  return new;
+end;
 $function$
 
 ```
@@ -1590,6 +1884,7 @@ CREATE OR REPLACE FUNCTION public.fulfill_tuckshop_preorder(p_preorder_id bigint
  RETURNS bigint
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_student_id INTEGER;
@@ -1624,6 +1919,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.generate_next_upn()
  RETURNS text
  LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   candidate TEXT;
@@ -1644,6 +1940,7 @@ CREATE OR REPLACE FUNCTION public.get_tuckshop_balance(p_student_id integer)
  RETURNS numeric
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_funded NUMERIC;
@@ -1675,6 +1972,7 @@ CREATE OR REPLACE FUNCTION public.get_tuckshop_balances()
  RETURNS TABLE(student_id integer, first_name text, last_name text, form_class text, year_group integer, balance numeric)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 BEGIN
   IF NOT user_has_staff_role(ARRAY['tuckshop', 'bursar']) THEN
@@ -1716,6 +2014,7 @@ CREATE OR REPLACE FUNCTION public.handle_negative_behaviour()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   week_start date;
@@ -1794,6 +2093,7 @@ CREATE OR REPLACE FUNCTION public.has_staff_role(role_names text[])
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   SELECT EXISTS (
     SELECT 1 FROM profiles p
@@ -1810,6 +2110,7 @@ CREATE OR REPLACE FUNCTION public.is_admin()
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   SELECT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin');
 $function$
@@ -1822,6 +2123,7 @@ CREATE OR REPLACE FUNCTION public.is_assessment_manager()
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   SELECT is_admin() OR has_staff_role(ARRAY['assessment_manager']);
 $function$
@@ -1834,6 +2136,7 @@ CREATE OR REPLACE FUNCTION public.is_demo_account()
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   select exists (select 1 from profiles where id = auth.uid() and is_demo_account = true);
 $function$
@@ -1846,8 +2149,9 @@ CREATE OR REPLACE FUNCTION public.is_pastoral_or_smt()
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
-  SELECT is_admin() OR has_staff_role(ARRAY['smt','houseparent']);
+  select is_admin() or has_staff_role(array['smt','houseparent','pastoral']);
 $function$
 
 ```
@@ -1858,6 +2162,7 @@ CREATE OR REPLACE FUNCTION public.is_staff_or_admin()
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   SELECT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin','staff'));
 $function$
@@ -1869,6 +2174,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.link_profile_to_staff()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 BEGIN
   IF NEW.staff_id IS NULL AND NEW.email IS NOT NULL THEN
@@ -1889,6 +2195,7 @@ CREATE OR REPLACE FUNCTION public.mark_message_read(p_message_id bigint)
  RETURNS void
  LANGUAGE sql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   update message_recipients set read_at = now()
   where message_id = p_message_id and profile_id = auth.uid() and read_at is null;
@@ -1902,8 +2209,13 @@ CREATE OR REPLACE FUNCTION public.merge_subjects(from_id integer, into_id intege
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 begin
+  if not is_admin() then
+    raise exception 'Only admin can merge subjects';
+  end if;
+
   update classes set subject_id = into_id where subject_id = from_id;
 
   update results r
@@ -1969,6 +2281,7 @@ CREATE OR REPLACE FUNCTION public.my_house_scope()
  RETURNS text
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   select sr.scope_value
   from profiles p
@@ -1987,6 +2300,7 @@ CREATE OR REPLACE FUNCTION public.my_parent_ids()
  RETURNS SETOF integer
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   SELECT parent_id FROM profiles WHERE id = auth.uid() AND parent_id IS NOT NULL
   UNION
@@ -2003,77 +2317,86 @@ CREATE OR REPLACE FUNCTION public.notify_pastoral_on_negative_behaviour()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
-DECLARE
-  api_key TEXT;
-  student_name TEXT;
-  recipients TEXT[];
-  subject TEXT;
-  body_html TEXT;
-  week_start DATE;
-  week_end DATE;
-  week_total INTEGER;
-  reason TEXT;
-BEGIN
-  IF NEW.is_demo THEN
-    RETURN NEW; -- training account data must never trigger real staff alerts
-  END IF;
+declare
+  student_name text;
+  recipients text[];
+  subject text;
+  body_html text;
+  week_start date;
+  week_end date;
+  week_total integer;
+  reason text;
+begin
+  if new.is_demo then
+    return new;
+  end if;
 
-  -- Only escalate for a single severe event (-4 or worse) or a bad Sat-Fri week (-8 or worse total)
-  week_start := NEW.event_date - (((EXTRACT(DOW FROM NEW.event_date)::INT - 6 + 7) % 7));
+  week_start := new.event_date - (((extract(dow from new.event_date)::int - 6 + 7) % 7));
   week_end := week_start + 6;
 
-  SELECT COALESCE(SUM(points), 0) INTO week_total
-  FROM behaviour_events
-  WHERE student_id = NEW.student_id AND type = 'negative'
-    AND event_date BETWEEN week_start AND week_end;
+  select coalesce(sum(points), 0) into week_total
+  from behaviour_events
+  where student_id = new.student_id and type = 'negative'
+    and event_date between week_start and week_end;
 
-  IF NEW.points <= -4 THEN
-    reason := 'A single severe event was logged (' || NEW.points || ' points).';
-  ELSIF week_total <= -8 THEN
+  if new.points <= -4 then
+    reason := 'A single severe event was logged (' || new.points || ' points).';
+  elsif week_total <= -8 then
     reason := 'Their running total for the week (Sat ' || week_start || ' – Fri ' || week_end || ') has reached ' || week_total || ' points.';
-  ELSE
-    RETURN NEW; -- doesn't meet either threshold, no alert
-  END IF;
+  else
+    return new;
+  end if;
 
-  SELECT decrypted_secret INTO api_key FROM vault.decrypted_secrets WHERE name = 'resend_api_key';
-  IF api_key IS NULL THEN
-    RETURN NEW;
-  END IF;
+  select first_name || ' ' || last_name into student_name from students where student_id = new.student_id;
 
-  SELECT first_name || ' ' || last_name INTO student_name FROM students WHERE student_id = NEW.student_id;
+  select array_agg(distinct st.email) into recipients
+  from staff st
+  join staff_roles sr on sr.staff_id = st.staff_id
+  where sr.role_name in ('smt','houseparent') and st.email is not null;
 
-  SELECT array_agg(DISTINCT st.email) INTO recipients
-  FROM staff st
-  JOIN staff_roles sr ON sr.staff_id = st.staff_id
-  WHERE sr.role_name IN ('smt','houseparent') AND st.email IS NOT NULL;
+  if recipients is null or array_length(recipients, 1) = 0 then
+    return new;
+  end if;
 
-  IF recipients IS NULL OR array_length(recipients, 1) = 0 THEN
-    RETURN NEW;
-  END IF;
-
-  subject := 'Behaviour alert: ' || student_name || ' — ' || COALESCE(NEW.category, 'Negative event');
+  subject := 'Behaviour alert: ' || student_name || ' — ' || coalesce(new.category, 'Negative event');
   body_html := '<p><strong>' || student_name || '</strong> has triggered a behaviour alert.</p>' ||
                '<p>' || reason || '</p>' ||
-               '<p><strong>Latest event — Category:</strong> ' || COALESCE(NEW.category, '—') || '<br/>' ||
-               '<strong>Points:</strong> ' || COALESCE(NEW.points::text, '—') || '<br/>' ||
-               '<strong>Date:</strong> ' || NEW.event_date::text || '</p>' ||
-               '<p>' || COALESCE(NEW.description, '') || '</p>' ||
-               '<p><a href="https://mis.classroomportal.org/students/' || NEW.student_id || '">View student in Adorable MIS</a></p>';
+               '<p><strong>Latest event — Category:</strong> ' || coalesce(new.category, '—') || '<br/>' ||
+               '<strong>Points:</strong> ' || coalesce(new.points::text, '—') || '<br/>' ||
+               '<strong>Date:</strong> ' || new.event_date::text || '</p>' ||
+               '<p>' || coalesce(new.description, '') || '</p>' ||
+               '<p><a href="https://misform.work/students/' || new.student_id || '">View student in Adorable MIS</a></p>';
 
-  PERFORM net.http_post(
-    url := 'https://api.resend.com/emails',
-    headers := jsonb_build_object('Authorization', 'Bearer ' || api_key, 'Content-Type', 'application/json'),
+  perform net.http_post(
+    url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
+      'Content-Type', 'application/json'
+    ),
     body := jsonb_build_object(
-      'from', 'Adorable MIS Alerts <alerts@alerts.classroomportal.org>',
       'to', to_jsonb(recipients),
       'subject', subject,
       'html', body_html
     )
   );
 
-  RETURN NEW;
-END;
+  return new;
+end;
+$function$
+
+```
+
+### `parent_emails_paused()` — SECURITY DEFINER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.parent_emails_paused()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+  select coalesce((select parent_emails_paused from system_settings limit 1), false);
 $function$
 
 ```
@@ -2084,6 +2407,7 @@ CREATE OR REPLACE FUNCTION public.recalc_invoice_status(p_invoice_id bigint)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_total NUMERIC;
@@ -2113,6 +2437,7 @@ CREATE OR REPLACE FUNCTION public.record_tuckshop_purchase(p_student_id integer,
  RETURNS bigint
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_purchase_id BIGINT;
@@ -2147,34 +2472,93 @@ $function$
 
 ```
 
+### `remove_class_links_on_student_leave()` — SECURITY INVOKER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.remove_class_links_on_student_leave()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  if new.status <> 'active' and (old.status is distinct from new.status) then
+    delete from student_class where student_id = new.student_id;
+  end if;
+  return new;
+end;
+$function$
+
+```
+
 ### `reset_all_parent_passwords()` — SECURITY DEFINER, plpgsql
 ```sql
 CREATE OR REPLACE FUNCTION public.reset_all_parent_passwords()
  RETURNS text
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
-DECLARE
-  rec RECORD;
-  new_password TEXT;
-  out_text TEXT := 'parent_name,email,temp_password' || chr(10);
-BEGIN
-  FOR rec IN
-    SELECT pr.id AS auth_id, p.first_name, p.last_name, p.email
-    FROM profiles pr
-    JOIN parents p ON p.parent_id = pr.parent_id
-    WHERE pr.role = 'parent'
-    ORDER BY p.last_name
-  LOOP
-    new_password := substr(md5(random()::text), 1, 10);
-    UPDATE auth.users SET encrypted_password = crypt(new_password, gen_salt('bf')) WHERE id = rec.auth_id;
-    out_text := out_text ||
-      '"' || COALESCE(rec.first_name, '') || ' ' || COALESCE(rec.last_name, '') || '",' ||
-      rec.email || ',' || new_password || chr(10);
-  END LOOP;
+declare
+  rec record;
+  new_password text;
+  out_text text := 'parent_name,email,temp_password' || chr(10);
+begin
+  if not is_admin() then
+    raise exception 'Only admin can reset parent passwords';
+  end if;
 
-  RETURN out_text;
-END;
+  for rec in
+    select pr.id as auth_id, p.first_name, p.last_name, p.email
+    from profiles pr
+    join parents p on p.parent_id = pr.parent_id
+    where pr.role = 'parent'
+    order by p.last_name
+  loop
+    new_password := substr(md5(random()::text), 1, 10);
+    update auth.users set encrypted_password = crypt(new_password, gen_salt('bf')) where id = rec.auth_id;
+    out_text := out_text ||
+      '"' || coalesce(rec.first_name, '') || ' ' || coalesce(rec.last_name, '') || '",' ||
+      rec.email || ',' || new_password || chr(10);
+  end loop;
+
+  return out_text;
+end;
+$function$
+
+```
+
+### `reset_all_student_passwords(new_password text)` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.reset_all_student_passwords(new_password text)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
+AS $function$
+declare
+  affected integer;
+begin
+  if not is_admin() then
+    raise exception 'Only admin can reset student passwords';
+  end if;
+
+  update auth.users
+  set encrypted_password = crypt(new_password, gen_salt('bf'))
+  where id in (
+    select pr.id from profiles pr
+    join students st on st.student_id = pr.student_id
+    where pr.role = 'student' and st.status = 'active'
+  );
+  get diagnostics affected = row_count;
+
+  update profiles
+  set must_change_password = true
+  where id in (
+    select pr.id from profiles pr
+    join students st on st.student_id = pr.student_id
+    where pr.role = 'student' and st.status = 'active'
+  );
+
+  return affected;
+end;
 $function$
 
 ```
@@ -2185,6 +2569,7 @@ CREATE OR REPLACE FUNCTION public.reset_demo_data()
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 declare
   v_maths_subject_id integer;
@@ -2194,6 +2579,7 @@ declare
   v_result_event_date date;
   v_sat date;
 begin
+  delete from detentions where is_demo = true;
   delete from behaviour_appeals where is_demo = true;
   delete from certificates_awarded where is_demo = true;
   delete from target_grades where is_demo = true;
@@ -2332,6 +2718,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.resolve_message_recipients(p_target_type text, p_target_value text)
  RETURNS TABLE(profile_id uuid)
  LANGUAGE sql
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   select p.id from profiles p
   join students s on s.student_id = p.student_id
@@ -2369,12 +2756,54 @@ $function$
 
 ```
 
+### `review_serious_behaviour_event(p_event_id integer, p_visible_to_parents boolean, p_protocol_confirmed boolean)` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.review_serious_behaviour_event(p_event_id integer, p_visible_to_parents boolean, p_protocol_confirmed boolean)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_event behaviour_events%rowtype;
+  v_reviewer_staff_id integer;
+begin
+  if not (is_admin() or has_staff_role(array['school_office'])) then
+    raise exception 'Only school office staff or admin can review a behaviour event';
+  end if;
+
+  select * into v_event from behaviour_events where event_id = p_event_id;
+  if not found then
+    raise exception 'Behaviour event % not found', p_event_id;
+  end if;
+
+  if v_event.type <> 'negative' or v_event.points > -4 then
+    raise exception 'Only serious (negative, -4 or -5 point) events go through this review';
+  end if;
+
+  if p_visible_to_parents and not p_protocol_confirmed then
+    raise exception 'Protocol confirmation is required before releasing this event to parents';
+  end if;
+
+  select staff_id into v_reviewer_staff_id from profiles where id = auth.uid();
+
+  update behaviour_events
+  set visible_to_parents = p_visible_to_parents,
+      protocol_reviewed_by = v_reviewer_staff_id,
+      protocol_reviewed_at = now()
+  where event_id = p_event_id;
+end;
+$function$
+
+```
+
 ### `search_people(p_query text)` — SECURITY INVOKER, sql
 ```sql
 CREATE OR REPLACE FUNCTION public.search_people(p_query text)
  RETURNS TABLE(profile_id uuid, display_name text, email text, person_type text)
  LANGUAGE sql
  STABLE
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   select p.id, stf.first_name || ' ' || stf.last_name, p.email, 'staff'
   from profiles p
@@ -2402,55 +2831,57 @@ CREATE OR REPLACE FUNCTION public.send_message(p_subject text, p_body text, p_ta
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
-DECLARE
+declare
   v_message_id bigint;
   v_count int;
-  v_api_key text;
   v_should_email boolean;
-BEGIN
-  IF is_demo_account() THEN
-    RAISE EXCEPTION 'Communication is disabled for the training account — no message was sent.';
-  END IF;
+begin
+  if is_demo_account() then
+    raise exception 'Communication is disabled for the training account — no message was sent.';
+  end if;
 
-  INSERT INTO messages (subject, body, sent_by, target_type, target_value)
-  VALUES (p_subject, p_body, auth.uid(), p_target_type, p_target_value)
-  RETURNING id INTO v_message_id;
+  if not user_has_staff_role(array['smt', 'pastoral', 'school_office']) then
+    raise exception 'You do not have permission to send messages.';
+  end if;
 
-  INSERT INTO message_recipients (message_id, profile_id)
-  SELECT v_message_id, profile_id FROM resolve_message_recipients(p_target_type, p_target_value)
-  ON CONFLICT DO NOTHING;
+  insert into messages (subject, body, sent_by, target_type, target_value)
+  values (p_subject, p_body, auth.uid(), p_target_type, p_target_value)
+  returning id into v_message_id;
 
-  SELECT count(*) INTO v_count FROM message_recipients WHERE message_id = v_message_id;
+  insert into message_recipients (message_id, profile_id)
+  select v_message_id, profile_id from resolve_message_recipients(p_target_type, p_target_value)
+  on conflict do nothing;
+
+  select count(*) into v_count from message_recipients where message_id = v_message_id;
 
   v_should_email := (p_target_type = 'individual');
 
-  UPDATE messages SET recipient_count = v_count, email_sent = v_should_email WHERE id = v_message_id;
+  update messages set recipient_count = v_count, email_sent = v_should_email where id = v_message_id;
 
-  IF v_should_email THEN
-    SELECT decrypted_secret INTO v_api_key FROM vault.decrypted_secrets WHERE name = 'resend_api_key';
-
-    IF v_api_key IS NOT NULL THEN
-      PERFORM net.http_post(
-        url := 'https://api.resend.com/emails',
-        headers := jsonb_build_object('Authorization', 'Bearer ' || v_api_key, 'Content-Type', 'application/json'),
-        body := jsonb_build_object(
-          'from', 'Adorable MIS <no-reply@mis.classroomportal.org>',
-          'to', coalesce(pr.email, par.email, st.student_email),
-          'subject', p_subject,
-          'text', p_body || E'\n\nView in your portal: https://mis.classroomportal.org/inbox'
-        )
+  if v_should_email then
+    perform net.http_post(
+      url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
+        'Content-Type', 'application/json'
+      ),
+      body := jsonb_build_object(
+        'to', coalesce(pr.email, par.email, st.student_email),
+        'subject', p_subject,
+        'text', p_body || E'\n\nView in your portal: https://misform.work/inbox'
       )
-      FROM profiles pr
-      JOIN message_recipients mr ON mr.profile_id = pr.id
-      LEFT JOIN parents par ON par.parent_id = pr.parent_id
-      LEFT JOIN students st ON st.student_id = pr.student_id
-      WHERE mr.message_id = v_message_id
-        AND coalesce(pr.email, par.email, st.student_email) IS NOT NULL;
-    END IF;
-  END IF;
+    )
+    from profiles pr
+    join message_recipients mr on mr.profile_id = pr.id
+    left join parents par on par.parent_id = pr.parent_id
+    left join students st on st.student_id = pr.student_id
+    where mr.message_id = v_message_id
+      and coalesce(pr.email, par.email, st.student_email) is not null
+      and not (pr.parent_id is not null and parent_emails_paused());
+  end if;
 
-  RETURN v_message_id;
-END;
+  return v_message_id;
+end;
 $function$
 
 ```
@@ -2462,37 +2893,37 @@ CREATE OR REPLACE FUNCTION public.send_parent_welcome_email(p_email text, p_name
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
-DECLARE
-  api_key TEXT;
-  body_html TEXT;
-BEGIN
-  IF NOT is_admin() THEN
-    RAISE EXCEPTION 'Only admin can send welcome emails';
-  END IF;
+declare
+  body_html text;
+begin
+  if not is_admin() then
+    raise exception 'Only admin can send welcome emails';
+  end if;
 
-  SELECT decrypted_secret INTO api_key FROM vault.decrypted_secrets WHERE name = 'resend_api_key';
-  IF api_key IS NULL THEN
-    RETURN;
-  END IF;
+  if parent_emails_paused() then
+    raise exception 'Parent emails are currently paused system-wide — no email was sent. Re-enable with: update system_settings set parent_emails_paused = false;';
+  end if;
 
   body_html := '<p>Dear ' || p_name || ',</p>' ||
     '<p>Adorable British College now has an online parent portal, <strong>Adorable MIS</strong>, where you can view your child''s weekly results compared to their target grades, and their behaviour record.</p>' ||
     '<p><strong>Login email:</strong> ' || p_email || '<br/>' ||
     '<strong>Temporary password:</strong> ' || p_temp_password || '</p>' ||
-    '<p>Please sign in at <a href="https://mis.classroomportal.org">mis.classroomportal.org</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
+    '<p>Please sign in at <a href="https://misform.work">misform.work</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
     '<p>Kind regards,<br/>Adorable British College</p>';
 
-  PERFORM net.http_post(
-    url := 'https://api.resend.com/emails',
-    headers := jsonb_build_object('Authorization', 'Bearer ' || api_key, 'Content-Type', 'application/json'),
+  perform net.http_post(
+    url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
+      'Content-Type', 'application/json'
+    ),
     body := jsonb_build_object(
-      'from', 'Adorable British College <mis@alerts.classroomportal.org>',
-      'to', jsonb_build_array(p_email),
+      'to', p_email,
       'subject', 'Your Adorable MIS parent portal account',
       'html', body_html
     )
   );
-END;
+end;
 $function$
 
 ```
@@ -2503,38 +2934,90 @@ CREATE OR REPLACE FUNCTION public.send_staff_welcome_email(p_email text, p_name 
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
-DECLARE
-  api_key TEXT;
-  body_html TEXT;
-BEGIN
-  IF NOT is_admin() THEN
-    RAISE EXCEPTION 'Only admin can send welcome emails';
-  END IF;
-
-  SELECT decrypted_secret INTO api_key FROM vault.decrypted_secrets WHERE name = 'resend_api_key';
-  IF api_key IS NULL THEN
-    RETURN;
-  END IF;
+declare
+  body_html text;
+begin
+  if not is_admin() then
+    raise exception 'Only admin can send welcome emails';
+  end if;
 
   body_html := '<p>Dear ' || p_name || ',</p>' ||
     '<p>You now have a staff account on <strong>Adorable MIS</strong>, Adorable British College''s Management Information System, where you can view your timetable, take attendance registers, enter results, and access student and behaviour records relevant to your role.</p>' ||
     '<p><strong>Login email:</strong> ' || p_email || '<br/>' ||
     '<strong>Temporary password:</strong> ' || p_temp_password || '</p>' ||
-    '<p>Please sign in at <a href="https://mis.classroomportal.org">mis.classroomportal.org</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
+    '<p>Please sign in at <a href="https://misform.work">misform.work</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
     '<p>Kind regards,<br/>Adorable British College</p>';
 
-  PERFORM net.http_post(
-    url := 'https://api.resend.com/emails',
-    headers := jsonb_build_object('Authorization', 'Bearer ' || api_key, 'Content-Type', 'application/json'),
+  perform net.http_post(
+    url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
+      'Content-Type', 'application/json'
+    ),
     body := jsonb_build_object(
-      'from', 'Adorable British College <mis@alerts.classroomportal.org>',
-      'to', jsonb_build_array(p_email),
+      'to', p_email,
       'subject', 'Your Adorable MIS staff account',
       'html', body_html
     )
   );
-END;
+end;
+$function$
+
+```
+
+### `send_student_welcome_email(p_email text, p_name text, p_temp_password text)` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.send_student_welcome_email(p_email text, p_name text, p_temp_password text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  body_html text;
+begin
+  if not is_admin() then
+    raise exception 'Only admin can send welcome emails';
+  end if;
+
+  body_html := '<p>Dear ' || p_name || ',</p>' ||
+    '<p>You now have a student account on <strong>Adorable MIS</strong>, Adorable British College''s Management Information System, where you can view your results, target grades, timetable and behaviour record.</p>' ||
+    '<p><strong>Login email:</strong> ' || p_email || '<br/>' ||
+    '<strong>Temporary password:</strong> ' || p_temp_password || '</p>' ||
+    '<p>Please sign in at <a href="https://misform.work">misform.work</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
+    '<p>Kind regards,<br/>Adorable British College</p>';
+
+  perform net.http_post(
+    url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
+      'Content-Type', 'application/json'
+    ),
+    body := jsonb_build_object(
+      'to', p_email,
+      'subject', 'Your Adorable MIS student account',
+      'html', body_html
+    )
+  );
+end;
+$function$
+
+```
+
+### `set_behaviour_event_default_visibility()` — SECURITY INVOKER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.set_behaviour_event_default_visibility()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  if new.type = 'positive' and new.visible_to_parents is not true then
+    new.visible_to_parents := true;
+  end if;
+  return new;
+end;
 $function$
 
 ```
@@ -2545,9 +3028,12 @@ CREATE OR REPLACE FUNCTION public.set_is_demo()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 begin
-  new.is_demo := is_demo_account();
+  if new.is_demo is distinct from true then
+    new.is_demo := is_demo_account();
+  end if;
   return new;
 end;
 $function$
@@ -2559,6 +3045,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.set_student_class_block_id()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 BEGIN
     SELECT c.block_id, COALESCE(cb.is_compound, false) INTO NEW.block_id, NEW.is_compound
@@ -2577,17 +3064,21 @@ CREATE OR REPLACE FUNCTION public.set_term_published(p_term_id bigint, p_publish
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
-BEGIN
-  IF NOT user_has_staff_role(ARRAY['smt']) THEN
-    RAISE EXCEPTION 'Only admin or SMT can publish fees to parents';
-  END IF;
+begin
+  if is_demo_account() then
+    raise exception 'Publishing fee terms is disabled for the training account.';
+  end if;
 
-  UPDATE fee_terms
-  SET published_to_parents = p_published,
-      published_at = CASE WHEN p_published THEN now() ELSE NULL END,
-      published_by = CASE WHEN p_published THEN auth.uid() ELSE NULL END
-  WHERE id = p_term_id;
-END;
+  if not user_has_staff_role(array['smt']) then
+    raise exception 'Only admin or SMT can publish fees to parents';
+  end if;
+
+  update fee_terms
+  set published_to_parents = p_published,
+      published_at = case when p_published then now() else null end,
+      published_by = case when p_published then auth.uid() else null end
+  where id = p_term_id;
+end;
 $function$
 
 ```
@@ -2597,6 +3088,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.set_updated_at()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 begin
   new.updated_at = now();
@@ -2612,6 +3104,7 @@ CREATE OR REPLACE FUNCTION public.submit_tuckshop_preorder(p_student_id integer,
  RETURNS bigint
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_preorder_id BIGINT;
@@ -2639,12 +3132,32 @@ $function$
 
 ```
 
+### `sync_mentor_group_from_form_class()` — SECURITY INVOKER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.sync_mentor_group_from_form_class()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF NEW.form_class IS NULL THEN
+    NEW.mentor_group_id := NULL;
+  ELSE
+    SELECT mentor_group_id INTO NEW.mentor_group_id
+    FROM mentor_groups WHERE group_name = NEW.form_class;
+  END IF;
+  RETURN NEW;
+END;
+$function$
+
+```
+
 ### `top_up_tuckshop_balance(p_student_id integer, p_term_id bigint, p_target_balance numeric, p_created_by uuid)` — SECURITY DEFINER, plpgsql
 ```sql
 CREATE OR REPLACE FUNCTION public.top_up_tuckshop_balance(p_student_id integer, p_term_id bigint, p_target_balance numeric, p_created_by uuid)
  RETURNS numeric
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_current NUMERIC;
@@ -2685,6 +3198,7 @@ CREATE OR REPLACE FUNCTION public.top_up_tuckshop_balance_for_group(p_target_typ
  RETURNS TABLE(student_id integer, student_name text, topped_up numeric)
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_student RECORD;
@@ -2719,9 +3233,109 @@ $function$
 CREATE OR REPLACE FUNCTION public.touch_sgb_updated_at()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 begin
   new.updated_at = now();
+  return new;
+end;
+$function$
+
+```
+
+### `trg_provision_staff_login()` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.trg_provision_staff_login()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
+AS $function$
+declare
+  new_password text;
+  new_user_id uuid;
+  staff_name text;
+begin
+  if new.email is null then
+    return new;
+  end if;
+  if exists (select 1 from profiles where staff_id = new.staff_id) then
+    return new;
+  end if;
+
+  new_password := substr(md5(random()::text), 1, 10);
+  new_user_id := gen_random_uuid();
+
+  begin
+    insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change, email_change_token_new)
+    values ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', new.email, crypt(new_password, gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '');
+
+    insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    values (gen_random_uuid(), new_user_id, new_user_id::text, jsonb_build_object('sub', new_user_id::text, 'email', new.email), 'email', now(), now(), now());
+
+    insert into profiles (id, role, staff_id, email)
+    values (new_user_id, 'staff', new.staff_id, new.email);
+  exception when unique_violation then
+    -- Email already used by another auth account - leave it for a human to sort out.
+    return new;
+  end;
+
+  staff_name := coalesce(new.first_name, '') || ' ' || coalesce(new.last_name, '');
+  begin
+    perform send_staff_welcome_email(new.email, staff_name, new_password);
+  exception when others then
+    raise notice 'Welcome email failed for %: %', new.email, sqlerrm;
+  end;
+
+  return new;
+end;
+$function$
+
+```
+
+### `trg_provision_student_login()` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.trg_provision_student_login()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
+AS $function$
+declare
+  new_password text;
+  new_user_id uuid;
+  student_name text;
+begin
+  if new.student_email is null then
+    return new;
+  end if;
+  if exists (select 1 from profiles where student_id = new.student_id) then
+    return new;
+  end if;
+
+  new_password := substr(md5(random()::text), 1, 10);
+  new_user_id := gen_random_uuid();
+
+  begin
+    insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change, email_change_token_new)
+    values ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', new.student_email, crypt(new_password, gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '');
+
+    insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    values (gen_random_uuid(), new_user_id, new_user_id::text, jsonb_build_object('sub', new_user_id::text, 'email', new.student_email), 'email', now(), now(), now());
+
+    insert into profiles (id, role, student_id, email)
+    values (new_user_id, 'student', new.student_id, new.student_email);
+  exception when unique_violation then
+    return new;
+  end;
+
+  student_name := coalesce(new.first_name, '') || ' ' || coalesce(new.last_name, '');
+  begin
+    perform send_student_welcome_email(new.student_email, student_name, new_password);
+  exception when others then
+    raise notice 'Welcome email failed for %: %', new.student_email, sqlerrm;
+  end;
+
   return new;
 end;
 $function$
@@ -2733,6 +3347,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.trg_recalc_invoice_status()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 BEGIN
   PERFORM recalc_invoice_status(COALESCE(NEW.invoice_id, OLD.invoice_id));
@@ -2749,13 +3364,21 @@ CREATE OR REPLACE FUNCTION public.undo_fee_charge_batch(p_batch_id bigint)
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
-DECLARE
-  v_count INTEGER;
-BEGIN
-  DELETE FROM invoice_line_items WHERE batch_id = p_batch_id;
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  RETURN v_count;
-END;
+declare
+  v_count integer;
+begin
+  if is_demo_account() then
+    raise exception 'Fee charges are disabled for the training account.';
+  end if;
+
+  if not user_has_staff_role(array['bursar', 'smt']) then
+    raise exception 'Only bursar/SMT can undo fee charge batches';
+  end if;
+
+  delete from invoice_line_items where batch_id = p_batch_id;
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
 $function$
 
 ```
@@ -2766,6 +3389,7 @@ CREATE OR REPLACE FUNCTION public.user_has_staff_role(role_names text[])
  RETURNS boolean
  LANGUAGE sql
  STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
   SELECT EXISTS (
     SELECT 1 FROM profiles p
@@ -2783,6 +3407,7 @@ CREATE OR REPLACE FUNCTION public.void_event_on_upheld_appeal()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
 AS $function$
 BEGIN
   IF NEW.status = 'upheld' AND (OLD.status IS DISTINCT FROM 'upheld') THEN
