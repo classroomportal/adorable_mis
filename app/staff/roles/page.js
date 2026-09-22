@@ -3,27 +3,13 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { useAuth } from '../../../lib/AuthContext';
+import { ROLE_LABELS } from '../../../lib/staffRoles';
 
-const ROLE_LABELS = {
-  admin: 'Admin',
-  smt: 'SMT',
-  hr: 'HR',
-  pastoral: 'Pastoral',
-  houseparent: 'House Parent',
-  assessment_manager: 'Assessment Manager',
-  assessment_user: 'Assessment User',
-  teacher: 'Teacher',
-  bursar: 'Bursar',
-  school_office: 'School Office',
-  admissions: 'Admissions',
-  tuckshop: 'Tuckshop',
-  head_of_department: 'Head of Dept',
-  mentor: 'Mentor',
-  nurse: 'Nurse / Sick Bay',
-};
 const ALL_ROLES = Object.keys(ROLE_LABELS);
 
 function StaffRolesInner() {
+  const { hasAccess } = useAuth();
   const [staff, setStaff] = useState([]);
   const [roleMap, setRoleMap] = useState({}); // staff_id -> Set of role_name
   const [deptScopeMap, setDeptScopeMap] = useState({}); // staff_id -> department_name (for head_of_department)
@@ -216,6 +202,11 @@ function StaffRolesInner() {
                   onChange={(e) => updateField(s.staff_id, 'last_name', e.target.value)}
                   onBlur={(e) => saveField(s.staff_id, 'last_name', e.target.value)}
                 />
+                {hasAccess('/staff/records') && (
+                  <a href={`/staff/records/${s.staff_id}`} style={{ display: 'inline-block', fontSize: '0.8rem', marginTop: '0.3rem' }}>
+                    Full record →
+                  </a>
+                )}
               </td>
               <td>
                 <input
