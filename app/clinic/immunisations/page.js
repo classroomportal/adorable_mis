@@ -14,8 +14,13 @@ import { isoToday, isoDateOffset, studentName } from '../../../lib/medical';
 const STUDENT_COLS = 'students(student_id, first_name, last_name, year_group, form_class, boarding_house)';
 
 function ImmunisationsInner() {
-  const [horizonDays, setHorizonDays] = useState(60);
-  const [vaccineFilter, setVaccineFilter] = useState('');
+  // Held as a draft until Load is pressed. The vaccine box used to re-query
+  // on every keystroke — typing "Tetanus" sent seven requests, six of them
+  // for a prefix nobody wanted.
+  const [query, setQuery] = useState({ horizonDays: 60, vaccine: '' });
+  const [appliedQuery, setAppliedQuery] = useState(query);
+  const { horizonDays, vaccine: vaccineFilter } = appliedQuery;
+  const dirty = query.horizonDays !== appliedQuery.horizonDays || query.vaccine !== appliedQuery.vaccine;
   const [due, setDue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -128,7 +133,7 @@ function ImmunisationsInner() {
       <div className="card">
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <label style={{ maxWidth: '12rem' }}>Due within
-            <select value={horizonDays} onChange={(e) => setHorizonDays(Number(e.target.value))}>
+            <select value={query.horizonDays} onChange={(e) => setQuery({ ...query, horizonDays: Number(e.target.value) })}>
               <option value={0}>Overdue only</option>
               <option value={30}>30 days</option>
               <option value={60}>60 days</option>
@@ -137,9 +142,22 @@ function ImmunisationsInner() {
             </select>
           </label>
           <label style={{ maxWidth: '14rem' }}>Vaccine
-            <input placeholder="All" value={vaccineFilter} onChange={(e) => setVaccineFilter(e.target.value)} />
+            <input
+              placeholder="All"
+              value={query.vaccine}
+              onChange={(e) => setQuery({ ...query, vaccine: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setAppliedQuery(query); } }}
+            />
           </label>
+          <button type="button" onClick={() => setAppliedQuery(query)} disabled={loading}>
+            {loading ? 'Loading...' : 'Load'}
+          </button>
         </div>
+        {dirty && (
+          <p style={{ fontSize: '0.8rem', color: '#7a5a10', margin: '0.6rem 0 0', fontWeight: 600 }}>
+            Filters changed — press Load to fetch them.
+          </p>
+        )}
         {status && <p style={{ fontSize: '0.8rem', color: 'var(--ink-soft)', marginBottom: 0 }}>{status}</p>}
       </div>
 

@@ -41,9 +41,18 @@ function Detail({ label, children }) {
 
 function VisitsInner() {
   const options = useStudentFilterOptions();
-  const [from, setFrom] = useState(isoDateOffset(-7));
-  const [to, setTo] = useState(isoToday());
-  const [category, setCategory] = useState('');
+  // Two layers of filter, and they behave differently on purpose.
+  //
+  // The student filters (year, form, gender, house, name) narrow rows that
+  // are already in the browser, so they apply as you type.
+  //
+  // The date range and visit type decide what gets fetched at all. Those sit
+  // in `draft` until Load is pressed — re-querying on every change meant a
+  // half-typed date like "0002-09-15" fired a pointless request, and on a
+  // school connection that is the difference between usable and not.
+  const [query, setQuery] = useState({ from: isoDateOffset(-7), to: isoToday(), category: '' });
+  const [appliedQuery, setAppliedQuery] = useState(query);
+  const { from, to, category } = appliedQuery;
   const [filter, setFilter] = useState({ ...EMPTY_STUDENT_FILTER });
   const [visits, setVisits] = useState([]);
   const [photos, setPhotos] = useState({});
@@ -55,11 +64,20 @@ function VisitsInner() {
   const [status, setStatus] = useState(null);
 
   const load = useCallback(async () => {
+    // A date input reports partial values while being typed ("0002-09-15"),
+    // which makes an out-of-range timestamp. Skip rather than send it.
+    const fromDate = new Date(`${from}T00:00:00`);
+    const toDate = new Date(`${to}T23:59:59.999`);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      setError('Enter a valid From and To date.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     let query = supabase.from('student_clinic_visits')
       .select(`visit_id, visited_at, category, reason, temperature_c, observations, treatment, medication_given, dose_given, outcome, parent_notified, parent_notified_at, follow_up_needed, ${STUDENT_COLS}`)
-      .gte('visited_at', new Date(`${from}T00:00:00`).toISOString())
-      .lte('visited_at', new Date(`${to}T23:59:59.999`).toISOString())
+      .gte('visited_at', fromDate.toISOString())
+      .lte('visited_at', toDate.toISOString())
       .order('visited_at', { ascending: false })
       .limit(500);
     if (category) query = query.eq('category', category);
@@ -80,6 +98,8 @@ function VisitsInner() {
       setStudents(data || []);
     })();
   }, []);
+
+  const dirty = query.from !== appliedQuery.from || query.to !== appliedQuery.to || query.category !== appliedQuery.category;
 
   // The student filters run over what is already loaded, so changing them is
   // instant and does not re-query.
@@ -164,16 +184,21 @@ function VisitsInner() {
         options={options}
         resultCount={filtered.length}
         totalCount={visits.length}
+        onLoad={() => setAppliedQuery(query)}
+        loading={loading}
+        dirty={dirty}
         extra={
           <>
-            <label style={{ maxWidth: '9.5rem' }}>From
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            </label>
-            <label style={{ maxWidth: '9.5rem' }}>To
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            </label>
+            <div className="filter-date-pair">
+              <label style={{ maxWidth: '9.5rem' }}>From
+                <input type="date" value={query.from} onChange={(e) => setQuery({ ...query, from: e.target.value })} />
+              </label>
+              <label style={{ maxWidth: '9.5rem' }}>To
+                <input type="date" value={query.to} onChange={(e) => setQuery({ ...query, to: e.target.value })} />
+              </label>
+            </div>
             <label style={{ maxWidth: '10rem' }}>Visit type
-              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <select value={query.category} onChange={(e) => setQuery({ ...query, category: e.target.value })}>
                 <option value="">All</option>
                 {VISIT_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
@@ -306,7 +331,7 @@ function VisitsInner() {
                       </div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
+                  <div className="visit-card-meta">
                     <div>{formatDateTime(v.visited_at)}</div>
                     <div style={{ marginTop: '0.3rem' }}>
                       <Chip tone="neutral">{labelFor(VISIT_CATEGORIES, v.category) || 'Unspecified'}</Chip>
@@ -323,13 +348,16 @@ function VisitsInner() {
                   <Detail label="Outcome">{labelFor(VISIT_OUTCOMES, v.outcome)}</Detail>
                   <Detail label="Medication">{v.medication_given}</Detail>
                   <Detail label="Dose">{v.dose_given}</Detail>
-                  <Detail label="Observations">{v.observations}</Detail>
-                  <Detail label="Treatment">{v.treatment}</Detail>
                   <Detail label="Parent told">
                     {v.parent_notified
                       ? <Chip tone="good">Yes{v.parent_notified_at ? ` · ${formatUKDate(v.parent_notified_at.slice(0, 10))}` : ''}</Chip>
                       : <Chip tone="bad">No</Chip>}
                   </Detail>
+                </div>
+
+                <div className="visit-notes-grid">
+                  <Detail label="Observations">{v.observations}</Detail>
+                  <Detail label="Treatment">{v.treatment}</Detail>
                 </div>
 
                 {(!v.parent_notified || v.follow_up_needed) && (
