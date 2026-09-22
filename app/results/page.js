@@ -24,7 +24,23 @@ function ResultsPageInner() {
       .select('result_id, student_id, subject_id, week_start_date, score, max_score, grade, students(first_name,last_name), subjects(subject_name)')
       .order('week_start_date', { ascending: false })
       .limit(20);
-    setResults(data || []);
+    const rows = data || [];
+    setResults(rows);
+
+    // Targets for just the students on screen. This used to read the whole
+    // table in one unpaginated select, which Supabase caps at 1000 rows —
+    // target_grades passed that long ago (5,236 rows), so roughly four
+    // students in five had their target silently dropped and the table showed
+    // "—" against results for students who did have one. Twenty results can
+    // only name twenty students, so fetching by student stays well inside the
+    // cap and reads a fraction of the rows.
+    const studentIds = [...new Set(rows.map((r) => r.student_id))];
+    if (studentIds.length === 0) { setTargetMap({}); return; }
+    const { data: tg } = await supabase
+      .from('target_grades')
+      .select('student_id, subject_id, target_grade')
+      .in('student_id', studentIds);
+    setTargetMap(Object.fromEntries((tg || []).map((t) => [`${t.student_id}-${t.subject_id}`, t.target_grade])));
   }
 
   useEffect(() => {
@@ -38,8 +54,6 @@ function ResultsPageInner() {
 
       const { data: gs } = await supabase.from('grade_scale').select('*');
       setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
-      const { data: tg } = await supabase.from('target_grades').select('student_id, subject_id, target_grade');
-      setTargetMap(Object.fromEntries((tg || []).map((t) => [`${t.student_id}-${t.subject_id}`, t.target_grade])));
     }
     loadOptions();
     loadResults();
