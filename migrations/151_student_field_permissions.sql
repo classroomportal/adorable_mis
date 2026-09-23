@@ -46,6 +46,10 @@ create table if not exists student_field_permissions (
 
 alter table student_field_permissions enable row level security;
 
+-- Explicit Data API grant: from 30 Oct 2026 Supabase no longer grants new
+-- public tables to the API roles automatically. RLS still decides the rows.
+grant select, insert, update, delete on student_field_permissions to authenticated;
+
 drop policy if exists "student_field_permissions readable by all authenticated" on student_field_permissions;
 create policy "student_field_permissions readable by all authenticated" on student_field_permissions
   for select using (auth.role() = 'authenticated');

@@ -113,6 +113,11 @@ create index if not exists idx_screening_findings_abnormal
 alter table student_medical_screenings enable row level security;
 alter table student_screening_findings enable row level security;
 
+-- Explicit Data API grants: from 30 Oct 2026 Supabase no longer grants new
+-- public tables to the API roles automatically. RLS still decides the rows.
+grant select, insert, update, delete on student_medical_screenings to authenticated;
+grant select, insert, update, delete on student_screening_findings to authenticated;
+
 create policy medical_staff_manage_screenings on student_medical_screenings
   for all using (is_medical_staff()) with check (is_medical_staff());
 
