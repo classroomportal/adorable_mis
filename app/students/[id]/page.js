@@ -49,9 +49,13 @@ function StudentDetail() {
   const { profile, staffRoles, hasAccess } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const canEditAssessment = isAdmin || (staffRoles || []).includes('assessment_manager');
-  // School office maintain core data (details, status, photo); RLS already
-  // lets them update students. Class allocation below stays admin-only.
-  const canEditCore = isAdmin || (staffRoles || []).includes('school_office');
+  // Which Core Data fields this user may change is set per role at
+  // /admin/permissions (migration 151) and enforced by a trigger on
+  // students; fields outside it show read-only in the edit form.
+  // Class allocation below stays admin-only.
+  const [editableFields, setEditableFields] = useState(new Set());
+  const canEditField = (key) => isAdmin || editableFields.has(key);
+  const canEditCore = isAdmin || editableFields.size > 0;
   // The medical record is gated on its own resource key so
   // /admin/permissions can move it between roles. Writing is narrower
   // than seeing it: only the nurse (and admin) pass the RLS policies in
@@ -120,6 +124,7 @@ function StudentDetail() {
       setMentorGroups((mg || []).map((r) => r.group_name));
     }
     loadLookups();
+    supabase.rpc('my_editable_student_fields').then(({ data }) => setEditableFields(new Set(data || [])));
   }, []);
 
   async function loadAll() {
@@ -384,47 +389,50 @@ function StudentDetail() {
     setSaveStatus('Saving...');
     const today = new Date().toISOString().slice(0, 10);
     const computedStatus = (editForm.leaving_date && editForm.leaving_date <= today) ? 'left' : editForm.status;
+    const changes = {
+      first_name: editForm.first_name,
+      last_name: editForm.last_name,
+      middle_name: editForm.middle_name,
+      legal_first_name: editForm.legal_first_name,
+      legal_last_name: editForm.legal_last_name,
+      preferred_name: editForm.preferred_name,
+      student_email: editForm.student_email,
+      upn: editForm.upn || null,
+      boarding_house: editForm.boarding_house,
+      boarding_room_number: editForm.boarding_room_number,
+      restaurant: editForm.restaurant,
+      home_town: editForm.home_town,
+      lga: editForm.lga,
+      national_identity_number: editForm.national_identity_number,
+      neco_exam_number: editForm.neco_exam_number,
+      utme_pin: editForm.utme_pin,
+      utme_profile_code: editForm.utme_profile_code,
+      sports_house: editForm.sports_house,
+      state_of_origin: editForm.state_of_origin,
+      admitted_letter_date: editForm.admitted_letter_date || null,
+      dob: editForm.dob,
+      year_group: editForm.year_group,
+      form_class: editForm.form_class,
+      admission_date: editForm.admission_date,
+      gender: editForm.gender,
+      address_line1: editForm.address_line1,
+      address_line2: editForm.address_line2,
+      city: editForm.city,
+      postcode: editForm.postcode,
+      country: editForm.country,
+      nationality: editForm.nationality,
+      religion: editForm.religion,
+      emergency_contact_name: editForm.emergency_contact_name,
+      emergency_contact_phone: editForm.emergency_contact_phone,
+      medical_notes: editForm.medical_notes,
+      leaving_date: editForm.leaving_date || null,
+      status: computedStatus,
+    };
+    // Send only the fields this user may edit; the trigger rejects the rest.
+    const update = Object.fromEntries(Object.entries(changes).filter(([key]) => canEditField(key)));
     const { error } = await supabase
       .from('students')
-      .update({
-        first_name: editForm.first_name,
-        last_name: editForm.last_name,
-        middle_name: editForm.middle_name,
-        legal_first_name: editForm.legal_first_name,
-        legal_last_name: editForm.legal_last_name,
-        preferred_name: editForm.preferred_name,
-        student_email: editForm.student_email,
-        upn: editForm.upn || null,
-        boarding_house: editForm.boarding_house,
-        boarding_room_number: editForm.boarding_room_number,
-        restaurant: editForm.restaurant,
-        home_town: editForm.home_town,
-        lga: editForm.lga,
-        national_identity_number: editForm.national_identity_number,
-        neco_exam_number: editForm.neco_exam_number,
-        utme_pin: editForm.utme_pin,
-        utme_profile_code: editForm.utme_profile_code,
-        sports_house: editForm.sports_house,
-        state_of_origin: editForm.state_of_origin,
-        admitted_letter_date: editForm.admitted_letter_date || null,
-        dob: editForm.dob,
-        year_group: editForm.year_group,
-        form_class: editForm.form_class,
-        admission_date: editForm.admission_date,
-        gender: editForm.gender,
-        address_line1: editForm.address_line1,
-        address_line2: editForm.address_line2,
-        city: editForm.city,
-        postcode: editForm.postcode,
-        country: editForm.country,
-        nationality: editForm.nationality,
-        religion: editForm.religion,
-        emergency_contact_name: editForm.emergency_contact_name,
-        emergency_contact_phone: editForm.emergency_contact_phone,
-        medical_notes: editForm.medical_notes,
-        leaving_date: editForm.leaving_date || null,
-        status: computedStatus,
-      })
+      .update(update)
       .eq('student_id', id);
     if (error) setSaveStatus(`Error: ${error.message}`);
     else {
@@ -619,7 +627,7 @@ function StudentDetail() {
         </div>
 
         <div style={{ overflow: 'hidden' }}>
-          {(student.photo_base64 || canEditCore) && (
+          {(student.photo_base64 || canEditField('photo_base64')) && (
             <div style={{ float: 'left', marginRight: '1.25rem', marginBottom: '0.5rem', textAlign: 'center' }}>
               {student.photo_base64 && (
                 <img
@@ -628,7 +636,7 @@ function StudentDetail() {
                   style={{ width: 120, height: 150, objectFit: 'cover', borderRadius: 8, display: 'block' }}
                 />
               )}
-              {canEditCore && (
+              {canEditField('photo_base64') && (
                 <div style={{ marginTop: '0.4rem' }}>
                   <label className="secondary" style={{ display: 'inline-block', padding: '0.3rem 0.6rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem' }}>
                     {student.photo_base64 ? 'Change photo' : 'Add photo'}
@@ -679,85 +687,85 @@ function StudentDetail() {
           ) : (
           <form onSubmit={handleSave} style={{ marginTop: '1rem' }}>
             <label>First name
-              <input value={editForm.first_name || ''} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
+              <input disabled={!canEditField('first_name')} value={editForm.first_name || ''} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
             </label>
             <label>Middle name
-              <input value={editForm.middle_name || ''} onChange={(e) => setEditForm({ ...editForm, middle_name: e.target.value })} />
+              <input disabled={!canEditField('middle_name')} value={editForm.middle_name || ''} onChange={(e) => setEditForm({ ...editForm, middle_name: e.target.value })} />
             </label>
             <label>Last name
-              <input value={editForm.last_name || ''} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} />
+              <input disabled={!canEditField('last_name')} value={editForm.last_name || ''} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} />
             </label>
             <label>Preferred/chosen name
-              <input value={editForm.preferred_name || ''} onChange={(e) => setEditForm({ ...editForm, preferred_name: e.target.value })} />
+              <input disabled={!canEditField('preferred_name')} value={editForm.preferred_name || ''} onChange={(e) => setEditForm({ ...editForm, preferred_name: e.target.value })} />
             </label>
             <label>Legal first name
-              <input value={editForm.legal_first_name || ''} onChange={(e) => setEditForm({ ...editForm, legal_first_name: e.target.value })} />
+              <input disabled={!canEditField('legal_first_name')} value={editForm.legal_first_name || ''} onChange={(e) => setEditForm({ ...editForm, legal_first_name: e.target.value })} />
             </label>
             <label>Legal last name
-              <input value={editForm.legal_last_name || ''} onChange={(e) => setEditForm({ ...editForm, legal_last_name: e.target.value })} />
+              <input disabled={!canEditField('legal_last_name')} value={editForm.legal_last_name || ''} onChange={(e) => setEditForm({ ...editForm, legal_last_name: e.target.value })} />
             </label>
             <label>UPN
-              <input value={editForm.upn || ''} onChange={(e) => setEditForm({ ...editForm, upn: e.target.value })} />
+              <input disabled={!canEditField('upn')} value={editForm.upn || ''} onChange={(e) => setEditForm({ ...editForm, upn: e.target.value })} />
             </label>
             <label>Student email
-              <input type="email" value={editForm.student_email || ''} onChange={(e) => setEditForm({ ...editForm, student_email: e.target.value })} />
+              <input disabled={!canEditField('student_email')} type="email" value={editForm.student_email || ''} onChange={(e) => setEditForm({ ...editForm, student_email: e.target.value })} />
             </label>
             <label>DOB
-              <input type="date" value={editForm.dob || ''} onChange={(e) => setEditForm({ ...editForm, dob: e.target.value })} />
+              <input disabled={!canEditField('dob')} type="date" value={editForm.dob || ''} onChange={(e) => setEditForm({ ...editForm, dob: e.target.value })} />
               {editForm.dob && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.dob)}</span>}
             </label>
             <label>Year group
-              <input type="number" value={editForm.year_group || ''} onChange={(e) => setEditForm({ ...editForm, year_group: e.target.value })} />
+              <input disabled={!canEditField('year_group')} type="number" value={editForm.year_group || ''} onChange={(e) => setEditForm({ ...editForm, year_group: e.target.value })} />
             </label>
             <label>Form class
-              <select value={editForm.form_class || ''} onChange={(e) => setEditForm({ ...editForm, form_class: e.target.value })}>
+              <select disabled={!canEditField('form_class')} value={editForm.form_class || ''} onChange={(e) => setEditForm({ ...editForm, form_class: e.target.value })}>
                 <option value="">—</option>
                 {mentorGroups.map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
             </label>
             <label>Admission date
-              <input type="date" value={editForm.admission_date || ''} onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })} />
+              <input disabled={!canEditField('admission_date')} type="date" value={editForm.admission_date || ''} onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })} />
               {editForm.admission_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.admission_date)}</span>}
             </label>
             <label>Admitted/letter date
-              <input type="date" value={editForm.admitted_letter_date || ''} onChange={(e) => setEditForm({ ...editForm, admitted_letter_date: e.target.value })} />
+              <input disabled={!canEditField('admitted_letter_date')} type="date" value={editForm.admitted_letter_date || ''} onChange={(e) => setEditForm({ ...editForm, admitted_letter_date: e.target.value })} />
               {editForm.admitted_letter_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.admitted_letter_date)}</span>}
             </label>
             <label>Gender
-              <input value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} />
+              <input disabled={!canEditField('gender')} value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} />
             </label>
             <label>Nationality
-              <input value={editForm.nationality || ''} onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value })} />
+              <input disabled={!canEditField('nationality')} value={editForm.nationality || ''} onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value })} />
             </label>
             <label>State of origin
-              <input value={editForm.state_of_origin || ''} onChange={(e) => setEditForm({ ...editForm, state_of_origin: e.target.value })} />
+              <input disabled={!canEditField('state_of_origin')} value={editForm.state_of_origin || ''} onChange={(e) => setEditForm({ ...editForm, state_of_origin: e.target.value })} />
             </label>
             <label>LGA
-              <input value={editForm.lga || ''} onChange={(e) => setEditForm({ ...editForm, lga: e.target.value })} />
+              <input disabled={!canEditField('lga')} value={editForm.lga || ''} onChange={(e) => setEditForm({ ...editForm, lga: e.target.value })} />
             </label>
             <label>Home town
-              <input value={editForm.home_town || ''} onChange={(e) => setEditForm({ ...editForm, home_town: e.target.value })} />
+              <input disabled={!canEditField('home_town')} value={editForm.home_town || ''} onChange={(e) => setEditForm({ ...editForm, home_town: e.target.value })} />
             </label>
             <label>Religion
-              <input value={editForm.religion || ''} onChange={(e) => setEditForm({ ...editForm, religion: e.target.value })} />
+              <input disabled={!canEditField('religion')} value={editForm.religion || ''} onChange={(e) => setEditForm({ ...editForm, religion: e.target.value })} />
             </label>
             <label>Boarding house
-              <select value={editForm.boarding_house || ''} onChange={(e) => setEditForm({ ...editForm, boarding_house: e.target.value })}>
+              <select disabled={!canEditField('boarding_house')} value={editForm.boarding_house || ''} onChange={(e) => setEditForm({ ...editForm, boarding_house: e.target.value })}>
                 <option value="">—</option>
                 {boardingHouses.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
             </label>
             <label>Boarding room number
-              <input value={editForm.boarding_room_number || ''} onChange={(e) => setEditForm({ ...editForm, boarding_room_number: e.target.value })} />
+              <input disabled={!canEditField('boarding_room_number')} value={editForm.boarding_room_number || ''} onChange={(e) => setEditForm({ ...editForm, boarding_room_number: e.target.value })} />
             </label>
             <label>Sports house
-              <select value={editForm.sports_house || ''} onChange={(e) => setEditForm({ ...editForm, sports_house: e.target.value })}>
+              <select disabled={!canEditField('sports_house')} value={editForm.sports_house || ''} onChange={(e) => setEditForm({ ...editForm, sports_house: e.target.value })}>
                 <option value="">—</option>
                 {sportsHouses.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
             </label>
             <label>Restaurant
-              <select value={editForm.restaurant || ''} onChange={(e) => setEditForm({ ...editForm, restaurant: e.target.value })}>
+              <select disabled={!canEditField('restaurant')} value={editForm.restaurant || ''} onChange={(e) => setEditForm({ ...editForm, restaurant: e.target.value })}>
                 <option value="">—</option>
                 <option value="1">1</option>
                 <option value="2">2</option>
@@ -766,47 +774,47 @@ function StudentDetail() {
               </select>
             </label>
             <label>National identity number
-              <input value={editForm.national_identity_number || ''} onChange={(e) => setEditForm({ ...editForm, national_identity_number: e.target.value })} />
+              <input disabled={!canEditField('national_identity_number')} value={editForm.national_identity_number || ''} onChange={(e) => setEditForm({ ...editForm, national_identity_number: e.target.value })} />
             </label>
             <label>NECO exam number
-              <input value={editForm.neco_exam_number || ''} onChange={(e) => setEditForm({ ...editForm, neco_exam_number: e.target.value })} />
+              <input disabled={!canEditField('neco_exam_number')} value={editForm.neco_exam_number || ''} onChange={(e) => setEditForm({ ...editForm, neco_exam_number: e.target.value })} />
             </label>
             <label>UTME PIN
-              <input value={editForm.utme_pin || ''} onChange={(e) => setEditForm({ ...editForm, utme_pin: e.target.value })} />
+              <input disabled={!canEditField('utme_pin')} value={editForm.utme_pin || ''} onChange={(e) => setEditForm({ ...editForm, utme_pin: e.target.value })} />
             </label>
             <label>UTME profile code
-              <input value={editForm.utme_profile_code || ''} onChange={(e) => setEditForm({ ...editForm, utme_profile_code: e.target.value })} />
+              <input disabled={!canEditField('utme_profile_code')} value={editForm.utme_profile_code || ''} onChange={(e) => setEditForm({ ...editForm, utme_profile_code: e.target.value })} />
             </label>
             <label>Address line 1
-              <input value={editForm.address_line1 || ''} onChange={(e) => setEditForm({ ...editForm, address_line1: e.target.value })} />
+              <input disabled={!canEditField('address_line1')} value={editForm.address_line1 || ''} onChange={(e) => setEditForm({ ...editForm, address_line1: e.target.value })} />
             </label>
             <label>Address line 2
-              <input value={editForm.address_line2 || ''} onChange={(e) => setEditForm({ ...editForm, address_line2: e.target.value })} />
+              <input disabled={!canEditField('address_line2')} value={editForm.address_line2 || ''} onChange={(e) => setEditForm({ ...editForm, address_line2: e.target.value })} />
             </label>
             <label>City
-              <input value={editForm.city || ''} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
+              <input disabled={!canEditField('city')} value={editForm.city || ''} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
             </label>
             <label>Postcode
-              <input value={editForm.postcode || ''} onChange={(e) => setEditForm({ ...editForm, postcode: e.target.value })} />
+              <input disabled={!canEditField('postcode')} value={editForm.postcode || ''} onChange={(e) => setEditForm({ ...editForm, postcode: e.target.value })} />
             </label>
             <label>Country
-              <input value={editForm.country || ''} onChange={(e) => setEditForm({ ...editForm, country: e.target.value })} />
+              <input disabled={!canEditField('country')} value={editForm.country || ''} onChange={(e) => setEditForm({ ...editForm, country: e.target.value })} />
             </label>
             <label>Emergency contact name
-              <input value={editForm.emergency_contact_name || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_name: e.target.value })} />
+              <input disabled={!canEditField('emergency_contact_name')} value={editForm.emergency_contact_name || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_name: e.target.value })} />
             </label>
             <label>Emergency contact phone
-              <input value={editForm.emergency_contact_phone || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })} />
+              <input disabled={!canEditField('emergency_contact_phone')} value={editForm.emergency_contact_phone || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })} />
             </label>
             <label>Medical notes
-              <input value={editForm.medical_notes || ''} onChange={(e) => setEditForm({ ...editForm, medical_notes: e.target.value })} />
+              <input disabled={!canEditField('medical_notes')} value={editForm.medical_notes || ''} onChange={(e) => setEditForm({ ...editForm, medical_notes: e.target.value })} />
             </label>
             <label>Leaving date
-              <input type="date" value={editForm.leaving_date || ''} onChange={(e) => setEditForm({ ...editForm, leaving_date: e.target.value })} />
+              <input disabled={!canEditField('leaving_date')} type="date" value={editForm.leaving_date || ''} onChange={(e) => setEditForm({ ...editForm, leaving_date: e.target.value })} />
               {editForm.leaving_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.leaving_date)}</span>}
             </label>
             <label>Status
-              <select value={editForm.status || 'active'} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+              <select disabled={!canEditField('status')} value={editForm.status || 'active'} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
                 <option value="active">Active</option>
                 <option value="left">Left</option>
               </select>
