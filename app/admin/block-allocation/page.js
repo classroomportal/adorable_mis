@@ -85,8 +85,8 @@ function BlockAllocationInner() {
         .select("student_id, first_name, last_name, form_class")
         .eq("year_group", year)
         .eq("status", "active")
-        .order("form_class")
-        .order("last_name");
+        .order("last_name")
+        .order("first_name");
       if (studentErr) {
         setMessage("Error loading students: " + studentErr.message);
         setLoading(false);
