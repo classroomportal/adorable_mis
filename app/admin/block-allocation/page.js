@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import RequireAuth from "../../RequireAuth";
 import RequireResource from "../../RequireResource";
+import { groupClassesByKey } from "../../../lib/blockGroups";
 
 const YEARS = [7, 8, 9, 10, 11, 12];
 
@@ -15,7 +16,7 @@ function BlockAllocationInner() {
 
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
-  // selections[student_id] = Set of class_id (single entry unless compound block)
+  // selections[student_id] = Set of class_id (one class, or every class of one group in a compound block)
   const [selections, setSelections] = useState({});
   const [initialSelections, setInitialSelections] = useState({});
 
@@ -70,7 +71,7 @@ function BlockAllocationInner() {
 
       const { data: classData, error: classErr } = await supabase
         .from("classes")
-        .select("class_id, class_code, room, subjects(subject_name), staff(first_name, last_name)")
+        .select("class_id, class_code, block_group, room, subjects(subject_name), staff(first_name, last_name)")
         .eq("block_id", blockId)
         .order("class_code");
       if (classErr) {
@@ -127,42 +128,33 @@ function BlockAllocationInner() {
     return out;
   }
 
-  // "Class" blocks (7A, 8A, 9A etc.) bundle every subject a form group takes
-  // together — Art, Business, Computing... — as separate classes so each
-  // keeps its own real teacher/room/timetable from Nova-T, but a student is
-  // never in one of those subjects without the rest, so they're allocated
-  // as one group rather than ticked subject by subject. class_code's prefix
-  // before the "/" (e.g. "7A" from "7A/Ar") is the group.
-  const isGroupBlock = block?.block_name === "Class";
+  // A compound block (Class, Pathway, Vocational) is a choice of one group per
+  // student, where a group can bundle several subjects — "7A1" is every
+  // subject that form group takes, Pathway "101" is Bi+Ch+Co+Cv+Ph, Year 12's
+  // "Science 1" is 12a/Bi1+Ch1+Ph1. Each subject is still its own class so it
+  // keeps its real teacher/room/timetable from Nova-T, but a student is never
+  // in one of them without the rest, so the group is allocated as one.
+  const isGroupBlock = !!block?.is_compound;
 
   const groups = isGroupBlock
-    ? (() => {
-        const byPrefix = new Map();
-        for (const c of classes) {
-          const prefix = c.class_code.split("/")[0];
-          if (!byPrefix.has(prefix)) byPrefix.set(prefix, []);
-          byPrefix.get(prefix).push(c);
-        }
-        return [...byPrefix.entries()]
-          .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([prefix, groupClasses]) => ({
-            prefix,
-            classIds: groupClasses.map((c) => c.class_id),
-            subjectsLabel: groupClasses.map((c) => c.subjects?.subject_name || c.class_code).join(", "),
-          }));
-      })()
+    ? [...groupClassesByKey(classes).entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([key, groupClasses]) => ({
+          key,
+          classIds: groupClasses.map((c) => c.class_id),
+          subjectsLabel: groupClasses.map((c) => c.subjects?.subject_name || c.class_code).join(", "),
+        }))
     : [];
 
   function toggle(studentId, classId) {
     setSelections((prev) => {
       const next = cloneSelections(prev);
       const current = next[studentId] || new Set();
-      const isCompound = block?.is_compound;
 
       if (current.has(classId)) {
         current.delete(classId);
       } else {
-        if (!isCompound) current.clear(); // single choice per block
+        current.clear(); // single choice per block
         current.add(classId);
       }
       next[studentId] = current;
@@ -316,12 +308,6 @@ function BlockAllocationInner() {
         </p>
       )}
 
-      {block?.is_compound && !isGroupBlock && (
-        <p style={{ background: "#fff7e0", padding: "0.5rem 0.75rem", borderRadius: 6, fontSize: "0.85rem" }}>
-          This is a compound block — students can be ticked into more than one class here (e.g. a Pathway bundling several subjects).
-        </p>
-      )}
-
       {loading && <p>Loading…</p>}
 
       {!loading && blockId && classes.length === 0 && (
@@ -342,8 +328,8 @@ function BlockAllocationInner() {
                           g.classIds.every((id) => selections[s.student_id]?.has(id))
                         ).length;
                         return (
-                          <th key={g.prefix} style={{ ...thStyle, textAlign: "center" }} title={g.subjectsLabel}>
-                            {g.prefix}
+                          <th key={g.key} style={{ ...thStyle, textAlign: "center" }} title={g.subjectsLabel}>
+                            {g.key}
                             <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>
                               {count} student{count === 1 ? "" : "s"}
                             </div>
@@ -378,7 +364,7 @@ function BlockAllocationInner() {
                     <td style={tdStyle}>{s.form_class || ""}</td>
                     {isGroupBlock
                       ? groups.map((g) => (
-                          <td key={g.prefix} style={{ ...tdStyle, textAlign: "center" }}>
+                          <td key={g.key} style={{ ...tdStyle, textAlign: "center" }}>
                             <input
                               type="checkbox"
                               checked={g.classIds.every((id) => selections[s.student_id]?.has(id)) || false}
