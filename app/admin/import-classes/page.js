@@ -950,7 +950,7 @@ function ImportClassesInner() {
               </p>
               {scheduleResult.unplaced > 0 && (
                 <p style={{ color: "#b45309" }}>
-                  {scheduleResult.unplaced} lesson(s) weren't added because that day and period has no bell time.
+                  {scheduleResult.unplaced} lesson(s) weren't added because that period doesn't run that day in Bell Times.
                 </p>
               )}
               {scheduleResult.failed.length > 0 && (
@@ -965,7 +965,7 @@ function ImportClassesInner() {
               {preview.noBellTime.length > 0 && (
                 <p style={{ margin: "0 0 0.4rem" }}>
                   Nova-T puts lessons in {preview.noBellTime.map((k) => slotLabel({ day_of_week: k.split("|")[0], period_number: Number(k.split("|")[1]) })).join(", ")},
-                  which {preview.noBellTime.length === 1 ? "has" : "have"} no bell time — those lessons can't be added until one is set in Bell Times.
+                  which {preview.noBellTime.length === 1 ? "doesn't" : "don't"} run that day in Bell Times — those lessons can't be added until {preview.noBellTime.length === 1 ? "it's" : "they're"} added to the day there.
                 </p>
               )}
               {preview.noSlotsInFile.length > 0 && (
@@ -1168,7 +1168,7 @@ function ImportClassesInner() {
                   </p>
                   {createResult.unplaced > 0 && (
                     <p style={{ color: "#b45309" }}>
-                      {createResult.unplaced} lesson(s) weren&apos;t added because that day and period has no bell time.
+                      {createResult.unplaced} lesson(s) weren&apos;t added because that period doesn&apos;t run that day in Bell Times.
                     </p>
                   )}
                   {createResult.failed.length > 0 && (
