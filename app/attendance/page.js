@@ -25,6 +25,7 @@ function AttendanceInner() {
   const [lateMinutes, setLateMinutes] = useState({}); // student_id -> minutes late, as typed
   const [slot, setSlot] = useState(null); // {start_time, end_time} of this class's slot in this period
   const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
+  const [lastGrades, setLastGrades] = useState({}); // student_id -> {grade, week_start_date}, for this class's subject
   const [status, setStatus] = useState(null);
   const [loadingRoster, setLoadingRoster] = useState(false);
 
@@ -35,7 +36,7 @@ function AttendanceInner() {
 
       const { data: c } = await supabase
         .from('classes')
-        .select('class_id, class_code, room, subjects(subject_name), curriculum_blocks(block_name)')
+        .select('class_id, class_code, room, subject_id, subjects(subject_name), curriculum_blocks(block_name)')
         .not('class_code', 'is', null)
         .order('class_code');
       const all = c || [];
@@ -95,10 +96,32 @@ function AttendanceInner() {
         });
       Object.values(byStudent).forEach((rows) => rows.sort((a, b) => a.period_number - b.period_number));
       setTodaySoFar(byStudent);
+
+      // Most recent graded result in this class's subject, so the teacher has
+      // it in front of them while taking the register. Newest first, so the
+      // first row seen per student is the one to keep. Mentor groups carry no
+      // subject results, so they're skipped.
+      const subjectClass = subjectClasses.find((c) => String(c.class_id) === String(classId));
+      const grades = {};
+      if (subjectClass?.subject_id) {
+        const { data: res } = await supabase
+          .from('results')
+          .select('student_id, grade, week_start_date')
+          .eq('subject_id', subjectClass.subject_id)
+          .not('grade', 'is', null)
+          .in('student_id', ids)
+          .order('week_start_date', { ascending: false })
+          .order('created_at', { ascending: false });
+        (res || []).forEach((row) => {
+          if (!grades[row.student_id]) grades[row.student_id] = row;
+        });
+      }
+      setLastGrades(grades);
     } else {
       setMarks({});
       setLateMinutes({});
       setTodaySoFar({});
+      setLastGrades({});
     }
     setLoadingRoster(false);
   }
@@ -129,6 +152,9 @@ function AttendanceInner() {
     if (status === 'absent') return '#c62828';
     return '#6b6b6b'; // authorized_absence and anything else
   }
+
+  // Only subject classes have a subject to show a grade for; mentor groups don't.
+  const showLastGrade = subjectClasses.some((c) => String(c.class_id) === String(classId));
 
   const codeToStatus = Object.fromEntries(codes.map((c) => [c.code, c.status]));
   function isLateCode(code) {
@@ -161,7 +187,9 @@ function AttendanceInner() {
     return String(elapsed);
   })();
 
-  useEffect(() => { loadRoster(); }, [classId, date, periodNumber]);
+  // subjectClasses too: with a classId from the URL, the roster can load before
+  // the class list has, and the last-grade lookup needs the class's subject.
+  useEffect(() => { loadRoster(); }, [classId, date, periodNumber, subjectClasses]);
 
   const today = schoolToday();
   const isFutureDate = !!date && date > today;
@@ -331,11 +359,22 @@ function AttendanceInner() {
                 </p>
               )}
               <div className="table-scroll"><table>
-                <thead><tr><th>Student</th><th>Today so far</th><th>Code</th><th>Minutes late</th></tr></thead>
+                <thead><tr><th>Student</th>{showLastGrade && <th>Last grade</th>}<th>Today so far</th><th>Code</th><th>Minutes late</th></tr></thead>
                 <tbody>
                   {roster.map((s) => (
                     <tr key={s.student_id}>
                       <td>{s.first_name} {s.last_name}</td>
+                      {showLastGrade && (
+                        <td>
+                          {lastGrades[s.student_id] ? (
+                            <span title={`Recorded w/c ${formatUKDate(lastGrades[s.student_id].week_start_date)}`} style={{ fontWeight: 600 }}>
+                              {lastGrades[s.student_id].grade}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#999', fontSize: '0.85em' }}>—</span>
+                          )}
+                        </td>
+                      )}
                       <td>
                         {(todaySoFar[s.student_id] || []).length === 0 ? (
                           <span style={{ color: '#999', fontSize: '0.85em' }}>—</span>
@@ -361,7 +400,14 @@ function AttendanceInner() {
                         )}
                       </td>
                       <td>
-                        <select value={marks[s.student_id] || ''} onChange={(e) => setMark(s.student_id, e.target.value)}>
+                        {/* Sized for the code itself; the open list still shows each description in full. */}
+                        <select
+                          value={marks[s.student_id] || ''}
+                          onChange={(e) => setMark(s.student_id, e.target.value)}
+                          aria-label={`Code — ${s.first_name} ${s.last_name}`}
+                          title={codes.find((c) => c.code === marks[s.student_id])?.description || ''}
+                          style={{ width: '6.5rem' }}
+                        >
                           <option value="">—</option>
                           {codes.map((c) => (
                             <option key={c.code} value={c.code}>{c.code} — {c.description}</option>
