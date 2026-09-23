@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useRef, useState, Fragment } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
@@ -22,6 +22,11 @@ function PortalInner() {
   const [gradePoints, setGradePoints] = useState({});
   const [appealForm, setAppealForm] = useState(null); // event_id being appealed
   const [appealReason, setAppealReason] = useState('');
+  // Same slow-network double tap as the behaviour form: one student ended up
+  // with 27 copies of one appeal. The ref stops a second submit before React
+  // re-renders; the state disables the button.
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState(null);
 
   const [periods, setPeriods] = useState([]);
@@ -89,10 +94,24 @@ function PortalInner() {
 
   async function submitAppeal(eventId) {
     if (!appealReason.trim()) { setStatus('Please explain why you are appealing.'); return; }
-    const { error } = await supabase.from('behaviour_appeals').insert({
-      event_id: eventId, student_id: studentId, reason: appealReason.trim(),
-    });
-    if (error) setStatus(`Error: ${error.message}`);
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    let error;
+    try {
+      ({ error } = await supabase.from('behaviour_appeals').insert({
+        event_id: eventId, student_id: studentId, reason: appealReason.trim(),
+      }));
+    } catch (err) {
+      error = err;
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+    // 23505 = the one-appeal-per-event unique index (migration 136): an earlier
+    // submit already got through, so reload and show that one instead.
+    if (error?.code === '23505') { setStatus('This event has already been appealed.'); setAppealForm(null); setAppealReason(''); load(); }
+    else if (error) setStatus(`Error: ${error.message}`);
     else { setStatus('Appeal submitted — your pastoral manager will review it.'); setAppealForm(null); setAppealReason(''); load(); }
   }
 
@@ -214,7 +233,7 @@ function PortalInner() {
                             onChange={(e) => setAppealReason(e.target.value)}
                             style={{ width: '12rem' }}
                           />
-                          <button onClick={() => submitAppeal(b.event_id)}>Submit</button>
+                          <button onClick={() => submitAppeal(b.event_id)} disabled={submitting}>{submitting ? 'Submitting…' : 'Submit'}</button>
                           <button className="secondary" onClick={() => { setAppealForm(null); setAppealReason(''); }}>Cancel</button>
                         </div>
                       ) : (

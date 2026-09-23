@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
+import { formatUKDate } from '../../lib/formatDate';
 
 function AppealsInner() {
   const { isPastoralOrSmt } = useAuth();
@@ -53,7 +54,7 @@ function AppealsInner() {
               {pending.map((a) => (
                 <tr key={a.appeal_id}>
                   <td>{a.students?.first_name} {a.students?.last_name}</td>
-                  <td>{a.behaviour_events?.event_date} — {a.behaviour_events?.category} ({a.behaviour_events?.points})</td>
+                  <td>{formatUKDate(a.behaviour_events?.event_date, { weekday: true })} — {a.behaviour_events?.category} ({a.behaviour_events?.points})</td>
                   <td>{a.reason}</td>
                   <td>
                     <input
@@ -83,7 +84,7 @@ function AppealsInner() {
               {resolved.map((a) => (
                 <tr key={a.appeal_id}>
                   <td>{a.students?.first_name} {a.students?.last_name}</td>
-                  <td>{a.behaviour_events?.event_date} — {a.behaviour_events?.category}</td>
+                  <td>{formatUKDate(a.behaviour_events?.event_date, { weekday: true })} — {a.behaviour_events?.category}</td>
                   <td>{a.status}</td>
                   <td>{a.resolution_notes ?? ''}</td>
                 </tr>

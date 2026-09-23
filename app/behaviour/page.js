@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
@@ -62,6 +62,12 @@ function BehaviourPageInner() {
     type: 'positive', category: '', points: '', description: '',
   });
   const [status, setStatus] = useState(null);
+  // On a slow connection staff assumed the first tap hadn't registered and
+  // tapped again, logging every event twice. The ref blocks a second submit
+  // synchronously (state alone can let a fast double tap through before the
+  // re-render); the state drives the disabled button.
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
 
   // behaviour_events has two FKs to staff (staff_id and protocol_reviewed_by),
   // so a bare staff(...) embed is ambiguous: PostgREST rejects the whole query
@@ -284,11 +290,21 @@ function BehaviourPageInner() {
       return;
     }
 
+    // A blank event (no category, no points) was being saved and showed up to
+    // students as an unexplained negative — they appealed those too.
+    if (!form.category || form.points === '') {
+      setStatus('Choose a category and enter the points before saving.');
+      return;
+    }
+
     if (isSerious && !form.description.trim()) {
       setStatus('This is a serious event (-3 to -5 points) — an explanation of what happened is required before it can be saved.');
       return;
     }
 
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     setStatus('Saving...');
     const rows = studentIds.map((student_id) => ({
       student_id,
@@ -298,7 +314,15 @@ function BehaviourPageInner() {
       points: form.points || null,
       description: form.description || null,
     }));
-    const { error } = await supabase.from('behaviour_events').insert(rows);
+    let error;
+    try {
+      ({ error } = await supabase.from('behaviour_events').insert(rows));
+    } catch (err) {
+      error = err;
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
     if (error) {
       setStatus(`Error: ${error.message}`);
     } else {
@@ -519,7 +543,7 @@ function BehaviourPageInner() {
 
         <label>
           Category
-          <select value={form.category} onChange={(e) => handleCategoryChange(e.target.value)}>
+          <select value={form.category} onChange={(e) => handleCategoryChange(e.target.value)} required>
             <option value="">Select...</option>
             {categoriesForType.map((c) => (
               <option key={c.category_id} value={c.name}>{c.name}</option>
@@ -529,7 +553,7 @@ function BehaviourPageInner() {
 
         <label>
           Points
-          <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} />
+          <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} required />
         </label>
 
         {isSerious && (
@@ -554,8 +578,8 @@ function BehaviourPageInner() {
           />
         </label>
 
-        <button type="submit" style={{ width: 'fit-content' }}>
-          {usingGroup ? `Add event for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Add event'}
+        <button type="submit" disabled={saving} style={{ width: 'fit-content' }}>
+          {saving ? 'Saving…' : usingGroup ? `Add event for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Add event'}
         </button>
       </form>
 
