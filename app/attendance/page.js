@@ -163,6 +163,10 @@ function AttendanceInner() {
 
   useEffect(() => { loadRoster(); }, [classId, date, periodNumber]);
 
+  const today = schoolToday();
+  const isFutureDate = !!date && date > today;
+  const isPastDate = !!date && date < today;
+
   function setMark(studentId, code) {
     setMarks((m) => ({ ...m, [studentId]: code }));
     setLateMinutes((lm) => {
@@ -231,6 +235,17 @@ function AttendanceInner() {
       setStatus('Mark at least one student.');
       return;
     }
+    // A mis-click on the timetable once saved a whole register five days in
+    // the future, so today's looked untaken. The DB refuses future dates too
+    // (migration 146); a past date is a legitimate correction, but confirm it.
+    if (isFutureDate) {
+      setStatus(`Can't save: ${formatUKDate(date, { weekday: true })} hasn't happened yet. Change the date to today.`);
+      return;
+    }
+    if (isPastDate && !window.confirm(`This will save the register for ${formatUKDate(date, { weekday: true })}, not today (${formatUKDate(today, { weekday: true })}). Save anyway?`)) {
+      setStatus('Not saved.');
+      return;
+    }
     setStatus('Saving...');
     const { error } = await supabase.from('attendance').upsert(rows, { onConflict: 'student_id,attend_date,period_number' });
     if (error) setStatus(`Error: ${error.message}`);
@@ -245,8 +260,8 @@ function AttendanceInner() {
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <label>
             Date
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            {date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(date)}</span>}
+            <input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} />
+            {date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(date, { weekday: true })}</span>}
           </label>
 
           <label>
@@ -281,6 +296,18 @@ function AttendanceInner() {
             </select>
           </label>
         </div>
+        {isFutureDate && (
+          <p style={{ color: '#b91c1c', fontWeight: 600, marginTop: '0.75rem', marginBottom: 0 }}>
+            {formatUKDate(date, { weekday: true })} is in the future — a register can't be saved for it. Today is {formatUKDate(today, { weekday: true })}.{' '}
+            <button type="button" className="secondary" onClick={() => setDate(today)}>Switch to today</button>
+          </p>
+        )}
+        {isPastDate && (
+          <p style={{ color: '#b45309', fontWeight: 600, marginTop: '0.75rem', marginBottom: 0 }}>
+            You're looking at {formatUKDate(date, { weekday: true })}, not today ({formatUKDate(today, { weekday: true })}).{' '}
+            <button type="button" className="secondary" onClick={() => setDate(today)}>Switch to today</button>
+          </p>
+        )}
       </div>
 
       {classId && (
