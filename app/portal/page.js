@@ -108,7 +108,10 @@ function PortalInner() {
       submittingRef.current = false;
       setSubmitting(false);
     }
-    if (error) setStatus(`Error: ${error.message}`);
+    // 23505 = the one-appeal-per-event unique index (migration 136): an earlier
+    // submit already got through, so reload and show that one instead.
+    if (error?.code === '23505') { setStatus('This event has already been appealed.'); setAppealForm(null); setAppealReason(''); load(); }
+    else if (error) setStatus(`Error: ${error.message}`);
     else { setStatus('Appeal submitted — your pastoral manager will review it.'); setAppealForm(null); setAppealReason(''); load(); }
   }
 
