@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
+import { STUDENT_CORE_FIELDS } from '../../../lib/studentFields';
 
 function PermissionsInner() {
   const { profile } = useAuth();
@@ -11,6 +12,7 @@ function PermissionsInner() {
   const [roles, setRoles] = useState([]);
   const [resources, setResources] = useState([]);
   const [grants, setGrants] = useState({}); // role_name -> Set of resource_key
+  const [fieldGrants, setFieldGrants] = useState({}); // role_name -> Set of student field the role can edit
   const [selectedRole, setSelectedRole] = useState('');
   const [status, setStatus] = useState(null);
 
@@ -26,6 +28,13 @@ function PermissionsInner() {
       map[row.role_name].add(row.resource_key);
     });
     setGrants(map);
+    const { data: sfp } = await supabase.from('student_field_permissions').select('*');
+    const fieldMap = {};
+    (sfp || []).forEach((row) => {
+      if (!fieldMap[row.role_name]) fieldMap[row.role_name] = new Set();
+      fieldMap[row.role_name].add(row.field_name);
+    });
+    setFieldGrants(fieldMap);
     if (r && r.length > 0 && !selectedRole) setSelectedRole(r[0].role_name);
   }
 
@@ -48,20 +57,37 @@ function PermissionsInner() {
     });
   }
 
+  // Grant or remove Edit on some student Core Data fields for the selected
+  // role. No row means Read only; migration 151 enforces it on save.
+  async function setFieldAccess(fieldKeys, canEdit) {
+    const current = fieldGrants[selectedRole] || new Set();
+    const keys = fieldKeys.filter((k) => current.has(k) !== canEdit);
+    if (keys.length === 0) return;
+    const { error } = canEdit
+      ? await supabase.from('student_field_permissions').insert(keys.map((k) => ({ role_name: selectedRole, field_name: k })))
+      : await supabase.from('student_field_permissions').delete().eq('role_name', selectedRole).in('field_name', keys);
+    if (error) { setStatus(`Error: ${error.message}`); return; }
+    setFieldGrants((prev) => {
+      const set = new Set(prev[selectedRole] || []);
+      keys.forEach((k) => (canEdit ? set.add(k) : set.delete(k)));
+      return { ...prev, [selectedRole]: set };
+    });
+  }
+
   if (!isAdmin) return <p>Only admin can manage permissions.</p>;
 
   const sections = [...new Set(resources.map((r) => r.section))];
   const selectedGrants = grants[selectedRole] || new Set();
+  const selectedFieldGrants = fieldGrants[selectedRole] || new Set();
 
   return (
     <div>
       <h1>Permissions</h1>
       <p>Choose a role, then tick which tiles/pages it can access. Changes save instantly.</p>
       <p style={{ color: '#5a6b8c', fontSize: '0.9rem' }}>
-        This controls which tiles a role can <em>see</em> — not what it can actually save once there.
-        Whether a role can edit or only view the data behind a tile is a separate, database-level rule
-        (a teacher can view Core Data but not edit it, for example) and isn&apos;t editable here. See{' '}
-        <code>sql/RLS_ACCESS_SUMMARY.md</code> in the repo for the full read/write breakdown per table.
+        The tiles control which pages a role can <em>see</em>. Whether a role can edit the data behind a
+        tile is a separate, database-level rule — see <code>sql/RLS_ACCESS_SUMMARY.md</code> in the repo.
+        The exception is student Core Data, whose Read/Edit access is set field by field at the bottom of this page.
       </p>
 
       <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -105,6 +131,48 @@ function PermissionsInner() {
           ))}
         </div>
       ))}
+
+      <div className="card" style={{ marginBottom: '1rem' }}>
+        <h2>Student Core Data fields</h2>
+        {selectedRole === 'admin' ? (
+          <p>Admin can always edit every field.</p>
+        ) : (
+          <>
+            <p style={{ color: '#5a6b8c', fontSize: '0.9rem' }}>
+              Choose which fields on a student&apos;s Core Data this role can change. Read means they can see the
+              field but not change it. Changes save instantly.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <button className="secondary" onClick={() => setFieldAccess(STUDENT_CORE_FIELDS.map((f) => f.key), false)}>All Read</button>
+              <button className="secondary" onClick={() => setFieldAccess(STUDENT_CORE_FIELDS.map((f) => f.key), true)}>All Edit</button>
+              <span style={{ alignSelf: 'center', color: '#5a6b8c', fontSize: '0.9rem' }}>
+                {selectedFieldGrants.size} of {STUDENT_CORE_FIELDS.length} editable
+              </span>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Field</th><th>Access</th></tr>
+              </thead>
+              <tbody>
+                {STUDENT_CORE_FIELDS.map((f) => (
+                  <tr key={f.key}>
+                    <td>{f.label}</td>
+                    <td>
+                      <select
+                        value={selectedFieldGrants.has(f.key) ? 'edit' : 'read'}
+                        onChange={(e) => setFieldAccess([f.key], e.target.value === 'edit')}
+                      >
+                        <option value="read">Read</option>
+                        <option value="edit">Edit</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
 
       {status && <p>{status}</p>}
     </div>
