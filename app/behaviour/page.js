@@ -314,6 +314,9 @@ function BehaviourPageInner() {
       type: form.type,
       category: form.category || null,
       description: form.description || null,
+      // The lesson or mentor group picked, so parents can see the subject
+      // (migration 145 works it out from the timetable otherwise).
+      class_id: groupType === 'mentor' && classId ? Number(classId) : null,
     }));
     let error;
     try {

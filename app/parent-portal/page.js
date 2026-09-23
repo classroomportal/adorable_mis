@@ -100,7 +100,7 @@ export function ParentPortalInner() {
       const { data: enrolled } = await supabase.from('student_class').select('classes(subject_id)').eq('student_id', selectedId);
       setTargets(tg || []);
       setEnrolledSubjectIds(new Set((enrolled || []).map((l) => l.classes?.subject_id).filter(Boolean)));
-      const { data: b } = await supabase.from('behaviour_events').select('*').eq('student_id', selectedId).order('event_date', { ascending: false });
+      const { data: b } = await supabase.from('behaviour_events').select('*, classes(subjects(subject_name, display_name))').eq('student_id', selectedId).order('event_date', { ascending: false });
       setBehaviour(b || []);
       const { data: gs } = await supabase.from('grade_scale').select('*');
       setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
@@ -364,13 +364,15 @@ export function ParentPortalInner() {
               <h2>Behaviour</h2>
               {behaviour.length === 0 ? <p>No events logged.</p> : (
                 <div className="table-scroll table-compact"><table>
-                  <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Points</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Subject</th><th>Points</th></tr></thead>
                   <tbody>
                     {behaviour.map((b) => (
                       <tr key={b.event_id}>
                         <td>{b.event_date}</td>
                         <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
                         <td>{b.category}</td>
+                        {/* Parents see the subject, not the teacher (students see who gave it). */}
+                        <td>{b.classes?.subjects?.display_name || b.classes?.subjects?.subject_name || '—'}</td>
                         <td>{b.points}</td>
                       </tr>
                     ))}
