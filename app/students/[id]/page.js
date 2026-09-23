@@ -49,6 +49,9 @@ function StudentDetail() {
   const { profile, staffRoles, hasAccess } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const canEditAssessment = isAdmin || (staffRoles || []).includes('assessment_manager');
+  // School office maintain core data (details, status, photo); RLS already
+  // lets them update students. Class allocation below stays admin-only.
+  const canEditCore = isAdmin || (staffRoles || []).includes('school_office');
   // The medical record is gated on its own resource key so
   // /admin/permissions can move it between roles. Writing is narrower
   // than seeing it: only the nurse (and admin) pass the RLS policies in
@@ -611,12 +614,12 @@ function StudentDetail() {
             <button className="secondary" onClick={() => setFullView(!fullView)}>
               {fullView ? 'Simple view' : 'Full view'}
             </button>
-            {isAdmin && !editing && <button className="secondary" onClick={() => setEditing(true)}>Edit</button>}
+            {canEditCore && !editing && <button className="secondary" onClick={() => setEditing(true)}>Edit</button>}
           </div>
         </div>
 
         <div style={{ overflow: 'hidden' }}>
-          {(student.photo_base64 || isAdmin) && (
+          {(student.photo_base64 || canEditCore) && (
             <div style={{ float: 'left', marginRight: '1.25rem', marginBottom: '0.5rem', textAlign: 'center' }}>
               {student.photo_base64 && (
                 <img
@@ -625,7 +628,7 @@ function StudentDetail() {
                   style={{ width: 120, height: 150, objectFit: 'cover', borderRadius: 8, display: 'block' }}
                 />
               )}
-              {isAdmin && (
+              {canEditCore && (
                 <div style={{ marginTop: '0.4rem' }}>
                   <label className="secondary" style={{ display: 'inline-block', padding: '0.3rem 0.6rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem' }}>
                     {student.photo_base64 ? 'Change photo' : 'Add photo'}
