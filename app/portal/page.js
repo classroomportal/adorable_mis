@@ -48,7 +48,7 @@ function PortalInner() {
     setEnrolledSubjectIds(new Set((enrolled || []).map((l) => l.classes?.subject_id).filter(Boolean)));
     const { data: gs } = await supabase.from('grade_scale').select('*');
     setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
-    const { data: b } = await supabase.from('behaviour_events').select('*').eq('student_id', studentId).order('event_date', { ascending: false });
+    const { data: b } = await supabase.from('behaviour_events').select('*, staff!behaviour_events_staff_id_fkey(first_name, last_name)').eq('student_id', studentId).order('event_date', { ascending: false });
     setBehaviour(b || []);
     const { data: ap } = await supabase.from('behaviour_appeals').select('*').eq('student_id', studentId);
     setAppeals(ap || []);
@@ -212,7 +212,7 @@ function PortalInner() {
         <h2>Behaviour</h2>
         {behaviour.length === 0 ? <p>No events logged.</p> : (
           <div className="table-scroll"><table>
-            <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Points</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Points</th><th>Given by</th><th></th></tr></thead>
             <tbody>
               {behaviour.map((b) => {
                 const existingAppeal = appealFor(b.event_id);
@@ -222,6 +222,8 @@ function PortalInner() {
                     <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
                     <td>{b.category}</td>
                     <td>{b.points}</td>
+                    {/* Recorded automatically since migration 138; older events have no staff member. */}
+                    <td>{b.staff ? `${b.staff.first_name} ${b.staff.last_name}` : '—'}</td>
                     <td>
                       {b.type !== 'negative' ? '' : existingAppeal ? (
                         <span style={{ fontSize: '0.85rem' }}>{STATUS_LABEL[existingAppeal.status]}</span>
