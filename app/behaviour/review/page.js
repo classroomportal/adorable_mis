@@ -6,7 +6,7 @@ import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 
-// A "serious" behaviour event is negative with -4 or -5 points (migration 106).
+// A "serious" behaviour event is negative with -3 to -5 points (migrations 106, 135).
 // It can't be saved without an explanation, but it stays hidden from the
 // parent portal until someone here confirms it follows school protocol, names
 // no other student, and reads clearly — then releases it with the toggle.
@@ -30,7 +30,7 @@ function ReviewInner() {
         .from('behaviour_events')
         .select('event_id, event_date, category, points, description, student_id, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
         .eq('type', 'negative')
-        .lte('points', -4)
+        .lte('points', -3)
         .eq('visible_to_parents', false)
         .is('protocol_reviewed_at', null)
         .order('event_date', { ascending: false }),
@@ -38,7 +38,7 @@ function ReviewInner() {
         .from('behaviour_events')
         .select('event_id, event_date, category, points, visible_to_parents, protocol_reviewed_at, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name), reviewer:staff!behaviour_events_protocol_reviewed_by_fkey(first_name, last_name)')
         .eq('type', 'negative')
-        .lte('points', -4)
+        .lte('points', -3)
         .not('protocol_reviewed_at', 'is', null)
         .order('protocol_reviewed_at', { ascending: false })
         .limit(30),
@@ -93,7 +93,7 @@ function ReviewInner() {
     <div>
       <h1>Review Serious Behaviour Events</h1>
       <p style={{ color: '#555' }}>
-        A -4 or -5 point event needs checking before parents see it: does the
+        A -3 to -5 point event needs checking before parents see it: does the
         explanation follow school protocol, does it avoid naming any other
         student, and is it written in clear, good English? Tick the
         confirmation and release it, or leave it hidden if it needs the
