@@ -149,6 +149,13 @@ alter table staff_training enable row level security;
 alter table staff_warnings enable row level security;
 alter table staff_attendance_records enable row level security;
 
+-- Explicit Data API grants: from 30 Oct 2026 Supabase no longer grants new
+-- public tables to the API roles automatically. RLS still decides the rows.
+grant select, insert, update, delete on staff_hr_profiles to authenticated;
+grant select, insert, update, delete on staff_training to authenticated;
+grant select, insert, update, delete on staff_warnings to authenticated;
+grant select, insert, update, delete on staff_attendance_records to authenticated;
+
 drop policy if exists hr_read_staff_hr_profiles on staff_hr_profiles;
 create policy hr_read_staff_hr_profiles on staff_hr_profiles for select using (can_read_staff_hr());
 drop policy if exists hr_write_staff_hr_profiles on staff_hr_profiles;

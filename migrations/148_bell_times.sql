@@ -49,6 +49,10 @@ create table if not exists bell_times (
 
 alter table bell_times enable row level security;
 
+-- Explicit Data API grant: from 30 Oct 2026 Supabase no longer grants new
+-- public tables to the API roles automatically. RLS still decides the rows.
+grant select, insert, update, delete on bell_times to authenticated;
+
 create policy read_all_bell_times on bell_times
   for select using (auth.role() = 'authenticated');
 
