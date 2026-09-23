@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
@@ -62,6 +62,12 @@ function BehaviourPageInner() {
     type: 'positive', category: '', points: '', description: '',
   });
   const [status, setStatus] = useState(null);
+  // On a slow connection staff assumed the first tap hadn't registered and
+  // tapped again, logging every event twice. The ref blocks a second submit
+  // synchronously (state alone can let a fast double tap through before the
+  // re-render); the state drives the disabled button.
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
 
   // behaviour_events has two FKs to staff (staff_id and protocol_reviewed_by),
   // so a bare staff(...) embed is ambiguous: PostgREST rejects the whole query
@@ -289,6 +295,9 @@ function BehaviourPageInner() {
       return;
     }
 
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     setStatus('Saving...');
     const rows = studentIds.map((student_id) => ({
       student_id,
@@ -298,7 +307,15 @@ function BehaviourPageInner() {
       points: form.points || null,
       description: form.description || null,
     }));
-    const { error } = await supabase.from('behaviour_events').insert(rows);
+    let error;
+    try {
+      ({ error } = await supabase.from('behaviour_events').insert(rows));
+    } catch (err) {
+      error = err;
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
     if (error) {
       setStatus(`Error: ${error.message}`);
     } else {
@@ -554,8 +571,8 @@ function BehaviourPageInner() {
           />
         </label>
 
-        <button type="submit" style={{ width: 'fit-content' }}>
-          {usingGroup ? `Add event for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Add event'}
+        <button type="submit" disabled={saving} style={{ width: 'fit-content' }}>
+          {saving ? 'Saving…' : usingGroup ? `Add event for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Add event'}
         </button>
       </form>
 
