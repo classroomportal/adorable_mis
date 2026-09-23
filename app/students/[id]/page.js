@@ -12,6 +12,7 @@ import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownl
 import { classifyGrade, STYLE, LABEL, visibleTargets } from '../../../lib/gradeCompare';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday, schoolWeekdayShort } from '../../../lib/schoolTime';
+import { classGroupKey, groupClassesByKey } from '../../../lib/blockGroups';
 import {
   AttendanceScopeCards,
   AttendanceTodayTable,
@@ -20,38 +21,6 @@ import {
 } from '../../components/AttendanceSummary';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-
-// A curriculum block like "Class" holds many subjects for the same teaching
-// group (e.g. "9A1/Ar", "9A1/Bs", ... "9A1/Me") alongside the other groups'
-// versions of the same subjects ("9C1/Ar", "9G1/Ar", ...). The class_code
-// prefix before the last "/" identifies the teaching group — picking a group
-// should enrol the student in every subject under that prefix at once,
-// rather than in just the one class_id a plain dropdown would pick.
-function classPrefix(code) {
-  const idx = code.lastIndexOf('/');
-  return idx === -1 ? code : code.slice(0, idx);
-}
-
-function groupClassesByPrefix(classes) {
-  const byPrefix = new Map();
-  for (const c of classes) {
-    const prefix = classPrefix(c.class_code);
-    if (!byPrefix.has(prefix)) byPrefix.set(prefix, []);
-    byPrefix.get(prefix).push(c);
-  }
-  return byPrefix;
-}
-
-// How a block is allocated — must match /admin/block-allocation, or a change
-// made there shows up wrongly (or not at all) here:
-//  - 'group':  the "Class" block — one whole teaching group (prefix) per student.
-//  - 'multi':  any other compound block (Pathway, Vocational) — the student can
-//              be in several classes/groups at once, e.g. 10D2/Gs and 10FA/Fa.
-//  - 'single': everything else — one class per block.
-function blockMode(b) {
-  if (b.block_name === 'Class') return 'group';
-  return b.is_compound ? 'multi' : 'single';
-}
 
 // `extra` renders in the header, which is visible while the section is shut —
 // so a button there (Edit) has to be able to open the section, otherwise
@@ -129,8 +98,8 @@ function StudentDetail() {
 
   const [blocks, setBlocks] = useState([]); // curriculum_blocks applicable to this student's year
   const [blockClasses, setBlockClasses] = useState({}); // block_id -> [classes]
-  const [blockSelections, setBlockSelections] = useState({}); // block_id -> class_id (single) or prefix (group)
-  const [enrolledClassIds, setEnrolledClassIds] = useState(new Set()); // every class_id the student is in — drives 'multi' blocks
+  const [blockSelections, setBlockSelections] = useState({}); // block_id -> class_id, or group key for a compound block
+  const [extraGroups, setExtraGroups] = useState({}); // block_id -> other group keys held in a compound block (should be none)
   const [otherYearClasses, setOtherYearClasses] = useState([]); // class_codes in blocks outside the student's year group
   const [blockSaveStatus, setBlockSaveStatus] = useState(null);
   const [blocksError, setBlocksError] = useState(null);
@@ -247,12 +216,12 @@ function StudentDetail() {
     setNgrt(ng || []);
 
     let byBlock = {};
-    let modeByBlock = {};
+    let compoundByBlock = {};
     let blocksLoaded = false;
     if (s.year_group) {
       const { data: cb, error: cbErr } = await supabase
         .from('curriculum_blocks')
-        .select('block_id, block_name, band, is_compound, classes!classes_block_id_fkey(class_id, class_code, room, subjects(subject_name, display_name), staff(first_name, last_name))')
+        .select('block_id, block_name, band, is_compound, classes!classes_block_id_fkey(class_id, class_code, block_group, room, subjects(subject_name, display_name), staff(first_name, last_name))')
         .eq('year_group', s.year_group)
         .order('block_name');
       if (cbErr) {
@@ -262,7 +231,7 @@ function StudentDetail() {
       } else {
         setBlocksError(null);
         setBlocks(cb || []);
-        (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; modeByBlock[b.block_id] = blockMode(b); });
+        (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; compoundByBlock[b.block_id] = b.is_compound; });
         blocksLoaded = true;
         setBlockClasses(byBlock);
       }
@@ -276,22 +245,32 @@ function StudentDetail() {
     // student_class, so it goes stale whenever a class gets linked to a block afterwards.
     const { data: currentLinks } = await supabase
       .from('student_class')
-      .select('class_id, classes(class_code, block_id, subject_id)')
+      .select('class_id, classes(class_code, block_group, block_id, subject_id)')
       .eq('student_id', id);
     const sel = {};
+    const groupsHeld = {};
     (currentLinks || []).forEach((l) => {
       const bId = l.classes?.block_id;
       if (!bId) return;
-      if (modeByBlock[bId] === 'group') sel[bId] = classPrefix(l.classes.class_code);
-      else if (modeByBlock[bId] === 'single') sel[bId] = l.class_id;
+      if (compoundByBlock[bId]) {
+        const key = classGroupKey(l.classes);
+        (groupsHeld[bId] ||= new Set()).add(key);
+        sel[bId] ||= key;
+      } else {
+        sel[bId] = l.class_id;
+      }
     });
     setBlockSelections(sel);
-    setEnrolledClassIds(new Set((currentLinks || []).map((l) => l.class_id)));
+    // A compound block is one group per student; more than one is a data
+    // problem to show, not something the dropdown can represent.
+    setExtraGroups(Object.fromEntries(Object.entries(groupsHeld)
+      .filter(([, keys]) => keys.size > 1)
+      .map(([bId, keys]) => [bId, [...keys].filter((k) => k !== sel[bId])])));
     // Classes in a block that isn't this student's year — typically left over
     // from before a year-group change. They still drive the timetable, but the
     // panel below only lists this year's blocks, so call them out explicitly.
     setOtherYearClasses(!blocksLoaded ? [] : (currentLinks || [])
-      .filter((l) => l.classes?.block_id && !(l.classes.block_id in modeByBlock))
+      .filter((l) => l.classes?.block_id && !(l.classes.block_id in compoundByBlock))
       .map((l) => l.classes.class_code)
       .sort());
     setEnrolledSubjectIds(new Set((currentLinks || []).map((l) => l.classes?.subject_id).filter(Boolean)));
@@ -526,14 +505,13 @@ function StudentDetail() {
     loadAll();
   }
 
-  // For a block like "Class" that holds several subjects per teaching group
-  // (e.g. "9A1/Ar", "9A1/Bs", ... "9A1/Me"), picking a group enrols the
-  // student in every one of that group's classes at once, rather than in
-  // just a single class_id the way handleBlockChange does for a normal
-  // single-subject block.
-  async function handleGroupBlockChange(blockId, newPrefix) {
+  // For a compound block (Class, Pathway, Vocational) picking a group enrols
+  // the student in every one of that group's classes at once — Pathway "101"
+  // is Bi, Ch, Co, Cv and Ph — rather than in just a single class_id the way
+  // handleBlockChange does for a normal single-subject block.
+  async function handleGroupBlockChange(blockId, newKey) {
     setBlockSaveStatus('Saving...');
-    setBlockSelections((prev) => ({ ...prev, [blockId]: newPrefix || null }));
+    setBlockSelections((prev) => ({ ...prev, [blockId]: newKey || null }));
 
     const allClassIds = (blockClasses[blockId] || []).map((c) => c.class_id);
     if (allClassIds.length > 0) {
@@ -548,9 +526,9 @@ function StudentDetail() {
       }
     }
 
-    if (newPrefix) {
+    if (newKey) {
       const newClassIds = (blockClasses[blockId] || [])
-        .filter((c) => classPrefix(c.class_code) === newPrefix)
+        .filter((c) => classGroupKey(c) === newKey)
         .map((c) => c.class_id);
       if (newClassIds.length > 0) {
         const { error } = await supabase
@@ -560,41 +538,6 @@ function StudentDetail() {
           setBlockSaveStatus(`Error: ${error.message}`);
           return;
         }
-      }
-    }
-    setBlockSaveStatus('Saved.');
-    loadAll();
-  }
-
-  // For a compound block other than "Class" (Pathway, Vocational) the student
-  // can hold several groups at once, so each group is ticked independently —
-  // the same as the checkboxes on /admin/block-allocation. Ticking a group the
-  // student is only partly in fills in the missing subjects.
-  async function handleMultiGroupToggle(blockId, prefix) {
-    setBlockSaveStatus('Saving...');
-    const groupClassIds = (blockClasses[blockId] || [])
-      .filter((c) => classPrefix(c.class_code) === prefix)
-      .map((c) => c.class_id);
-    const fullySelected = groupClassIds.every((cid) => enrolledClassIds.has(cid));
-
-    if (fullySelected) {
-      const { error } = await supabase
-        .from('student_class')
-        .delete()
-        .eq('student_id', id)
-        .in('class_id', groupClassIds);
-      if (error) {
-        setBlockSaveStatus(`Error: ${error.message}`);
-        return;
-      }
-    } else {
-      const missing = groupClassIds.filter((cid) => !enrolledClassIds.has(cid));
-      const { error } = await supabase
-        .from('student_class')
-        .upsert(missing.map((class_id) => ({ student_id: Number(id), class_id })), { onConflict: 'student_id,class_id', ignoreDuplicates: true });
-      if (error) {
-        setBlockSaveStatus(`Error: ${error.message}`);
-        return;
       }
     }
     setBlockSaveStatus('Saved.');
@@ -949,59 +892,40 @@ function StudentDetail() {
               <tbody>
                 {blocks.map((b) => {
                   const options = blockClasses[b.block_id] || [];
-                  const byPrefix = groupClassesByPrefix(options);
-                  // Whether a class's prefix bundles several distinct subjects a
-                  // student takes together (e.g. Pathway "101" = Bi+Ch+Co+Cv+Ph)
-                  // is exactly what curriculum_blocks.is_compound already records
-                  // — MFL/Option classes can share a prefix too (it's just the
-                  // form code, e.g. "10a"), but that's one choice among them, not
-                  // a bundle, so is_compound (not prefix grouping) is the signal.
-                  // Only "Class" is a single-group choice; other compound blocks
-                  // can hold several groups (see blockMode).
-                  const mode = blockMode(b);
-                  const grouped = mode === 'group';
+                  const byGroup = groupClassesByKey(options);
+                  // Whether a group bundles several distinct subjects a student
+                  // takes together (e.g. Pathway "101" = Bi+Ch+Co+Cv+Ph) is exactly
+                  // what curriculum_blocks.is_compound already records — MFL/Option
+                  // classes can share a prefix too (it's just the form code, e.g.
+                  // "10a"), but that's one choice among them, not a bundle, so
+                  // is_compound (not prefix grouping) is the signal.
+                  const grouped = !!b.is_compound;
                   const currentValue = blockSelections[b.block_id] || '';
-                  const multiGroups = mode === 'multi'
-                    ? [...byPrefix.entries()].map(([prefix, classes]) => ({
-                        prefix,
-                        classes,
-                        held: classes.filter((c) => enrolledClassIds.has(c.class_id)).length,
-                      }))
-                    : [];
-                  const groupLabel = (g) => `${g.prefix} — ${g.classes.map((c) => c.subjects?.display_name || c.subjects?.subject_name || c.class_code).join(', ')}`
-                    + (g.held > 0 && g.held < g.classes.length ? ` (${g.held} of ${g.classes.length})` : '');
+                  const extra = extraGroups[b.block_id] || [];
+                  // Name a Pathway's handful of subjects; a form group's dozen-plus
+                  // in the "Class" block would swamp the dropdown, so count those.
+                  const groupSubjects = (classes) => (classes.length > 6
+                    ? `${classes.length} subjects`
+                    : classes.map((c) => c.subjects?.display_name || c.subjects?.subject_name || c.class_code).join(', '));
                   return (
                     <tr key={b.block_id}>
                       <td>{b.block_name}{b.band && b.band !== 'a' ? ` (${b.band})` : ''}</td>
                       <td>
-                        {mode === 'multi' ? (
-                          isAdmin ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                              {multiGroups.map((g) => (
-                                <label key={g.prefix} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={g.held === g.classes.length}
-                                    ref={(el) => { if (el) el.indeterminate = g.held > 0 && g.held < g.classes.length; }}
-                                    onChange={() => handleMultiGroupToggle(b.block_id, g.prefix)}
-                                  />
-                                  {groupLabel(g)}
-                                </label>
-                              ))}
-                            </div>
-                          ) : (
-                            multiGroups.filter((g) => g.held > 0).map(groupLabel).join('; ') || 'Not allocated'
-                          )
-                        ) : isAdmin ? (
+                        {extra.length > 0 && (
+                          <div style={{ fontSize: '0.85rem', color: '#8a5a00', marginBottom: '0.25rem' }}>
+                            Also in {extra.join(', ')} — a student should be in only one group here.
+                          </div>
+                        )}
+                        {isAdmin ? (
                           grouped ? (
                             <select
                               value={currentValue}
                               onChange={(e) => handleGroupBlockChange(b.block_id, e.target.value || null)}
                             >
                               <option value="">— Not allocated —</option>
-                              {[...byPrefix.entries()].map(([prefix, classes]) => (
-                                <option key={prefix} value={prefix}>
-                                  {prefix} — {classes.length} subject{classes.length === 1 ? '' : 's'}
+                              {[...byGroup.entries()].map(([key, classes]) => (
+                                <option key={key} value={key}>
+                                  {key} — {groupSubjects(classes)}
                                 </option>
                               ))}
                             </select>
@@ -1020,7 +944,7 @@ function StudentDetail() {
                             </select>
                           )
                         ) : grouped ? (
-                          currentValue || 'Not allocated'
+                          currentValue ? `${currentValue} — ${groupSubjects(byGroup.get(currentValue) || [])}` : 'Not allocated'
                         ) : (
                           options.find((c) => String(c.class_id) === String(currentValue))?.class_code || 'Not allocated'
                         )}
