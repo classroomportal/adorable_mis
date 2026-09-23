@@ -100,9 +100,13 @@ function StaffTimetable() {
     // The school's today, not the device's: a laptop in another zone, or the
     // hour either side of midnight, would otherwise open the register on the
     // wrong date. Parsed at local midnight so getDay() reads that calendar day.
+    //
+    // This school week's day, never next week's: jumping forward (a Mon click
+    // on a Wednesday used to open next Monday) saved whole registers on a
+    // future date. At the weekend, "this week" is the one just finished.
     const today = new Date(`${schoolToday()}T00:00:00`);
-    let diff = target - today.getDay();
-    if (diff < 0) diff += 7;
+    const todayWeekday = today.getDay() === 0 ? 7 : today.getDay();
+    const diff = target - todayWeekday;
     const d = new Date(today);
     d.setDate(today.getDate() + diff);
     return toLocalISO(d);
