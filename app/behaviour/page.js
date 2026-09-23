@@ -290,6 +290,13 @@ function BehaviourPageInner() {
       return;
     }
 
+    // A blank event (no category, no points) was being saved and showed up to
+    // students as an unexplained negative — they appealed those too.
+    if (!form.category || form.points === '') {
+      setStatus('Choose a category and enter the points before saving.');
+      return;
+    }
+
     if (isSerious && !form.description.trim()) {
       setStatus('This is a serious event (-3 to -5 points) — an explanation of what happened is required before it can be saved.');
       return;
@@ -536,7 +543,7 @@ function BehaviourPageInner() {
 
         <label>
           Category
-          <select value={form.category} onChange={(e) => handleCategoryChange(e.target.value)}>
+          <select value={form.category} onChange={(e) => handleCategoryChange(e.target.value)} required>
             <option value="">Select...</option>
             {categoriesForType.map((c) => (
               <option key={c.category_id} value={c.name}>{c.name}</option>
@@ -546,7 +553,7 @@ function BehaviourPageInner() {
 
         <label>
           Points
-          <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} />
+          <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} required />
         </label>
 
         {isSerious && (
