@@ -11,6 +11,7 @@ function WelcomeEmailsInner() {
   const isAdmin = profile?.role === 'admin';
   const [csvText, setCsvText] = useState('');
   const [rows, setRows] = useState([]);
+  const [selected, setSelected] = useState(new Set());
   const [status, setStatus] = useState(null);
   const [sending, setSending] = useState(false);
 
@@ -18,6 +19,7 @@ function WelcomeEmailsInner() {
     const parsed = Papa.parse(csvText.trim(), { header: true, skipEmptyLines: true });
     const valid = (parsed.data || []).filter((r) => r.email && r.temp_password && !r.temp_password.startsWith('('));
     setRows(valid);
+    setSelected(new Set(valid.map((_, i) => i)));
     setStatus(`${valid.length} parent(s) ready to email (skipped rows without a real password).`);
   }
 
@@ -30,8 +32,18 @@ function WelcomeEmailsInner() {
 4. Write the email using {{parent_name}}, {{email}}, {{temp_password}} as merge fields (see the template above for wording — swap {{ }} for the merge fields).
 5. Preview a few, then send. Workspace allows up to 2,000 recipients/day, so the whole parent list can go in one send.`;
 
+  const chosen = rows.filter((_, i) => selected.has(i));
+
+  function toggle(i) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  }
+
   function handleExportCsv() {
-    const csv = Papa.unparse(rows.map((r) => ({
+    const csv = Papa.unparse(chosen.map((r) => ({
       parent_name: r.parent_name || '',
       email: r.email,
       temp_password: r.temp_password,
@@ -59,13 +71,14 @@ Please log in at misform.work and change your password on first login.
 Kind regards,
 Adorable British College`;
 
-  const OVER_DAILY_CAP = rows.length > 2000;
+  const OVER_DAILY_CAP = chosen.length > 2000;
 
   async function handleSend() {
     setSending(true);
     let sent = 0;
     const problems = [];
-    for (const r of rows) {
+    const toSend = chosen;
+    for (const r of toSend) {
       const { error } = await supabase.rpc('send_parent_welcome_email', {
         p_email: r.email,
         p_name: r.parent_name || r.email,
@@ -73,10 +86,10 @@ Adorable British College`;
       });
       if (error) problems.push(`${r.email}: ${error.message}`);
       else sent += 1;
-      setStatus(`Sending... ${sent + problems.length}/${rows.length}`);
+      setStatus(`Sending... ${sent + problems.length}/${toSend.length}`);
     }
     setSending(false);
-    setStatus(`Sent ${sent} of ${rows.length}.${problems.length ? ' Issues: ' + problems.slice(0, 10).join('; ') : ''}`);
+    setStatus(`Sent ${sent} of ${toSend.length}.${problems.length ? ' Issues: ' + problems.slice(0, 10).join('; ') : ''}`);
   }
 
   if (!isAdmin) return <p>Only admin can send welcome emails.</p>;
@@ -98,18 +111,31 @@ Adorable British College`;
 
       {rows.length > 0 && (
         <div className="card">
-          <p>{rows.length} parent(s) will receive an email with their login and temporary password.</p>
+          <p>{chosen.length} of {rows.length} parent(s) selected. Only ticked parents will receive an email with their login and temporary password.</p>
+
+          <div style={{ marginBottom: '0.5rem' }}>
+            <button onClick={() => setSelected(new Set(rows.map((_, i) => i)))} disabled={sending} style={{ marginRight: '0.5rem' }}>Select all</button>
+            <button onClick={() => setSelected(new Set())} disabled={sending}>Select none</button>
+          </div>
+          <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #ddd', padding: '0.5rem', marginBottom: '0.75rem' }}>
+            {rows.map((r, i) => (
+              <label key={i} style={{ display: 'block', padding: '0.15rem 0' }}>
+                <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)} disabled={sending} />{' '}
+                {r.parent_name || '(no name)'} — {r.email}
+              </label>
+            ))}
+          </div>
 
           {OVER_DAILY_CAP && (
             <p style={{ color: '#b45309', fontWeight: 600 }}>
-              {rows.length} is over Google Workspace's ~2,000/day send limit — sending now will fail partway through.
+              {chosen.length} is over Google Workspace's ~2,000/day send limit — sending now will fail partway through.
               Export the CSV below and mail-merge it through the school office's own email instead.
             </p>
           )}
 
-          <button onClick={handleExportCsv} style={{ marginRight: '0.5rem' }}>Download CSV for mail merge</button>
-          <button onClick={handleSend} disabled={sending || OVER_DAILY_CAP}>
-            {sending ? 'Sending...' : `Send ${rows.length} emails from mis@abc.sch.ng`}
+          <button onClick={handleExportCsv} disabled={chosen.length === 0} style={{ marginRight: '0.5rem' }}>Download CSV for mail merge</button>
+          <button onClick={handleSend} disabled={sending || OVER_DAILY_CAP || chosen.length === 0}>
+            {sending ? 'Sending...' : `Send ${chosen.length} email${chosen.length === 1 ? '' : 's'} from mis@abc.sch.ng`}
           </button>
 
           <details style={{ marginTop: '0.75rem' }} open={OVER_DAILY_CAP}>
