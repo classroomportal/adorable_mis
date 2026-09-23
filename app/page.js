@@ -168,13 +168,7 @@ const TABS = [
       // Class Allocation, not this.
       { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
       { href: '/admin/import-staff-commitments', label: 'Import Staff Commitments (NCLASS.DAT)' },
-    ].filter((it) => hasAccess(it.href)),
-  },
-  {
-    key: 'bell-times', label: 'Bell Times', icon: '🔔', accent: 'school',
-    description: 'The start and end of every lesson, day by day.',
-    items: ({ hasAccess }) => [
-      { href: '/admin/bell-times', label: 'Edit Bell Times' },
+      { href: '/admin/bell-times', label: 'Bell Times' },
     ].filter((it) => hasAccess(it.href)),
   },
   {
