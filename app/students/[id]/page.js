@@ -42,6 +42,17 @@ function groupClassesByPrefix(classes) {
   return byPrefix;
 }
 
+// How a block is allocated — must match /admin/block-allocation, or a change
+// made there shows up wrongly (or not at all) here:
+//  - 'group':  the "Class" block — one whole teaching group (prefix) per student.
+//  - 'multi':  any other compound block (Pathway, Vocational) — the student can
+//              be in several classes/groups at once, e.g. 10D2/Gs and 10FA/Fa.
+//  - 'single': everything else — one class per block.
+function blockMode(b) {
+  if (b.block_name === 'Class') return 'group';
+  return b.is_compound ? 'multi' : 'single';
+}
+
 // `extra` renders in the header, which is visible while the section is shut —
 // so a button there (Edit) has to be able to open the section, otherwise
 // clicking it appears to do nothing.
@@ -118,7 +129,9 @@ function StudentDetail() {
 
   const [blocks, setBlocks] = useState([]); // curriculum_blocks applicable to this student's year
   const [blockClasses, setBlockClasses] = useState({}); // block_id -> [classes]
-  const [blockSelections, setBlockSelections] = useState({}); // block_id -> class_id (current + edits)
+  const [blockSelections, setBlockSelections] = useState({}); // block_id -> class_id (single) or prefix (group)
+  const [enrolledClassIds, setEnrolledClassIds] = useState(new Set()); // every class_id the student is in — drives 'multi' blocks
+  const [otherYearClasses, setOtherYearClasses] = useState([]); // class_codes in blocks outside the student's year group
   const [blockSaveStatus, setBlockSaveStatus] = useState(null);
   const [blocksError, setBlocksError] = useState(null);
   const [boardingHouses, setBoardingHouses] = useState([]);
@@ -234,7 +247,8 @@ function StudentDetail() {
     setNgrt(ng || []);
 
     let byBlock = {};
-    let compoundByBlock = {};
+    let modeByBlock = {};
+    let blocksLoaded = false;
     if (s.year_group) {
       const { data: cb, error: cbErr } = await supabase
         .from('curriculum_blocks')
@@ -248,7 +262,8 @@ function StudentDetail() {
       } else {
         setBlocksError(null);
         setBlocks(cb || []);
-        (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; compoundByBlock[b.block_id] = b.is_compound; });
+        (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; modeByBlock[b.block_id] = blockMode(b); });
+        blocksLoaded = true;
         setBlockClasses(byBlock);
       }
     } else {
@@ -267,9 +282,18 @@ function StudentDetail() {
     (currentLinks || []).forEach((l) => {
       const bId = l.classes?.block_id;
       if (!bId) return;
-      sel[bId] = compoundByBlock[bId] ? classPrefix(l.classes.class_code) : l.class_id;
+      if (modeByBlock[bId] === 'group') sel[bId] = classPrefix(l.classes.class_code);
+      else if (modeByBlock[bId] === 'single') sel[bId] = l.class_id;
     });
     setBlockSelections(sel);
+    setEnrolledClassIds(new Set((currentLinks || []).map((l) => l.class_id)));
+    // Classes in a block that isn't this student's year — typically left over
+    // from before a year-group change. They still drive the timetable, but the
+    // panel below only lists this year's blocks, so call them out explicitly.
+    setOtherYearClasses(!blocksLoaded ? [] : (currentLinks || [])
+      .filter((l) => l.classes?.block_id && !(l.classes.block_id in modeByBlock))
+      .map((l) => l.classes.class_code)
+      .sort());
     setEnrolledSubjectIds(new Set((currentLinks || []).map((l) => l.classes?.subject_id).filter(Boolean)));
 
     setLoading(false);
@@ -472,19 +496,21 @@ function StudentDetail() {
     setBlockSaveStatus('Saving...');
     setBlockSelections((prev) => ({ ...prev, [blockId]: newClassId || null }));
 
-    // Remove any existing link for this block, then insert the new one (if a class was chosen)
-    const { data: existing } = await supabase
-      .from('student_class')
-      .select('class_id')
-      .eq('student_id', id)
-      .eq('block_id', blockId);
-
-    if (existing && existing.length > 0) {
-      await supabase
+    // Remove any existing link for this block, then insert the new one (if a
+    // class was chosen). Matched on the block's class_ids rather than
+    // student_class.block_id, which is only a trigger-maintained copy of
+    // classes.block_id and can go stale (see migration 073).
+    const allClassIds = (blockClasses[blockId] || []).map((c) => c.class_id);
+    if (allClassIds.length > 0) {
+      const { error } = await supabase
         .from('student_class')
         .delete()
         .eq('student_id', id)
-        .eq('block_id', blockId);
+        .in('class_id', allClassIds);
+      if (error) {
+        setBlockSaveStatus(`Error: ${error.message}`);
+        return;
+      }
     }
 
     if (newClassId) {
@@ -534,6 +560,41 @@ function StudentDetail() {
           setBlockSaveStatus(`Error: ${error.message}`);
           return;
         }
+      }
+    }
+    setBlockSaveStatus('Saved.');
+    loadAll();
+  }
+
+  // For a compound block other than "Class" (Pathway, Vocational) the student
+  // can hold several groups at once, so each group is ticked independently —
+  // the same as the checkboxes on /admin/block-allocation. Ticking a group the
+  // student is only partly in fills in the missing subjects.
+  async function handleMultiGroupToggle(blockId, prefix) {
+    setBlockSaveStatus('Saving...');
+    const groupClassIds = (blockClasses[blockId] || [])
+      .filter((c) => classPrefix(c.class_code) === prefix)
+      .map((c) => c.class_id);
+    const fullySelected = groupClassIds.every((cid) => enrolledClassIds.has(cid));
+
+    if (fullySelected) {
+      const { error } = await supabase
+        .from('student_class')
+        .delete()
+        .eq('student_id', id)
+        .in('class_id', groupClassIds);
+      if (error) {
+        setBlockSaveStatus(`Error: ${error.message}`);
+        return;
+      }
+    } else {
+      const missing = groupClassIds.filter((cid) => !enrolledClassIds.has(cid));
+      const { error } = await supabase
+        .from('student_class')
+        .upsert(missing.map((class_id) => ({ student_id: Number(id), class_id })), { onConflict: 'student_id,class_id', ignoreDuplicates: true });
+      if (error) {
+        setBlockSaveStatus(`Error: ${error.message}`);
+        return;
       }
     }
     setBlockSaveStatus('Saved.');
@@ -895,13 +956,43 @@ function StudentDetail() {
                   // — MFL/Option classes can share a prefix too (it's just the
                   // form code, e.g. "10a"), but that's one choice among them, not
                   // a bundle, so is_compound (not prefix grouping) is the signal.
-                  const grouped = !!b.is_compound;
+                  // Only "Class" is a single-group choice; other compound blocks
+                  // can hold several groups (see blockMode).
+                  const mode = blockMode(b);
+                  const grouped = mode === 'group';
                   const currentValue = blockSelections[b.block_id] || '';
+                  const multiGroups = mode === 'multi'
+                    ? [...byPrefix.entries()].map(([prefix, classes]) => ({
+                        prefix,
+                        classes,
+                        held: classes.filter((c) => enrolledClassIds.has(c.class_id)).length,
+                      }))
+                    : [];
+                  const groupLabel = (g) => `${g.prefix} — ${g.classes.map((c) => c.subjects?.display_name || c.subjects?.subject_name || c.class_code).join(', ')}`
+                    + (g.held > 0 && g.held < g.classes.length ? ` (${g.held} of ${g.classes.length})` : '');
                   return (
                     <tr key={b.block_id}>
                       <td>{b.block_name}{b.band && b.band !== 'a' ? ` (${b.band})` : ''}</td>
                       <td>
-                        {isAdmin ? (
+                        {mode === 'multi' ? (
+                          isAdmin ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                              {multiGroups.map((g) => (
+                                <label key={g.prefix} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={g.held === g.classes.length}
+                                    ref={(el) => { if (el) el.indeterminate = g.held > 0 && g.held < g.classes.length; }}
+                                    onChange={() => handleMultiGroupToggle(b.block_id, g.prefix)}
+                                  />
+                                  {groupLabel(g)}
+                                </label>
+                              ))}
+                            </div>
+                          ) : (
+                            multiGroups.filter((g) => g.held > 0).map(groupLabel).join('; ') || 'Not allocated'
+                          )
+                        ) : isAdmin ? (
                           grouped ? (
                             <select
                               value={currentValue}
@@ -940,6 +1031,12 @@ function StudentDetail() {
               </tbody>
             </table>
           </div>
+        )}
+        {otherYearClasses.length > 0 && (
+          <p style={{ fontSize: '0.85rem', color: '#8a5a00', marginTop: '0.5rem' }}>
+            Still allocated to classes from another year group's blocks: {otherYearClasses.join(', ')}.
+            Remove them from /admin/block-allocation for that year if they no longer apply.
+          </p>
         )}
       </Collapsible>
 
