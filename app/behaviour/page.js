@@ -263,9 +263,11 @@ function BehaviourPageInner() {
     setForm({ ...form, type: newType, category: '', points: '' });
   }
 
+  // Points are set centrally per category (/admin/lookups) — staff can't change
+  // them here, and the database enforces the same (migration 140).
   function handleCategoryChange(categoryName) {
     const match = categoriesForType.find((c) => c.name === categoryName);
-    setForm({ ...form, category: categoryName, points: match?.default_points ?? form.points });
+    setForm({ ...form, category: categoryName, points: match?.default_points ?? '' });
   }
 
   function toggleStudent(studentId) {
@@ -292,8 +294,8 @@ function BehaviourPageInner() {
 
     // A blank event (no category, no points) was being saved and showed up to
     // students as an unexplained negative — they appealed those too.
-    if (!form.category || form.points === '') {
-      setStatus('Choose a category and enter the points before saving.');
+    if (!form.category) {
+      setStatus('Choose a category before saving.');
       return;
     }
 
@@ -311,7 +313,6 @@ function BehaviourPageInner() {
       event_date: form.event_date,
       type: form.type,
       category: form.category || null,
-      points: form.points || null,
       description: form.description || null,
     }));
     let error;
@@ -553,7 +554,7 @@ function BehaviourPageInner() {
 
         <label>
           Points
-          <input type="number" value={form.points} onChange={(e) => setForm({ ...form, points: e.target.value })} required />
+          <input type="number" value={form.points} readOnly tabIndex={-1} placeholder="Set by category" style={{ background: '#f3f4f6' }} />
         </label>
 
         {isSerious && (
