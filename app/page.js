@@ -168,7 +168,13 @@ const TABS = [
       // Class Allocation, not this.
       { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
       { href: '/admin/import-staff-commitments', label: 'Import Staff Commitments (NCLASS.DAT)' },
-      { href: '/admin/bell-times', label: 'Bell Times' },
+    ].filter((it) => hasAccess(it.href)),
+  },
+  {
+    key: 'bell-times', label: 'Bell Times', icon: '🔔', accent: 'school',
+    description: 'The start and end of every lesson, day by day.',
+    items: ({ hasAccess }) => [
+      { href: '/admin/bell-times', label: 'Edit Bell Times' },
     ].filter((it) => hasAccess(it.href)),
   },
   {
@@ -242,7 +248,9 @@ const TABS = [
     items: ({ hasAccess }) => [
       { href: '/students/import', label: 'Import Students' },
       { href: '/students/photos/import', label: 'Import Photos' },
-      { href: '/admin/import-timetable', label: 'Import Student Class Allocations' },
+      // /admin/import-timetable (SIMS student-class upload) is no longer used:
+      // allocations are kept in Formwork, and that upload only ever added
+      // students to classes, never took them out. Hidden, not deleted.
     ].filter((it) => hasAccess(it.href)),
   },
 ];
