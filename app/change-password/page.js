@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
-import { useRouter } from 'next/navigation';
 
 function ChangePasswordInner() {
   const { profile } = useAuth();
@@ -12,7 +11,6 @@ function ChangePasswordInner() {
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -25,10 +23,18 @@ function ChangePasswordInner() {
       await supabase.rpc('clear_must_change_password');
     }
     setLoading(false);
-    if (error) setError(error.message);
-    else {
+    if (error) {
+      // Supabase refuses a new password equal to the current one; for a
+      // parent on their first sign-in that's their child's date of birth.
+      setError(/different from the old password/i.test(error.message)
+        ? 'Please choose a new password. It cannot be the same as the one you signed in with.'
+        : error.message);
+    } else {
       setStatus('Password updated.');
-      setTimeout(() => router.push('/'), 1000);
+      // Full reload rather than router.push: the profile in AuthContext
+      // still says must_change_password, and RequireAuth would bounce
+      // straight back here until it's re-read.
+      setTimeout(() => { window.location.href = '/'; }, 1000);
     }
   }
 
@@ -36,7 +42,7 @@ function ChangePasswordInner() {
     <div style={{ maxWidth: 380, margin: '2rem auto' }}>
       <h1>Change Password</h1>
       {profile?.must_change_password && (
-        <p style={{ color: '#a3232c' }}>You're using a temporary password — set your own before continuing.</p>
+        <p style={{ color: '#a3232c' }}>Welcome! Before you continue, please choose your own password. It must be at least 8 characters. You will use this new password every time you sign in from now on.</p>
       )}
       <form onSubmit={handleSubmit} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         <label>

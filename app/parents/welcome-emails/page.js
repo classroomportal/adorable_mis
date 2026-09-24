@@ -57,7 +57,9 @@ function WelcomeEmailsInner() {
     URL.revokeObjectURL(url);
   }
 
-  // Keep in step with the letter in send_parent_welcome_email() (migration 159).
+  // Keep in step with the letter in send_parent_welcome_email() (migration 160).
+  // Assumes the date-of-birth password; a parent with no current child gets a
+  // random one, and the email function drops that explanation for them.
   const MAIL_MERGE_TEMPLATE = `Subject: Introducing Formwork: your new parent account (separate from SIMS)
 
 Dear {{parent_name}},
@@ -88,9 +90,11 @@ YOUR LOGIN DETAILS
 
 Web address: misform.work
 Login email: {{email}}
-Temporary password: {{temp_password}}
+Password: {{temp_password}}
 
-When you first sign in, please change your password straight away using "Change Password" in the menu. Keep your password private: the school will never ask you for it.
+Your password is your oldest child's date of birth, written as 8 numbers: day, month, year, with no spaces or slashes. For example, a child born on 24 March 2012 would be 24032012.
+
+The first time you sign in, Formwork will ask you to choose your own new password (at least 8 characters). After that, use the new password you chose. Keep it private: the school will never ask you for it.
 
 NEED HELP?
 
@@ -126,7 +130,8 @@ Adorable British College`;
     <div>
       <h1>Send Parent Welcome Emails</h1>
       <div className="card">
-        <p>Paste the CSV that <code>create_parent_logins()</code> returned (columns: <code>parent_name,email,temp_password</code>). Rows marked "skipped" are ignored automatically.</p>
+        <p>Paste the CSV that <code>create_parent_logins()</code> or <code>reset_parent_passwords_to_dob()</code> returned (columns: <code>parent_name,email,temp_password</code>). Rows marked "skipped" are ignored automatically.</p>
+        <p>A parent's first password is their oldest current child's date of birth as 8 digits (DDMMYYYY), and they must choose their own password the first time they sign in. Parents with no current child get a random password instead.</p>
         <textarea
           rows={8}
           style={{ width: '100%' }}
