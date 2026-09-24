@@ -8,6 +8,7 @@ import { formatUKDate } from '../../../lib/formatDate';
 import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
 import MedicalRecordCard from '../../components/MedicalRecordCard';
+import StudentParentsEditor from '../../components/StudentParentsEditor';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
 import { classifyGrade, STYLE, LABEL, visibleTargets } from '../../../lib/gradeCompare';
 import { formatTimeRange } from '../../../lib/formatTime';
@@ -63,6 +64,10 @@ function StudentDetail() {
   // buttons that fail on save.
   const canSeeMedical = hasAccess('/students/medical');
   const canEditMedical = isAdmin || (staffRoles || []).includes('nurse');
+  // Parents and the student_parent links are writable by admin and the
+  // school office under their RLS policies, so only they get the Edit button.
+  const canEditParents = isAdmin || (staffRoles || []).includes('school_office');
+  const [editingParents, setEditingParents] = useState(false);
 
   const [student, setStudent] = useState(null);
   const [parents, setParents] = useState([]);
@@ -154,7 +159,7 @@ function StudentDetail() {
 
     const { data: p } = await supabase
       .from('student_parent')
-      .select('is_primary_contact, parents(first_name,last_name,phone,email,relationship_type)')
+      .select('parent_id, is_primary_contact, parents(first_name,last_name,phone,email,address,relationship_type)')
       .eq('student_id', id);
     setParents(p || []);
 
@@ -870,14 +875,27 @@ function StudentDetail() {
         </Collapsible>
       )}
 
-      <Collapsible title="Parents / Guardians">
-        {parents.length === 0 ? <p>None on record.</p> : (
+      <Collapsible
+        title="Parents / Guardians"
+        forceOpen={editingParents}
+        extra={canEditParents && !editingParents && (
+          <button className="secondary" onClick={() => setEditingParents(true)}>Edit</button>
+        )}
+      >
+        {editingParents ? (
+          <StudentParentsEditor
+            studentId={id}
+            links={parents}
+            onCancel={() => setEditingParents(false)}
+            onDone={() => { setEditingParents(false); loadAll(); }}
+          />
+        ) : parents.length === 0 ? <p>None on record.</p> : (
           <div className="table-scroll">
             <table>
               <thead><tr><th>Name</th><th>Relationship</th><th>Phone</th><th>Email</th><th>Primary</th></tr></thead>
               <tbody>
-                {parents.map((pp, i) => (
-                  <tr key={i}>
+                {parents.map((pp) => (
+                  <tr key={pp.parent_id}>
                     <td>{pp.parents?.first_name} {pp.parents?.last_name}</td>
                     <td>{pp.parents?.relationship_type}</td>
                     <td>{pp.parents?.phone}</td>
