@@ -83,11 +83,15 @@ function mostCommon(arr) {
 
 // The Other Half is run in Formwork (migration 156, /other-half), not
 // Nova-T: activities, rooms, staff and who goes where are all entered there.
-// Any OH group still in an export — the old whole-year 7a/Oh1 style — is
-// skipped outright, so an import can never recreate, re-time or reassign it.
+// Nova-T's whole-year groups in that slot — Other Half (7a/Oh1) and Sports
+// Academy (77/Sa1), which is now a chosen OH activity — are skipped
+// outright, so an import can never recreate, re-time or reassign them
+// (migration 158 removed the ones already imported).
+const OTHER_HALF_SUBJECT_CODES = new Set(["oh", "sa"]);
+
 function isOtherHalfGroup(subcode, groupFull) {
-  const suffix = (groupFull.split("/")[1] || "").replace(/\d+$/, "");
-  return subjectCodeFromSub(subcode).toLowerCase() === "oh" || suffix.toLowerCase() === "oh";
+  const suffix = (groupFull.split("/")[1] || "").replace(/\d+$/, "").toLowerCase();
+  return OTHER_HALF_SUBJECT_CODES.has(subjectCodeFromSub(subcode).toLowerCase()) || OTHER_HALF_SUBJECT_CODES.has(suffix);
 }
 
 async function parseFiles(files) {
@@ -845,7 +849,7 @@ function ImportClassesInner() {
             <li>Total classes parsed from file: {preview.totalParsed}</li>
             {preview.skippedOtherHalf.length > 0 && (
               <li>
-                Skipped {preview.skippedOtherHalf.length} Other Half group{preview.skippedOtherHalf.length === 1 ? "" : "s"} ({preview.skippedOtherHalf.join(", ")}) —
+                Skipped {preview.skippedOtherHalf.length} Other Half / Sports Academy group{preview.skippedOtherHalf.length === 1 ? "" : "s"} ({preview.skippedOtherHalf.join(", ")}) —
                 the Other Half is managed at <a href="/other-half/activities">Activity Programme</a>, not Nova-T.
               </li>
             )}
