@@ -9,7 +9,13 @@ import { useAuth } from '../../../lib/AuthContext';
 // Matches the CoreSats "StudentData" export format exactly.
 function excelDateToISO(val) {
   if (!val) return null;
-  if (val instanceof Date) return val.toISOString().slice(0, 10);
+  // SheetJS (cellDates) builds dates at local midnight — in practice a few
+  // seconds before it — so toISOString() gave the UTC date, a day early in
+  // Lagos. Round to the nearest day and read the local calendar date.
+  if (val instanceof Date) {
+    const d = new Date(val.getTime() + 12 * 60 * 60 * 1000);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
   if (typeof val === 'number') {
     const d = XLSX.SSF.parse_date_code(val);
     if (!d) return null;
@@ -141,7 +147,7 @@ function ImportInner() {
               </thead>
               <tbody>
                 {preview.map((r, i) => (
-                  <tr key={i}>{Object.values(r).map((v, j) => <td key={j}>{v instanceof Date ? v.toISOString().slice(0,10) : String(v ?? '')}</td>)}</tr>
+                  <tr key={i}>{Object.values(r).map((v, j) => <td key={j}>{v instanceof Date ? excelDateToISO(v) : String(v ?? '')}</td>)}</tr>
                 ))}
               </tbody>
             </table>

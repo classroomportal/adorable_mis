@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
+import { schoolToday } from '../../../lib/schoolTime';
 import { buildWeekColumns } from '../../../lib/generateTermTestScores';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
@@ -67,7 +68,7 @@ function ImportInner() {
         .select('term_id, term_name, start_date, end_date')
         .order('start_date', { ascending: false });
       setTerms(data || []);
-      const today = new Date().toISOString().slice(0, 10);
+      const today = schoolToday();
       const current = (data || []).find((t) => t.start_date <= today && t.end_date >= today);
       if (current) setTermId(current.term_id);
       else if (data && data.length > 0) setTermId(data[0].term_id);

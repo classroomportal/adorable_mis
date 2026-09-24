@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import { schoolToday, schoolDateOffset } from '../../lib/schoolTime';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
@@ -58,7 +59,7 @@ function BehaviourPageInner() {
   const [singleStudentId, setSingleStudentId] = useState(''); // used when no group chosen
 
   const [form, setForm] = useState({
-    event_date: searchParams.get('date') || new Date().toISOString().slice(0, 10),
+    event_date: searchParams.get('date') || schoolToday(),
     type: 'positive', category: '', points: '', description: '',
   });
   const [status, setStatus] = useState(null);
@@ -84,14 +85,12 @@ function BehaviourPageInner() {
   }
 
   async function loadAlerts() {
-    const since = new Date();
-    since.setDate(since.getDate() - 7);
     const { data } = await supabase
       .from('behaviour_events')
       .select('event_id, event_date, category, points, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('type', 'negative')
       .eq('is_demo', !!profile?.is_demo_account)
-      .gte('event_date', since.toISOString().slice(0, 10))
+      .gte('event_date', schoolDateOffset(-7))
       .order('event_date', { ascending: false });
     setAlerts(data || []);
   }
@@ -281,7 +280,7 @@ function BehaviourPageInner() {
   function selectAll() { setSelected(new Set(roster.map((s) => s.student_id))); }
   function selectNone() { setSelected(new Set()); }
 
-  const isSerious = form.type === 'negative' && Number(form.points) <= -3 && form.points !== '';
+  const isSerious = form.type === 'negative' && Number(form.points) <= -5 && form.points !== '';
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -300,7 +299,7 @@ function BehaviourPageInner() {
     }
 
     if (isSerious && !form.description.trim()) {
-      setStatus('This is a serious event (-3 to -5 points) — an explanation of what happened is required before it can be saved.');
+      setStatus('This is a serious event (-5 points) — an explanation of what happened is required before it can be saved.');
       return;
     }
 
@@ -562,7 +561,7 @@ function BehaviourPageInner() {
 
         {isSerious && (
           <div className="card" style={{ borderColor: '#b45309', flexDirection: 'column', alignItems: 'stretch' }}>
-            <strong style={{ color: '#b45309' }}>This is a serious event (-3 to -5 points).</strong>
+            <strong style={{ color: '#b45309' }}>This is a serious event (-5 points).</strong>
             <p style={{ margin: '0.3rem 0 0', fontSize: '0.9em' }}>
               Explain what happened, in your own words, following school protocol.
               Do not name any other student — describe what they did without

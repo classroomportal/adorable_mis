@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
+import { schoolToday } from '../../../lib/schoolTime';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { formatUKDate } from '../../../lib/formatDate';
@@ -38,7 +39,7 @@ function RecordPaymentInner() {
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('transfer');
   const [reference, setReference] = useState('');
-  const [paidDate, setPaidDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paidDate, setPaidDate] = useState(() => schoolToday());
 
   const [status, setStatus] = useState('idle');
   const [statusMessage, setStatusMessage] = useState('');

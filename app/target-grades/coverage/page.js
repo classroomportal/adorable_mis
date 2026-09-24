@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
+import { schoolToday } from '../../../lib/schoolTime';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 
@@ -28,7 +29,7 @@ function downloadCsv(rows, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `${filename}-${schoolToday()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
