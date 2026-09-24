@@ -8,12 +8,27 @@ function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
 }
 
-function nextSaturday() {
-  const d = new Date();
-  const day = d.getDay();
-  const add = (6 - day + 7) % 7 || 7;
-  d.setDate(d.getDate() + add);
+function longDate(iso) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+}
+
+// Orders for a Saturday lock at 11pm Lagos time on the Friday before —
+// same rule as tuckshop_preorder_cutoff() (migration 160). Lagos is UTC+1
+// all year, so the offset can be written in.
+function dayBefore(forDate) {
+  const d = new Date(`${forDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
+}
+
+function cutoffFor(forDate) {
+  return new Date(`${dayBefore(forDate)}T23:00:00+01:00`);
+}
+
+function isLocked(forDate) {
+  return Date.now() >= cutoffFor(forDate).getTime();
 }
 
 function TuckshopInner() {
@@ -27,6 +42,7 @@ function TuckshopInner() {
   const [preorderStatus, setPreorderStatus] = useState(null);
   const [myPreorders, setMyPreorders] = useState([]);
   const [closedUntil, setClosedUntil] = useState(null);
+  const [orderDate, setOrderDate] = useState(null);
 
   async function load() {
     if (!studentId) return;
@@ -54,6 +70,10 @@ function TuckshopInner() {
     // Lagos and would keep the notice up past the reopen time.
     const today = new Date().toLocaleDateString('en-CA');
     setClosedUntil(until && today < until ? until : null);
+    // Which Saturday is open for ordering comes from the database, so the
+    // Friday 11pm cutoff doesn't depend on the phone's clock.
+    const { data: next } = await supabase.rpc('tuckshop_next_order_date');
+    setOrderDate(next || null);
     const { data: pre } = await supabase
       .from('tuckshop_preorders')
       .select('id, for_date, status')
@@ -75,19 +95,19 @@ function TuckshopInner() {
   }
 
   async function submitPreorder() {
-    if (closedUntil) return;
+    if (closedUntil || !orderDate) return;
     if (Object.keys(preorderCart).length === 0) return;
     setPreorderStatus('Submitting…');
     const payload = Object.entries(preorderCart).map(([itemId, qty]) => ({ item_id: Number(itemId), quantity: qty }));
     const { error } = await supabase.rpc('submit_tuckshop_preorder', {
       p_student_id: studentId,
-      p_for_date: nextSaturday(),
+      p_for_date: orderDate,
       p_items: payload,
     });
     if (error) {
       setPreorderStatus(`Error: ${error.message}`);
     } else {
-      setPreorderStatus('Preorder submitted for Saturday.');
+      setPreorderStatus(`Preorder submitted for ${longDate(orderDate)}.`);
       setPreorderCart({});
       await load();
     }
@@ -108,17 +128,19 @@ function TuckshopInner() {
           </span>
         </p>
 
-        <h3>Preorder for Saturday</h3>
+        <h3>Preorder for {orderDate ? longDate(orderDate) : 'Saturday'}</h3>
         {closedUntil ? (
           <p className="badge badge-negative" style={{ display: 'inline-block' }}>
-            Tuckshop ordering is closed at the moment. It reopens on{' '}
-            {new Date(`${closedUntil}T00:00:00`).toLocaleDateString('en-GB', {
-              weekday: 'long', day: 'numeric', month: 'long',
-            })}
-            .
+            Tuckshop ordering is closed at the moment. It reopens on {longDate(closedUntil)}.
           </p>
         ) : (
         <>
+        {orderDate && (
+          <p style={{ color: '#555' }}>
+            Orders close at 11pm on {longDate(dayBefore(orderDate))}.
+            After that they&apos;re locked and go to the tuckshop.
+          </p>
+        )}
         <div className="table-scroll">
           <table>
             <thead><tr><th>Item</th><th>Price</th><th>Qty</th></tr></thead>
@@ -141,7 +163,7 @@ function TuckshopInner() {
             </tbody>
           </table>
         </div>
-        <button onClick={submitPreorder} disabled={Object.keys(preorderCart).length === 0} style={{ marginTop: '0.5rem' }}>
+        <button onClick={submitPreorder} disabled={!orderDate || Object.keys(preorderCart).length === 0} style={{ marginTop: '0.5rem' }}>
           Submit preorder
         </button>
         {preorderStatus && <p>{preorderStatus}</p>}
@@ -155,12 +177,15 @@ function TuckshopInner() {
               <table>
                 <thead><tr><th>For date</th><th>Status</th></tr></thead>
                 <tbody>
-                  {myPreorders.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.for_date}</td>
-                      <td><span className={`badge ${p.status === 'fulfilled' ? 'badge-positive' : 'badge-negative'}`}>{p.status}</span></td>
-                    </tr>
-                  ))}
+                  {myPreorders.map((p) => {
+                    const label = p.status === 'pending' && isLocked(p.for_date) ? 'locked' : p.status;
+                    return (
+                      <tr key={p.id}>
+                        <td>{p.for_date}</td>
+                        <td><span className={`badge ${p.status === 'fulfilled' ? 'badge-positive' : 'badge-negative'}`}>{label}</span></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
