@@ -3,26 +3,30 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
+import { schoolToday } from '../../lib/schoolTime';
 
 const STATUS_OPTIONS = ['scheduled', 'attended', 'missed', 'cancelled'];
 
+// All week arithmetic is done on UTC-midnight dates built from the school's
+// own calendar day (schoolToday). Mixing local-midnight Dates with
+// toISOString() shifted every date back a day in Lagos (UTC+1), so the page
+// asked for Thursday's detentions and never found the Friday rows.
 function saturdayOf(date) {
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun..6=Sat
+  const day = d.getUTCDay(); // 0=Sun..6=Sat
   const diffToSat = (day - 6 + 7) % 7; // days since the most recent Saturday (0 if today is Saturday)
-  d.setDate(d.getDate() - diffToSat);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - diffToSat);
   return d;
 }
 function fmt(d) { return d.toISOString().slice(0, 10); }
-function addDays(d, n) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
+function addDays(d, n) { const c = new Date(d); c.setUTCDate(c.getUTCDate() + n); return c; }
 
 function DetentionInner() {
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = previous, etc.
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const baseSat = saturdayOf(new Date());
+  const baseSat = saturdayOf(new Date(`${schoolToday()}T00:00:00Z`));
   const start = addDays(baseSat, weekOffset * 7);
   const end = addDays(start, 6); // Friday — detentions are always dated to this Friday
 
