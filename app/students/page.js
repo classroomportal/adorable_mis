@@ -19,6 +19,16 @@ function StudentsList() {
   // flashes the whole school at a house-only houseparent.
   const [houseScopeExclusive, setHouseScopeExclusive] = useState(true);
   const [showAllHouses, setShowAllHouses] = useState(false);
+  // Cards or the old table; remembered per browser, since someone scanning a
+  // whole year group may prefer the denser table.
+  const [layout, setLayout] = useState('cards');
+  useEffect(() => {
+    try { if (localStorage.getItem('studentsLayout') === 'table') setLayout('table'); } catch {}
+  }, []);
+  function chooseLayout(next) {
+    setLayout(next);
+    try { localStorage.setItem('studentsLayout', next); } catch {}
+  }
 
   // On mount, only fetch the small distinct year/form lists needed to
   // populate the filter dropdowns — not the full student list or photos.
@@ -153,8 +163,38 @@ function StudentsList() {
 
       {hasLoaded && (
         <>
-          <p style={{ color: '#5a6b8c', fontSize: '0.9rem' }}>{students.length} student(s) loaded</p>
+          <div className="students-toolbar">
+            <p style={{ color: '#5a6b8c', fontSize: '0.9rem', margin: 0 }}>{students.length} student(s) loaded</p>
+            <div className="layout-toggle" role="group" aria-label="Layout">
+              <button type="button" className={layout === 'cards' ? 'active' : ''} onClick={() => chooseLayout('cards')}>Cards</button>
+              <button type="button" className={layout === 'table' ? 'active' : ''} onClick={() => chooseLayout('table')}>List</button>
+            </div>
+          </div>
 
+          {layout === 'cards' ? (
+            <div className="pupil-tiles">
+              {students.map((s) => (
+                <a key={s.student_id} href={`/students/${s.student_id}`} className="pupil-tile">
+                  {s.photo_base64 ? (
+                    <img className="pupil-tile-photo" src={`data:image/jpeg;base64,${s.photo_base64}`} alt="" />
+                  ) : (
+                    <span className="pupil-tile-photo">{s.first_name?.[0]}{s.last_name?.[0]}</span>
+                  )}
+                  <div className="pupil-tile-body">
+                    <div className="pupil-tile-name">{s.first_name} {s.last_name}</div>
+                    <div className="pupil-tile-sub">
+                      {[s.year_group && `Year ${s.year_group}`, s.form_class, s.status !== 'active' && 'Left'].filter(Boolean).join(' · ')}
+                    </div>
+                    <div className="pupil-tile-stats">
+                      <span title="Net behaviour points">📋 {s.net_behaviour_points ?? 0}</span>
+                      <span title="Latest weekly average">⭐ {s.latest_week_avg_pct != null ? `${s.latest_week_avg_pct}%` : '—'}</span>
+                    </div>
+                    <div className="pupil-tile-contact" title="Primary contact">👪 {s.primary_contact_name ?? 'No primary contact'}</div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : (
           <div className="table-scroll"><table>
         <thead>
           <tr>
@@ -189,6 +229,7 @@ function StudentsList() {
           ))}
         </tbody>
       </table></div>
+          )}
         </>
       )}
     </div>

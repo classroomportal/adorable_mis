@@ -322,6 +322,70 @@ a.dashboard-tile { color: white; text-decoration: none; }
   font-weight: 700;
   font-size: 1.3rem;
 }
+/* Staff student list — cards in the same red as the profile. */
+.students-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0.75rem;
+}
+.layout-toggle { display: flex; }
+.layout-toggle button,
+.layout-toggle button:hover {
+  background: white;
+  color: var(--red-800);
+  border: 1px solid var(--red-700);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+  border-radius: 0;
+}
+.layout-toggle button:first-child { border-radius: 8px 0 0 8px; }
+.layout-toggle button:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+.layout-toggle button.active { background: var(--red-700); color: white; }
+.pupil-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+.pupil-tile {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  background: var(--red-700);
+  color: white;
+  border-radius: 12px;
+  padding: 0.9rem;
+  text-decoration: none;
+  min-width: 0;
+}
+.pupil-tile:hover, .pupil-tile:focus-visible { background: var(--red-900); color: white; }
+.pupil-tile-photo {
+  width: 64px;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--red-900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+.pupil-tile-body { min-width: 0; }
+.pupil-tile-name { font-weight: 600; overflow-wrap: anywhere; }
+.pupil-tile-sub { font-size: 0.8rem; opacity: 0.85; margin-top: 0.1rem; }
+.pupil-tile-stats { display: flex; gap: 0.8rem; font-size: 0.85rem; margin-top: 0.4rem; }
+.pupil-tile-contact {
+  font-size: 0.78rem;
+  opacity: 0.85;
+  margin-top: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (min-width: 900px) {
   .dashboard-red .dashboard-tiles { grid-template-columns: repeat(3, 1fr); }
 }
