@@ -57,16 +57,44 @@ function WelcomeEmailsInner() {
     URL.revokeObjectURL(url);
   }
 
-  const MAIL_MERGE_TEMPLATE = `Subject: Your Formwork parent portal login
+  // Keep in step with the letter in send_parent_welcome_email() (migration 159).
+  const MAIL_MERGE_TEMPLATE = `Subject: Introducing Formwork: your new parent account (separate from SIMS)
 
 Dear {{parent_name}},
 
-Your Formwork parent portal account is ready.
+INTRODUCING FORMWORK, OUR NEW SCHOOL INFORMATION SYSTEM
 
+Adorable British College has introduced a new online system called Formwork. It gives you a parent account where you can follow your child's school life in one place, at any time, from a phone, tablet or computer.
+
+FORMWORK IS SEPARATE FROM SIMS
+
+You may already be familiar with SIMS, including the SIMS Parent app. Formwork is a completely separate system that runs on a different server from SIMS. This means:
+  • Your SIMS username and password will NOT work on Formwork. Please use the new login details below.
+  • Formwork has its own web address, misform.work. It is not reached through the SIMS Parent app or the SIMS website.
+  • Changing your password in one system does not change it in the other.
+
+WHAT YOU CAN SEE IN FORMWORK
+
+For each of your children:
+  • their timetable
+  • their results compared with their target grades
+  • their behaviour record
+  • their attendance, including today lesson by lesson
+  • school fees and payment history
+  • their tuckshop balance and spending
+  • messages from the school in your inbox
+
+YOUR LOGIN DETAILS
+
+Web address: misform.work
 Login email: {{email}}
 Temporary password: {{temp_password}}
 
-Please log in at misform.work and change your password on first login.
+When you first sign in, please change your password straight away using "Change Password" in the menu. Keep your password private: the school will never ask you for it.
+
+NEED HELP?
+
+If you cannot sign in, or something about your child looks wrong, please contact the school office and we will be happy to help.
 
 Kind regards,
 Adorable British College`;
