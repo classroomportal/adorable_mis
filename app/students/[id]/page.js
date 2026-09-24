@@ -68,6 +68,10 @@ function StudentDetail() {
   // school office under their RLS policies, so only they get the Edit button.
   const canEditParents = isAdmin || (staffRoles || []).includes('school_office');
   const [editingParents, setEditingParents] = useState(false);
+  // Portal login state per linked parent (parent_login_status, migration 159)
+  // and the outcome of the last Create login click, keyed by parent_id.
+  const [parentLogins, setParentLogins] = useState({});
+  const [loginOutcome, setLoginOutcome] = useState({});
 
   const [student, setStudent] = useState(null);
   const [parents, setParents] = useState([]);
@@ -132,6 +136,45 @@ function StudentDetail() {
     loadLookups();
     supabase.rpc('my_editable_student_fields').then(({ data }) => setEditableFields(new Set(data || [])));
   }, []);
+
+  async function loadParentLogins() {
+    if (!canEditParents || parents.length === 0) { setParentLogins({}); return; }
+    const { data } = await supabase.rpc('parent_login_status', { p_parent_ids: parents.map((pp) => pp.parent_id) });
+    setParentLogins(Object.fromEntries((data || []).map((r) => [r.parent_id, r])));
+  }
+  useEffect(() => { loadParentLogins(); }, [parents, canEditParents]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function createParentLogin(pp) {
+    const name = `${pp.parents?.first_name || ''} ${pp.parents?.last_name || ''}`.trim() || 'this parent';
+    if (!window.confirm(`Create a parent portal login for ${name} (${pp.parents?.email})?`)) return;
+    setLoginOutcome((o) => ({ ...o, [pp.parent_id]: { busy: true } }));
+    const { data, error } = await supabase.rpc('create_parent_login', { p_parent_id: pp.parent_id });
+    const row = (data || [])[0];
+    setLoginOutcome((o) => ({ ...o, [pp.parent_id]: error ? { error: error.message } : row }));
+    loadParentLogins();
+  }
+
+  function renderLoginCell(pp) {
+    const outcome = loginOutcome[pp.parent_id];
+    if (outcome?.busy) return 'Creating...';
+    if (outcome?.error) return <span style={{ color: 'var(--danger, #b91c1c)' }}>{outcome.error}</span>;
+    if (outcome?.emailed) return `Created — login details emailed to ${outcome.login_email}`;
+    if (outcome?.temp_password) {
+      return (
+        <span>
+          Created. Parent emails are paused, so nothing was sent — give the parent these details now (they won&apos;t be shown again):
+          <br /><strong>Login:</strong> {outcome.login_email}
+          <br /><strong>Temporary password:</strong> <code>{outcome.temp_password}</code>
+        </span>
+      );
+    }
+    const st = parentLogins[pp.parent_id];
+    if (!st) return '';
+    if (st.has_login) return 'Has login';
+    if (!pp.parents?.email) return 'No email';
+    if (st.email_in_use) return 'Email used by another login';
+    return <button className="secondary" onClick={() => createParentLogin(pp)}>Create login</button>;
+  }
 
   async function loadAll() {
     const { data: s, error: sErr } = await supabase
@@ -892,7 +935,7 @@ function StudentDetail() {
         ) : parents.length === 0 ? <p>None on record.</p> : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Name</th><th>Relationship</th><th>Phone</th><th>Email</th><th>Primary</th></tr></thead>
+              <thead><tr><th>Name</th><th>Relationship</th><th>Phone</th><th>Email</th><th>Primary</th>{canEditParents && <th>Portal login</th>}</tr></thead>
               <tbody>
                 {parents.map((pp) => (
                   <tr key={pp.parent_id}>
@@ -901,6 +944,7 @@ function StudentDetail() {
                     <td>{pp.parents?.phone}</td>
                     <td>{pp.parents?.email}</td>
                     <td>{pp.is_primary_contact ? 'Yes' : ''}</td>
+                    {canEditParents && <td>{renderLoginCell(pp)}</td>}
                   </tr>
                 ))}
               </tbody>
