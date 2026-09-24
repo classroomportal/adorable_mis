@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { schoolToday } from '../../../lib/schoolTime';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 
@@ -131,7 +132,7 @@ function FeesTableInner() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fees-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `fees-${schoolToday()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }

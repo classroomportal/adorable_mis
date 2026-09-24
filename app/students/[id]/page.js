@@ -435,7 +435,7 @@ function StudentDetail() {
   async function handleSave(e) {
     e.preventDefault();
     setSaveStatus('Saving...');
-    const today = new Date().toISOString().slice(0, 10);
+    const today = schoolToday();
     const computedStatus = (editForm.leaving_date && editForm.leaving_date <= today) ? 'left' : editForm.status;
     const changes = {
       first_name: editForm.first_name,
@@ -933,7 +933,7 @@ function StudentDetail() {
                 <option value="left">Left</option>
               </select>
             </label>
-            {editForm.leaving_date && editForm.leaving_date <= new Date().toISOString().slice(0, 10) && (
+            {editForm.leaving_date && editForm.leaving_date <= schoolToday() && (
               <p style={{ color: '#a3232c', flexBasis: '100%' }}>
                 Leaving date has passed — status will be set to Left automatically on save.
               </p>

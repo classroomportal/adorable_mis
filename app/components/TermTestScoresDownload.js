@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { schoolToday } from '../../lib/schoolTime';
 import { generateTermTestScores } from '../../lib/generateTermTestScores';
 
 export default function TermTestScoresDownload({ studentId }) {
@@ -16,7 +17,7 @@ export default function TermTestScoresDownload({ studentId }) {
         .order('start_date', { ascending: false });
       setTerms(data || []);
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = schoolToday();
       const sorted = [...(data || [])].sort((a, b) => a.start_date.localeCompare(b.start_date));
       const current = sorted.find((t) => t.start_date <= today && t.end_date >= today);
       // If no term's date range actually contains today (a gap between

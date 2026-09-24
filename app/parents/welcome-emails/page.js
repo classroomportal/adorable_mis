@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
+import { schoolToday } from '../../../lib/schoolTime';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
@@ -52,7 +53,7 @@ function WelcomeEmailsInner() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `parent-welcome-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `parent-welcome-emails-${schoolToday()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }

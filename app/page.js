@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { schoolDateOffset } from '../lib/schoolTime';
 import SplashScreen from './components/SplashScreen';
 import { ParentPortalInner } from './parent-portal/page';
 
@@ -40,7 +41,7 @@ function DashboardStats({ isDemoAccount }) {
       const [{ count: studentCount }, { count: staffCount }, { data: alerts }] = await Promise.all([
         supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('status', 'active').eq('is_demo', !!isDemoAccount),
         supabase.from('staff').select('staff_id', { count: 'exact', head: true }).eq('is_demo', !!isDemoAccount),
-        supabase.from('behaviour_events').select('event_id').eq('type', 'negative').eq('is_demo', !!isDemoAccount).gte('event_date', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
+        supabase.from('behaviour_events').select('event_id').eq('type', 'negative').eq('is_demo', !!isDemoAccount).gte('event_date', schoolDateOffset(-7)),
       ]);
       setStats({
         students: studentCount ?? 0,
