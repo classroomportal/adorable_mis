@@ -12,6 +12,7 @@ import { formatUKDate } from '../../lib/formatDate';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 import { schoolToday, schoolWeekdayShort } from '../../lib/schoolTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
+import ChildOtherHalf from '../components/ChildOtherHalf';
 import {
   AttendanceScopeCards,
   AttendanceTodayTable,
@@ -273,6 +274,12 @@ export function ParentPortalInner() {
                   <span className="dashboard-tile-sub">{selectedChild ? `${selectedChild.first_name}'s week` : ''}</span>
                 </button>
 
+                <button type="button" className="dashboard-tile" onClick={() => setActiveView('otherhalf')}>
+                  <span className="dashboard-tile-label">The Other Half</span>
+                  <span className="dashboard-tile-icon">🎭</span>
+                  <span className="dashboard-tile-sub">{otherHalf.length === 0 ? 'No activities chosen yet' : `${otherHalf.length} activit${otherHalf.length === 1 ? 'y' : 'ies'} chosen`}</span>
+                </button>
+
                 <button type="button" className="dashboard-tile" onClick={() => setActiveView('assessment')}>
                   <span className="dashboard-tile-label">Assessment</span>
                   <span className="dashboard-tile-icon">⭐</span>
@@ -355,6 +362,13 @@ export function ParentPortalInner() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeView === 'otherhalf' && selectedChild && (
+            <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <h2>The Other Half</h2>
+              <ChildOtherHalf studentId={selectedId} yearGroup={selectedChild.year_group} firstName={selectedChild.first_name} />
             </div>
           )}
 
