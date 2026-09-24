@@ -280,7 +280,7 @@ function BehaviourPageInner() {
   function selectAll() { setSelected(new Set(roster.map((s) => s.student_id))); }
   function selectNone() { setSelected(new Set()); }
 
-  const isSerious = form.type === 'negative' && Number(form.points) <= -3 && form.points !== '';
+  const isSerious = form.type === 'negative' && Number(form.points) <= -5 && form.points !== '';
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -299,7 +299,7 @@ function BehaviourPageInner() {
     }
 
     if (isSerious && !form.description.trim()) {
-      setStatus('This is a serious event (-3 to -5 points) — an explanation of what happened is required before it can be saved.');
+      setStatus('This is a serious event (-5 points) — an explanation of what happened is required before it can be saved.');
       return;
     }
 
@@ -561,7 +561,7 @@ function BehaviourPageInner() {
 
         {isSerious && (
           <div className="card" style={{ borderColor: '#b45309', flexDirection: 'column', alignItems: 'stretch' }}>
-            <strong style={{ color: '#b45309' }}>This is a serious event (-3 to -5 points).</strong>
+            <strong style={{ color: '#b45309' }}>This is a serious event (-5 points).</strong>
             <p style={{ margin: '0.3rem 0 0', fontSize: '0.9em' }}>
               Explain what happened, in your own words, following school protocol.
               Do not name any other student — describe what they did without
