@@ -81,8 +81,18 @@ function mostCommon(arr) {
   return best;
 }
 
+// The Other Half is run in Formwork (migration 156, /other-half), not
+// Nova-T: activities, rooms, staff and who goes where are all entered there.
+// Any OH group still in an export — the old whole-year 7a/Oh1 style — is
+// skipped outright, so an import can never recreate, re-time or reassign it.
+function isOtherHalfGroup(subcode, groupFull) {
+  const suffix = (groupFull.split("/")[1] || "").replace(/\d+$/, "");
+  return subjectCodeFromSub(subcode).toLowerCase() === "oh" || suffix.toLowerCase() === "oh";
+}
+
 async function parseFiles(files) {
   const rowsByClass = new Map(); // class_code -> {staffCodes: [], rooms: [], subcode}
+  const skippedOtherHalf = new Set();
 
   for (const file of files) {
     const text = await file.text();
@@ -92,6 +102,7 @@ async function parseFiles(files) {
       if (cols.length < 5) continue;
       const [subcode, slotStr, staffCode, room, groupFull] = cols;
       if (!groupFull) continue;
+      if (isOtherHalfGroup(subcode, groupFull)) { skippedOtherHalf.add(groupFull); continue; }
       if (!rowsByClass.has(groupFull)) {
         rowsByClass.set(groupFull, { staffCodes: [], rooms: [], subcode, slots: new Map(), badSlots: [] });
       }
@@ -116,7 +127,7 @@ async function parseFiles(files) {
       badSlots: entry.badSlots,
     });
   }
-  return classes;
+  return { classes, skippedOtherHalf: [...skippedOtherHalf].sort() };
 }
 
 // --- Component -----------------------------------------------------------
@@ -189,7 +200,7 @@ function ImportClassesInner() {
 
     setBusy(true);
     try {
-      const parsedClasses = await parseFiles(files);
+      const { classes: parsedClasses, skippedOtherHalf } = await parseFiles(files);
 
       const [
         { data: existingClasses, error: cErr },
@@ -476,6 +487,7 @@ function ImportClassesInner() {
 
       setPreview({
         totalParsed: parsedClasses.length,
+        skippedOtherHalf,
         updates: updatesWithStudentCounts,
         unchangedCount: unchanged.length,
         newClasses,
@@ -831,6 +843,12 @@ function ImportClassesInner() {
           </p>
           <ul>
             <li>Total classes parsed from file: {preview.totalParsed}</li>
+            {preview.skippedOtherHalf.length > 0 && (
+              <li>
+                Skipped {preview.skippedOtherHalf.length} Other Half group{preview.skippedOtherHalf.length === 1 ? "" : "s"} ({preview.skippedOtherHalf.join(", ")}) —
+                the Other Half is managed at <a href="/other-half/activities">Activity Programme</a>, not Nova-T.
+              </li>
+            )}
             <li>Unchanged (matches DB already): {preview.unchangedCount}</li>
             <li>Existing classes with changes: {preview.updates.length}</li>
             <li>Class codes not found in DB: {preview.newClasses.length}</li>

@@ -172,6 +172,15 @@ const TABS = [
     ].filter((it) => hasAccess(it.href)),
   },
   {
+    key: 'otherhalf', label: 'The Other Half', icon: '🎭', accent: 'myinfo',
+    description: 'Activities in the Other Half slot — your registers, the programme and student choices.',
+    items: ({ hasAccess }) => [
+      { href: '/other-half', label: 'My Other Half & Registers' },
+      { href: '/other-half/activities', label: 'Activity Programme' },
+      { href: '/other-half/choices', label: 'Student Choices' },
+    ].filter((it) => hasAccess(it.href)),
+  },
+  {
     key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school',
     description: 'Import results, target grades and manage grading setup.',
     items: ({ hasAccess }) => [
@@ -287,6 +296,13 @@ export default function Home() {
               { href: '/portal', label: 'My Grades & Behaviour' },
               { href: '/portal/tuckshop', label: 'Tuckshop' },
               { href: '/change-password', label: 'Change Password' },
+            ]}
+          />
+          <ModuleCard
+            icon="🎭" label="The Other Half" accent="students"
+            description="Choose your activities for each Other Half slot."
+            items={[
+              { href: '/portal/other-half', label: 'Choose My Activities' },
             ]}
           />
         </div>

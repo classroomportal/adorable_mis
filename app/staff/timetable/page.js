@@ -7,6 +7,7 @@ import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday } from '../../../lib/schoolTime';
+import { loadOtherHalfSlots, loadCurrentOtherHalfTermId } from '../../../lib/otherHalf';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -18,6 +19,8 @@ function StaffTimetable() {
   const [periods, setPeriods] = useState([]);
   const [classes, setClasses] = useState([]);
   const [commitments, setCommitments] = useState([]);
+  const [otherHalf, setOtherHalf] = useState([]); // OH activities this person runs, current term
+  const [ohSlots, setOhSlots] = useState({ byDay: {} });
   const [loading, setLoading] = useState(true);
   const [myMissingCount, setMyMissingCount] = useState(0);
 
@@ -30,6 +33,7 @@ function StaffTimetable() {
         .select('staff_id, first_name, last_name')
         .order('last_name');
       setStaffList(st || []);
+      setOhSlots(await loadOtherHalfSlots());
     }
     loadStatic();
   }, []);
@@ -43,9 +47,10 @@ function StaffTimetable() {
 
   useEffect(() => {
     async function loadTimetable() {
-      if (!selectedStaffId) { setClasses([]); setCommitments([]); setLoading(false); return; }
+      if (!selectedStaffId) { setClasses([]); setCommitments([]); setOtherHalf([]); setLoading(false); return; }
       setLoading(true);
-      const [{ data: classData }, { data: commitmentData }] = await Promise.all([
+      const ohTermId = await loadCurrentOtherHalfTermId();
+      const [{ data: classData }, { data: commitmentData }, { data: ohData }] = await Promise.all([
         supabase
           .from('classes')
           .select('class_id, room, class_code, subjects(subject_name, display_name), timetable_slots(day_of_week, period_number, start_time, end_time)')
@@ -54,9 +59,16 @@ function StaffTimetable() {
           .from('staff_commitments')
           .select('day_of_week, period_number, label')
           .eq('staff_id', selectedStaffId),
+        supabase
+          .from('other_half_activity_staff')
+          .select('other_half_activities!inner(activity_id, activity_name, room, day_of_week, term_id, is_active)')
+          .eq('staff_id', selectedStaffId)
+          .eq('other_half_activities.term_id', ohTermId ?? -1)
+          .eq('other_half_activities.is_active', true),
       ]);
       setClasses(classData || []);
       setCommitments(commitmentData || []);
+      setOtherHalf((ohData || []).map((r) => r.other_half_activities).filter(Boolean));
       setLoading(false);
     }
     loadTimetable();
@@ -88,6 +100,22 @@ function StaffTimetable() {
     cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
   });
 
+  // Other Half activities (migration 156) sit in the OH slot and open the OH
+  // register rather than a class register.
+  otherHalf.forEach((a) => {
+    const slot = ohSlots.byDay[a.day_of_week];
+    if (!slot) return;
+    const key = `${a.day_of_week}-${slot.period_number}`;
+    const entry = {
+      otherHalfActivityId: a.activity_id,
+      subject: a.activity_name,
+      room: a.room,
+      classCode: 'Other Half',
+      time: formatTimeRange(slot.start_time, slot.end_time),
+    };
+    cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
+  });
+
   const DAY_TO_WEEKDAY = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
   function toLocalISO(d) {
     const y = d.getFullYear();
@@ -114,6 +142,10 @@ function StaffTimetable() {
 
   function goToRegister(entry, dayLabel, periodNumber) {
     const date = dateForDay(dayLabel);
+    if (entry.otherHalfActivityId) {
+      router.push(`/other-half/register?activityId=${entry.otherHalfActivityId}&date=${date}`);
+      return;
+    }
     router.push(`/attendance?classId=${entry.classId}&period=${periodNumber}&date=${date}`);
   }
 

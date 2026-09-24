@@ -67,6 +67,7 @@ function StudentDetail() {
   const [student, setStudent] = useState(null);
   const [parents, setParents] = useState([]);
   const [timetable, setTimetable] = useState([]);
+  const [otherHalf, setOtherHalf] = useState([]); // chosen OH activities (other_half_timetable)
   const [periods, setPeriods] = useState([]);
   const [behaviour, setBehaviour] = useState([]);
   const [attendance, setAttendance] = useState([]); // most recent marks, newest first
@@ -165,6 +166,9 @@ function StudentDetail() {
       .select('classes(class_id, room, subjects(subject_name, display_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
       .eq('student_id', id);
     setTimetable(tt || []);
+
+    const { data: oh } = await supabase.from('other_half_timetable').select('*').eq('student_id', id);
+    setOtherHalf(oh || []);
 
     const { data: be } = await supabase
       .from('behaviour_events')
@@ -565,6 +569,15 @@ function StudentDetail() {
         time: formatTimeRange(slot.start_time, slot.end_time),
       };
     });
+  });
+  // The activity chosen for each Other Half day replaces Nova-T's whole-year OH group.
+  otherHalf.forEach((r) => {
+    if (!r.period_number) return;
+    cellMap[`${r.day_of_week}-${r.period_number}`] = {
+      subject: r.activity_name,
+      room: r.room,
+      time: formatTimeRange(r.start_time, r.end_time),
+    };
   });
 
   const periodName = (n) => periods.find((p) => p.period_number === n)?.period_name || (n ? `Period ${n}` : '—');

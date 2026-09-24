@@ -9,6 +9,7 @@ import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload
 import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
 import { visibleTargets } from '../../lib/gradeCompare';
 import { formatTimeRange } from '../../lib/formatTime';
+import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -31,6 +32,7 @@ function PortalInner() {
 
   const [periods, setPeriods] = useState([]);
   const [timetableClasses, setTimetableClasses] = useState([]);
+  const [otherHalf, setOtherHalf] = useState([]); // chosen OH activities (other_half_timetable)
   const [timetableLoading, setTimetableLoading] = useState(true);
   const [studentName, setStudentName] = useState('');
   const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(null); // null = enrolment not loaded yet
@@ -68,9 +70,11 @@ function PortalInner() {
       setTimetableLoading(true);
       const { data } = await supabase
         .from('student_class')
-        .select('classes(class_id, room, class_code, subjects(subject_name, display_name), staff(first_name, last_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
+        .select('classes(class_id, room, class_code, subjects(subject_name, display_name, subject_code), staff(first_name, last_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
         .eq('student_id', studentId);
       setTimetableClasses((data || []).map((row) => row.classes).filter(Boolean));
+      const { data: oh } = await supabase.from('other_half_timetable').select('*').eq('student_id', studentId);
+      setOtherHalf(oh || []);
       setTimetableLoading(false);
     }
     loadTimetable();
@@ -130,10 +134,18 @@ function PortalInner() {
         room: c.room,
         teacher: c.staff ? `${c.staff.first_name} ${c.staff.last_name}` : null,
         time: formatTimeRange(slot.start_time, slot.end_time),
+        isOtherHalfClass: isOtherHalfSubject(c.subjects),
       };
       cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
     });
   });
+  // The activity chosen for each Other Half day replaces Nova-T's whole-year OH group.
+  mergeOtherHalfIntoCells(cellMap, otherHalf, (r) => ({
+    subject: r.activity_name,
+    room: r.room,
+    teacher: r.staff_names,
+    time: formatTimeRange(r.start_time, r.end_time),
+  }));
 
   function renderTimetableGrid() {
     return (
