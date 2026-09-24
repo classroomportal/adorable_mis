@@ -1,4 +1,4 @@
--- Migration 163: fix "UPDATE requires a WHERE clause" on the tuckshop
+-- Migration 170: fix "UPDATE requires a WHERE clause" on the tuckshop
 -- Open / Close Ordering page.
 --
 -- set_tuckshop_ordering() (migration 120) updated the system_settings
