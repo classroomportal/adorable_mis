@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
@@ -48,6 +48,14 @@ function ActivitiesInner() {
   const [status, setStatus] = useState(null);
   const [windowStatus, setWindowStatus] = useState(null);
   const [copyFrom, setCopyFrom] = useState('');
+  const formRef = useRef(null);
+
+  // The form opens inside the day card it was started from (form.anchor), so
+  // editing a Thursday activity doesn't open a form above Monday, off-screen.
+  // Bring it into view whenever a different activity or day is opened.
+  useEffect(() => {
+    if (form) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [form?.activity_id, form?.anchor]);
 
   useEffect(() => {
     async function loadStatic() {
@@ -104,13 +112,14 @@ function ActivitiesInner() {
   }
 
   function startNew(day) {
-    setForm({ ...EMPTY_FORM, day_of_week: day || slots.days[0] || 'Mon', year_groups: [...yearOptions] });
+    setForm({ ...EMPTY_FORM, anchor: day, day_of_week: day || slots.days[0] || 'Mon', year_groups: [...yearOptions] });
     setStaffFilter('');
     setStatus(null);
   }
 
-  function startEdit(a) {
+  function startEdit(a, anchor) {
     setForm({
+      anchor,
       activity_id: a.activity_id,
       day_of_week: a.day_of_week,
       activity_name: a.activity_name,
@@ -234,7 +243,7 @@ function ActivitiesInner() {
   const filteredStaff = staff.filter((s) =>
     !staffFilter.trim() || `${s.first_name} ${s.last_name} ${s.staff_code || ''}`.toLowerCase().includes(staffFilter.trim().toLowerCase()));
 
-  function renderActivityRow(a) {
+  function renderActivityRow(a, anchor) {
     const n = taken[a.activity_id] || 0;
     const full = a.capacity != null && n >= a.capacity;
     return (
@@ -248,13 +257,86 @@ function ActivitiesInner() {
         <td>{formatYearGroups(a.year_groups)}</td>
         <td style={full ? { color: '#b91c1c', fontWeight: 600 } : undefined}>{n}{a.capacity != null ? ` / ${a.capacity}` : ''}</td>
         <td style={{ whiteSpace: 'nowrap' }}>
-          <button type="button" className="secondary" onClick={() => startEdit(a)}>Edit</button>{' '}
+          <button type="button" className="secondary" onClick={() => startEdit(a, anchor)}>Edit</button>{' '}
           {a.is_active
             ? <button type="button" className="secondary" onClick={() => setActive(a, false)}>Retire</button>
             : <button type="button" className="secondary" onClick={() => setActive(a, true)}>Restore</button>}{' '}
           <button type="button" className="secondary" onClick={() => deleteActivity(a)}>Delete</button>
         </td>
       </tr>
+    );
+  }
+
+  function renderForm() {
+    return (
+      <form ref={formRef} onSubmit={saveActivity} className="card" style={{ flexDirection: 'column', alignItems: 'stretch', marginTop: '0.75rem', scrollMarginTop: '1rem', borderColor: '#2f6fad' }}>
+        <h2 style={{ marginTop: 0 }}>{form.activity_id ? `Edit ${form.activity_name || 'activity'}` : 'New activity'}</h2>
+        <div className="form-grid">
+          <label>
+            Day
+            <select value={form.day_of_week} onChange={(e) => setForm({ ...form, day_of_week: e.target.value })}>
+              {days.map((d) => <option key={d} value={d}>{OH_DAY_NAMES[d]}</option>)}
+            </select>
+          </label>
+          <label>
+            Activity
+            <input value={form.activity_name} onChange={(e) => setForm({ ...form, activity_name: e.target.value })} placeholder="e.g. Chess Club" required />
+          </label>
+          <label>
+            Room / venue
+            <input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="e.g. Sports Hall" />
+          </label>
+          <label>
+            Places (blank = no limit)
+            <input type="number" min="1" step="1" inputMode="numeric" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
+          </label>
+        </div>
+        <label style={{ marginTop: '0.75rem', flex: '0 0 auto' }}>
+          Description (students see this when choosing)
+          <textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        </label>
+
+        <fieldset style={{ marginTop: '0.75rem', border: '1px solid #ddd', borderRadius: 6, padding: '0.5rem 0.75rem' }}>
+          <legend>Open to</legend>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {yearOptions.map((y) => (
+              <label key={y} style={{ display: 'flex', flexDirection: 'row', flex: '0 0 auto', gap: '0.3rem', alignItems: 'center' }}>
+                <input type="checkbox" style={{ width: 'auto' }} checked={form.year_groups.includes(y)} onChange={() => setForm({ ...form, year_groups: toggleIn(form.year_groups, y) })} />
+                Year {y}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset style={{ marginTop: '0.75rem', border: '1px solid #ddd', borderRadius: 6, padding: '0.5rem 0.75rem' }}>
+          <legend>Staff running it{form.staff_ids.length ? ` (${form.staff_ids.length})` : ''}</legend>
+          {form.staff_ids.length > 0 && (
+            <p style={{ margin: '0 0 0.5rem' }}>
+              {form.staff_ids.map((id) => staff.find((s) => s.staff_id === id)).filter(Boolean).map((s) => (
+                <span key={s.staff_id} className="badge" style={{ marginRight: '0.35rem' }}>
+                  {s.first_name} {s.last_name}{' '}
+                  <button type="button" className="secondary" style={{ padding: '0 0.3rem' }} aria-label={`Remove ${s.first_name} ${s.last_name}`} onClick={() => setForm({ ...form, staff_ids: form.staff_ids.filter((x) => x !== s.staff_id) })}>×</button>
+                </span>
+              ))}
+            </p>
+          )}
+          <input placeholder="Search staff by name or code" value={staffFilter} onChange={(e) => setStaffFilter(e.target.value)} />
+          <div style={{ maxHeight: '12rem', overflowY: 'auto', marginTop: '0.4rem' }}>
+            {filteredStaff.map((s) => (
+              <label key={s.staff_id} style={{ display: 'flex', flexDirection: 'row', flex: '0 0 auto', gap: '0.4rem', alignItems: 'center', padding: '0.1rem 0' }}>
+                <input type="checkbox" style={{ width: 'auto' }} checked={form.staff_ids.includes(s.staff_id)} onChange={() => setForm({ ...form, staff_ids: toggleIn(form.staff_ids, s.staff_id) })} />
+                {s.first_name} {s.last_name}{s.staff_code ? <span style={{ color: '#888' }}> · {s.staff_code}</span> : ''}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {status && <p style={{ marginBottom: 0 }}><strong>{status}</strong></p>}
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+          <button type="submit">Save activity</button>
+          <button type="button" className="secondary" onClick={() => setForm(null)}>Cancel</button>
+        </div>
+      </form>
     );
   }
 
@@ -314,77 +396,15 @@ function ActivitiesInner() {
         </div>
       )}
 
-      {status && <p><strong>{status}</strong></p>}
-
-      {form && (
-        <form onSubmit={saveActivity} className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-          <h2 style={{ marginTop: 0 }}>{form.activity_id ? `Edit ${form.activity_name || 'activity'}` : 'New activity'}</h2>
-          <div className="form-grid">
-            <label>
-              Day
-              <select value={form.day_of_week} onChange={(e) => setForm({ ...form, day_of_week: e.target.value })}>
-                {days.map((d) => <option key={d} value={d}>{OH_DAY_NAMES[d]}</option>)}
-              </select>
-            </label>
-            <label>
-              Activity
-              <input value={form.activity_name} onChange={(e) => setForm({ ...form, activity_name: e.target.value })} placeholder="e.g. Chess Club" required />
-            </label>
-            <label>
-              Room / venue
-              <input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="e.g. Sports Hall" />
-            </label>
-            <label>
-              Places (blank = no limit)
-              <input type="number" min="1" step="1" inputMode="numeric" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
-            </label>
-          </div>
-          <label style={{ marginTop: '0.75rem' }}>
-            Description (students see this when choosing)
-            <textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </label>
-
-          <fieldset style={{ marginTop: '0.75rem', border: '1px solid #ddd', borderRadius: 6, padding: '0.5rem 0.75rem' }}>
-            <legend>Open to</legend>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              {yearOptions.map((y) => (
-                <label key={y} style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
-                  <input type="checkbox" style={{ width: 'auto' }} checked={form.year_groups.includes(y)} onChange={() => setForm({ ...form, year_groups: toggleIn(form.year_groups, y) })} />
-                  Year {y}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset style={{ marginTop: '0.75rem', border: '1px solid #ddd', borderRadius: 6, padding: '0.5rem 0.75rem' }}>
-            <legend>Staff running it{form.staff_ids.length ? ` (${form.staff_ids.length})` : ''}</legend>
-            {form.staff_ids.length > 0 && (
-              <p style={{ margin: '0 0 0.5rem' }}>
-                {form.staff_ids.map((id) => staff.find((s) => s.staff_id === id)).filter(Boolean).map((s) => (
-                  <span key={s.staff_id} className="badge" style={{ marginRight: '0.35rem' }}>
-                    {s.first_name} {s.last_name}{' '}
-                    <button type="button" className="secondary" style={{ padding: '0 0.3rem' }} aria-label={`Remove ${s.first_name} ${s.last_name}`} onClick={() => setForm({ ...form, staff_ids: form.staff_ids.filter((x) => x !== s.staff_id) })}>×</button>
-                  </span>
-                ))}
-              </p>
-            )}
-            <input placeholder="Search staff by name or code" value={staffFilter} onChange={(e) => setStaffFilter(e.target.value)} />
-            <div style={{ maxHeight: '12rem', overflowY: 'auto', marginTop: '0.4rem' }}>
-              {filteredStaff.map((s) => (
-                <label key={s.staff_id} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', padding: '0.1rem 0' }}>
-                  <input type="checkbox" style={{ width: 'auto' }} checked={form.staff_ids.includes(s.staff_id)} onChange={() => setForm({ ...form, staff_ids: toggleIn(form.staff_ids, s.staff_id) })} />
-                  {s.first_name} {s.last_name}{s.staff_code ? <span style={{ color: '#888' }}> · {s.staff_code}</span> : ''}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-            <button type="submit">Save activity</button>
-            <button type="button" className="secondary" onClick={() => setForm(null)}>Cancel</button>
-          </div>
-        </form>
+      {/* Sticky, so a message from a row far down the page (a refused delete,
+          a save) is on screen rather than up above Monday. */}
+      {status && !form && (
+        <p style={{ position: 'sticky', top: 0, zIndex: 5, background: '#fff8e1', border: '1px solid #f0c419', borderRadius: 4, padding: '0.5rem 0.75rem' }}>
+          <strong>{status}</strong>{' '}
+          <button type="button" className="secondary" style={{ marginLeft: '0.5rem' }} onClick={() => setStatus(null)}>Dismiss</button>
+        </p>
       )}
+
 
       {days.map((d) => (
         <div key={d} className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
@@ -395,12 +415,13 @@ function ActivitiesInner() {
             </h2>
             <button type="button" className="secondary" onClick={() => startNew(d)}>+ Add activity</button>
           </div>
+          {form?.anchor === d && renderForm()}
           {byDay[d].length === 0 ? (
             <p style={{ color: '#666' }}>No activities yet.</p>
           ) : (
             <div className="table-scroll"><table>
               <thead><tr><th>Activity</th><th>Room</th><th>Staff</th><th>Open to</th><th>Chosen</th><th></th></tr></thead>
-              <tbody>{byDay[d].map(renderActivityRow)}</tbody>
+              <tbody>{byDay[d].map((a) => renderActivityRow(a, d))}</tbody>
             </table></div>
           )}
         </div>
@@ -410,9 +431,10 @@ function ActivitiesInner() {
         <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch', borderColor: '#b45309' }}>
           <h2 style={{ marginTop: 0 }}>On a day with no Other Half</h2>
           <p style={{ color: '#666' }}>Bell Times has no Other Half on these days, so they won&apos;t appear on anyone&apos;s timetable.</p>
+          {form?.anchor === 'off' && renderForm()}
           <div className="table-scroll"><table>
             <thead><tr><th>Activity</th><th>Room</th><th>Staff</th><th>Open to</th><th>Chosen</th><th></th></tr></thead>
-            <tbody>{offDay.map(renderActivityRow)}</tbody>
+            <tbody>{offDay.map((a) => renderActivityRow(a, 'off'))}</tbody>
           </table></div>
         </div>
       )}
