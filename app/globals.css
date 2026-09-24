@@ -967,3 +967,18 @@ input, select { width: 100%; }
   .hr-kpi, .card { box-shadow: none; }
   .hr-sections { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Tuckshop order sheets (/tuckshop/order-sheets): one restaurant per printed page. */
+.order-sheet-page { margin-bottom: 2rem; }
+.order-sheet-page h2 { margin-bottom: 0.2rem; }
+.order-sheet-page h3 { margin: 1rem 0 0.4rem; font-size: 1rem; }
+.order-sheet-meta { color: #555; font-size: 0.85rem; margin: 0 0 0.75rem; }
+.order-sheet-table { width: 100%; border-collapse: collapse; }
+.order-sheet-table th, .order-sheet-table td { border: 1px solid #ccc; padding: 0.3rem 0.5rem; vertical-align: top; }
+.order-sheet-tick { width: 3.5rem; text-align: center; }
+@media print {
+  .order-sheet-page { break-after: page; page-break-after: always; margin: 0; font-size: 0.85rem; }
+  .order-sheet-page:last-of-type { break-after: auto; page-break-after: auto; }
+  .order-sheet-table th, .order-sheet-table td { border-color: #666; padding: 0.2rem 0.4rem; }
+  .order-sheet-table tr { break-inside: avoid; page-break-inside: avoid; }
+}
