@@ -192,7 +192,7 @@ function ChoicesInner() {
             Search
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or form" />
           </label>
-          <label style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+          <label style={{ display: 'flex', flexDirection: 'row', flex: '0 0 auto', gap: '0.4rem', alignItems: 'center' }}>
             <input type="checkbox" style={{ width: 'auto' }} checked={onlyUnchosen} onChange={(e) => setOnlyUnchosen(e.target.checked)} />
             Only students without a choice
           </label>
