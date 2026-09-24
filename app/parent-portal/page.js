@@ -11,6 +11,7 @@ import { visibleTargets } from '../../lib/gradeCompare';
 import { formatUKDate } from '../../lib/formatDate';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 import { schoolToday, schoolWeekdayShort } from '../../lib/schoolTime';
+import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
 import {
   AttendanceScopeCards,
   AttendanceTodayTable,
@@ -39,6 +40,7 @@ export function ParentPortalInner() {
 
   const [periods, setPeriods] = useState([]);
   const [timetableClasses, setTimetableClasses] = useState([]);
+  const [otherHalf, setOtherHalf] = useState([]); // chosen OH activities (other_half_timetable)
   const [timetableLoading, setTimetableLoading] = useState(true);
 
   const [attendance, setAttendance] = useState([]); // most recent marks, newest first
@@ -130,9 +132,11 @@ export function ParentPortalInner() {
       setTimetableLoading(true);
       const { data: tt } = await supabase
         .from('student_class')
-        .select('classes(class_id, room, class_code, subjects(subject_name, display_name), staff(first_name, last_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
+        .select('classes(class_id, room, class_code, subjects(subject_name, display_name, subject_code), staff(first_name, last_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
         .eq('student_id', selectedId);
       setTimetableClasses((tt || []).map((row) => row.classes).filter(Boolean));
+      const { data: oh } = await supabase.from('other_half_timetable').select('*').eq('student_id', selectedId);
+      setOtherHalf(oh || []);
       setTimetableLoading(false);
 
       const { data: term } = await supabase.from('fee_terms').select('id, name, is_current, published_to_parents').eq('is_current', true).maybeSingle();
@@ -202,10 +206,17 @@ export function ParentPortalInner() {
         subject: c.subjects?.display_name || c.subjects?.subject_name,
         room: c.room,
         teacher: c.staff ? `${c.staff.first_name} ${c.staff.last_name}` : null,
+        isOtherHalfClass: isOtherHalfSubject(c.subjects),
       };
       cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
     });
   });
+  // The activity chosen for each Other Half day replaces Nova-T's whole-year OH group.
+  mergeOtherHalfIntoCells(cellMap, otherHalf, (r) => ({
+    subject: r.activity_name,
+    room: r.room,
+    teacher: r.staff_names,
+  }));
 
   const periodName = (n) => periods.find((p) => p.period_number === n)?.period_name || (n ? `Period ${n}` : '—');
 
