@@ -13,7 +13,7 @@ function RegisterAlertsInner() {
     setLoading(true);
     let query = supabase
       .from('register_alerts')
-      .select('register_alert_id, period_date, minutes_late, resolved, staff(first_name, last_name)')
+      .select('register_alert_id, period_date, minutes_late, resolved, staff(first_name, last_name), other_half_activities(activity_name)')
       .order('period_date', { ascending: false })
       .order('minutes_late', { ascending: false });
     if (!showResolved) query = query.eq('resolved', false);
@@ -44,11 +44,12 @@ function RegisterAlertsInner() {
       <div className="card">
         {loading ? <p>Loading...</p> : rows.length === 0 ? <p>No outstanding register alerts.</p> : (
           <div className="table-scroll"><table>
-            <thead><tr><th>Staff</th><th>Date</th><th>Minutes late</th><th>Resolved</th></tr></thead>
+            <thead><tr><th>Staff</th><th>Register</th><th>Date</th><th>Minutes late</th><th>Resolved</th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.register_alert_id}>
                   <td>{r.staff?.first_name} {r.staff?.last_name}</td>
+                  <td>{r.other_half_activities ? `Other Half: ${r.other_half_activities.activity_name}` : 'Class'}</td>
                   <td>{r.period_date}</td>
                   <td>{r.minutes_late}</td>
                   <td>

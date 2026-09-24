@@ -54,9 +54,14 @@ function RegistersNotDoneInner() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.slot_id}>
+                // Other Half rows have no slot — they're per activity (migration 157).
+                <tr key={r.slot_id ?? `oh-${r.other_half_activity_id}`}>
                   <td>{r.teacher_name}</td>
-                  <td>{r.class_code}</td>
+                  <td>
+                    {r.other_half_activity_id
+                      ? <a href={`/other-half/register?activityId=${r.other_half_activity_id}`}>{r.class_code}</a>
+                      : r.class_code}
+                  </td>
                   {/* The school's period names are offset from period_number —
                       number 3 is "Period 2" — so printing the number made the
                       start time look wrong against it. Show what staff call it. */}

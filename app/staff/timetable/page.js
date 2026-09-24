@@ -156,8 +156,10 @@ function StaffTimetable() {
       if (!isOwnTimetable) { setMyMissingCount(0); return; }
       const { data } = await supabase
         .from('registers_not_done')
-        .select('slot_id')
-        .eq('staff_id', profile.staff_id);
+        .select('slot_id, other_half_activity_id')
+        // staff_ids, not staff_id: an Other Half activity can have several
+        // staff, and its row belongs to all of them (migration 157).
+        .contains('staff_ids', [profile.staff_id]);
       setMyMissingCount((data || []).length);
     }
     loadMyMissing();
