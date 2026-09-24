@@ -8,6 +8,10 @@ function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
 }
 
+// Most of any one item a student can order for a Saturday, across all their
+// orders for it. Enforced in submit_tuckshop_preorder() (migration 171).
+const MAX_PER_ITEM = 2;
+
 function longDate(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -43,6 +47,9 @@ function TuckshopInner() {
   const [myPreorders, setMyPreorders] = useState([]);
   const [closedUntil, setClosedUntil] = useState(null);
   const [orderDate, setOrderDate] = useState(null);
+  // item id -> quantity already ordered for orderDate, so the dropdown only
+  // offers what's left of the limit.
+  const [alreadyOrdered, setAlreadyOrdered] = useState({});
 
   async function load() {
     if (!studentId) return;
@@ -74,6 +81,19 @@ function TuckshopInner() {
     // Friday 11pm cutoff doesn't depend on the phone's clock.
     const { data: next } = await supabase.rpc('tuckshop_next_order_date');
     setOrderDate(next || null);
+    const ordered = {};
+    if (next) {
+      const { data: lines } = await supabase
+        .from('tuckshop_preorder_items')
+        .select('tuckshop_item_id, quantity, tuckshop_preorders!inner(student_id, for_date, status)')
+        .eq('tuckshop_preorders.student_id', studentId)
+        .eq('tuckshop_preorders.for_date', next)
+        .neq('tuckshop_preorders.status', 'cancelled');
+      (lines || []).forEach((l) => {
+        ordered[l.tuckshop_item_id] = (ordered[l.tuckshop_item_id] || 0) + l.quantity;
+      });
+    }
+    setAlreadyOrdered(ordered);
     const { data: pre } = await supabase
       .from('tuckshop_preorders')
       .select('id, for_date, status')
@@ -139,27 +159,36 @@ function TuckshopInner() {
           <p style={{ color: '#555' }}>
             Orders close at 11pm on {longDate(dayBefore(orderDate))}.
             After that they&apos;re locked and go to the tuckshop.
+            You can order up to {MAX_PER_ITEM} of each item for the Saturday.
           </p>
         )}
         <div className="table-scroll">
           <table>
             <thead><tr><th>Item</th><th>Price</th><th>Qty</th></tr></thead>
             <tbody>
-              {tuckshopItems.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.name}</td>
-                  <td>{naira(item.price)}</td>
-                  <td>
-                    <input
-                      type="number"
-                      min="0"
-                      value={preorderCart[item.id] || ''}
-                      onChange={(e) => setPreorderQty(item.id, e.target.value)}
-                      style={{ width: '4rem' }}
-                    />
-                  </td>
-                </tr>
-              ))}
+              {tuckshopItems.map((item) => {
+                const left = Math.max(0, MAX_PER_ITEM - (alreadyOrdered[item.id] || 0));
+                return (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td>{naira(item.price)}</td>
+                    <td>
+                      {left === 0 ? (
+                        <span style={{ color: '#555' }}>{MAX_PER_ITEM} ordered</span>
+                      ) : (
+                        <select
+                          value={preorderCart[item.id] || 0}
+                          onChange={(e) => setPreorderQty(item.id, e.target.value)}
+                        >
+                          {Array.from({ length: left + 1 }, (_, n) => (
+                            <option key={n} value={n}>{n}</option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
