@@ -11,7 +11,7 @@ import { schoolToday } from '../../../../lib/schoolTime';
 import { resizePhotoToBase64 } from '../../../../lib/photo';
 import { ROLE_LABELS } from '../../../../lib/staffRoles';
 import {
-  EMPLOYMENT_TYPES, WARNING_LEVELS, ATTENDANCE_TYPES,
+  EMPLOYMENT_TYPES, HR_DEPARTMENTS, WARNING_LEVELS, ATTENDANCE_TYPES,
   academicYearLabel, clearanceStatus, lengthOfService, isWarningLive,
   isTrainingExpired, attendanceTotals, initials,
 } from '../../../../lib/staffHr';
@@ -25,7 +25,7 @@ const HR_SECTIONS = [
     title: 'Employment',
     fields: [
       { key: 'job_title', label: 'Job title' },
-      { key: 'department', label: 'Department', type: 'department' },
+      { key: 'department', label: 'Department', type: 'select', options: HR_DEPARTMENTS },
       { key: 'employment_type', label: 'Employment type', type: 'select', options: EMPLOYMENT_TYPES },
       { key: 'date_of_appointment', label: 'Date of appointment', type: 'date' },
       { key: 'probation_end_date', label: 'Probation ends', type: 'date' },
@@ -108,25 +108,19 @@ function blankToNull(v) {
   return v === '' || v === undefined ? null : v;
 }
 
-function FieldInput({ field, value, onChange, departments }) {
+function FieldInput({ field, value, onChange }) {
   const common = { value: value ?? '', onChange: (e) => onChange(e.target.value), required: field.required };
   if (field.type === 'textarea') return <textarea rows={3} {...common} />;
   if (field.type === 'select') {
+    // A value saved before the list existed (or since dropped from it) stays
+    // selectable, so opening the form and saving doesn't silently blank it.
+    const legacy = value && !(value in field.options);
     return (
       <select {...common}>
         <option value="">—</option>
+        {legacy && <option value={value}>{value} (not in list)</option>}
         {Object.entries(field.options).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
       </select>
-    );
-  }
-  if (field.type === 'department') {
-    return (
-      <>
-        <input list="hr-departments" {...common} />
-        <datalist id="hr-departments">
-          {(departments || []).map((d) => <option key={d} value={d} />)}
-        </datalist>
-      </>
     );
   }
   return (
@@ -279,7 +273,6 @@ function StaffRecord() {
   const [classes, setClasses] = useState([]);
   const [commitments, setCommitments] = useState([]);
   const [periods, setPeriods] = useState([]);
-  const [departments, setDepartments] = useState([]);
 
   const [tab, setTab] = useState('overview');
   const [editing, setEditing] = useState(false);
@@ -304,7 +297,7 @@ function StaffRecord() {
 
   async function loadAll() {
     setLoading(true);
-    const [{ data: s }, { data: r }, { data: cls }, { data: cm }, { data: pr }, { data: d }] = await Promise.all([
+    const [{ data: s }, { data: r }, { data: cls }, { data: cm }, { data: pr }] = await Promise.all([
       supabase.from('staff').select('staff_id, first_name, last_name, staff_code, email').eq('staff_id', staffId).maybeSingle(),
       supabase.from('staff_roles').select('role_name, scope_value').eq('staff_id', staffId),
       supabase
@@ -313,7 +306,6 @@ function StaffRecord() {
         .eq('staff_id', staffId),
       supabase.from('staff_commitments').select('day_of_week, period_number, label').eq('staff_id', staffId),
       supabase.from('periods').select('*').order('period_number'),
-      supabase.from('departments').select('department_name').order('department_name'),
       loadHr(),
     ]);
     setStaff(s || null);
@@ -321,7 +313,6 @@ function StaffRecord() {
     setClasses(cls || []);
     setCommitments(cm || []);
     setPeriods(pr || []);
-    setDepartments((d || []).map((x) => x.department_name));
     setLoading(false);
   }
 
@@ -625,7 +616,6 @@ function StaffRecord() {
                             <FieldInput
                               field={fd}
                               value={form[fd.key]}
-                              departments={departments}
                               onChange={(v) => setForm((f) => ({ ...f, [fd.key]: v }))}
                             />
                           </label>
