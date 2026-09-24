@@ -11,7 +11,7 @@ import { schoolToday } from '../../../../lib/schoolTime';
 import { resizePhotoToBase64 } from '../../../../lib/photo';
 import { ROLE_LABELS } from '../../../../lib/staffRoles';
 import {
-  EMPLOYMENT_TYPES, HR_DEPARTMENTS, WARNING_LEVELS, ATTENDANCE_TYPES,
+  EMPLOYMENT_TYPES, HR_DEPARTMENTS, NATIONALITIES, WARNING_LEVELS, ATTENDANCE_TYPES,
   academicYearLabel, clearanceStatus, lengthOfService, isWarningLive,
   isTrainingExpired, attendanceTotals, initials,
 } from '../../../../lib/staffHr';
@@ -46,7 +46,7 @@ const HR_SECTIONS = [
     fields: [
       { key: 'date_of_birth', label: 'Date of birth', type: 'date' },
       { key: 'gender', label: 'Gender', type: 'select', options: { Female: 'Female', Male: 'Male' } },
-      { key: 'nationality', label: 'Nationality' },
+      { key: 'nationality', label: 'Nationality', type: 'select', options: NATIONALITIES },
       { key: 'phone', label: 'Phone' },
       { key: 'personal_email', label: 'Personal email', type: 'email' },
       { key: 'address', label: 'Home address', type: 'textarea' },
