@@ -45,7 +45,10 @@ function WelcomeEmailsInner() {
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [paused, setPaused] = useState(null); // { note } when paused
+  const [emailSetting, setEmailSetting] = useState(null); // { paused, note } once loaded
+  const [pauseReason, setPauseReason] = useState('');
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState(null);
   const [years, setYears] = useState(new Set());
   const [show, setShow] = useState('ready');
   const [selected, setSelected] = useState(new Set());
@@ -60,7 +63,7 @@ function WelcomeEmailsInner() {
     ]);
     setLoadError(error ? error.message : null);
     setCandidates(data || []);
-    setPaused(settings?.parent_emails_paused ? { note: settings.parent_emails_paused_note } : null);
+    setEmailSetting(settings ? { paused: settings.parent_emails_paused, note: settings.parent_emails_paused_note } : null);
     setLoading(false);
   }
 
@@ -140,9 +143,29 @@ function WelcomeEmailsInner() {
     setSelected(new Set());
   }
 
+  // The pause (migration 114) covers every email to a parent, not just this
+  // page's letters, so resuming is confirmed with that spelled out.
+  async function setEmailsPaused(pause) {
+    const question = pause
+      ? 'Pause all emails to parents? Welcome letters and individual messages to parents will stop sending until someone resumes them.'
+      : 'Resume emails to parents? Welcome letters can be sent from this page again, and individual messages staff send to a parent will be emailed to them again.';
+    if (!window.confirm(question)) return;
+    setSwitching(true);
+    setSwitchError(null);
+    const { error } = await supabase.rpc('set_parent_emails_paused', {
+      p_paused: pause,
+      p_note: pause ? pauseReason : null,
+    });
+    if (error) setSwitchError(error.message);
+    else setPauseReason('');
+    await load();
+    setSwitching(false);
+  }
+
   if (!isAdmin) return <p>Only admin can send welcome emails.</p>;
 
-  const sendDisabled = sending || !!paused || chosen.length === 0;
+  const paused = emailSetting?.paused ?? true; // unknown counts as paused: never offer Send on a guess
+  const sendDisabled = sending || paused || chosen.length === 0;
   const sentCount = results?.rows?.filter((r) => r.outcome === 'Sent').length ?? 0;
   const notSent = results?.rows?.filter((r) => r.outcome !== 'Sent') ?? [];
 
@@ -150,10 +173,39 @@ function WelcomeEmailsInner() {
     <div>
       <h1>Send Parent Welcome Emails</h1>
 
-      {paused && (
-        <div className="card" style={{ borderLeft: '4px solid #b45309' }}>
-          <p style={{ margin: 0, fontWeight: 600, color: '#b45309' }}>Parent emails are paused, so nothing can be sent right now.</p>
-          {paused.note && <p style={{ margin: '0.35rem 0 0' }}>{paused.note}</p>}
+      {emailSetting && (
+        <div className="card" style={{ borderLeft: `4px solid ${paused ? '#b45309' : '#15803d'}` }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 600, color: paused ? '#b45309' : '#15803d' }}>
+                {paused ? 'Emails to parents are paused' : 'Emails to parents are on'}
+              </p>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', color: '#555' }}>
+                Covers welcome letters and individual messages staff send to a parent.
+                {emailSetting.note ? ` ${emailSetting.note.replace(/[.\s]*$/, '')}.` : ''}
+              </p>
+            </div>
+            {paused ? (
+              <button type="button" onClick={() => setEmailsPaused(false)} disabled={switching}>
+                {switching ? 'Saving…' : 'Resume parent emails'}
+              </button>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={pauseReason}
+                  onChange={(e) => setPauseReason(e.target.value)}
+                  placeholder="Reason (optional)"
+                  style={{ width: '14rem' }}
+                  disabled={switching}
+                />
+                <button type="button" className="secondary" onClick={() => setEmailsPaused(true)} disabled={switching}>
+                  {switching ? 'Saving…' : 'Pause parent emails'}
+                </button>
+              </div>
+            )}
+          </div>
+          {switchError && <p style={{ color: '#b91c1c', margin: '0.5rem 0 0' }}>{switchError}</p>}
         </div>
       )}
 
