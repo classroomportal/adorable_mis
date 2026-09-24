@@ -377,14 +377,6 @@ a.dashboard-tile { color: white; text-decoration: none; }
 .pupil-tile-name { font-weight: 600; overflow-wrap: anywhere; }
 .pupil-tile-sub { font-size: 0.8rem; opacity: 0.85; margin-top: 0.1rem; }
 .pupil-tile-stats { display: flex; gap: 0.8rem; font-size: 0.85rem; margin-top: 0.4rem; }
-.pupil-tile-contact {
-  font-size: 0.78rem;
-  opacity: 0.85;
-  margin-top: 0.2rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 @media (min-width: 900px) {
   .dashboard-red .dashboard-tiles { grid-template-columns: repeat(3, 1fr); }

@@ -189,7 +189,6 @@ function StudentsList() {
                       <span title="Net behaviour points">📋 {s.net_behaviour_points ?? 0}</span>
                       <span title="Latest weekly average">⭐ {s.latest_week_avg_pct != null ? `${s.latest_week_avg_pct}%` : '—'}</span>
                     </div>
-                    <div className="pupil-tile-contact" title="Primary contact">👪 {s.primary_contact_name ?? 'No primary contact'}</div>
                   </div>
                 </a>
               ))}
