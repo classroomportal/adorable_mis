@@ -1,190 +1,272 @@
 'use client';
-import { useState } from 'react';
-import Papa from 'papaparse';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
-import { schoolToday } from '../../../lib/schoolTime';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
+// Everything here goes through parent_welcome_candidates() and
+// send_parent_welcome_batch() (migration 172). The database works out each
+// parent's date-of-birth password and records every send, so this page never
+// handles a password and can't email the same parent twice.
+
+const STATUS_LABELS = {
+  ready: 'Not sent yet',
+  sent: 'Already sent',
+  signed_in: 'Already signed in',
+  no_email: 'No email address',
+  no_dob: 'No date of birth for their child',
+  email_shared: "Email used by another parent's login",
+};
+
+const SHOW_OPTIONS = [
+  { value: 'ready', label: 'Not sent yet' },
+  { value: 'sent', label: 'Already sent' },
+  { value: 'blocked', label: "Can't be sent" },
+  { value: 'all', label: 'Everyone' },
+];
+
+// globals.css stacks every <label> as a column that grows to fill the row;
+// these sit inline instead (tick-box beside its text).
+const INLINE_LABEL = {
+  display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '0.4rem', flex: '0 0 auto', fontSize: '0.95rem', whiteSpace: 'nowrap',
+};
+
+function formatSentAt(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleString('en-GB', {
+    timeZone: 'Africa/Lagos', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
+}
+
 function WelcomeEmailsInner() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
-  const [csvText, setCsvText] = useState('');
-  const [rows, setRows] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [paused, setPaused] = useState(null); // { note } when paused
+  const [years, setYears] = useState(new Set());
+  const [show, setShow] = useState('ready');
   const [selected, setSelected] = useState(new Set());
-  const [status, setStatus] = useState(null);
   const [sending, setSending] = useState(false);
+  const [results, setResults] = useState(null);
 
-  function handleParse() {
-    const parsed = Papa.parse(csvText.trim(), { header: true, skipEmptyLines: true });
-    const valid = (parsed.data || []).filter((r) => r.email && r.temp_password && !r.temp_password.startsWith('('));
-    setRows(valid);
-    setSelected(new Set(valid.map((_, i) => i)));
-    setStatus(`${valid.length} parent(s) ready to email (skipped rows without a real password).`);
+  async function load() {
+    setLoading(true);
+    const [{ data, error }, { data: settings }] = await Promise.all([
+      supabase.rpc('parent_welcome_candidates'),
+      supabase.from('system_settings').select('parent_emails_paused, parent_emails_paused_note').maybeSingle(),
+    ]);
+    setLoadError(error ? error.message : null);
+    setCandidates(data || []);
+    setPaused(settings?.parent_emails_paused ? { note: settings.parent_emails_paused_note } : null);
+    setLoading(false);
   }
 
-  const GMAIL_MAIL_MERGE_INSTRUCTIONS = `Sending via mis@abc.sch.ng (Google Workspace mail merge)
+  useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
 
-1. Open Google Sheets → File → Import → upload the CSV you just downloaded. Keep the header row (parent_name, email, temp_password).
-2. In Gmail, compose a new email and click the mail-merge icon in the compose toolbar (only shows if multi-send mode is on).
-   Not showing? Settings → See all settings → Advanced → Multi-Send Mode → Enable.
-3. Link the Google Sheet you just made as the recipient source.
-4. Write the email using {{parent_name}}, {{email}}, {{temp_password}} as merge fields (see the template above for wording — swap {{ }} for the merge fields).
-5. Preview a few, then send. Workspace allows up to 2,000 recipients/day, so the whole parent list can go in one send.`;
+  const allYears = useMemo(() => {
+    const ys = new Set();
+    candidates.forEach((c) => (c.years || []).forEach((y) => ys.add(y)));
+    return [...ys].sort((a, b) => a - b);
+  }, [candidates]);
 
-  const chosen = rows.filter((_, i) => selected.has(i));
+  // A parent with children in more than one year shows under each of them;
+  // once sent, they're "Already sent" everywhere.
+  const inYears = useMemo(
+    () => candidates.filter((c) => (c.years || []).some((y) => years.has(y))),
+    [candidates, years],
+  );
 
-  function toggle(i) {
+  const counts = useMemo(() => {
+    const out = { ready: 0, sent: 0, blocked: 0 };
+    inYears.forEach((c) => {
+      if (c.status === 'ready') out.ready += 1;
+      else if (c.status === 'sent') out.sent += 1;
+      else out.blocked += 1;
+    });
+    return out;
+  }, [inYears]);
+
+  const shown = inYears.filter((c) => {
+    if (show === 'all') return true;
+    if (show === 'blocked') return c.status !== 'ready' && c.status !== 'sent';
+    return c.status === show;
+  });
+
+  const chosen = inYears.filter((c) => c.status === 'ready' && selected.has(c.parent_id));
+
+  function toggleYear(y) {
+    const next = new Set(years);
+    if (next.has(y)) next.delete(y); else next.add(y);
+    setYears(next);
+    // Default to everyone sendable in the chosen years; untick to hold back.
+    setSelected(new Set(
+      candidates
+        .filter((c) => c.status === 'ready' && (c.years || []).some((yy) => next.has(yy)))
+        .map((c) => c.parent_id),
+    ));
+    setResults(null);
+  }
+
+  function toggleParent(id) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(i)) next.delete(i); else next.add(i);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }
 
-  function handleExportCsv() {
-    const csv = Papa.unparse(chosen.map((r) => ({
-      parent_name: r.parent_name || '',
-      email: r.email,
-      temp_password: r.temp_password,
-    })));
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `parent-welcome-emails-${schoolToday()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  function selectAllReady(on) {
+    setSelected(on ? new Set(inYears.filter((c) => c.status === 'ready').map((c) => c.parent_id)) : new Set());
   }
 
-  // Keep in step with the letter in send_parent_welcome_email() (migration 160).
-  // Assumes the date-of-birth password; a parent with no current child gets a
-  // random one, and the email function drops that explanation for them.
-  const MAIL_MERGE_TEMPLATE = `Subject: Introducing Formwork: your new parent account (separate from SIMS)
-
-Dear {{parent_name}},
-
-INTRODUCING FORMWORK, OUR NEW SCHOOL INFORMATION SYSTEM
-
-Adorable British College has introduced a new online system called Formwork. It gives you a parent account where you can follow your child's school life in one place, at any time, from a phone, tablet or computer.
-
-FORMWORK IS SEPARATE FROM SIMS
-
-You may already be familiar with SIMS, including the SIMS Parent app. Formwork is a completely separate system that runs on a different server from SIMS. This means:
-  • Your SIMS username and password will NOT work on Formwork. Please use the new login details below.
-  • Formwork has its own web address, misform.work. It is not reached through the SIMS Parent app or the SIMS website.
-  • Changing your password in one system does not change it in the other.
-
-WHAT YOU CAN SEE IN FORMWORK
-
-For each of your children:
-  • their timetable
-  • their results compared with their target grades
-  • their behaviour record
-  • their attendance, including today lesson by lesson
-  • school fees and payment history
-  • their tuckshop balance and spending
-  • messages from the school in your inbox
-
-YOUR LOGIN DETAILS
-
-Web address: misform.work
-Login email: {{email}}
-Password: {{temp_password}}
-
-Your password is your oldest child's date of birth, written as 8 numbers: day, month, year, with no spaces or slashes. For example, a child born on 24 March 2012 would be 24032012.
-
-The first time you sign in, Formwork will ask you to choose your own new password (at least 8 characters). After that, use the new password you chose. Keep it private: the school will never ask you for it.
-
-NEED HELP?
-
-If you cannot sign in, or something about your child looks wrong, please contact the school office and we will be happy to help.
-
-Kind regards,
-Adorable British College`;
-
-  const OVER_DAILY_CAP = chosen.length > 2000;
-
   async function handleSend() {
+    const yearList = [...years].sort((a, b) => a - b).map((y) => `Y${y}`).join(', ');
+    if (!window.confirm(`Email the welcome letter to ${chosen.length} parent${chosen.length === 1 ? '' : 's'} (${yearList})? Each parent is only ever sent it once.`)) return;
     setSending(true);
-    let sent = 0;
-    const problems = [];
-    const toSend = chosen;
-    for (const r of toSend) {
-      const { error } = await supabase.rpc('send_parent_welcome_email', {
-        p_email: r.email,
-        p_name: r.parent_name || r.email,
-        p_temp_password: r.temp_password,
-      });
-      if (error) problems.push(`${r.email}: ${error.message}`);
-      else sent += 1;
-      setStatus(`Sending... ${sent + problems.length}/${toSend.length}`);
-    }
+    setResults(null);
+    const { data, error } = await supabase.rpc('send_parent_welcome_batch', {
+      p_parent_ids: chosen.map((c) => c.parent_id),
+    });
     setSending(false);
-    setStatus(`Sent ${sent} of ${toSend.length}.${problems.length ? ' Issues: ' + problems.slice(0, 10).join('; ') : ''}`);
+    if (error) {
+      setResults({ error: error.message });
+      return;
+    }
+    setResults({ rows: data || [] });
+    await load();
+    setSelected(new Set());
   }
 
   if (!isAdmin) return <p>Only admin can send welcome emails.</p>;
 
+  const sendDisabled = sending || !!paused || chosen.length === 0;
+  const sentCount = results?.rows?.filter((r) => r.outcome === 'Sent').length ?? 0;
+  const notSent = results?.rows?.filter((r) => r.outcome !== 'Sent') ?? [];
+
   return (
     <div>
       <h1>Send Parent Welcome Emails</h1>
-      <div className="card">
-        <p>Paste the CSV that <code>create_parent_logins()</code> or <code>reset_parent_passwords_to_dob()</code> returned (columns: <code>parent_name,email,temp_password</code>). Rows marked "skipped" are ignored automatically.</p>
-        <p>A parent's first password is their oldest current child's date of birth as 8 digits (DDMMYYYY), and they must choose their own password the first time they sign in. Parents with no current child get a random password instead.</p>
-        <textarea
-          rows={8}
-          style={{ width: '100%' }}
-          value={csvText}
-          onChange={(e) => setCsvText(e.target.value)}
-          placeholder="parent_name,email,temp_password&#10;Adaobi ABIAH,adafaith483@gmail.com,0b575c25d5&#10;..."
-        />
-        <button onClick={handleParse} style={{ marginTop: '0.5rem' }}>Parse</button>
-      </div>
 
-      {rows.length > 0 && (
-        <div className="card">
-          <p>{chosen.length} of {rows.length} parent(s) selected. Only ticked parents will receive an email with their login and temporary password.</p>
-
-          <div style={{ marginBottom: '0.5rem' }}>
-            <button onClick={() => setSelected(new Set(rows.map((_, i) => i)))} disabled={sending} style={{ marginRight: '0.5rem' }}>Select all</button>
-            <button onClick={() => setSelected(new Set())} disabled={sending}>Select none</button>
-          </div>
-          <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #ddd', padding: '0.5rem', marginBottom: '0.75rem' }}>
-            {rows.map((r, i) => (
-              <label key={i} style={{ display: 'block', padding: '0.15rem 0' }}>
-                <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)} disabled={sending} />{' '}
-                {r.parent_name || '(no name)'} — {r.email}
-              </label>
-            ))}
-          </div>
-
-          {OVER_DAILY_CAP && (
-            <p style={{ color: '#b45309', fontWeight: 600 }}>
-              {chosen.length} is over Google Workspace's ~2,000/day send limit — sending now will fail partway through.
-              Export the CSV below and mail-merge it through the school office's own email instead.
-            </p>
-          )}
-
-          <button onClick={handleExportCsv} disabled={chosen.length === 0} style={{ marginRight: '0.5rem' }}>Download CSV for mail merge</button>
-          <button onClick={handleSend} disabled={sending || OVER_DAILY_CAP || chosen.length === 0}>
-            {sending ? 'Sending...' : `Send ${chosen.length} email${chosen.length === 1 ? '' : 's'} from mis@abc.sch.ng`}
-          </button>
-
-          <details style={{ marginTop: '0.75rem' }} open={OVER_DAILY_CAP}>
-            <summary>How to send via mis@abc.sch.ng (Google Workspace mail merge)</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{GMAIL_MAIL_MERGE_INSTRUCTIONS}</pre>
-          </details>
-
-          <details style={{ marginTop: '0.5rem' }}>
-            <summary>Mail-merge email template (copy for Word/Outlook)</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f0', padding: '0.75rem', fontSize: '0.85rem' }}>{MAIL_MERGE_TEMPLATE}</pre>
-          </details>
+      {paused && (
+        <div className="card" style={{ borderLeft: '4px solid #b45309' }}>
+          <p style={{ margin: 0, fontWeight: 600, color: '#b45309' }}>Parent emails are paused, so nothing can be sent right now.</p>
+          {paused.note && <p style={{ margin: '0.35rem 0 0' }}>{paused.note}</p>}
         </div>
       )}
 
-      {status && <p>{status}</p>}
+      <div className="card">
+        <p style={{ marginTop: 0 }}>
+          Choose year groups to send the welcome letter to parents of those students. Each parent&apos;s first password is their oldest
+          current child&apos;s date of birth (DDMMYYYY), and they must choose their own the first time they sign in. A parent is only
+          ever sent the letter once, and parents who have already signed in are never sent it.
+        </p>
+
+        {loading ? <p>Loading parents…</p> : loadError ? <p style={{ color: '#b91c1c' }}>Couldn&apos;t load parents: {loadError}</p> : (
+          <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', alignItems: 'center' }}>
+              <strong>Year groups:</strong>
+              {allYears.map((y) => (
+                <label key={y} style={INLINE_LABEL}>
+                  <input type="checkbox" checked={years.has(y)} onChange={() => toggleYear(y)} disabled={sending} />
+                  Year {y}
+                </label>
+              ))}
+            </div>
+
+            {years.size > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', alignItems: 'center', marginTop: '0.75rem' }}>
+                <label style={INLINE_LABEL}>
+                  Show
+                  <select value={show} onChange={(e) => setShow(e.target.value)}>
+                    {SHOW_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </label>
+                <span style={{ color: '#555' }}>
+                  {counts.ready} not sent yet · {counts.sent} already sent · {counts.blocked} can&apos;t be sent
+                </span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {years.size > 0 && !loading && (
+        <div className="card">
+          {show === 'ready' && counts.ready > 0 && (
+            <div style={{ marginBottom: '0.5rem' }}>
+              <button type="button" className="secondary" onClick={() => selectAllReady(true)} disabled={sending} style={{ marginRight: '0.5rem' }}>Select all</button>
+              <button type="button" className="secondary" onClick={() => selectAllReady(false)} disabled={sending}>Select none</button>
+            </div>
+          )}
+
+          {shown.length === 0 ? (
+            <p>No parents to show for this filter.</p>
+          ) : (
+            <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid #ddd' }}>
+              <table style={{ width: '100%' }}>
+                <thead>
+                  <tr><th></th><th>Parent</th><th>Email</th><th>Children</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {shown.map((c) => (
+                    <tr key={c.parent_id}>
+                      <td>
+                        {c.status === 'ready' && (
+                          <input type="checkbox" checked={selected.has(c.parent_id)} onChange={() => toggleParent(c.parent_id)} disabled={sending} />
+                        )}
+                      </td>
+                      <td>{c.parent_name || '(no name)'}</td>
+                      <td>{c.email || '—'}</td>
+                      <td>{c.children}</td>
+                      <td>
+                        {STATUS_LABELS[c.status] || c.status}
+                        {c.status === 'sent' && c.sent_at ? ` (${formatSentAt(c.sent_at)})` : ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div style={{ marginTop: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sendDisabled}
+              style={sendDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+            >
+              {sending ? 'Sending…' : `Send to ${chosen.length} parent${chosen.length === 1 ? '' : 's'}`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {results && (
+        <div className="card">
+          {results.error ? (
+            <p style={{ color: '#b91c1c', margin: 0 }}>Nothing was sent: {results.error}</p>
+          ) : (
+            <>
+              <p style={{ marginTop: 0, fontWeight: 600 }}>Sent to {sentCount} parent{sentCount === 1 ? '' : 's'}.</p>
+              {notSent.length > 0 && (
+                <>
+                  <p>Not sent ({notSent.length}):</p>
+                  <ul style={{ margin: 0 }}>
+                    {notSent.map((r) => {
+                      const c = candidates.find((x) => x.parent_id === r.parent_id);
+                      return <li key={r.parent_id}>{c?.parent_name || r.email || `Parent ${r.parent_id}`}: {r.outcome}</li>;
+                    })}
+                  </ul>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
