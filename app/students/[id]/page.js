@@ -10,6 +10,7 @@ import PublishedDocuments from '../../components/PublishedDocuments';
 import MedicalRecordCard from '../../components/MedicalRecordCard';
 import StudentParentsEditor from '../../components/StudentParentsEditor';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
+import { useHashView, DashboardTile, DashboardBack } from '../../components/Dashboard';
 import { classifyGrade, STYLE, LABEL, visibleTargets } from '../../../lib/gradeCompare';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday, schoolWeekdayShort } from '../../../lib/schoolTime';
@@ -23,22 +24,16 @@ import {
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-// `extra` renders in the header, which is visible while the section is shut —
-// so a button there (Edit) has to be able to open the section, otherwise
-// clicking it appears to do nothing.
-function Collapsible({ title, defaultOpen = false, forceOpen = false, extra, children }) {
-  const [open, setOpen] = useState(defaultOpen);
-  useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
+// One section of the profile, opened from its tile. `extra` holds the
+// section's own buttons (Edit, Print) beside the heading.
+function Section({ title, extra, children }) {
   return (
     <div className="card">
-      <div
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', cursor: 'pointer' }}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <h2 style={{ margin: 0 }}>{open ? '▾' : '▸'} {title}</h2>
-        {extra && <span onClick={(e) => e.stopPropagation()}>{extra}</span>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <h2 style={{ margin: 0 }}>{title}</h2>
+        {extra && <span>{extra}</span>}
       </div>
-      {open && <div style={{ marginTop: '0.75rem' }}>{children}</div>}
+      <div style={{ marginTop: '0.75rem' }}>{children}</div>
     </div>
   );
 }
@@ -111,6 +106,7 @@ function StudentDetail() {
   const [editForm, setEditForm] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
   const [fullView, setFullView] = useState(false);
+  const [view, openView] = useHashView();
   const [siblings, setSiblings] = useState([]);
 
   const [blocks, setBlocks] = useState([]); // curriculum_blocks applicable to this student's year
@@ -669,13 +665,70 @@ function StudentDetail() {
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
   if (!student) return <p>Student not found (id: {id}).</p>;
 
-  return (
-    <div>
-      <h1>{student.first_name} {student.last_name}</h1>
-      <TermTestScoresDownload studentId={student.student_id} />
-      <KeyStageTranscriptDownload studentId={student.student_id} />
-      <PublishedDocuments studentId={student.student_id} />
+  const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
+  const positiveCount = behaviour.filter((b) => b.type === 'positive').length;
+  const negativeCount = behaviour.filter((b) => b.type === 'negative').length;
+  const attendanceYear = attendanceSummary.find((r) => r.scope === 'year');
+  const attendanceSessions = Number(attendanceYear?.sessions || 0);
+  const attendancePct = attendanceSessions > 0
+    ? Math.round(((Number(attendanceYear.present) + Number(attendanceYear.late)) / attendanceSessions) * 100)
+    : null;
+  const shownTargetCount = visibleTargets(targetList, results, enrolledSubjectIds).length;
+  const allocatedBlocks = blocks.filter((b) => blockSelections[b.block_id]).length;
 
+  // The tiles on the profile's front page; each opens one section below.
+  const tiles = [
+    { key: 'core', label: 'Core Data', icon: '🪪', sub: student.dob ? `Born ${formatUKDate(student.dob)}` : 'Personal details' },
+    canSeeMedical && { key: 'medical', label: 'Medical', icon: '🩺', sub: 'Health record' },
+    { key: 'parents', label: 'Parents / Guardians', icon: '👪', sub: parents.length === 0 ? 'None on record' : plural(parents.length, 'contact') },
+    siblings.length > 0 && { key: 'siblings', label: 'Siblings', icon: '🧒', sub: `${plural(siblings.length, 'sibling')} at school` },
+    { key: 'timetable', label: 'Timetable', icon: '🗓️', sub: `${student.first_name}'s week` },
+    { key: 'blocks', label: 'Curriculum Blocks', icon: '🧩', sub: blocks.length === 0 ? 'None set up' : `${allocatedBlocks} of ${blocks.length} allocated` },
+    { key: 'attendance', label: 'Attendance', icon: '📊', sub: attendancePct === null ? 'No data yet' : `${attendancePct}% this year` },
+    { key: 'behaviour', label: 'Behaviour', icon: '📋', sub: behaviour.length === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative` },
+    { key: 'targets', label: 'Target Grades', icon: '🎯', sub: shownTargetCount === 0 ? 'No targets set' : `${plural(shownTargetCount, 'subject')} tracked` },
+    { key: 'results', label: 'Results', icon: '⭐', sub: results.length === 0 ? 'No results yet' : plural(results.length, 'result') },
+    { key: 'predictive', label: 'CAT4 / NGRT', icon: '🧠', sub: cat4.length + ngrt.length === 0 ? 'No data recorded' : plural(cat4.length + ngrt.length, 'sitting') },
+    { key: 'documents', label: 'Reports & Documents', icon: '📄', sub: 'Downloads' },
+  ].filter(Boolean);
+  // A hash for a section this user can't open (e.g. #medical) shows the tiles.
+  const activeView = tiles.some((t) => t.key === view) ? view : null;
+
+  return (
+    <div className="dashboard-red">
+      <div className="profile-hero no-print">
+        {student.photo_base64 ? (
+          <img className="profile-hero-photo" src={`data:image/jpeg;base64,${student.photo_base64}`} alt="" />
+        ) : (
+          <span className="profile-hero-photo">{student.first_name?.[0]}{student.last_name?.[0]}</span>
+        )}
+        <div>
+          <h1>{student.first_name} {student.last_name}</h1>
+          <div className="profile-hero-sub">
+            {[student.year_group && `Year ${student.year_group}`, student.form_class, student.status !== 'active' && student.status].filter(Boolean).join(' · ')}
+          </div>
+        </div>
+      </div>
+
+      {activeView === null ? (
+        <div className="dashboard-tiles">
+          {tiles.map((t) => (
+            <DashboardTile key={t.key} label={t.label} icon={t.icon} sub={t.sub} onClick={() => openView(t.key)} />
+          ))}
+        </div>
+      ) : (
+        <DashboardBack onClick={() => openView(null)}>Back to {student.first_name}&apos;s profile</DashboardBack>
+      )}
+
+      {activeView === 'documents' && (
+        <Section title="Reports &amp; Documents">
+          <TermTestScoresDownload studentId={student.student_id} />
+          <KeyStageTranscriptDownload studentId={student.student_id} />
+          <PublishedDocuments studentId={student.student_id} />
+        </Section>
+      )}
+
+      {activeView === 'core' && (
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2 style={{ margin: 0 }}>Core Data</h2>
@@ -894,13 +947,14 @@ function StudentDetail() {
         )}
         </div>
       </div>
+      )}
 
-      {canSeeMedical && (
+      {canSeeMedical && activeView === 'medical' && (
         <MedicalRecordCard studentId={student.student_id} canEdit={canEditMedical} />
       )}
 
-      {siblings.length > 0 && (
-        <Collapsible title="Siblings">
+      {activeView === 'siblings' && (
+        <Section title="Siblings">
           <div className="table-scroll">
             <table>
               <thead><tr><th>Name</th><th>Year</th><th>Form</th></tr></thead>
@@ -915,12 +969,12 @@ function StudentDetail() {
               </tbody>
             </table>
           </div>
-        </Collapsible>
+        </Section>
       )}
 
-      <Collapsible
+      {activeView === 'parents' && (
+      <Section
         title="Parents / Guardians"
-        forceOpen={editingParents}
         extra={canEditParents && !editingParents && (
           <button className="secondary" onClick={() => setEditingParents(true)}>Edit</button>
         )}
@@ -951,16 +1005,19 @@ function StudentDetail() {
             </table>
           </div>
         )}
-      </Collapsible>
+      </Section>
+      )}
 
-      <Collapsible
+      {activeView === 'timetable' && (
+      <Section
         title="Timetable"
         extra={<button className="secondary" onClick={() => window.print()}>Print</button>}
       >
         <div className="table-scroll">
           {renderTimetableGrid()}
         </div>
-      </Collapsible>
+      </Section>
+      )}
 
       <div className="timetable-print">
         <h2>{student.first_name} {student.last_name}</h2>
@@ -968,7 +1025,8 @@ function StudentDetail() {
         {renderTimetableGrid()}
       </div>
 
-      <Collapsible title="Curriculum Blocks" extra={blockSaveStatus && <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>{blockSaveStatus}</span>}>
+      {activeView === 'blocks' && (
+      <Section title="Curriculum Blocks" extra={blockSaveStatus && <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>{blockSaveStatus}</span>}>
         {blocks.length === 0 ? (
           <p>{blocksError ? `Error loading blocks: ${blocksError}` : `No curriculum blocks are set up for Year ${student.year_group} yet.`}</p>
         ) : (
@@ -1048,9 +1106,11 @@ function StudentDetail() {
             Remove them from /admin/block-allocation for that year if they no longer apply.
           </p>
         )}
-      </Collapsible>
+      </Section>
+      )}
 
-      <Collapsible title="Attendance">
+      {activeView === 'attendance' && (
+      <Section title="Attendance">
         {attendanceSummary.length === 0 && attendance.length === 0 ? <p>No attendance recorded.</p> : (
           <>
             <AttendanceScopeCards summary={attendanceSummary} />
@@ -1068,9 +1128,11 @@ function StudentDetail() {
               : <AttendanceRecentTable marks={attendance} periodName={periodName} />}
           </>
         )}
-      </Collapsible>
+      </Section>
+      )}
 
-      <Collapsible title="Behaviour">
+      {activeView === 'behaviour' && (
+      <Section title="Behaviour">
         {behaviour.length === 0 ? <p>No events logged.</p> : (
           <div className="table-scroll">
             <table>
@@ -1089,11 +1151,12 @@ function StudentDetail() {
             </table>
           </div>
         )}
-      </Collapsible>
+      </Section>
+      )}
 
-      <Collapsible
+      {activeView === 'targets' && (
+      <Section
         title="Target Grades"
-        forceOpen={editingTargets}
         extra={canEditAssessment && (editingTargets ? (
           <>
             <button onClick={saveTargets}>Save targets</button>{' '}
@@ -1166,9 +1229,11 @@ function StudentDetail() {
           </div>
           );
         })()}
-      </Collapsible>
+      </Section>
+      )}
 
-      <Collapsible title="Results">
+      {activeView === 'results' && (
+      <Section title="Results">
         {results.length === 0 ? <p>No results recorded.</p> : (
           <div className="table-scroll">
             <table>
@@ -1192,11 +1257,12 @@ function StudentDetail() {
             </table>
           </div>
         )}
-      </Collapsible>
+      </Section>
+      )}
 
-      <Collapsible
+      {activeView === 'predictive' && (
+      <Section
         title="Predictive Assessment Data (CAT4 / NGRT)"
-        forceOpen={editingScores}
         extra={canEditAssessment && (cat4.length > 0 || ngrt.length > 0) && (editingScores ? (
           <>
             <button onClick={saveScores}>Save scores</button>{' '}
@@ -1294,7 +1360,8 @@ function StudentDetail() {
             )}
           </>
         )}
-      </Collapsible>
+      </Section>
+      )}
     </div>
   );
 }

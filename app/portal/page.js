@@ -10,6 +10,7 @@ import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
 import { visibleTargets } from '../../lib/gradeCompare';
 import { formatTimeRange } from '../../lib/formatTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
+import { useHashView, DashboardTile, DashboardBack } from '../components/Dashboard';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -36,6 +37,8 @@ function PortalInner() {
   const [timetableLoading, setTimetableLoading] = useState(true);
   const [studentName, setStudentName] = useState('');
   const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(null); // null = enrolment not loaded yet
+  const [tuckshopBalance, setTuckshopBalance] = useState(null);
+  const [view, openView] = useHashView();
 
   async function load() {
     if (!studentId) return;
@@ -54,6 +57,8 @@ function PortalInner() {
     setBehaviour(b || []);
     const { data: ap } = await supabase.from('behaviour_appeals').select('*').eq('student_id', studentId);
     setAppeals(ap || []);
+    const { data: bal } = await supabase.rpc('get_tuckshop_balance', { p_student_id: studentId });
+    setTuckshopBalance(bal ?? null);
   }
 
   useEffect(() => {
@@ -177,14 +182,51 @@ function PortalInner() {
     );
   }
 
-  return (
-    <div>
-      <h1>My Grades & Behaviour</h1>
-      <p><a href="/inbox">📬 Inbox</a></p>
-      <TermTestScoresDownload studentId={studentId} />
-      <KeyStageTranscriptDownload studentId={studentId} />
-      <PublishedDocuments studentId={studentId} />
+  const shownTargetCount = visibleTargets(targets, results, enrolledSubjectIds).length;
+  const positiveCount = behaviour.filter((b) => b.type === 'positive').length;
+  const negativeCount = behaviour.filter((b) => b.type === 'negative').length;
+  const firstName = studentName.split(' ')[0];
 
+  // Sections that open on this page; the other tiles link to their own pages.
+  const VIEWS = ['timetable', 'assessment', 'behaviour'];
+  const activeView = VIEWS.includes(view) ? view : null;
+
+  return (
+    <div className="dashboard-red">
+      <div className="profile-hero no-print">
+        <span className="profile-hero-photo">{studentName.split(' ').map((w) => w[0]).join('').slice(0, 2)}</span>
+        <div>
+          <h1>{firstName ? `Hello, ${firstName}` : 'My Portal'}</h1>
+          <div className="profile-hero-sub">Your timetable, grades and behaviour</div>
+        </div>
+      </div>
+
+      {activeView === null ? (
+        <div className="dashboard-tiles">
+          <DashboardTile label="Timetable" icon="🗓️" sub="My week" onClick={() => openView('timetable')} />
+          <DashboardTile
+            label="The Other Half" icon="🎭" href="/portal/other-half"
+            sub={otherHalf.length === 0 ? 'Choose activities' : `${otherHalf.length} activit${otherHalf.length === 1 ? 'y' : 'ies'} chosen`}
+          />
+          <DashboardTile
+            label="Assessment" icon="⭐" onClick={() => openView('assessment')}
+            sub={shownTargetCount === 0 ? 'No targets set' : `${shownTargetCount} subject${shownTargetCount === 1 ? '' : 's'} tracked`}
+          />
+          <DashboardTile
+            label="Behaviour" icon="📋" onClick={() => openView('behaviour')}
+            sub={behaviour.length === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative`}
+          />
+          <DashboardTile
+            label="Tuckshop" icon="🛒" href="/portal/tuckshop"
+            sub={tuckshopBalance === null ? 'Balance & orders' : `₦${Number(tuckshopBalance).toLocaleString()} balance`}
+          />
+          <DashboardTile label="Messages" icon="📬" sub="View inbox" href="/inbox" />
+        </div>
+      ) : (
+        <DashboardBack onClick={() => openView(null)}>Back to my portal</DashboardBack>
+      )}
+
+      {activeView === 'timetable' && (
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2 style={{ margin: 0 }}>My Timetable</h2>
@@ -202,6 +244,7 @@ function PortalInner() {
           </div>
         )}
       </div>
+      )}
 
       {timetableClasses.length > 0 && (
         <div className="timetable-print">
@@ -210,8 +253,12 @@ function PortalInner() {
         </div>
       )}
 
+      {activeView === 'assessment' && (
       <div className="card">
         <h2>Results vs Target</h2>
+        <TermTestScoresDownload studentId={studentId} />
+        <KeyStageTranscriptDownload studentId={studentId} />
+        <PublishedDocuments studentId={studentId} />
         {visibleTargets(targets, results, enrolledSubjectIds).length === 0 ? <p>No target grades set yet.</p> : (
           <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} enrolledSubjectIds={enrolledSubjectIds} />
         )}
@@ -219,7 +266,9 @@ function PortalInner() {
           <a href="/results/subject-overview">View my subject overview (max &amp; average %) →</a>
         </p>
       </div>
+      )}
 
+      {activeView === 'behaviour' && (
       <div className="card">
         <h2>Behaviour</h2>
         {behaviour.length === 0 ? <p>No events logged.</p> : (
@@ -262,6 +311,7 @@ function PortalInner() {
         )}
         {status && <p>{status}</p>}
       </div>
+      )}
     </div>
   );
 }

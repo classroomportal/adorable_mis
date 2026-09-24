@@ -5,6 +5,9 @@
   --brand-600: #4a8fc4;
   --brand-100: #e3f0fa;
   --brand-050: #f2f7fc;
+  --red-900: #5c1414;
+  --red-800: #8a1c1c;
+  --red-700: #b3282d;
   --yellow-100: #fff6d6;
   --yellow-200: #fdecad;
   --slate-50: #f6f7f9;
@@ -252,11 +255,14 @@ input, select { width: 100%; }
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 0.3rem;
   cursor: pointer;
   border: none;
   text-align: left;
   font-family: inherit;
 }
+a.dashboard-tile { color: white; text-decoration: none; }
+.dashboard-tile:hover, .dashboard-tile:focus-visible { background: var(--brand-900); }
 .dashboard-tile-icon { font-size: 1.6rem; }
 .child-tile { align-items: center; text-align: center; gap: 0.4rem; }
 .child-tile-photo {
@@ -276,6 +282,49 @@ input, select { width: 100%; }
 .dashboard-tile-label { font-weight: 600; }
 .dashboard-tile-sub { font-size: 0.78rem; opacity: 0.85; }
 .dashboard-back { display: inline-block; margin-bottom: 0.75rem; cursor: pointer; }
+.dashboard-back-btn,
+.dashboard-back-btn:hover {
+  background: none;
+  color: var(--ink);
+  padding: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+.dashboard-back-btn:hover { text-decoration: underline; }
+
+/* Red variant — the student profile and the student portal. */
+.dashboard-red .dashboard-tile { background: var(--red-700); }
+.dashboard-red .dashboard-tile:hover,
+.dashboard-red .dashboard-tile:focus-visible { background: var(--red-900); }
+.dashboard-red .card h2 { color: var(--red-800); }
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--red-800);
+  color: white;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.profile-hero h1 { color: white; margin: 0; }
+.profile-hero-sub { opacity: 0.85; margin-top: 0.2rem; }
+.profile-hero-photo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--red-900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+@media (min-width: 900px) {
+  .dashboard-red .dashboard-tiles { grid-template-columns: repeat(3, 1fr); }
+}
 
 .core-data-fields p { margin: 0.3rem 0; }
 
