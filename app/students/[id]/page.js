@@ -12,6 +12,7 @@ import StudentParentsEditor from '../../components/StudentParentsEditor';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
 import { useHashView, DashboardTile, DashboardBack } from '../../components/Dashboard';
 import { classifyGrade, STYLE, LABEL, visibleTargets } from '../../../lib/gradeCompare';
+import { groupResultSets } from '../../../lib/resultSets';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday, schoolWeekdayShort } from '../../../lib/schoolTime';
 import { classGroupKey, groupClassesByKey } from '../../../lib/blockGroups';
@@ -78,6 +79,8 @@ function StudentDetail() {
   const [attendanceToday, setAttendanceToday] = useState([]); // today's marks, lesson by lesson
   const [attendanceSummary, setAttendanceSummary] = useState([]); // today / week / year, counted in the DB
   const [results, setResults] = useState([]);
+  const [resultSetEvents, setResultSetEvents] = useState([]); // calendar_events flagged is_result_set
+  const [resultSetKey, setResultSetKey] = useState(''); // '' = newest set
   const [targetMap, setTargetMap] = useState({}); // subject_id -> target grade
   const [targetList, setTargetList] = useState([]); // all target grades for this student, incl. subjects with no results yet
   const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(new Set()); // subject_ids this student is timetabled for
@@ -250,6 +253,8 @@ function StudentDetail() {
       .eq('student_id', id)
       .order('week_start_date', { ascending: false });
     setResults(r || []);
+    const { data: rse } = await supabase.from('calendar_events').select('event_id, event_name, event_date').eq('is_result_set', true);
+    setResultSetEvents(rse || []);
 
     const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name, display_name)').eq('student_id', id);
     setTargetList(tg || []);
@@ -687,7 +692,7 @@ function StudentDetail() {
     { key: 'attendance', label: 'Attendance', icon: '📊', sub: attendancePct === null ? 'No data yet' : `${attendancePct}% this year` },
     { key: 'behaviour', label: 'Behaviour', icon: '📋', sub: behaviour.length === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative` },
     { key: 'targets', label: 'Target Grades', icon: '🎯', sub: shownTargetCount === 0 ? 'No targets set' : `${plural(shownTargetCount, 'subject')} tracked` },
-    { key: 'results', label: 'Results', icon: '⭐', sub: results.length === 0 ? 'No results yet' : plural(results.length, 'result') },
+    { key: 'results', label: 'Results', icon: '⭐', sub: results.length === 0 ? 'No results yet' : plural(groupResultSets(results, resultSetEvents).length, 'result set') },
     { key: 'predictive', label: 'CAT4 / NGRT', icon: '🧠', sub: cat4.length + ngrt.length === 0 ? 'No data recorded' : plural(cat4.length + ngrt.length, 'sitting') },
     { key: 'documents', label: 'Reports & Documents', icon: '📄', sub: 'Downloads' },
   ].filter(Boolean);
@@ -766,18 +771,19 @@ function StudentDetail() {
             <div className="core-data-fields">
               <p><strong>Name:</strong> {student.first_name} {student.middle_name || ''} {student.last_name}</p>
               {student.preferred_name && <p><strong>Preferred name:</strong> {student.preferred_name}</p>}
-              <p><strong>DOB:</strong> {student.dob}</p>
+              <p><strong>DOB:</strong> {formatUKDate(student.dob)}</p>
               <p><strong>Year group:</strong> {student.year_group} &nbsp; <strong>Form:</strong> {student.form_class}</p>
-              <p><strong>Status:</strong> {student.status}{student.leaving_date ? ` (leaving date: ${student.leaving_date})` : ''}</p>
+              <p><strong>Status:</strong> {student.status}{student.leaving_date ? ` (leaving date: ${formatUKDate(student.leaving_date)})` : ''}</p>
 
               {fullView && (
                 <>
                   <p><strong>UPN:</strong> {student.upn || '—'}</p>
+                  <p><strong>Admission number:</strong> {student.admission_number || '—'}</p>
                   <p><strong>Legal first name:</strong> {student.legal_first_name || '—'}</p>
                   <p><strong>Legal last name:</strong> {student.legal_last_name || '—'}</p>
                   <p><strong>Student email:</strong> {student.student_email || '—'}</p>
-                  <p><strong>Admission date:</strong> {student.admission_date}</p>
-                  <p><strong>Admitted/letter date:</strong> {student.admitted_letter_date || '—'}</p>
+                  <p><strong>Admission date:</strong> {formatUKDate(student.admission_date) || '—'}</p>
+                  <p><strong>Admitted/letter date:</strong> {formatUKDate(student.admitted_letter_date) || '—'}</p>
                   <p><strong>Gender:</strong> {student.gender || '—'}</p>
                   <p><strong>Nationality:</strong> {student.nationality || '—'}</p>
                   <p><strong>State of origin:</strong> {student.state_of_origin || '—'}</p>
@@ -1140,7 +1146,7 @@ function StudentDetail() {
               <tbody>
                 {behaviour.map((b) => (
                   <tr key={b.event_id}>
-                    <td>{b.event_date}</td>
+                    <td>{formatUKDate(b.event_date)}</td>
                     <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
                     <td>{b.category}</td>
                     <td>{b.points}</td>
@@ -1232,20 +1238,31 @@ function StudentDetail() {
       </Section>
       )}
 
-      {activeView === 'results' && (
-      <Section title="Results">
+      {activeView === 'results' && (() => {
+        const resultSets = groupResultSets(results, resultSetEvents);
+        const shownSet = resultSets.find((rs) => rs.key === resultSetKey) || resultSets[0];
+        const label = (r) => r.subjects?.display_name || r.subjects?.subject_name || '';
+        const shown = shownSet ? [...shownSet.results].sort((a, b) => label(a).localeCompare(label(b))) : [];
+        return (
+      <Section
+        title="Results"
+        extra={resultSets.length > 0 && (
+          <select aria-label="Result set" value={shownSet.key} onChange={(e) => setResultSetKey(e.target.value)}>
+            {resultSets.map((rs) => <option key={rs.key} value={rs.key}>{rs.label}</option>)}
+          </select>
+        )}
+      >
         {results.length === 0 ? <p>No results recorded.</p> : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Week</th><th>Subject</th><th>Score</th><th>Grade</th><th>Target</th><th>vs Target</th></tr></thead>
+              <thead><tr><th>Subject</th><th>Score</th><th>Grade</th><th>Target</th><th>vs Target</th></tr></thead>
               <tbody>
-                {results.map((r) => {
+                {shown.map((r) => {
                   const target = targetMap[r.subject_id];
                   const cmp = classifyGrade(target, r.grade, gradePoints);
                   return (
                     <tr key={r.result_id}>
-                      <td>{r.week_start_date}</td>
-                      <td>{r.subjects?.display_name || r.subjects?.subject_name}</td>
+                      <td>{label(r)}</td>
                       <td>{r.score ?? '—'}{r.max_score ? ` / ${r.max_score}` : ''}</td>
                       <td>{r.grade ?? '—'}</td>
                       <td>{target ?? '—'}</td>
@@ -1258,7 +1275,8 @@ function StudentDetail() {
           </div>
         )}
       </Section>
-      )}
+        );
+      })()}
 
       {activeView === 'predictive' && (
       <Section
@@ -1311,7 +1329,7 @@ function StudentDetail() {
                         </tr>
                       )) : cat4.map((c) => (
                         <tr key={c.cat4_id}>
-                          <td>{c.test_date ?? '—'}</td><td>{c.level ?? '—'}</td><td>{c.mean_sas}</td>
+                          <td>{formatUKDate(c.test_date) || '—'}</td><td>{c.level ?? '—'}</td><td>{c.mean_sas}</td>
                           <td>{c.verbal_sas}</td><td>{c.non_verbal_sas}</td><td>{c.quantitative_sas}</td><td>{c.spatial_sas}</td>
                           <td>{c.profile ?? '—'}</td>
                         </tr>
@@ -1349,7 +1367,7 @@ function StudentDetail() {
                         </tr>
                       )) : ngrt.map((n) => (
                         <tr key={n.ngrt_id}>
-                          <td>{n.test_date ?? '—'}</td><td>{n.form}</td><td>{n.sas}</td>
+                          <td>{formatUKDate(n.test_date) || '—'}</td><td>{n.form}</td><td>{n.sas}</td>
                           <td>{n.pc_stanine}</td><td>{n.sc_stanine}</td><td>{n.overall_stanine}</td><td>{n.reading_age}</td>
                         </tr>
                       ))}
