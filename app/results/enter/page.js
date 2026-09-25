@@ -13,8 +13,17 @@ const RESULT_TYPES = [
 ];
 
 function EnterResultsInner() {
-  const { profile } = useAuth();
+  const { profile, staffRoles } = useAuth();
   const staffId = profile?.staff_id;
+  // Admins and assessment staff may enter results for any class, not just
+  // their own — the `results` write policies already allow it for exactly
+  // these roles (is_assessment_manager() and has_staff_role('assessment_user')).
+  // Everyone else is limited to classes they teach, matching
+  // teaches_student_for_subject() (migration 129).
+  const canEnterAnyClass =
+    profile?.role === 'admin' ||
+    (staffRoles || []).includes('assessment_manager') ||
+    (staffRoles || []).includes('assessment_user');
 
   const [classes, setClasses] = useState([]);
   const [classId, setClassId] = useState('');
@@ -30,15 +39,16 @@ function EnterResultsInner() {
 
   const selectedClass = classes.find((c) => String(c.class_id) === String(classId));
 
-  // Load this teacher's own classes + the list of selectable result sets, once.
+  // Load the selectable classes (own classes, or every class for admins and
+  // assessment staff) + the list of selectable result sets, once.
   useEffect(() => {
-    if (!staffId) return;
-    supabase
+    if (!staffId && !canEnterAnyClass) return;
+    let classQuery = supabase
       .from('classes')
-      .select('class_id, class_code, subject_id, year_group, subjects(subject_name)')
-      .eq('staff_id', staffId)
-      .order('class_code')
-      .then(({ data }) => setClasses(data || []));
+      .select('class_id, class_code, subject_id, year_group, staff_id, subjects(subject_name), staff(first_name, last_name)')
+      .order('class_code');
+    if (!canEnterAnyClass) classQuery = classQuery.eq('staff_id', staffId);
+    classQuery.then(({ data }) => setClasses(data || []));
 
     supabase
       .from('calendar_events')
@@ -46,7 +56,7 @@ function EnterResultsInner() {
       .eq('is_result_set', true)
       .order('event_date', { ascending: false })
       .then(({ data }) => setResultSets(data || []));
-  }, [staffId]);
+  }, [staffId, canEnterAnyClass]);
 
   const loadRosterAndExisting = useCallback(async () => {
     if (!classId || !resultSetEventId || !selectedClass) {
@@ -156,21 +166,41 @@ function EnterResultsInner() {
 
   const selectedResultSet = resultSets.find((r) => String(r.event_id) === String(resultSetEventId));
 
+  const ownClasses = classes.filter((c) => staffId && c.staff_id === staffId);
+  const otherClasses = classes.filter((c) => !(staffId && c.staff_id === staffId));
+  const classOption = (c, showTeacher) => (
+    <option key={c.class_id} value={c.class_id}>
+      {c.class_code} — {c.subjects?.subject_name}
+      {showTeacher && (c.staff ? ` (${c.staff.first_name} ${c.staff.last_name})` : ' (no teacher assigned)')}
+    </option>
+  );
+
   return (
     <div>
       <h1>Enter Results</h1>
-      <p>Pick one of your classes and a result set, then enter a percentage for each student — the grade is calculated automatically.</p>
+      <p>
+        {canEnterAnyClass
+          ? 'Pick any class and a result set, then enter a percentage for each student — the grade is calculated automatically.'
+          : 'Pick one of your classes and a result set, then enter a percentage for each student — the grade is calculated automatically.'}
+      </p>
 
       <div className="card">
         <label>
           Class
           <select value={classId} onChange={(e) => setClassId(e.target.value)}>
             <option value="">Select a class...</option>
-            {classes.map((c) => (
-              <option key={c.class_id} value={c.class_id}>
-                {c.class_code} — {c.subjects?.subject_name}
-              </option>
-            ))}
+            {canEnterAnyClass ? (
+              <>
+                {ownClasses.length > 0 && (
+                  <optgroup label="My classes">{ownClasses.map((c) => classOption(c, false))}</optgroup>
+                )}
+                <optgroup label={ownClasses.length > 0 ? 'Other classes' : 'All classes'}>
+                  {otherClasses.map((c) => classOption(c, true))}
+                </optgroup>
+              </>
+            ) : (
+              classes.map((c) => classOption(c, false))
+            )}
           </select>
         </label>
 
@@ -196,7 +226,7 @@ function EnterResultsInner() {
         </label>
       </div>
 
-      {classes.length === 0 && (
+      {classes.length === 0 && !canEnterAnyClass && (
         <p style={{ color: '#666' }}>No classes are assigned to you as the teacher on record — nothing to select yet.</p>
       )}
 
