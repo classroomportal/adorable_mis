@@ -17,6 +17,14 @@ import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 // Required secret (Dashboard > Edge Functions > Secrets, or
 // `supabase secrets set`): GMAIL_APP_PASSWORD
 // Optional secret: GMAIL_SENDER (defaults to mis@abc.sch.ng if unset)
+//
+// Sends to any address, parents' included. A version deployed straight to
+// Supabase (never committed) silently dropped every non-@abc.sch.ng
+// recipient and still answered ok:true, so the 25 Sep 2026 parent welcome
+// batch was recorded as sent while nothing reached a parent. The principal
+// asked for parent email to be allowed again. If a recipient restriction is
+// ever wanted, make it fail loudly (a non-2xx status) rather than
+// returning ok, or callers will record a send that never happened.
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
