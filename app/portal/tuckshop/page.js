@@ -11,6 +11,9 @@ function naira(n) {
 // Most of any one item a student can order for a Saturday, across all their
 // orders for it. Enforced in submit_tuckshop_preorder() (migration 171).
 const MAX_PER_ITEM = 2;
+// Most snacks and drinks (tuckshop_items.is_food) in total for a Saturday,
+// across all their orders. Enforced there too (migration 180).
+const MAX_FOOD = 2;
 
 function longDate(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
@@ -62,7 +65,7 @@ function TuckshopInner() {
       .order('purchase_date', { ascending: false })
       .limit(10);
     setTuckshopHistory(hist || []);
-    const { data: items } = await supabase.from('tuckshop_items').select('id, name, price').eq('active', true).order('name');
+    const { data: items } = await supabase.from('tuckshop_items').select('id, name, price, is_food').eq('active', true).order('name');
     setTuckshopItems(items || []);
     // system_settings is a single row, readable by any authenticated user.
     // Ordering is shut while today is before tuckshop_ordering_closed_until;
@@ -104,6 +107,18 @@ function TuckshopInner() {
   }
 
   useEffect(() => { load(); }, [studentId]);
+
+  const foodIds = new Set(tuckshopItems.filter((i) => i.is_food).map((i) => i.id));
+  const foodOrdered = Object.entries(alreadyOrdered)
+    .filter(([id]) => foodIds.has(Number(id)))
+    .reduce((n, [, q]) => n + q, 0);
+  // Food already in the basket, not counting this item (its own choice is
+  // what the dropdown is setting).
+  function foodInCart(exceptId) {
+    return Object.entries(preorderCart)
+      .filter(([id]) => Number(id) !== exceptId && foodIds.has(Number(id)))
+      .reduce((n, [, q]) => n + q, 0);
+  }
 
   function setPreorderQty(itemId, qty) {
     setPreorderCart((prev) => {
@@ -159,7 +174,8 @@ function TuckshopInner() {
           <p style={{ color: '#555' }}>
             Orders close at 11pm on {longDate(dayBefore(orderDate))}.
             After that they&apos;re locked and go to the tuckshop.
-            You can order up to {MAX_PER_ITEM} of each item for the Saturday.
+            You can order up to {MAX_PER_ITEM} of each item, and no more than {MAX_FOOD} snacks
+            and drinks in total, for the Saturday.
           </p>
         )}
         <div className="table-scroll">
@@ -167,14 +183,17 @@ function TuckshopInner() {
             <thead><tr><th>Item</th><th>Price</th><th>Qty</th></tr></thead>
             <tbody>
               {tuckshopItems.map((item) => {
-                const left = Math.max(0, MAX_PER_ITEM - (alreadyOrdered[item.id] || 0));
+                let left = Math.max(0, MAX_PER_ITEM - (alreadyOrdered[item.id] || 0));
+                if (item.is_food) left = Math.min(left, Math.max(0, MAX_FOOD - foodOrdered - foodInCart(item.id)));
                 return (
                   <tr key={item.id}>
                     <td>{item.name}</td>
                     <td>{naira(item.price)}</td>
                     <td>
                       {left === 0 ? (
-                        <span style={{ color: '#555' }}>{MAX_PER_ITEM} ordered</span>
+                        <span style={{ color: '#555' }}>
+                          {(alreadyOrdered[item.id] || 0) >= MAX_PER_ITEM ? `${MAX_PER_ITEM} ordered` : 'Food limit reached'}
+                        </span>
                       ) : (
                         <select
                           value={preorderCart[item.id] || 0}
