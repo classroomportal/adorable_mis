@@ -538,12 +538,17 @@ function ImportClassesInner() {
     }
   }
 
+  // Applied rows come off the list and the confirmation sits where the list
+  // was. It used to leave the list untouched and put "Done" at the foot of a
+  // long page, out of view, so a successful apply looked like the button had
+  // done nothing — and clicking it again re-applied every row.
   async function applyUpdatesOnly() {
     if (!preview?.updates?.length) return;
     setBusy(true);
     setError(null);
+    setResult(null);
+    const done = new Set();
     try {
-      let count = 0;
       for (const u of preview.updates) {
         const { error: upErr } = await supabase
           .from("classes")
@@ -555,12 +560,13 @@ function ImportClassesInner() {
           })
           .eq("class_id", u.class_id);
         if (upErr) throw upErr;
-        count++;
+        done.add(u.class_id);
       }
-      setResult({ updated: count });
     } catch (err) {
       setError(err.message || String(err));
     } finally {
+      setResult({ updated: done.size });
+      setPreview((prev) => ({ ...prev, updates: prev.updates.filter((u) => !done.has(u.class_id)) }));
       setBusy(false);
     }
   }
@@ -941,9 +947,15 @@ function ImportClassesInner() {
                 disabled={busy}
                 style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}
               >
-                Apply {preview.updates.length} update(s)
+                {busy ? "Applying…" : `Apply ${preview.updates.length} update(s)`}
               </button>
             </details>
+          )}
+          {result && (
+            <p style={{ marginTop: "1rem", color: "green", fontWeight: "bold" }}>
+              ✓ Updated {result.updated} class(es) — teacher, room and subject changes are saved.
+              {preview.updates.length > 0 && " The ones still listed above were not saved (see the error at the top)."}
+            </p>
           )}
 
 
@@ -1323,11 +1335,6 @@ function ImportClassesInner() {
         </div>
       )}
 
-      {result && (
-        <div style={{ marginTop: "1rem", color: "green" }}>
-          Done — updated {result.updated} class(es).
-        </div>
-      )}
     </div>
   );
 }
