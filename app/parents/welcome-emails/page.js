@@ -9,6 +9,14 @@ import { useAuth } from '../../../lib/AuthContext';
 // send_parent_welcome_batch() (migration 172). The database works out each
 // parent's date-of-birth password and records every send, so this page never
 // handles a password and can't email the same parent twice.
+//
+// "Sent" here means queued: since migration 177 every email goes through
+// email_outbox, which a pg_cron job sends a few at a time (Gmail refuses a
+// burst) and marks delivered or failed from Gmail's actual reply. The
+// Delivery card reads that table, so it shows what really went out.
+
+const WELCOME_SUBJECT = 'Introducing Formwork: your new parent account (separate from SIMS)';
+const DELIVERY_STATES = ['queued', 'sending', 'sent', 'failed'];
 
 const STATUS_LABELS = {
   ready: 'Not sent yet',
@@ -54,6 +62,23 @@ function WelcomeEmailsInner() {
   const [selected, setSelected] = useState(new Set());
   const [sending, setSending] = useState(false);
   const [results, setResults] = useState(null);
+  const [delivery, setDelivery] = useState(null); // { queued, sending, sent, failed, failures: [] }
+
+  // Counted with head requests rather than fetching rows: a full run is over
+  // a thousand letters, past PostgREST's default page size.
+  async function loadDelivery() {
+    const counts = await Promise.all(DELIVERY_STATES.map((st) => supabase.from('email_outbox')
+      .select('email_id', { count: 'exact', head: true })
+      .eq('subject', WELCOME_SUBJECT).eq('status', st)));
+    const { data: failures } = await supabase.from('email_outbox')
+      .select('email_id, recipient, last_error')
+      .eq('subject', WELCOME_SUBJECT).eq('status', 'failed')
+      .order('email_id', { ascending: false }).limit(50);
+    setDelivery({
+      ...Object.fromEntries(DELIVERY_STATES.map((st, i) => [st, counts[i].count ?? 0])),
+      failures: failures || [],
+    });
+  }
 
   async function load() {
     setLoading(true);
@@ -67,7 +92,15 @@ function WelcomeEmailsInner() {
     setLoading(false);
   }
 
-  useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
+  useEffect(() => { if (isAdmin) { load(); loadDelivery(); } }, [isAdmin]);
+
+  // Refresh while letters are still going out.
+  const inFlight = delivery ? delivery.queued + delivery.sending : 0;
+  useEffect(() => {
+    if (!isAdmin || inFlight === 0) return undefined;
+    const t = setInterval(loadDelivery, 15000);
+    return () => clearInterval(t);
+  }, [isAdmin, inFlight]);
 
   const allYears = useMemo(() => {
     const ys = new Set();
@@ -139,7 +172,7 @@ function WelcomeEmailsInner() {
       return;
     }
     setResults({ rows: data || [] });
-    await load();
+    await Promise.all([load(), loadDelivery()]);
     setSelected(new Set());
   }
 
@@ -303,7 +336,7 @@ function WelcomeEmailsInner() {
             <p style={{ color: '#b91c1c', margin: 0 }}>Nothing was sent: {results.error}</p>
           ) : (
             <>
-              <p style={{ marginTop: 0, fontWeight: 600 }}>Sent to {sentCount} parent{sentCount === 1 ? '' : 's'}.</p>
+              <p style={{ marginTop: 0, fontWeight: 600 }}>Queued for {sentCount} parent{sentCount === 1 ? '' : 's'}. Letters go out about 12 a minute; see Delivery below.</p>
               {notSent.length > 0 && (
                 <>
                   <p>Not sent ({notSent.length}):</p>
@@ -316,6 +349,22 @@ function WelcomeEmailsInner() {
                 </>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {delivery && delivery.queued + delivery.sending + delivery.sent + delivery.failed > 0 && (
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>Delivery</h2>
+          <p style={{ margin: 0 }}>
+            <strong>{delivery.sent}</strong> delivered to Gmail
+            {inFlight > 0 && <> · <strong>{inFlight}</strong> still going out (refreshes every 15 seconds)</>}
+            {delivery.failed > 0 && <> · <strong style={{ color: '#b91c1c' }}>{delivery.failed}</strong> failed after 6 tries</>}
+          </p>
+          {delivery.failures.length > 0 && (
+            <ul style={{ marginBottom: 0 }}>
+              {delivery.failures.map((f) => <li key={f.email_id}>{f.recipient}: {f.last_error}</li>)}
+            </ul>
           )}
         </div>
       )}
