@@ -19,6 +19,7 @@ function MissingGradesInner() {
   const [error, setError] = useState(null);
   const [showComplete, setShowComplete] = useState(false);
   const [subject, setSubject] = useState(''); // '' = all subjects
+  const [year, setYear] = useState(''); // '' = all years
   const [open, setOpen] = useState({}); // class_id -> names expanded
 
   useEffect(() => {
@@ -48,11 +49,18 @@ function MissingGradesInner() {
     });
   }, [eventId]);
 
-  // Subjects offered by the chosen result set. A subject picked for an
-  // earlier set that this one doesn't have falls back to all subjects.
+  // Subjects and years offered by the chosen result set. One picked for an
+  // earlier set that this one doesn't have falls back to "all".
   const subjects = [...new Set(rows.map((r) => r.subject_name))].sort((a, b) => a.localeCompare(b));
+  const years = [...new Set(rows.map((r) => r.year_group))].sort((a, b) => a - b);
   const activeSubject = subjects.includes(subject) ? subject : '';
-  const filtered = activeSubject ? rows.filter((r) => r.subject_name === activeSubject) : rows;
+  const activeYear = years.includes(Number(year)) ? Number(year) : '';
+  const filtered = rows.filter((r) =>
+    (!activeSubject || r.subject_name === activeSubject) && (!activeYear || r.year_group === activeYear)
+  );
+  // e.g. "Year 10 English " — slots into "of 3 … classes" in the summary.
+  const scope = [activeYear && `Year ${activeYear}`, activeSubject].filter(Boolean).join(' ');
+  const scopeLabel = scope ? `${scope} ` : '';
 
   const sorted = [...filtered].sort((a, b) =>
     (b.expected - b.entered) - (a.expected - a.entered)
@@ -91,6 +99,15 @@ function MissingGradesInner() {
             ))}
           </select>
         </label>
+        <label>
+          Year
+          <select value={activeYear} onChange={(e) => setYear(e.target.value)} disabled={years.length === 0}>
+            <option value="">All years</option>
+            {years.map((y) => (
+              <option key={y} value={y}>Year {y}</option>
+            ))}
+          </select>
+        </label>
         <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', gap: '0.4rem', alignItems: 'center', fontSize: '0.9rem', marginTop: '0.5rem' }}>
           <input type="checkbox" checked={showComplete} onChange={(e) => setShowComplete(e.target.checked)} style={{ width: 'auto', margin: 0 }} />
           Also show complete classes
@@ -106,9 +123,11 @@ function MissingGradesInner() {
         ) : (
           <>
             <p>
-              {incomplete.length === 0
-                ? `All ${filtered.length} ${activeSubject ? `${activeSubject} ` : ''}classes assessed in this result set are complete.`
-                : <><strong>{totalMissing}</strong> missing {totalMissing === 1 ? 'mark' : 'marks'} across <strong>{incomplete.length}</strong> of {filtered.length} {activeSubject ? `${activeSubject} ` : ''}classes{notStarted > 0 && <> — {notStarted} {notStarted === 1 ? 'class has' : 'classes have'} none entered at all</>}.</>}
+              {filtered.length === 0
+                ? `No ${scopeLabel}classes were assessed in this result set.`
+                : incomplete.length === 0
+                ? `All ${filtered.length} ${scopeLabel}classes assessed in this result set are complete.`
+                : <><strong>{totalMissing}</strong> missing {totalMissing === 1 ? 'mark' : 'marks'} across <strong>{incomplete.length}</strong> of {filtered.length} {scopeLabel}classes{notStarted > 0 && <> — {notStarted} {notStarted === 1 ? 'class has' : 'classes have'} none entered at all</>}.</>}
             </p>
             {shown.length > 0 && (
               <div className="table-scroll"><table>
