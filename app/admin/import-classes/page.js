@@ -94,9 +94,24 @@ function isOtherHalfGroup(subcode, groupFull) {
   return OTHER_HALF_SUBJECT_CODES.has(subjectCodeFromSub(subcode).toLowerCase()) || OTHER_HALF_SUBJECT_CODES.has(suffix);
 }
 
+// Every real timetable row names its group twice: the subcode's part after
+// the slash is the group's part after the slash ("B/Hi1" with "10B/Hi1",
+// "A/Pr1" with "7a/Pr1"). That holds for every row of every TBTR file.
+// Other Nova-T exports that get uploaded alongside them don't — NOVACURR.txt
+// lists each block's groups on one comma-separated line, so
+// "10B/Pe1,10B/Fd1,10B/Gr1,10B/Fm1,10B/Hi1,..." read as a row made 10B/Hi1 a
+// PE class with a "teacher" of 10B/Gr1, and the preview offered to change
+// History to PE. Lines that fail this are ignored and listed, never imported.
+function isTimetableRow(subcode, groupFull) {
+  const subSuffix = subcode.split("/")[1];
+  const groupSuffix = groupFull.split("/")[1];
+  return !!subSuffix && subSuffix.toLowerCase() === (groupSuffix || "").toLowerCase();
+}
+
 async function parseFiles(files) {
   const rowsByClass = new Map(); // class_code -> {staffCodes: [], rooms: [], subcode}
   const skippedOtherHalf = new Set();
+  const ignoredLines = new Map(); // file name -> count of non-timetable lines
 
   for (const file of files) {
     const text = await file.text();
@@ -106,6 +121,10 @@ async function parseFiles(files) {
       if (cols.length < 5) continue;
       const [subcode, slotStr, staffCode, room, groupFull] = cols;
       if (!groupFull) continue;
+      if (!isTimetableRow(subcode, groupFull)) {
+        ignoredLines.set(file.name, (ignoredLines.get(file.name) || 0) + 1);
+        continue;
+      }
       if (isOtherHalfGroup(subcode, groupFull)) { skippedOtherHalf.add(groupFull); continue; }
       if (!rowsByClass.has(groupFull)) {
         rowsByClass.set(groupFull, { staffCodes: [], rooms: [], subcode, slots: new Map(), badSlots: [] });
@@ -131,7 +150,11 @@ async function parseFiles(files) {
       badSlots: entry.badSlots,
     });
   }
-  return { classes, skippedOtherHalf: [...skippedOtherHalf].sort() };
+  return {
+    classes,
+    skippedOtherHalf: [...skippedOtherHalf].sort(),
+    ignoredLines: [...ignoredLines].map(([file, count]) => ({ file, count })),
+  };
 }
 
 // --- Component -----------------------------------------------------------
@@ -204,7 +227,7 @@ function ImportClassesInner() {
 
     setBusy(true);
     try {
-      const { classes: parsedClasses, skippedOtherHalf } = await parseFiles(files);
+      const { classes: parsedClasses, skippedOtherHalf, ignoredLines } = await parseFiles(files);
 
       const [
         { data: existingClasses, error: cErr },
@@ -492,6 +515,7 @@ function ImportClassesInner() {
       setPreview({
         totalParsed: parsedClasses.length,
         skippedOtherHalf,
+        ignoredLines,
         updates: updatesWithStudentCounts,
         unchangedCount: unchanged.length,
         newClasses,
@@ -514,12 +538,17 @@ function ImportClassesInner() {
     }
   }
 
+  // Applied rows come off the list and the confirmation sits where the list
+  // was. It used to leave the list untouched and put "Done" at the foot of a
+  // long page, out of view, so a successful apply looked like the button had
+  // done nothing — and clicking it again re-applied every row.
   async function applyUpdatesOnly() {
     if (!preview?.updates?.length) return;
     setBusy(true);
     setError(null);
+    setResult(null);
+    const done = new Set();
     try {
-      let count = 0;
       for (const u of preview.updates) {
         const { error: upErr } = await supabase
           .from("classes")
@@ -531,12 +560,13 @@ function ImportClassesInner() {
           })
           .eq("class_id", u.class_id);
         if (upErr) throw upErr;
-        count++;
+        done.add(u.class_id);
       }
-      setResult({ updated: count });
     } catch (err) {
       setError(err.message || String(err));
     } finally {
+      setResult({ updated: done.size });
+      setPreview((prev) => ({ ...prev, updates: prev.updates.filter((u) => !done.has(u.class_id)) }));
       setBusy(false);
     }
   }
@@ -853,6 +883,12 @@ function ImportClassesInner() {
                 the Other Half is managed at <a href="/other-half/activities">Activity Programme</a>, not Nova-T.
               </li>
             )}
+            {preview.ignoredLines.length > 0 && (
+              <li>
+                Ignored {preview.ignoredLines.map((f) => `${f.count} line${f.count === 1 ? "" : "s"} in ${f.file}`).join(", ")} —
+                not timetable rows (only the TBTR*.DAT files are read; other Nova-T exports such as NOVACURR.txt can be left out).
+              </li>
+            )}
             <li>Unchanged (matches DB already): {preview.unchangedCount}</li>
             <li>Existing classes with changes: {preview.updates.length}</li>
             <li>Class codes not found in DB: {preview.newClasses.length}</li>
@@ -911,9 +947,15 @@ function ImportClassesInner() {
                 disabled={busy}
                 style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}
               >
-                Apply {preview.updates.length} update(s)
+                {busy ? "Applying…" : `Apply ${preview.updates.length} update(s)`}
               </button>
             </details>
+          )}
+          {result && (
+            <p style={{ marginTop: "1rem", color: "green", fontWeight: "bold" }}>
+              ✓ Updated {result.updated} class(es) — teacher, room and subject changes are saved.
+              {preview.updates.length > 0 && " The ones still listed above were not saved (see the error at the top)."}
+            </p>
           )}
 
 
@@ -1293,11 +1335,6 @@ function ImportClassesInner() {
         </div>
       )}
 
-      {result && (
-        <div style={{ marginTop: "1rem", color: "green" }}>
-          Done — updated {result.updated} class(es).
-        </div>
-      )}
     </div>
   );
 }
