@@ -108,11 +108,13 @@ const TABS = [
       { href: '/attendance', label: 'Attendance' },
       { href: '/results', label: 'Results' },
       { href: '/results/enter', label: 'Enter Results' },
+      // Shares the /results grant rather than having a resource of its own.
+      { href: '/results/missing', label: 'Missing Grades', resource: '/results' },
       { href: '/results/subject-overview', label: 'Subject Overview' },
       { href: '/certificates', label: 'Certificates' },
       { href: '/detention', label: 'Detention List' },
       { href: '/appeals', label: 'Behaviour Appeals' },
-    ].filter((it) => hasAccess(it.href)),
+    ].filter((it) => hasAccess(it.resource || it.href)),
   },
   {
     key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students',
