@@ -18,6 +18,7 @@ function MissingGradesInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showComplete, setShowComplete] = useState(false);
+  const [subject, setSubject] = useState(''); // '' = all subjects
   const [open, setOpen] = useState({}); // class_id -> names expanded
 
   useEffect(() => {
@@ -47,7 +48,13 @@ function MissingGradesInner() {
     });
   }, [eventId]);
 
-  const sorted = [...rows].sort((a, b) =>
+  // Subjects offered by the chosen result set. A subject picked for an
+  // earlier set that this one doesn't have falls back to all subjects.
+  const subjects = [...new Set(rows.map((r) => r.subject_name))].sort((a, b) => a.localeCompare(b));
+  const activeSubject = subjects.includes(subject) ? subject : '';
+  const filtered = activeSubject ? rows.filter((r) => r.subject_name === activeSubject) : rows;
+
+  const sorted = [...filtered].sort((a, b) =>
     (b.expected - b.entered) - (a.expected - a.entered)
     || a.year_group - b.year_group
     || (a.class_code || '').localeCompare(b.class_code || '')
@@ -75,6 +82,15 @@ function MissingGradesInner() {
             ))}
           </select>
         </label>
+        <label>
+          Subject
+          <select value={activeSubject} onChange={(e) => setSubject(e.target.value)} disabled={subjects.length === 0}>
+            <option value="">All subjects</option>
+            {subjects.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </label>
         <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', gap: '0.4rem', alignItems: 'center', fontSize: '0.9rem', marginTop: '0.5rem' }}>
           <input type="checkbox" checked={showComplete} onChange={(e) => setShowComplete(e.target.checked)} style={{ width: 'auto', margin: 0 }} />
           Also show complete classes
@@ -91,8 +107,8 @@ function MissingGradesInner() {
           <>
             <p>
               {incomplete.length === 0
-                ? `All ${rows.length} classes assessed in this result set are complete.`
-                : <><strong>{totalMissing}</strong> missing {totalMissing === 1 ? 'mark' : 'marks'} across <strong>{incomplete.length}</strong> of {rows.length} classes{notStarted > 0 && <> — {notStarted} {notStarted === 1 ? 'class has' : 'classes have'} none entered at all</>}.</>}
+                ? `All ${filtered.length} ${activeSubject ? `${activeSubject} ` : ''}classes assessed in this result set are complete.`
+                : <><strong>{totalMissing}</strong> missing {totalMissing === 1 ? 'mark' : 'marks'} across <strong>{incomplete.length}</strong> of {filtered.length} {activeSubject ? `${activeSubject} ` : ''}classes{notStarted > 0 && <> — {notStarted} {notStarted === 1 ? 'class has' : 'classes have'} none entered at all</>}.</>}
             </p>
             {shown.length > 0 && (
               <div className="table-scroll"><table>
