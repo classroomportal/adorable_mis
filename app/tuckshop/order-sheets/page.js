@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { generateOrderSheetsPdf } from '../../../lib/generateOrderSheetsPdf';
 
 // Printable tuckshop order sheets: one page per restaurant listing each
 // student's order, with the total of each item, plus a whole-school
@@ -78,6 +79,7 @@ function OrderSheetsInner() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => { loadDates(); }, []);
   useEffect(() => { if (forDate) loadSheet(forDate); }, [forDate]);
@@ -185,6 +187,20 @@ function OrderSheetsInner() {
               ))}
             </select>
           </label>
+          <button
+            onClick={async () => {
+              setDownloading(true);
+              try {
+                await generateOrderSheetsPdf({ forDate, locked, restaurants, allTotals, studentCount });
+              } catch (e) {
+                setError(`Couldn't make the PDF: ${e.message}`);
+              }
+              setDownloading(false);
+            }}
+            disabled={loading || downloading || rows.length === 0}
+          >
+            {downloading ? 'Making PDF…' : 'Download PDF'}
+          </button>
           <button onClick={() => window.print()} disabled={loading || rows.length === 0}>Print</button>
         </div>
         {forDate && !locked && (
