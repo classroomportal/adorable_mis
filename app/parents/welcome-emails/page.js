@@ -30,6 +30,7 @@ const STATUS_LABELS = {
 const SHOW_OPTIONS = [
   { value: 'ready', label: 'Not sent yet' },
   { value: 'sent', label: 'Already sent' },
+  { value: 'signed_in', label: 'Signed in' },
   { value: 'blocked', label: "Can't be sent" },
   { value: 'all', label: 'Everyone' },
 ];
@@ -116,8 +117,9 @@ function WelcomeEmailsInner() {
   );
 
   const counts = useMemo(() => {
-    const out = { ready: 0, sent: 0, blocked: 0 };
+    const out = { ready: 0, sent: 0, blocked: 0, signedIn: 0 };
     inYears.forEach((c) => {
+      if (c.last_sign_in_at) out.signedIn += 1;
       if (c.status === 'ready') out.ready += 1;
       else if (c.status === 'sent') out.sent += 1;
       else out.blocked += 1;
@@ -125,11 +127,17 @@ function WelcomeEmailsInner() {
     return out;
   }, [inYears]);
 
-  const shown = inYears.filter((c) => {
+  // "Signed in" isn't one of the statuses (a parent sent the letter stays
+  // "sent" after signing in), so it filters on last_sign_in_at instead, most
+  // recent first.
+  const shown = show === 'signed_in'
+    ? inYears.filter((c) => c.last_sign_in_at).sort((a, b) => b.last_sign_in_at.localeCompare(a.last_sign_in_at))
+    : inYears.filter((c) => {
     if (show === 'all') return true;
     if (show === 'blocked') return c.status !== 'ready' && c.status !== 'sent';
     return c.status === show;
   });
+  const totalSignedIn = candidates.filter((c) => c.last_sign_in_at).length;
 
   const chosen = inYears.filter((c) => c.status === 'ready' && selected.has(c.parent_id));
 
@@ -248,6 +256,12 @@ function WelcomeEmailsInner() {
           current child&apos;s date of birth (DDMMYYYY), and they must choose their own the first time they sign in. A parent is only
           ever sent the letter once, and parents who have already signed in are never sent it.
         </p>
+        {!loading && !loadError && (
+          <p>
+            <strong>{totalSignedIn}</strong> parent{totalSignedIn === 1 ? ' has' : 's have'} signed in so far.
+            {' '}To see who, tick the year groups and choose <em>Show: Signed in</em>.
+          </p>
+        )}
 
         {loading ? <p>Loading parents…</p> : loadError ? <p style={{ color: '#b91c1c' }}>Couldn&apos;t load parents: {loadError}</p> : (
           <>
@@ -270,7 +284,7 @@ function WelcomeEmailsInner() {
                   </select>
                 </label>
                 <span style={{ color: '#555' }}>
-                  {counts.ready} not sent yet · {counts.sent} already sent · {counts.blocked} can&apos;t be sent
+                  {counts.ready} not sent yet · {counts.sent} already sent · {counts.blocked} can&apos;t be sent · {counts.signedIn} signed in
                 </span>
               </div>
             )}
@@ -309,6 +323,8 @@ function WelcomeEmailsInner() {
                       <td>
                         {STATUS_LABELS[c.status] || c.status}
                         {c.status === 'sent' && c.sent_at ? ` (${formatSentAt(c.sent_at)})` : ''}
+                        {c.last_sign_in_at && c.status !== 'signed_in' ? ' · signed in' : ''}
+                        {c.last_sign_in_at ? ` (last ${formatSentAt(c.last_sign_in_at)})` : ''}
                       </td>
                     </tr>
                   ))}
