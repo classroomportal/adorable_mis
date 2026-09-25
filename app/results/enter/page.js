@@ -183,6 +183,7 @@ function EnterResultsInner() {
           ? 'Pick any class and a result set, then enter a percentage for each student — the grade is calculated automatically.'
           : 'Pick one of your classes and a result set, then enter a percentage for each student — the grade is calculated automatically.'}
       </p>
+      <p><a href="/results/missing" className="secondary">Find missing grades by class</a></p>
 
       <div className="card">
         <label>
