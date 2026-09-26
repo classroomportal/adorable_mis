@@ -466,6 +466,7 @@ a.dashboard-tile { color: white; text-decoration: none; }
   line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
   white-space: nowrap;
 }
 @media print {
@@ -562,7 +563,7 @@ a.dashboard-tile { color: white; text-decoration: none; }
    with its destinations listed as pill buttons rather than a link list. */
 .module-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1rem;
 }
 .module-card {
@@ -588,8 +589,9 @@ a.dashboard-tile { color: white; text-decoration: none; }
 }
 .module-card-title { font-size: 1.05rem; font-weight: 700; color: var(--ink); }
 .module-card-desc { font-size: 0.83rem; color: var(--ink-soft); line-height: 1.4; margin: -0.1rem 0 0.2rem; }
-/* Sub-choices are a two-column grid of identical boxes: the same width and
-   height whatever the label, which wraps to at most three lines. */
+/* Sub-choices are a two-column grid of identical one-line pills. Labels are
+   kept short enough to fit (the pop-out description carries the detail); an
+   over-long one is cut with an ellipsis rather than making its pill taller. */
 .module-card-chips {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -603,22 +605,21 @@ a.dashboard-tile { color: white; text-decoration: none; }
   align-items: center;
   justify-content: center;
   text-align: center;
-  height: 3.6rem;
   font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.2;
   color: var(--accent-color, var(--brand-700)) !important;
   background: var(--accent-bg, var(--brand-100));
-  border-radius: 10px;
-  padding: 0.35rem 0.5rem;
+  border-radius: 999px;
+  padding: 0.4rem 0.35rem;
   text-decoration: none;
   transition: background 0.12s ease, color 0.12s ease;
 }
 .module-chip-label {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .module-chip:hover,
 .module-chip:focus-visible {
