@@ -1,4 +1,7 @@
--- 146_backfill_behaviour_logged_by_from_logs.sql
+-- 188_backfill_behaviour_logged_by_from_logs.sql
+-- Applied to live on 23 Sep 2026, between 145 and 147. It was written as 146,
+-- but 146_no_future_dated_registers.sql took that number first, so it is
+-- recorded here under the next free number. Already applied: don't re-run.
 -- Until migration 138, behaviour_events.staff_id ("logged by") was never set,
 -- so events 81-925 (21-22 Sep) recorded no teacher. The principal asked for
 -- it to be recovered from Supabase's API request logs, which still held every
