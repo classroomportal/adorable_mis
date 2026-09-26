@@ -15,12 +15,19 @@ function AppealsInner() {
   async function load() {
     const { data } = await supabase
       .from('behaviour_appeals')
-      .select('*, students(first_name,last_name), behaviour_events(event_date, category, points, description)')
+      .select('*, students(first_name,last_name), behaviour_events(event_date, category, points, description, staff!behaviour_events_staff_id_fkey(first_name, last_name)))')
       .order('created_at', { ascending: false });
     setAppeals(data || []);
   }
 
   useEffect(() => { load(); }, []);
+
+  // Who recorded the event being appealed. behaviour_events has two FKs to
+  // staff, so the embed in load() names staff_id's constraint explicitly.
+  function awardedBy(a) {
+    const s = a.behaviour_events?.staff;
+    return s ? `${s.first_name} ${s.last_name}` : '—';
+  }
 
   async function resolve(appealId, newStatus) {
     const { data: userData } = await supabase.auth.getUser();
@@ -49,12 +56,13 @@ function AppealsInner() {
         <h2>Pending ({pending.length})</h2>
         {pending.length === 0 ? <p>No appeals waiting for review.</p> : (
           <div className="table-scroll"><table>
-            <thead><tr><th>Student</th><th>Event</th><th>Reason for appeal</th><th>Notes</th><th></th></tr></thead>
+            <thead><tr><th>Student</th><th>Event</th><th>Awarded by</th><th>Reason for appeal</th><th>Notes</th><th></th></tr></thead>
             <tbody>
               {pending.map((a) => (
                 <tr key={a.appeal_id}>
                   <td>{a.students?.first_name} {a.students?.last_name}</td>
                   <td>{formatUKDate(a.behaviour_events?.event_date, { weekday: true })} — {a.behaviour_events?.category} ({a.behaviour_events?.points})</td>
+                  <td>{awardedBy(a)}</td>
                   <td>{a.reason}</td>
                   <td>
                     <input
@@ -79,12 +87,13 @@ function AppealsInner() {
         <h2>Resolved</h2>
         {resolved.length === 0 ? <p>None yet.</p> : (
           <div className="table-scroll"><table>
-            <thead><tr><th>Student</th><th>Event</th><th>Status</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Student</th><th>Event</th><th>Awarded by</th><th>Status</th><th>Notes</th></tr></thead>
             <tbody>
               {resolved.map((a) => (
                 <tr key={a.appeal_id}>
                   <td>{a.students?.first_name} {a.students?.last_name}</td>
                   <td>{formatUKDate(a.behaviour_events?.event_date, { weekday: true })} — {a.behaviour_events?.category}</td>
+                  <td>{awardedBy(a)}</td>
                   <td>{a.status}</td>
                   <td>{a.resolution_notes ?? ''}</td>
                 </tr>
