@@ -161,7 +161,6 @@ const TABS = [
     items: ({ hasAccess }) => [
       { href: '/students', label: 'Core Data', desc: "Find a student and open their full record." },
       { href: '/behaviour', label: 'Behaviour Log', desc: "Log and look up behaviour points." },
-      { href: '/behaviour/review', label: 'Serious Incidents', desc: "Check serious incidents before parents can see them." },
       { href: '/attendance', label: 'Attendance', desc: "Take a register for a lesson or mentor group." },
       { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
       { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
@@ -175,15 +174,17 @@ const TABS = [
   },
   {
     key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students',
-    description: 'Pastoral oversight — behaviour, detentions and mentor groups.',
+    description: 'Behaviour, detentions, registers and mentor groups.',
     // Class Allocation only goes to pastoral/head_of_department in
     // role_permissions — only the pastoral role (plus admin) actually has
     // student_class write access (migration 105), houseparent/smt don't.
     items: ({ hasAccess }) => [
       { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
       { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
-      { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
+      { href: '/behaviour/review', label: 'Serious Incidents', desc: "Check serious incidents before parents can see them." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
+      { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
+      { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
       { href: '/staff/mentor-groups', label: 'Mentor Groups', desc: "Assign staff to each mentor group." },
       { href: '/admin/block-allocation', label: 'Class Allocation', desc: "Put students into classes, block by block." },
     ].filter((it) => hasAccess(it.href)),
@@ -222,7 +223,7 @@ const TABS = [
   },
   {
     key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school',
-    description: 'Manage timetables and class allocations.',
+    description: 'Timetable imports, bell times, class allocation and printing.',
     items: ({ hasAccess }) => [
       { href: '/admin/block-allocation', label: 'Class Allocation', desc: "Put students into classes, block by block." },
       // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
@@ -230,6 +231,7 @@ const TABS = [
       { href: '/admin/import-classes', label: 'Import Nova-T', desc: "Upload the Nova-T timetable files." },
       { href: '/admin/import-staff-commitments', label: 'Import Meetings', desc: "Upload staff meetings and non-working periods." },
       { href: '/admin/bell-times', label: 'Bell Times', desc: "Which periods run each day, and their times." },
+      { href: '/admin/print-timetables', label: 'Print Timetables', desc: "Print student timetables for a year group." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
@@ -288,21 +290,17 @@ const TABS = [
       { href: '/staff/roles', label: 'Staff & Roles', desc: "Give staff their roles." },
       { href: '/staff/import-emails', label: 'Import Emails', desc: "Add staff login emails from a list." },
       { href: '/admin/permissions', label: 'Permissions', desc: "Choose which roles can open which pages." },
-      { href: '/admin/lookups', label: 'Lookups', desc: "Drop-down lists such as houses and behaviour types." },
       { href: '/parents', label: 'Parents', desc: "Parent records and their logins." },
       { href: '/parents/import', label: 'Import Parents', desc: "Upload the SIMS parent list." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'administration', label: 'Administration', icon: '⏰', accent: 'admin',
-    description: "Register follow-ups, lookups and reporting.",
+    description: 'Lookups, student numbers, class lists and backups.',
     items: ({ hasAccess }) => [
-      { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
-      { href: '/behaviour/review', label: 'Serious Incidents', desc: "Check serious incidents before parents can see them." },
       { href: '/admin/lookups', label: 'Lookups', desc: "Drop-down lists such as houses and behaviour types." },
       { href: '/admin/student-numbers', label: 'Student Numbers', desc: "Boys and girls by year, mentor group and class." },
       { href: '/admin/class-lists', label: 'Class Lists', desc: "Print class lists." },
-      { href: '/admin/print-timetables', label: 'Print Timetables', desc: "Print student timetables for a year group." },
       { href: '/admin/backup', label: 'Run a Backup', desc: "Take a full backup of the database." },
     ].filter((it) => hasAccess(it.href)),
   },
