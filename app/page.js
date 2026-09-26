@@ -222,7 +222,6 @@ const TABS = [
     key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school',
     description: 'Manage timetables and class allocations.',
     items: ({ hasAccess }) => [
-      { href: '/staff/timetable', label: 'My Timetable', desc: "Your week of lessons, rooms and meetings." },
       { href: '/admin/block-allocation', label: 'Class Allocation', desc: "Put students into classes, block by block." },
       // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
       // Class Allocation, not this.
