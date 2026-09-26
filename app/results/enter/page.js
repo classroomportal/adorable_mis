@@ -5,6 +5,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import { loadResultSetScopes, scopeToReportPeriod, inReportPeriod } from '../../../lib/reportWriting';
 
 const RESULT_TYPES = [
   { value: 'short_test', label: 'Short Test' },
@@ -30,6 +31,11 @@ function EnterResultsInner() {
   const [resultSets, setResultSets] = useState([]);
   const [resultSetEventId, setResultSetEventId] = useState('');
   const [resultType, setResultType] = useState('short_test');
+  // Result sets only for some students (e.g. "New students check"): event_id
+  // -> the linked report period's { year_groups, joined_from }.
+  const [setScopes, setSetScopes] = useState({});
+  // For such a set, the classes its students are in; null otherwise.
+  const [scopeClassIds, setScopeClassIds] = useState(null);
 
   const [roster, setRoster] = useState([]); // [{student_id, first_name, last_name, year_group}]
   const [boundaries, setBoundaries] = useState([]); // grade boundaries for this class's subject
@@ -56,7 +62,21 @@ function EnterResultsInner() {
       .eq('is_result_set', true)
       .order('event_date', { ascending: false })
       .then(({ data }) => setResultSets(data || []));
+
+    loadResultSetScopes().then(setSetScopes);
   }, [staffId, canEnterAnyClass]);
+
+  const setScope = setScopes[resultSetEventId] || null;
+
+  useEffect(() => {
+    if (!setScope) { setScopeClassIds(null); return; }
+    scopeToReportPeriod(
+      supabase.from('students').select('student_id, student_class(class_id)').eq('status', 'active'),
+      setScope
+    ).then(({ data }) => {
+      setScopeClassIds(new Set((data || []).flatMap((s) => (s.student_class || []).map((sc) => sc.class_id))));
+    });
+  }, [setScope]);
 
   const loadRosterAndExisting = useCallback(async () => {
     if (!classId || !resultSetEventId || !selectedClass) {
@@ -69,11 +89,11 @@ function EnterResultsInner() {
 
     const { data: sc } = await supabase
       .from('student_class')
-      .select('students(student_id, first_name, last_name, year_group, status)')
+      .select('students(student_id, first_name, last_name, year_group, status, admission_date)')
       .eq('class_id', classId);
     const studentList = (sc || [])
       .map((r) => r.students)
-      .filter((s) => s && s.status === 'active')
+      .filter((s) => s && s.status === 'active' && (!setScope || inReportPeriod(s, setScope)))
       .sort((a, b) => a.last_name.localeCompare(b.last_name));
     setRoster(studentList);
 
@@ -103,7 +123,7 @@ function EnterResultsInner() {
     }
     setRows(nextRows);
     setLoadingRoster(false);
-  }, [classId, resultSetEventId, selectedClass]);
+  }, [classId, resultSetEventId, selectedClass, setScope]);
 
   useEffect(() => {
     loadRosterAndExisting();
@@ -166,8 +186,10 @@ function EnterResultsInner() {
 
   const selectedResultSet = resultSets.find((r) => String(r.event_id) === String(resultSetEventId));
 
-  const ownClasses = classes.filter((c) => staffId && c.staff_id === staffId);
-  const otherClasses = classes.filter((c) => !(staffId && c.staff_id === staffId));
+  // A result set for some students only offers the classes they're in.
+  const shownClasses = scopeClassIds ? classes.filter((c) => scopeClassIds.has(c.class_id)) : classes;
+  const ownClasses = shownClasses.filter((c) => staffId && c.staff_id === staffId);
+  const otherClasses = shownClasses.filter((c) => !(staffId && c.staff_id === staffId));
   const classOption = (c, showTeacher) => (
     <option key={c.class_id} value={c.class_id}>
       {c.class_code} — {c.subjects?.subject_name}
@@ -200,7 +222,7 @@ function EnterResultsInner() {
                 </optgroup>
               </>
             ) : (
-              classes.map((c) => classOption(c, false))
+              shownClasses.map((c) => classOption(c, false))
             )}
           </select>
         </label>
@@ -270,7 +292,9 @@ function EnterResultsInner() {
       )}
 
       {!loadingRoster && selectedClass && selectedResultSet && roster.length === 0 && (
-        <p style={{ color: '#666' }}>No students are linked to this class yet.</p>
+        <p style={{ color: '#666' }}>
+          {setScope ? 'None of the students this result set is for are in this class.' : 'No students are linked to this class yet.'}
+        </p>
       )}
     </div>
   );
