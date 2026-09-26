@@ -25,6 +25,7 @@ function DetentionInner() {
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = previous, etc.
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const baseSat = saturdayOf(new Date(`${schoolToday()}T00:00:00Z`));
   const start = addDays(baseSat, weekOffset * 7);
@@ -69,7 +70,8 @@ function DetentionInner() {
   useEffect(() => { load(); }, [weekOffset]);
 
   async function updateStatus(detentionIds, newStatus) {
-    await supabase.from('detentions').update({ status: newStatus }).in('detention_id', detentionIds);
+    const { error: err } = await supabase.from('detentions').update({ status: newStatus }).in('detention_id', detentionIds);
+    setError(err ? `Couldn't save that status: ${err.message}` : null);
     load();
   }
 
@@ -84,6 +86,7 @@ function DetentionInner() {
           <button className="secondary" onClick={() => setWeekOffset((w) => w + 1)} disabled={weekOffset >= 0}>Next week →</button>
           {weekOffset !== 0 && <button className="secondary" onClick={() => setWeekOffset(0)}>This week</button>}
         </div>
+        {error && <p style={{ color: '#a3232c' }}>{error}</p>}
       </div>
 
       <div className="card">
