@@ -545,6 +545,12 @@ a.dashboard-tile { color: white; text-decoration: none; }
 }
 .stat-card-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--ink); }
 .stat-card-label { font-size: 0.8rem; color: var(--ink-soft); margin-top: 0.15rem; }
+/* Quick links (timetable, calendar, inbox) share the stat-card look, with the
+   destination's name where a stat card has its number. */
+.quick-link { text-decoration: none; transition: box-shadow 0.12s ease, transform 0.12s ease; }
+.quick-link:hover, .quick-link:focus-visible { box-shadow: 0 4px 12px rgba(15,23,42,0.12); transform: translateY(-1px); }
+.quick-link-label { font-size: 1.15rem; font-weight: 800; line-height: 1.15; color: var(--ink); }
+.quick-link-row { margin-bottom: 0.75rem; }
 .stat-card.accent-myinfo   { --accent-color: #2f6fa8; --accent-bg: #e3f0fa; }
 .stat-card.accent-family   { --accent-color: #c07d1f; --accent-bg: #fbeed9; }
 .stat-card.accent-students { --accent-color: #3f8f5f; --accent-bg: #e2f3e8; }
@@ -693,6 +699,7 @@ a.dashboard-tile { color: white; text-decoration: none; }
   .stat-card-icon { width: 2.2rem; height: 2.2rem; font-size: 1.25rem; }
   .stat-card-value { font-size: 1.2rem; }
   .stat-card-label { font-size: 0.72rem; }
+  .quick-link-label { font-size: 0.98rem; }
 }
 
 /* Attendance summary on a student's record: today / this week / this year. */

@@ -65,6 +65,61 @@ function DashboardStats({ isDemoAccount }) {
   );
 }
 
+// The everyday destinations — timetable, calendar, inbox — as big tiles above
+// the stats rather than a module card of their own, since nearly every member
+// of staff uses them. My Children only appears for staff who are also parents
+// (their login email matches a parent record, as on /parent-portal).
+function QuickLinks({ hasAccess }) {
+  const { session, profile } = useAuth();
+  const [unread, setUnread] = useState(null);
+  const [isParent, setIsParent] = useState(false);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    supabase
+      .from('message_recipients')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_id', session.user.id)
+      .is('read_at', null)
+      .then(({ count }) => setUnread(count ?? 0));
+  }, [session]);
+
+  useEffect(() => {
+    if (!profile?.email) return;
+    supabase
+      .from('parents')
+      .select('parent_id')
+      .eq('email', profile.email)
+      .maybeSingle()
+      .then(({ data }) => setIsParent(!!data));
+  }, [profile]);
+
+  const links = [
+    { href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
+    { href: '/calendar', label: 'Calendar', icon: '📅', accent: 'school', sub: 'Term dates and school events' },
+    {
+      href: '/inbox', label: 'Inbox', icon: '✉️', accent: 'family',
+      sub: unread == null ? 'Your messages' : unread === 0 ? 'No unread messages' : `${unread} unread`,
+    },
+    isParent && { href: '/parent-portal', label: 'My Children', icon: '👪', accent: 'students', sub: "Your children's grades and behaviour" },
+  ].filter((l) => l && hasAccess(l.href));
+  if (links.length === 0) return null;
+
+  return (
+    <div className="stat-card-row quick-link-row">
+      {links.map((l) => (
+        <a key={l.href} className={`stat-card quick-link accent-${l.accent}`} href={l.href}>
+          <div className="stat-card-icon">{l.icon}</div>
+          <div>
+            <div className="quick-link-label">{l.label}</div>
+            <div className="stat-card-label">{l.sub}</div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
 // A module card names what it's for, then lists its destinations as pill buttons.
 // allowedHrefs, when given, greys out any item not in the set instead of hiding it —
 // used by the training account so it can see the full shape of what a real SMT
@@ -100,16 +155,6 @@ function ModuleCard({ icon, label, accent, description, items, allowedHrefs }) {
 // empty, so a tab with no accessible items just disappears — no separate
 // tab-level gate needed.
 const TABS = [
-  {
-    key: 'home', label: 'Dashboard', icon: '🏠', accent: 'myinfo',
-    description: 'Your day-to-day — timetable, family, calendar and messages.',
-    items: ({ hasAccess }) => [
-      { href: '/staff/timetable', label: 'My Timetable', desc: "Your week of lessons, rooms and meetings." },
-      { href: '/parent-portal', label: 'My Children', desc: "Your own children's grades, behaviour and attendance." },
-      { href: '/calendar', label: 'Calendar', desc: "Term dates, school events and report deadlines." },
-      { href: '/inbox', label: 'Inbox', desc: "Messages sent to you." },
-    ].filter((it) => hasAccess(it.href)),
-  },
   {
     key: 'students', label: 'Students', icon: '🎓', accent: 'students',
     description: 'Core records, behaviour, attendance, results and certificates.',
@@ -392,6 +437,7 @@ export default function Home() {
 
   return (
     <div>
+      <QuickLinks hasAccess={hasAccess} />
       <DashboardStats isDemoAccount={profile?.is_demo_account} />
       <div className="module-card-grid">
         {TABS.map((t) => (
