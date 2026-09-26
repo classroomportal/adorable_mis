@@ -213,12 +213,13 @@ const TABS = [
   },
   {
     key: 'comms', label: 'Communication', icon: '💬', accent: 'family',
-    description: 'Announcements, read receipts and login emails to staff and parents.',
+    description: 'Announcements, read receipts and login emails to staff, parents and students.',
     items: ({ hasAccess }) => [
       { href: '/comms/compose', label: 'Send Message', desc: "Send a message to parents, groups or staff." },
       { href: '/comms/history', label: 'Sent Messages', desc: "Past messages and who has read them." },
       { href: '/staff/welcome-emails', label: 'Staff Logins', desc: "Email staff their login link." },
       { href: '/parents/welcome-emails', label: 'Parent Logins', desc: "Email parents their login details." },
+      { href: '/students/welcome-emails', label: 'Student Logins', desc: "Email students who have never signed in their login link." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
