@@ -466,6 +466,7 @@ a.dashboard-tile { color: white; text-decoration: none; }
   line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
   white-space: nowrap;
 }
 @media print {
@@ -545,6 +546,12 @@ a.dashboard-tile { color: white; text-decoration: none; }
 }
 .stat-card-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--ink); }
 .stat-card-label { font-size: 0.8rem; color: var(--ink-soft); margin-top: 0.15rem; }
+/* Quick links (timetable, calendar, inbox) share the stat-card look, with the
+   destination's name where a stat card has its number. */
+.quick-link { text-decoration: none; transition: box-shadow 0.12s ease, transform 0.12s ease; }
+.quick-link:hover, .quick-link:focus-visible { box-shadow: 0 4px 12px rgba(15,23,42,0.12); transform: translateY(-1px); }
+.quick-link-label { font-size: 1.15rem; font-weight: 800; line-height: 1.15; color: var(--ink); }
+.quick-link-row { margin-bottom: 0.75rem; }
 .stat-card.accent-myinfo   { --accent-color: #2f6fa8; --accent-bg: #e3f0fa; }
 .stat-card.accent-family   { --accent-color: #c07d1f; --accent-bg: #fbeed9; }
 .stat-card.accent-students { --accent-color: #3f8f5f; --accent-bg: #e2f3e8; }
@@ -556,7 +563,7 @@ a.dashboard-tile { color: white; text-decoration: none; }
    with its destinations listed as pill buttons rather than a link list. */
 .module-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1rem;
 }
 .module-card {
@@ -582,27 +589,75 @@ a.dashboard-tile { color: white; text-decoration: none; }
 }
 .module-card-title { font-size: 1.05rem; font-weight: 700; color: var(--ink); }
 .module-card-desc { font-size: 0.83rem; color: var(--ink-soft); line-height: 1.4; margin: -0.1rem 0 0.2rem; }
+/* Sub-choices are a two-column grid of identical one-line pills. Labels are
+   kept short enough to fit (the pop-out description carries the detail); an
+   over-long one is cut with an ellipsis rather than making its pill taller. */
 .module-card-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
   margin-top: auto;
   padding-top: 0.4rem;
 }
 .module-chip {
-  display: inline-flex;
+  position: relative;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.2;
   color: var(--accent-color, var(--brand-700)) !important;
   background: var(--accent-bg, var(--brand-100));
   border-radius: 999px;
-  padding: 0.35rem 0.75rem;
+  padding: 0.4rem 0.35rem;
+  text-decoration: none;
   transition: background 0.12s ease, color 0.12s ease;
 }
-.module-chip:hover {
+.module-chip-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.module-chip:hover,
+.module-chip:focus-visible {
   background: var(--accent-color, var(--brand-700));
   color: white !important;
+}
+/* The pop-out description. It opens above the chip, anchored to the chip's
+   outer edge (left column to the left, right column to the right) so it never
+   runs off the side of a narrow screen. */
+.module-chip-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(230px, 75vw);
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--ink);
+  color: white;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+}
+.module-chip:nth-child(even) .module-chip-tip { left: auto; right: 0; }
+.module-chip:hover .module-chip-tip,
+.module-chip:focus-visible .module-chip-tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 0.25s;
 }
 .module-chip-soon {
   opacity: 0.55;
@@ -645,6 +700,7 @@ a.dashboard-tile { color: white; text-decoration: none; }
   .stat-card-icon { width: 2.2rem; height: 2.2rem; font-size: 1.25rem; }
   .stat-card-value { font-size: 1.2rem; }
   .stat-card-label { font-size: 0.72rem; }
+  .quick-link-label { font-size: 0.98rem; }
 }
 
 /* Attendance summary on a student's record: today / this week / this year. */

@@ -6,17 +6,21 @@ import { schoolDateOffset } from '../lib/schoolTime';
 import SplashScreen from './components/SplashScreen';
 import { ParentPortalInner } from './parent-portal/page';
 
-function Chip({ href, label, disabled }) {
+// Every chip is the same fixed-size box, whatever the length of its label, and
+// carries a one-line description that pops out on hover or keyboard focus.
+function Chip({ href, label, desc, disabled, tipId }) {
+  const tip = desc && <span className="module-chip-tip" id={tipId} role="tooltip">{desc}</span>;
   if (disabled) {
     return (
       <span className="module-chip module-chip-soon" title="Not available on the training account yet">
-        {label}
+        <span className="module-chip-label">{label}</span>
       </span>
     );
   }
   return (
-    <a className="module-chip" href={href}>
-      {label}
+    <a className="module-chip" href={href} aria-describedby={desc ? tipId : undefined}>
+      <span className="module-chip-label">{label}</span>
+      {tip}
     </a>
   );
 }
@@ -61,6 +65,61 @@ function DashboardStats({ isDemoAccount }) {
   );
 }
 
+// The everyday destinations — timetable, calendar, inbox — as big tiles above
+// the stats rather than a module card of their own, since nearly every member
+// of staff uses them. My Children only appears for staff who are also parents
+// (their login email matches a parent record, as on /parent-portal).
+function QuickLinks({ hasAccess }) {
+  const { session, profile } = useAuth();
+  const [unread, setUnread] = useState(null);
+  const [isParent, setIsParent] = useState(false);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    supabase
+      .from('message_recipients')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_id', session.user.id)
+      .is('read_at', null)
+      .then(({ count }) => setUnread(count ?? 0));
+  }, [session]);
+
+  useEffect(() => {
+    if (!profile?.email) return;
+    supabase
+      .from('parents')
+      .select('parent_id')
+      .eq('email', profile.email)
+      .maybeSingle()
+      .then(({ data }) => setIsParent(!!data));
+  }, [profile]);
+
+  const links = [
+    { href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
+    { href: '/calendar', label: 'Calendar', icon: '📅', accent: 'school', sub: 'Term dates and school events' },
+    {
+      href: '/inbox', label: 'Inbox', icon: '✉️', accent: 'family',
+      sub: unread == null ? 'Your messages' : unread === 0 ? 'No unread messages' : `${unread} unread`,
+    },
+    isParent && { href: '/parent-portal', label: 'My Children', icon: '👪', accent: 'students', sub: "Your children's grades and behaviour" },
+  ].filter((l) => l && hasAccess(l.href));
+  if (links.length === 0) return null;
+
+  return (
+    <div className="stat-card-row quick-link-row">
+      {links.map((l) => (
+        <a key={l.href} className={`stat-card quick-link accent-${l.accent}`} href={l.href}>
+          <div className="stat-card-icon">{l.icon}</div>
+          <div>
+            <div className="quick-link-label">{l.label}</div>
+            <div className="stat-card-label">{l.sub}</div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
 // A module card names what it's for, then lists its destinations as pill buttons.
 // allowedHrefs, when given, greys out any item not in the set instead of hiding it —
 // used by the training account so it can see the full shape of what a real SMT
@@ -74,7 +133,15 @@ function ModuleCard({ icon, label, accent, description, items, allowedHrefs }) {
       {description && <div className="module-card-desc">{description}</div>}
       <div className="module-card-chips">
         {items.map((it) => (
-          <Chip key={it.href} href={it.href} label={it.label} disabled={allowedHrefs && !allowedHrefs.has(it.href)} />
+          <Chip
+            key={it.href}
+            href={it.href}
+            label={it.label}
+            desc={it.desc}
+            // Some links sit on more than one card, so the card label keeps ids unique.
+            tipId={`tip-${label}-${it.href}`.replace(/[^\w-]/g, '-')}
+            disabled={allowedHrefs && !allowedHrefs.has(it.href)}
+          />
         ))}
       </div>
     </div>
@@ -89,31 +156,21 @@ function ModuleCard({ icon, label, accent, description, items, allowedHrefs }) {
 // tab-level gate needed.
 const TABS = [
   {
-    key: 'home', label: 'Dashboard', icon: '🏠', accent: 'myinfo',
-    description: 'Your day-to-day — timetable, family, calendar and messages.',
-    items: ({ hasAccess }) => [
-      { href: '/staff/timetable', label: 'My Timetable' },
-      { href: '/parent-portal', label: 'My Children' },
-      { href: '/calendar', label: 'Calendar' },
-      { href: '/inbox', label: 'Inbox' },
-    ].filter((it) => hasAccess(it.href)),
-  },
-  {
     key: 'students', label: 'Students', icon: '🎓', accent: 'students',
     description: 'Core records, behaviour, attendance, results and certificates.',
     items: ({ hasAccess }) => [
-      { href: '/students', label: 'Core Data' },
-      { href: '/behaviour', label: 'Behaviour Log' },
-      { href: '/behaviour/review', label: 'Review Serious Behaviour Events' },
-      { href: '/attendance', label: 'Attendance' },
-      { href: '/results', label: 'Results' },
-      { href: '/results/enter', label: 'Enter Results' },
+      { href: '/students', label: 'Core Data', desc: "Find a student and open their full record." },
+      { href: '/behaviour', label: 'Behaviour Log', desc: "Log and look up behaviour points." },
+      { href: '/behaviour/review', label: 'Serious Incidents', desc: "Check serious incidents before parents can see them." },
+      { href: '/attendance', label: 'Attendance', desc: "Take a register for a lesson or mentor group." },
+      { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
+      { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
       // Shares the /results grant rather than having a resource of its own.
-      { href: '/results/missing', label: 'Missing Grades', resource: '/results' },
-      { href: '/results/subject-overview', label: 'Subject Overview' },
-      { href: '/certificates', label: 'Certificates' },
-      { href: '/detention', label: 'Detention List' },
-      { href: '/appeals', label: 'Behaviour Appeals' },
+      { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
+      { href: '/results/subject-overview', label: 'Subject Overview', desc: "Chart a student's results over time." },
+      { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
+      { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
+      { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
     ].filter((it) => hasAccess(it.resource || it.href)),
   },
   {
@@ -123,139 +180,138 @@ const TABS = [
     // role_permissions — only the pastoral role (plus admin) actually has
     // student_class write access (migration 105), houseparent/smt don't.
     items: ({ hasAccess }) => [
-      { href: '/detention', label: 'Detentions' },
-      { href: '/certificates', label: 'Certificates' },
-      { href: '/pastoral/registers-not-done', label: 'Registers Not Done' },
-      { href: '/appeals', label: 'Behaviour Appeals' },
-      { href: '/staff/mentor-groups', label: 'Mentor Groups' },
-      { href: '/admin/block-allocation', label: 'Class Allocation' },
+      { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
+      { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
+      { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
+      { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
+      { href: '/staff/mentor-groups', label: 'Mentor Groups', desc: "Assign staff to each mentor group." },
+      { href: '/admin/block-allocation', label: 'Class Allocation', desc: "Put students into classes, block by block." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'clinic', label: 'Clinic', icon: '🩺', accent: 'clinic',
     description: 'Sick bay log, height & weight rounds and immunisations.',
     items: ({ hasAccess }) => [
-      { href: '/clinic', label: 'Sick Bay Dashboard' },
-      { href: '/clinic/screenings', label: 'Resumption Screening' },
-      { href: '/clinic/visits', label: 'Sick Bay Log' },
-      { href: '/clinic/measurements', label: 'Height & Weight Round' },
-      { href: '/clinic/immunisations', label: 'Immunisations' },
+      { href: '/clinic', label: 'Sick Bay Today', desc: "Who is in the sick bay today, and follow-ups." },
+      { href: '/clinic/screenings', label: 'Resumption Check', desc: "Start-of-term medical check for boarders." },
+      { href: '/clinic/visits', label: 'Sick Bay Log', desc: "Record a sick bay visit and see past visits." },
+      { href: '/clinic/measurements', label: 'Height & Weight', desc: "Enter heights and weights for a whole group." },
+      { href: '/clinic/immunisations', label: 'Immunisations', desc: "Vaccinations that are due or overdue." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'reports', label: 'Reports', icon: '📝', accent: 'students',
     description: 'Write, check and generate student reports.',
     items: ({ hasAccess }) => [
-      { href: '/reports/write-subject-comments', label: 'Write Subject Comments' },
-      { href: '/reports/write-pastoral-comments', label: 'Write Pastoral Comments' },
-      { href: '/reports/check', label: 'Check Reports' },
-      { href: '/reports/periods', label: 'Manage Report Periods' },
-      { href: '/reports/generate', label: 'Generate Reports' },
+      { href: '/reports/write-subject-comments', label: 'Subject Comments', desc: "Write report comments for your classes." },
+      { href: '/reports/write-pastoral-comments', label: 'Pastoral Comments', desc: "Write the pastoral comment for your mentees." },
+      { href: '/reports/check', label: 'Check Reports', desc: "Read, AI-check and approve submitted comments." },
+      { href: '/reports/periods', label: 'Report Periods', desc: "Set up report periods and who checks them." },
+      { href: '/reports/generate', label: 'Generate Reports', desc: "Produce the finished student reports." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'comms', label: 'Communication', icon: '💬', accent: 'family',
     description: 'Send announcements to parents and track read receipts.',
     items: ({ hasAccess }) => [
-      { href: '/comms/compose', label: 'Send Announcements to Parents / Groups' },
-      { href: '/comms/history', label: 'Message History & Read Receipts' },
+      { href: '/comms/compose', label: 'Send Message', desc: "Send a message to parents, groups or staff." },
+      { href: '/comms/history', label: 'Sent Messages', desc: "Past messages and who has read them." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school',
     description: 'Manage timetables and class allocations.',
     items: ({ hasAccess }) => [
-      { href: '/staff/timetable', label: 'My Timetable' },
-      { href: '/admin/block-allocation', label: 'Class Allocation' },
+      { href: '/admin/block-allocation', label: 'Class Allocation', desc: "Put students into classes, block by block." },
       // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
       // Class Allocation, not this.
-      { href: '/admin/import-classes', label: 'Import Nova-T Timetable' },
-      { href: '/admin/import-staff-commitments', label: 'Import Staff Commitments (NCLASS.DAT)' },
-      { href: '/admin/bell-times', label: 'Bell Times' },
+      { href: '/admin/import-classes', label: 'Import Nova-T', desc: "Upload the Nova-T timetable files." },
+      { href: '/admin/import-staff-commitments', label: 'Import Meetings', desc: "Upload staff meetings and non-working periods." },
+      { href: '/admin/bell-times', label: 'Bell Times', desc: "Which periods run each day, and their times." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'otherhalf', label: 'The Other Half', icon: '🎭', accent: 'myinfo',
     description: 'Activities in the Other Half slot — your registers, the programme and student choices.',
     items: ({ hasAccess }) => [
-      { href: '/other-half', label: 'My Other Half & Registers' },
-      { href: '/other-half/activities', label: 'Activity Programme' },
-      { href: '/other-half/choices', label: 'Student Choices' },
+      { href: '/other-half', label: 'My Other Half', desc: "Your Other Half activities and registers." },
+      { href: '/other-half/activities', label: 'Activities', desc: "Set up each term's Other Half programme." },
+      { href: '/other-half/choices', label: 'Student Choices', desc: "See and adjust students' activity choices." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school',
     description: 'Import results, target grades and manage grading setup.',
     items: ({ hasAccess }) => [
-      { href: '/results/import-gradebook', label: 'Import Weekly Results' },
-      { href: '/target-grades/import', label: 'Import Target Grades' },
-      { href: '/classes/progress', label: 'Class Progress' },
-      { href: '/admin/grade-boundaries', label: 'Grade Boundaries' },
-      { href: '/admin/subject-settings', label: 'Subject Settings' },
-      { href: '/assessments/import', label: 'Import CAT4/NGRT' },
+      { href: '/results/import-gradebook', label: 'Import Results', desc: "Upload the weekly Moodle gradebook." },
+      { href: '/target-grades/import', label: 'Import Targets', desc: "Upload students' target grades." },
+      { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
+      { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
+      { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
+      { href: '/assessments/import', label: 'Import CAT4/NGRT', desc: "Upload CAT4 and NGRT scores." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
     description: 'Charges, payments, discounts and the debtors list.',
     items: ({ hasAccess }) => [
-      { href: '/bursar/charge-checklist', label: 'Charge Checklist' },
-      { href: '/bursar/fee-items', label: 'Fee Items (Prices)' },
-      { href: '/bursar/discounts', label: 'Discounts' },
-      { href: '/bursar/payments', label: 'Record a Payment' },
-      { href: '/bursar/fees-table', label: 'All Students (Table)' },
-      { href: '/bursar/debtors', label: 'Debtors List' },
-      { href: '/bursar/audit', label: 'Audit' },
-      { href: '/smt/fees-dashboard', label: 'SMT Dashboard' },
+      { href: '/bursar/charge-checklist', label: 'Charge Checklist', desc: "Charge a fee to a group of students." },
+      { href: '/bursar/fee-items', label: 'Fee Items', desc: "Fee items and their prices." },
+      { href: '/bursar/discounts', label: 'Discounts', desc: "Give students fee discounts." },
+      { href: '/bursar/payments', label: 'Record a Payment', desc: "Record a fee payment." },
+      { href: '/bursar/fees-table', label: 'All Students', desc: "Charged, paid and owed for every student." },
+      { href: '/bursar/debtors', label: 'Debtors List', desc: "Students who owe fees, with parent contacts." },
+      { href: '/bursar/audit', label: 'Audit', desc: "Recent fee charges, with undo." },
+      { href: '/smt/fees-dashboard', label: 'SMT Dashboard', desc: "Fee collection totals, and publishing fees to parents." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'tuckshop', label: 'Tuckshop', icon: '🍭', accent: 'family',
     description: 'Sell items, top up balances and manage stock.',
     items: ({ hasAccess }) => [
-      { href: '/tuckshop/purchase', label: 'Sell Items' },
-      { href: '/tuckshop/topup', label: 'Top Up Balance' },
-      { href: '/tuckshop/balances', label: 'Balances' },
-      { href: '/tuckshop/preorders', label: 'Preorders' },
-      { href: '/tuckshop/items', label: 'Items & Prices' },
-      { href: '/tuckshop/order-sheets', label: 'Order Sheets' },
-      { href: '/tuckshop/ordering', label: 'Open / Close Ordering' },
+      { href: '/tuckshop/purchase', label: 'Sell Items', desc: "Sell items from a student's balance." },
+      { href: '/tuckshop/topup', label: 'Top Up Balance', desc: "Add money to tuckshop balances." },
+      { href: '/tuckshop/balances', label: 'Balances', desc: "Every student's tuckshop balance." },
+      { href: '/tuckshop/preorders', label: 'Preorders', desc: "Student preorders waiting to be handed out." },
+      { href: '/tuckshop/items', label: 'Items & Prices', desc: "Tuckshop items and prices." },
+      { href: '/tuckshop/order-sheets', label: 'Order Sheets', desc: "Printable order sheets for each tuckshop day." },
+      { href: '/tuckshop/ordering', label: 'Ordering On/Off', desc: "Close and reopen student ordering." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'staff', label: 'Staff & Access', icon: '🔐', accent: 'admin',
     description: 'Staff accounts, roles, permissions and parent records.',
     items: ({ hasAccess }) => [
-      { href: '/staff/records', label: 'Staff Records' },
-      { href: '/staff/roles', label: 'Staff & Roles' },
-      { href: '/staff/import-emails', label: 'Bulk Import Staff Emails' },
-      { href: '/admin/permissions', label: 'Permissions' },
-      { href: '/admin/lookups', label: 'Lookups' },
-      { href: '/staff/welcome-emails', label: 'Send Staff Welcome Emails' },
-      { href: '/parents', label: 'Parents' },
-      { href: '/parents/welcome-emails', label: 'Send Parent Welcome Emails' },
-      { href: '/parents/import', label: 'Import Parents' },
+      { href: '/staff/records', label: 'Staff Records', desc: "HR record for each staff member." },
+      { href: '/staff/roles', label: 'Staff & Roles', desc: "Give staff their roles." },
+      { href: '/staff/import-emails', label: 'Import Emails', desc: "Add staff login emails from a list." },
+      { href: '/admin/permissions', label: 'Permissions', desc: "Choose which roles can open which pages." },
+      { href: '/admin/lookups', label: 'Lookups', desc: "Drop-down lists such as houses and behaviour types." },
+      { href: '/staff/welcome-emails', label: 'Staff Logins', desc: "Email staff their login link." },
+      { href: '/parents', label: 'Parents', desc: "Parent records and their logins." },
+      { href: '/parents/welcome-emails', label: 'Parent Logins', desc: "Email parents their login details." },
+      { href: '/parents/import', label: 'Import Parents', desc: "Upload the SIMS parent list." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'administration', label: 'Administration', icon: '⏰', accent: 'admin',
     description: "Register follow-ups, lookups and reporting.",
     items: ({ hasAccess }) => [
-      { href: '/admin/register-alerts', label: 'Register Alerts' },
-      { href: '/behaviour/review', label: 'Review Serious Behaviour Events' },
-      { href: '/admin/lookups', label: 'Lookups' },
-      { href: '/admin/student-numbers', label: 'Student Numbers by Gender' },
-      { href: '/admin/class-lists', label: 'Class Lists (Print)' },
-      { href: '/admin/print-timetables', label: 'Print Timetables (Print)' },
-      { href: '/admin/backup', label: 'Run a Backup' },
+      { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
+      { href: '/behaviour/review', label: 'Serious Incidents', desc: "Check serious incidents before parents can see them." },
+      { href: '/admin/lookups', label: 'Lookups', desc: "Drop-down lists such as houses and behaviour types." },
+      { href: '/admin/student-numbers', label: 'Student Numbers', desc: "Boys and girls by year, mentor group and class." },
+      { href: '/admin/class-lists', label: 'Class Lists', desc: "Print class lists." },
+      { href: '/admin/print-timetables', label: 'Print Timetables', desc: "Print student timetables for a year group." },
+      { href: '/admin/backup', label: 'Run a Backup', desc: "Take a full backup of the database." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'setup', label: 'Initial Setup', icon: '📥', accent: 'setup',
     description: 'One-off imports for getting a new school set up.',
     items: ({ hasAccess }) => [
-      { href: '/students/import', label: 'Import Students' },
-      { href: '/students/photos/import', label: 'Import Photos' },
+      { href: '/students/import', label: 'Import Students', desc: "Upload a student list." },
+      { href: '/students/photos/import', label: 'Import Photos', desc: "Upload student photos." },
       // /admin/import-timetable (SIMS student-class upload) is no longer used:
       // allocations are kept in Formwork, and that upload only ever added
       // students to classes, never took them out. Hidden, not deleted.
@@ -298,16 +354,16 @@ export default function Home() {
             icon="📚" label="My Info" accent="myinfo"
             description="Your grades, behaviour record and account."
             items={[
-              { href: '/portal', label: 'My Grades & Behaviour' },
-              { href: '/portal/tuckshop', label: 'Tuckshop' },
-              { href: '/change-password', label: 'Change Password' },
+              { href: '/portal', label: 'My Grades', desc: "Your grades, targets and behaviour record." },
+              { href: '/portal/tuckshop', label: 'Tuckshop', desc: "Order from the tuckshop." },
+              { href: '/change-password', label: 'Change Password', desc: "Choose a new password." },
             ]}
           />
           <ModuleCard
             icon="🎭" label="The Other Half" accent="students"
             description="Choose your activities for each Other Half slot."
             items={[
-              { href: '/portal/other-half', label: 'Choose My Activities' },
+              { href: '/portal/other-half', label: 'Choose Activities', desc: "Pick one activity for each Other Half day." },
             ]}
           />
         </div>
@@ -380,6 +436,7 @@ export default function Home() {
 
   return (
     <div>
+      <QuickLinks hasAccess={hasAccess} />
       <DashboardStats isDemoAccount={profile?.is_demo_account} />
       <div className="module-card-grid">
         {TABS.map((t) => (
