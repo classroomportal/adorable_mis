@@ -153,6 +153,16 @@ button {
   font-weight: 500;
 }
 button:hover { background: var(--brand-900); }
+/* Without this a disabled button looked exactly like a live one, so staff
+   tapped buttons that were never going to do anything. */
+button:disabled,
+button:disabled:hover {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--brand-700);
+}
+button.secondary:disabled,
+button.secondary:disabled:hover { background: white; }
 button.secondary, a.secondary {
   background: white;
   color: var(--brand-700);
