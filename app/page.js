@@ -164,8 +164,6 @@ const TABS = [
       { href: '/attendance', label: 'Attendance', desc: "Take a register for a lesson or mentor group." },
       { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
       { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
-      // Shares the /results grant rather than having a resource of its own.
-      { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
       { href: '/results/subject-overview', label: 'Subject Overview', desc: "Chart a student's results over time." },
       { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
       { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
@@ -251,11 +249,13 @@ const TABS = [
       { href: '/results/import-gradebook', label: 'Import Results', desc: "Upload the weekly Moodle gradebook." },
       { href: '/target-grades/import', label: 'Import Targets', desc: "Upload students' target grades." },
       { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
+      // Shares the /results grant rather than having a resource of its own.
+      { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
       { href: '/results/top-ten', label: 'Top 10', desc: "Print the top 10 students for a result set." },
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
       { href: '/assessments/import', label: 'Import CAT4/NGRT', desc: "Upload CAT4 and NGRT scores." },
-    ].filter((it) => hasAccess(it.href)),
+    ].filter((it) => hasAccess(it.resource || it.href)),
   },
   {
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
