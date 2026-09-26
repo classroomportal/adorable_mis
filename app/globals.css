@@ -582,27 +582,75 @@ a.dashboard-tile { color: white; text-decoration: none; }
 }
 .module-card-title { font-size: 1.05rem; font-weight: 700; color: var(--ink); }
 .module-card-desc { font-size: 0.83rem; color: var(--ink-soft); line-height: 1.4; margin: -0.1rem 0 0.2rem; }
+/* Sub-choices are a two-column grid of identical boxes: the same width and
+   height whatever the label, which wraps to at most three lines. */
 .module-card-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
   margin-top: auto;
   padding-top: 0.4rem;
 }
 .module-chip {
-  display: inline-flex;
+  position: relative;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 3.6rem;
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.2;
   color: var(--accent-color, var(--brand-700)) !important;
   background: var(--accent-bg, var(--brand-100));
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  padding: 0.35rem 0.5rem;
+  text-decoration: none;
   transition: background 0.12s ease, color 0.12s ease;
 }
-.module-chip:hover {
+.module-chip-label {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.module-chip:hover,
+.module-chip:focus-visible {
   background: var(--accent-color, var(--brand-700));
   color: white !important;
+}
+/* The pop-out description. It opens above the chip, anchored to the chip's
+   outer edge (left column to the left, right column to the right) so it never
+   runs off the side of a narrow screen. */
+.module-chip-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(230px, 75vw);
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--ink);
+  color: white;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.18);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+}
+.module-chip:nth-child(even) .module-chip-tip { left: auto; right: 0; }
+.module-chip:hover .module-chip-tip,
+.module-chip:focus-visible .module-chip-tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 0.25s;
 }
 .module-chip-soon {
   opacity: 0.55;
