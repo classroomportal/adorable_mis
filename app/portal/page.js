@@ -12,6 +12,7 @@ import { visibleTargets } from '../../lib/gradeCompare';
 import { formatTimeRange } from '../../lib/formatTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
 import { useHashView, DashboardTile, DashboardBack } from '../components/Dashboard';
+import { closingWarning } from '../../lib/tuckshopSchedule';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -39,6 +40,8 @@ function PortalInner() {
   const [studentName, setStudentName] = useState('');
   const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(null); // null = enrolment not loaded yet
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
+  // Warning in the last hours before a tuckshop ordering window closes.
+  const [tuckshopWarning, setTuckshopWarning] = useState(null);
   const [view, openView] = useHashView();
 
   async function load() {
@@ -60,6 +63,23 @@ function PortalInner() {
     setAppeals(ap || []);
     const { data: bal } = await supabase.rpc('get_tuckshop_balance', { p_student_id: studentId });
     setTuckshopBalance(bal ?? null);
+    const { data: settings } = await supabase.from('system_settings').select('tuckshop_ordering_closed_until').maybeSingle();
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
+    const closed = settings?.tuckshop_ordering_closed_until && today < settings.tuckshop_ordering_closed_until;
+    const { data: windows } = closed ? { data: [] } : await supabase.rpc('tuckshop_order_windows', { p_days: 7 });
+    const closing = (windows || []).find((w) => w.is_open && closingWarning(w.for_date, w.closes_at));
+    const warning = closing ? closingWarning(closing.for_date, closing.closes_at) : null;
+    if (warning) {
+      const { count } = await supabase
+        .from('tuckshop_preorders')
+        .select('id', { count: 'exact', head: true })
+        .eq('student_id', studentId)
+        .eq('for_date', closing.for_date)
+        .eq('status', 'pending');
+      setTuckshopWarning({ text: warning, hasOrder: (count || 0) > 0 });
+    } else {
+      setTuckshopWarning(null);
+    }
   }
 
   useEffect(() => {
@@ -201,6 +221,17 @@ function PortalInner() {
           <div className="profile-hero-sub">Your timetable, grades and behaviour</div>
         </div>
       </div>
+
+      {activeView === null && tuckshopWarning && (
+        <a href="/portal/tuckshop" className="card no-print" style={{ display: 'block', borderLeft: '5px solid #a3232c', background: '#fff4f4', color: 'inherit', textDecoration: 'none' }}>
+          <strong>⏰ {tuckshopWarning.text}</strong>
+          <div style={{ marginTop: '0.25rem' }}>
+            {tuckshopWarning.hasOrder
+              ? 'Check your order now if you want to change or cancel it →'
+              : 'You haven\'t ordered yet — order now →'}
+          </div>
+        </a>
+      )}
 
       {activeView === null ? (
         <div className="dashboard-tiles">

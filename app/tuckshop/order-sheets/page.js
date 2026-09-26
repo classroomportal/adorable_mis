@@ -5,11 +5,12 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { generateOrderSheetsPdf } from '../../../lib/generateOrderSheetsPdf';
+import { isLocked as lockedBySchedule, loadSchedule, momentLabel, windowFor } from '../../../lib/tuckshopSchedule';
 
 // Printable tuckshop order sheets: one page per restaurant listing each
 // student's order, with the total of each item, plus a whole-school
-// summary for the stock room. Orders for a Saturday lock at 11pm on the
-// Friday before (migration 160) — the sheet is live, so printing before
+// summary for the stock room. Orders lock when that day's ordering window
+// closes (tuckshop_order_schedule, migration 187) — the sheet is live, so printing before
 // then shows a warning that it can still change.
 
 function naira(n) {
@@ -22,16 +23,6 @@ function longDate(iso) {
   });
 }
 
-function dayBefore(iso) {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
-// Lagos is UTC+1 all year. Mirrors tuckshop_preorder_cutoff().
-function isLocked(forDate) {
-  return Date.now() >= new Date(`${dayBefore(forDate)}T23:00:00+01:00`).getTime();
-}
 
 function restaurantLabel(r) {
   if (!r) return 'No restaurant set';
@@ -80,11 +71,21 @@ function OrderSheetsInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const [schedule, setSchedule] = useState([]);
+
+  const isLocked = (d) => lockedBySchedule(d, schedule);
+  // e.g. "11pm on Thursday 1 October"
+  const closesLabel = (d) => {
+    const w = windowFor(d, schedule);
+    return w ? momentLabel(w.closesAt) : 'the day before';
+  };
 
   useEffect(() => { loadDates(); }, []);
   useEffect(() => { if (forDate) loadSheet(forDate); }, [forDate]);
 
   async function loadDates() {
+    const sched = await loadSchedule(supabase);
+    setSchedule(sched);
     const { data, error: err } = await supabase
       .from('tuckshop_preorders')
       .select('for_date')
@@ -92,17 +93,16 @@ function OrderSheetsInner() {
       .order('for_date', { ascending: false });
     if (err) { setError(err.message); setLoading(false); return; }
     const list = [...new Set((data || []).map((r) => r.for_date))];
-    // The next order date is always offered, even before anyone has ordered.
-    const { data: next } = await supabase.rpc('tuckshop_next_order_date');
-    if (next && !list.includes(next)) list.unshift(next);
+    // Upcoming tuckshop days are always offered, even before anyone has ordered.
+    const { data: windows } = await supabase.rpc('tuckshop_order_windows', { p_days: 7 });
+    (windows || []).forEach((w) => { if (!list.includes(w.for_date)) list.push(w.for_date); });
     list.sort().reverse();
     setDates(list);
-    // Default to the most recent Saturday whose orders are locked and
-    // today-or-later (the one the shop is about to serve); otherwise the
-    // next one open for ordering.
-    const today = new Date().toLocaleDateString('en-CA');
+    // Default to the soonest tuckshop day, today or later, whose orders are
+    // locked (the one the shop is about to serve); otherwise the next one.
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
     const upcoming = list.filter((d) => d >= today).sort();
-    setForDate(upcoming.find(isLocked) || upcoming[0] || list[0] || '');
+    setForDate(upcoming.find((d) => lockedBySchedule(d, sched)) || upcoming[0] || list[0] || '');
     if (list.length === 0) setLoading(false);
   }
 
@@ -141,7 +141,7 @@ function OrderSheetsInner() {
   }
 
   // Restaurant -> students -> item lines. A student can place more than one
-  // order for the same Saturday; they're combined into one line here.
+  // order for the same tuckshop day; they're combined into one line here.
   const restaurants = useMemo(() => {
     const byRest = new Map();
     rows.forEach((r) => {
@@ -191,7 +191,7 @@ function OrderSheetsInner() {
             onClick={async () => {
               setDownloading(true);
               try {
-                await generateOrderSheetsPdf({ forDate, locked, restaurants, allTotals, studentCount });
+                await generateOrderSheetsPdf({ forDate, locked, closesLabel: closesLabel(forDate), restaurants, allTotals, studentCount });
               } catch (e) {
                 setError(`Couldn't make the PDF: ${e.message}`);
               }
@@ -205,8 +205,8 @@ function OrderSheetsInner() {
         </div>
         {forDate && !locked && (
           <p className="badge badge-negative" style={{ display: 'inline-block' }}>
-            Students can still order for this Saturday until 11pm on {longDate(dayBefore(forDate))} —
-            this sheet may still change. Print after 11pm Friday for the final list.
+            Students can still order for this day until {closesLabel(forDate)} —
+            this sheet may still change. Print after that for the final list.
           </p>
         )}
         {error && <p style={{ color: '#a3232c' }}>Error: {error}</p>}
@@ -220,7 +220,7 @@ function OrderSheetsInner() {
             <h2>Tuckshop orders — {longDate(forDate)}</h2>
             <p className="order-sheet-meta">
               All restaurants · {studentCount} student{studentCount === 1 ? '' : 's'} ·{' '}
-              {locked ? 'Final (orders locked 11pm Friday)' : 'PROVISIONAL — ordering still open'} ·
+              {locked ? `Final (orders locked ${closesLabel(forDate)})` : 'PROVISIONAL — ordering still open'} ·
               printed {new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
             </p>
             <table className="order-sheet-table">

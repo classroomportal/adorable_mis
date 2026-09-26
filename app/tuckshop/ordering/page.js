@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import ScheduleEditor from './ScheduleEditor';
 
 // Local date, not toISOString() — that is UTC, an hour behind Lagos, which
 // would make "tomorrow" look like today for the first hour of the day.
@@ -80,7 +81,7 @@ function TuckshopOrderingInner() {
             <p style={{ marginTop: 0 }}>
               Status:{' '}
               <span className={`badge ${isClosed ? 'badge-negative' : 'badge-positive'}`}>
-                {isClosed ? 'Closed' : 'Open'}
+                {isClosed ? 'Closed' : 'Following the weekly schedule'}
               </span>
             </p>
             {isClosed ? (
@@ -89,7 +90,7 @@ function TuckshopOrderingInner() {
                 <strong>{longDate(closedUntil)}</strong>.
               </p>
             ) : (
-              <p>Students can place preorders from their portal.</p>
+              <p>Students can order from their portal during the weekly ordering windows below.</p>
             )}
             {note && <p style={{ color: '#555' }}><em>{note}</em></p>}
             <p style={{ color: '#555', fontSize: '0.9rem' }}>
@@ -111,8 +112,11 @@ function TuckshopOrderingInner() {
               className="card"
               onSubmit={(e) => { e.preventDefault(); apply(reopenOn, newNote); }}
             >
-              <h3 style={{ marginTop: 0 }}>Close ordering</h3>
-              <p>Ordering reopens automatically on the date you pick — nobody has to turn it back on.</p>
+              <h3 style={{ marginTop: 0 }}>Close ordering (holidays, stock-takes)</h3>
+              <p>
+                Shuts ordering completely, whatever the weekly schedule says, until the date you pick.
+                The schedule takes over again on its own — nobody has to turn it back on.
+              </p>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <label>
                   Reopen on<br />
@@ -141,6 +145,8 @@ function TuckshopOrderingInner() {
           )}
 
           {status && <p>{status}</p>}
+
+          <ScheduleEditor />
 
           {pendingCount > 0 && (
             <div className="card">
