@@ -4,19 +4,16 @@ import { useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { decodeNovaTSlot } from '../../../lib/novaTSlots';
 
 // Nova-T's NCLASS.DAT rows: "Meeting ,38,CBT,    " = label, slot number,
 // staff code, room (always blank — a commitment has no room booking here).
-// Slot decodes the same way TBTRA-F.DAT's slot column does.
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-
-function decodeSlot(slotStr) {
-  const slot = parseInt(slotStr, 10);
-  if (!Number.isFinite(slot) || slot < 1) return null;
-  const dayIndex = (slot - 1) % 5;
-  const periodNumber = Math.floor((slot - 1) / 5) + 1;
-  return { day_of_week: DAYS[dayIndex], period_number: periodNumber };
-}
+// The slot is the same day-major number as TBTRA-F.DAT's (lib/novaTSlots):
+// 38 is Friday Lesson 1. This page used to have its own period-major
+// decode, which put 38 on Wednesday's Other Half, scattered the part-time
+// teacher's Monday and Thursday off across the week, and set meetings on
+// top of registrations the teachers were taking (migration 184 moved the
+// stored ones to their real times).
 
 function commitmentKey(staffId, dayOfWeek, periodNumber) {
   return `${staffId}|${dayOfWeek}|${periodNumber}`;
@@ -30,7 +27,7 @@ async function parseFile(file) {
     const cols = line.split(',').map((c) => c.trim());
     if (cols.length < 3) continue;
     const [label, slotStr, staffCode] = cols;
-    const decoded = decodeSlot(slotStr);
+    const decoded = decodeNovaTSlot(slotStr);
     if (!label || !staffCode || !decoded) continue;
     rows.push({ label, staff_code: staffCode, ...decoded });
   }
