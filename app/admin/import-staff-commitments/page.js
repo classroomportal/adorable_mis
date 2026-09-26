@@ -81,19 +81,19 @@ function ImportStaffCommitmentsInner() {
         });
       }
 
-      // Nova-T data gets corrected sometimes (e.g. a staff member removed
-      // from a meeting that shouldn't have had them). A commitment already
-      // in the database for a staff member THIS FILE covers, but that isn't
-      // one of the rows this upload produced for them, is stale — flag it
-      // for removal instead of leaving last import's mistake in place
-      // forever. (Staff not mentioned anywhere in this file are left alone —
-      // this file might just not cover them.)
+      // NCLASS.DAT is Nova-T's whole list of commitments, so anything
+      // already saved that this file doesn't have is stale — flag it for
+      // removal. That includes staff the file doesn't mention at all: this
+      // used to only look at staff who were in the file, so when the
+      // Wednesday Lesson 4 meeting was cancelled, the 11 staff who had no
+      // other commitment kept it forever (CUE's showed as a clash with
+      // 9G1/Bs). A file with no usable rows flags nothing, so a wrong or
+      // empty upload can't offer to wipe every commitment.
       let staleCommitments = [];
       if (staffIdsInFile.size > 0) {
         const { data: existing, error: exErr } = await supabase
           .from('staff_commitments')
-          .select('commitment_id, staff_id, day_of_week, period_number, label, staff(first_name, last_name)')
-          .in('staff_id', [...staffIdsInFile]);
+          .select('commitment_id, staff_id, day_of_week, period_number, label, staff(first_name, last_name)');
         if (exErr) throw exErr;
 
         const newKeys = new Set(matched.map((m) => commitmentKey(m.staff_id, m.day_of_week, m.period_number)));
@@ -244,11 +244,12 @@ function ImportStaffCommitmentsInner() {
           {preview.staleCommitments && preview.staleCommitments.length > 0 && (
             <details open style={{ marginTop: '1rem' }}>
               <summary style={{ color: 'crimson' }}>
-                {preview.staleCommitments.length} commitment(s) already saved for staff in this file, but not in it anymore — review before removing
+                {preview.staleCommitments.length} commitment(s) already saved but not in this file anymore — review before removing
               </summary>
               <p style={{ fontSize: '0.9em', color: '#555' }}>
-                Typically a correction (e.g. someone removed from a meeting
-                they shouldn't have been on). Ticked ones will be deleted.
+                A meeting that's been cancelled, or someone taken off one. This
+                file is Nova-T's full list, so that includes staff it doesn't
+                mention at all. Ticked ones will be deleted.
               </p>
               <div className="table-scroll">
                 <table>
