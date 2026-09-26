@@ -296,20 +296,14 @@ const TABS = [
   },
   {
     key: 'administration', label: 'Administration', icon: '⏰', accent: 'admin',
-    description: 'Lookups, student numbers, class lists and backups.',
+    description: 'Lookups, student numbers, class lists, imports and backups.',
     items: ({ hasAccess }) => [
       { href: '/admin/lookups', label: 'Lookups', desc: "Drop-down lists such as houses and behaviour types." },
       { href: '/admin/student-numbers', label: 'Student Numbers', desc: "Boys and girls by year, mentor group and class." },
       { href: '/admin/class-lists', label: 'Class Lists', desc: "Print class lists." },
-      { href: '/admin/backup', label: 'Run a Backup', desc: "Take a full backup of the database." },
-    ].filter((it) => hasAccess(it.href)),
-  },
-  {
-    key: 'setup', label: 'Initial Setup', icon: '📥', accent: 'setup',
-    description: 'One-off imports for getting a new school set up.',
-    items: ({ hasAccess }) => [
       { href: '/students/import', label: 'Import Students', desc: "Upload a student list." },
       { href: '/students/photos/import', label: 'Import Photos', desc: "Upload student photos." },
+      { href: '/admin/backup', label: 'Run a Backup', desc: "Take a full backup of the database." },
       // /admin/import-timetable (SIMS student-class upload) is no longer used:
       // allocations are kept in Formwork, and that upload only ever added
       // students to classes, never took them out. Hidden, not deleted.
