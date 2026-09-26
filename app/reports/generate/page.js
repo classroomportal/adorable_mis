@@ -7,6 +7,8 @@ import { useAuth } from '../../../lib/AuthContext';
 import { publishTermTestScores } from '../../../lib/generateTermTestScores';
 import { publishKeyStageTranscript, KEY_STAGE_GROUP_OPTIONS } from '../../../lib/generateKeyStageTranscript';
 import { publishWrittenReport, downloadWrittenReport } from '../../../lib/generateWrittenReport';
+import { scopeToReportPeriod, describeReportPeriod } from '../../../lib/reportWriting';
+import { formatUKDate } from '../../../lib/formatDate';
 
 const DOC_TYPES = [
   { value: 'written_report', label: 'Written report (grades and approved comments)' },
@@ -37,14 +39,15 @@ function GenerateReportsInner() {
 
   useEffect(() => {
     if (!period) { setStudents([]); return; }
-    supabase
-      .from('students')
-      .select('student_id, first_name, last_name, year_group')
-      .eq('status', 'active')
-      .eq('is_demo', false)
-      .in('year_group', period.year_groups || [])
-      .order('last_name')
-      .then(({ data }) => setStudents(data || []));
+    scopeToReportPeriod(
+      supabase
+        .from('students')
+        .select('student_id, first_name, last_name, year_group')
+        .eq('status', 'active')
+        .eq('is_demo', false)
+        .order('last_name'),
+      period
+    ).then(({ data }) => setStudents(data || []));
   }, [period]);
 
   async function generateAndPublish() {
@@ -125,7 +128,7 @@ function GenerateReportsInner() {
 
         {period && (
           <p style={{ color: '#666', fontSize: '0.9rem' }}>
-            Years {(period.year_groups || []).join(', ')} — {students.length} active student{students.length === 1 ? '' : 's'}.
+            {describeReportPeriod(period, formatUKDate)} — {students.length} active student{students.length === 1 ? '' : 's'}.
           </p>
         )}
 

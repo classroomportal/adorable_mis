@@ -8,6 +8,7 @@ import { formatUKDate } from '../../../lib/formatDate';
 import {
   JUDGEMENTS, JUDGEMENT_GRADES, SHOWN_WEEKS, isExamResult, loadAcademicYear, weekLabel,
   loadGradePoints, loadYearResults, loadTargets, summariseGrades, describeVsTarget,
+  scopeToReportPeriod, inReportPeriod,
 } from '../../../lib/reportWriting';
 import { subjectFacts } from '../../../lib/reportFacts';
 import GradeChip from '../../components/GradeChip';
@@ -29,6 +30,9 @@ function WriteSubjectCommentsInner() {
   const [periodId, setPeriodId] = useState('');
   const [classes, setClasses] = useState([]);
   const [classId, setClassId] = useState('');
+  // For a period limited to recent joiners (joined_from), the classes those
+  // students are in; null when the period covers whole year groups.
+  const [periodClassIds, setPeriodClassIds] = useState(null);
 
   const [roster, setRoster] = useState([]);
   const [rows, setRows] = useState({}); // student_id -> { id, comment, effort_grade, presentation_grade, homework_grade, status, checker_note }
@@ -58,9 +62,21 @@ function WriteSubjectCommentsInner() {
       .then(({ data }) => setClasses(data || []));
   }, [staffId]);
 
-  // Classes relevant to the selected period's year groups only
+  useEffect(() => {
+    if (!selectedPeriod?.joined_from) { setPeriodClassIds(null); return; }
+    scopeToReportPeriod(
+      supabase.from('students').select('student_id, student_class(class_id)').eq('status', 'active'),
+      selectedPeriod
+    ).then(({ data }) => {
+      setPeriodClassIds(new Set((data || []).flatMap((s) => (s.student_class || []).map((sc) => sc.class_id))));
+    });
+  }, [selectedPeriod]);
+
+  // Classes relevant to the selected period's year groups only — and, for a
+  // new students period, only classes with a new student in them.
   const classesForPeriod = selectedPeriod
-    ? classes.filter((c) => (selectedPeriod.year_groups || []).includes(c.year_group))
+    ? classes.filter((c) => (selectedPeriod.year_groups || []).includes(c.year_group)
+        && (!selectedPeriod.joined_from || periodClassIds?.has(c.class_id)))
     : [];
 
   const loadRosterAndExisting = useCallback(async () => {
@@ -74,11 +90,11 @@ function WriteSubjectCommentsInner() {
 
     const { data: sc } = await supabase
       .from('student_class')
-      .select('students(student_id, first_name, last_name, year_group, status)')
+      .select('students(student_id, first_name, last_name, year_group, status, admission_date)')
       .eq('class_id', classId);
     const studentList = (sc || [])
       .map((r) => r.students)
-      .filter((s) => s && s.status === 'active')
+      .filter((s) => s && s.status === 'active' && (!selectedPeriod || inReportPeriod(s, selectedPeriod)))
       .sort((a, b) => a.last_name.localeCompare(b.last_name));
     setRoster(studentList);
 

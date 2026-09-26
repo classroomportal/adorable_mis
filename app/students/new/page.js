@@ -3,12 +3,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import { schoolToday } from '../../../lib/schoolTime';
 
 function NewStudentInner() {
   const router = useRouter();
   const [upn, setUpn] = useState('');
   const [form, setForm] = useState({
     first_name: '', last_name: '', middle_name: '', gender: '', year_group: '', form_class: '', dob: '',
+    // Decides whether they count as a new student on report periods like
+    // "New students check" (migration 193); required since migration 194.
+    admission_date: schoolToday(),
   });
   const [status, setStatus] = useState(null);
   const [mentorGroups, setMentorGroups] = useState([]);
@@ -36,6 +40,10 @@ function NewStudentInner() {
       setStatus('Date of birth is required.');
       return;
     }
+    if (!form.admission_date) {
+      setStatus('Admission date is required.');
+      return;
+    }
     setStatus('Creating...');
     const { data, error } = await supabase
       .from('students')
@@ -48,6 +56,7 @@ function NewStudentInner() {
         year_group: form.year_group ? Number(form.year_group) : null,
         form_class: form.form_class || null,
         dob: form.dob,
+        admission_date: form.admission_date,
         status: 'active',
       })
       .select('student_id')
@@ -89,6 +98,10 @@ function NewStudentInner() {
         <label>
           Date of birth
           <input type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} required />
+        </label>
+        <label>
+          Admission date (the day they joined the school)
+          <input type="date" value={form.admission_date} onChange={(e) => setForm({ ...form, admission_date: e.target.value })} required />
         </label>
         <label>
           Year group

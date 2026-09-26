@@ -73,7 +73,11 @@ function ImportInner() {
           .maybeSingle();
 
         if (existing) {
-          const { error } = await supabase.from('students').update(row).eq('student_id', existing.student_id);
+          // A blank admission date keeps the one on record — it can't be
+          // cleared (NOT NULL, migration 194).
+          const changes = { ...row };
+          if (changes.admission_date == null) delete changes.admission_date;
+          const { error } = await supabase.from('students').update(changes).eq('student_id', existing.student_id);
           if (error) problems.push(`Row ${i + 2} (UPN ${row.upn}): ${error.message}`);
           else updated++;
           continue;
@@ -102,7 +106,7 @@ function ImportInner() {
         <p>Optional columns (include any you have data for — leave others out or blank):</p>
         <p style={{ fontSize: '0.85rem', wordBreak: 'break-word' }}>{COLUMNS.filter(c => !['first_name','last_name','dob','year_group'].includes(c)).join(', ')}</p>
         <p><code>upn</code>: if a student with this UPN already exists, their record is <strong>updated</strong>. If not (or left blank), a <strong>new</strong> student is created.</p>
-        <p><code>dob</code>, <code>admission_date</code>, <code>admitted_letter_date</code>, <code>leaving_date</code> format: YYYY-MM-DD.</p>
+        <p><code>dob</code>, <code>admission_date</code>, <code>admitted_letter_date</code>, <code>leaving_date</code> format: YYYY-MM-DD. A new student with no <code>admission_date</code> is given today&apos;s date.</p>
         <input type="file" accept=".csv" onChange={handleFile} />
       </div>
 

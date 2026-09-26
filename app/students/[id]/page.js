@@ -845,7 +845,7 @@ function StudentDetail() {
               </select>
             </label>
             <label>Admission date
-              <input disabled={!canEditField('admission_date')} type="date" value={editForm.admission_date || ''} onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })} />
+              <input disabled={!canEditField('admission_date')} required type="date" value={editForm.admission_date || ''} onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })} />
               {editForm.admission_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.admission_date)}</span>}
             </label>
             <label>Admitted/letter date

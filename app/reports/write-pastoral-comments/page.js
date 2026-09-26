@@ -7,7 +7,7 @@ import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import {
   JUDGEMENTS, JUDGEMENT_GRADES, loadAcademicYear, loadGradePoints, loadYearResults, loadTargets,
-  loadBehaviourTotals, rankSubjects,
+  loadBehaviourTotals, rankSubjects, scopeToReportPeriod,
 } from '../../../lib/reportWriting';
 import { pastoralFacts } from '../../../lib/reportFacts';
 import GradeChip from '../../components/GradeChip';
@@ -90,13 +90,14 @@ function WritePastoralCommentsInner() {
     setLoadingRoster(true);
     setStatus(null);
 
-    const yearGroups = selectedPeriod.year_groups || [];
-    let query = supabase
-      .from('students')
-      .select('student_id, first_name, last_name, year_group, form_class, boarding_house')
-      .in('year_group', yearGroups.length ? yearGroups : [-1])
-      .eq('status', 'active')
-      .order('last_name');
+    let query = scopeToReportPeriod(
+      supabase
+        .from('students')
+        .select('student_id, first_name, last_name, year_group, form_class, boarding_house')
+        .eq('status', 'active')
+        .order('last_name'),
+      selectedPeriod
+    );
 
     if (commentType === 'mentor') query = query.in('student_id', menteeIds.length ? menteeIds : [-1]);
     if (commentType === 'houseparent') query = query.eq('boarding_house', houseScope);

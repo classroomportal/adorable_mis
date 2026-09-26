@@ -4,6 +4,8 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
+import { formatUKDate } from '../../../lib/formatDate';
+import { describeReportPeriod } from '../../../lib/reportWriting';
 
 const ALL_YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
 
@@ -45,6 +47,7 @@ function ManagePeriodsInner() {
   const [selectedYears, setSelectedYears] = useState([]);
   const [commentsDue, setCommentsDue] = useState('');
   const [checkDue, setCheckDue] = useState('');
+  const [joinedFrom, setJoinedFrom] = useState(''); // '' = everyone in the year groups
 
   // Checker add form (per expanded period)
   const [checkerStaffId, setCheckerStaffId] = useState('');
@@ -95,11 +98,12 @@ function ManagePeriodsInner() {
       year_groups: selectedYears,
       comments_due_date: commentsDue || null,
       check_due_date: checkDue || null,
+      joined_from: joinedFrom || null,
       created_by: user?.id || null,
     }]);
     if (error) { setStatus(`Error: ${error.message}`); return; }
 
-    setName(''); setTermId(''); setSelectedYears([]); setCommentsDue(''); setCheckDue('');
+    setName(''); setTermId(''); setSelectedYears([]); setCommentsDue(''); setCheckDue(''); setJoinedFrom('');
     setStatus('Report period created.');
     load();
   }
@@ -168,6 +172,11 @@ function ManagePeriodsInner() {
             <input type="date" value={checkDue} onChange={(e) => setCheckDue(e.target.value)} />
           </label>
 
+          <label>
+            Only students who joined on or after (optional — e.g. a new students check)
+            <input type="date" value={joinedFrom} onChange={(e) => setJoinedFrom(e.target.value)} />
+          </label>
+
           <div style={{ flex: '1 1 100%' }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '0.35rem' }}>Year groups covered</div>
             <YearGroupPicker selected={selectedYears} onToggle={toggleYear} />
@@ -188,7 +197,7 @@ function ManagePeriodsInner() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div>
                   <strong>{p.name}</strong>{' '}
-                  <span style={{ color: '#666' }}>— Years {(p.year_groups || []).join(', ')}</span>
+                  <span style={{ color: '#666' }}>— {describeReportPeriod(p, formatUKDate)}</span>
                   {p.is_published && <span style={{ marginLeft: '0.5rem', color: 'green' }}>Published</span>}
                   <div style={{ fontSize: '0.85rem', color: '#666' }}>
                     Comments due: {p.comments_due_date || '—'} &nbsp;|&nbsp; Checking due: {p.check_due_date || '—'}
