@@ -1,0 +1,730 @@
+<title>Report Writing Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f2f7fc;
+  --ink: #1f2733;
+  --ink-soft: #5b6472;
+  --line: #e2e5ea;
+  --brand: #2f6fa8;
+  --brand-strong: #1d4a7a;
+  --brand-tint: #e3f0fa;
+  --good: #1a7a3d;   --good-tint: #e3f4e8;
+  --on: #1d4a7a;     --on-tint: #e3f0fa;
+  --warn: #8a5a00;   --warn-tint: #fff1cc;
+  --bad: #b3282d;    --bad-tint: #fbe4e4;
+  --note: #fff6d6;   --note-line: #eecb7a;
+  --spark: #2f6fa8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #10151d; --surface: #18202b; --surface-2: #1c2633; --ink: #e6ebf2; --ink-soft: #9aa6b5;
+    --line: #2a3442; --brand: #6aa8dc; --brand-strong: #9cc7ec; --brand-tint: #1c3148;
+    --good: #6fcf8f; --good-tint: #173524; --on: #9cc7ec; --on-tint: #1c3148;
+    --warn: #f0c060; --warn-tint: #3a2e10; --bad: #f08a8a; --bad-tint: #3d1b1d;
+    --note: #332b12; --note-line: #6b5720; --spark: #6aa8dc;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #10151d; --surface: #18202b; --surface-2: #1c2633; --ink: #e6ebf2; --ink-soft: #9aa6b5;
+  --line: #2a3442; --brand: #6aa8dc; --brand-strong: #9cc7ec; --brand-tint: #1c3148;
+  --good: #6fcf8f; --good-tint: #173524; --on: #9cc7ec; --on-tint: #1c3148;
+  --warn: #f0c060; --warn-tint: #3a2e10; --bad: #f08a8a; --bad-tint: #3d1b1d;
+  --note: #332b12; --note-line: #6b5720; --spark: #6aa8dc;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 60px; }
+h1 { font-size: 1.5rem; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.15rem; margin: 0; text-wrap: balance; }
+h3 { font-size: 0.95rem; margin: 0; }
+p { margin: 0; }
+.muted { color: var(--ink-soft); }
+.small { font-size: 0.85rem; }
+.label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
+
+.banner { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.sample { font-size: 0.78rem; background: var(--note); border: 1px solid var(--note-line); padding: 2px 10px; border-radius: 99px; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 18px; overflow-x: auto; }
+.tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 14px; font: inherit; font-weight: 600; color: var(--ink-soft); cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--brand-strong); border-bottom-color: var(--brand); }
+.tab:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.pickers { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+.pickers label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; }
+select, textarea { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+select, textarea { font-weight: 400; }
+textarea { width: 100%; resize: vertical; line-height: 1.5; }
+
+.intro { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; display: grid; gap: 6px; }
+.intro ul { margin: 0; padding-left: 1.2em; }
+
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+.status { font-size: 0.8rem; color: var(--ink-soft); }
+.status.done { color: var(--good); }
+
+/* Grade history table */
+.hist { overflow-x: auto; }
+.hist table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.85rem; }
+.hist th { text-align: center; font-weight: 600; color: var(--ink-soft); font-size: 0.72rem; padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: bottom; }
+.hist th .d { display: block; font-weight: 400; }
+.hist td { text-align: center; padding: 6px; }
+.hist th:first-child, .hist td:first-child { text-align: left; }
+.hist .tgt { border-left: 1px solid var(--line); }
+
+.g { display: inline-block; min-width: 2.4em; padding: 2px 6px; border-radius: 5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.g.above { background: var(--good-tint); color: var(--good); }
+.g.on { background: var(--on-tint); color: var(--on); }
+.g.below1 { background: var(--warn-tint); color: var(--warn); }
+.g.below2 { background: var(--bad-tint); color: var(--bad); }
+.g.target { background: none; border: 1.5px dashed var(--ink-soft); color: var(--ink); }
+.g.exam { box-shadow: inset 0 0 0 1.5px currentColor; }
+
+.facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; }
+.facts b { font-variant-numeric: tabular-nums; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+.measures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .measures { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; }
+
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+button.b { font: inherit; font-size: 0.88rem; font-weight: 600; border-radius: 6px; padding: 7px 12px; cursor: pointer; border: 1px solid var(--brand); background: var(--brand); color: #fff; }
+button.b.sec { background: var(--surface); color: var(--brand-strong); border-color: var(--line); }
+:root[data-theme="dark"] button.b:not(.sec) { color: #0d1826; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) button.b:not(.sec) { color: #0d1826; } }
+
+details.ai { font-size: 0.82rem; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--surface-2); }
+details.ai summary { cursor: pointer; font-weight: 600; color: var(--ink-soft); }
+details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
+.simnote { font-size: 0.75rem; color: var(--ink-soft); }
+
+/* Pastoral */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.tile .v { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tile .v.pos { color: var(--good); }
+.tile .v.neg { color: var(--bad); }
+.tile .s { font-size: 0.78rem; color: var(--ink-soft); }
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+.panel { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.87rem; }
+.list li { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.list .r { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 0.78rem; border: 1px solid var(--line); border-radius: 99px; padding: 2px 9px; background: var(--surface-2); }
+.chip b { font-weight: 600; }
+.chip.ni { background: var(--warn-tint); color: var(--warn); border-color: transparent; }
+.mlabel { font-size: 0.82rem; font-weight: 600; min-width: 11em; align-self: center; }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; }
+.bar .p { background: var(--good); }
+.bar .n { background: var(--bad); }
+
+/* Report sheet — deliberately a white printed page in both themes */
+.sheet-wrap { overflow-x: auto; }
+.sheet {
+  background: #fff; color: #1b2330; max-width: 820px; margin: 0 auto; padding: 36px 40px;
+  border: 1px solid #d9dde3; box-shadow: 0 2px 12px rgba(15,23,42,0.12);
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 1.5;
+}
+@media (max-width: 640px) { .sheet { padding: 22px 18px; } }
+.sheet .top { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #16304f; padding-bottom: 12px; }
+.sheet .school { font-size: 1.35rem; font-weight: 700; color: #16304f; letter-spacing: 0.01em; }
+.sheet .rtitle { font-size: 0.95rem; color: #4a5361; }
+.sheet .meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 16px; margin: 14px 0 18px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.82rem; }
+@media (max-width: 640px) { .sheet .meta { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sheet .meta .k { color: #5b6472; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.sheet .meta .v { font-weight: 600; }
+.sheet h4 { font-size: 1.05rem; color: #16304f; margin: 22px 0 8px; }
+.sheet table { width: 100%; border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.8rem; min-width: 600px; }
+.sheet th { background: #eef2f7; color: #3b4452; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 6px; text-align: center; border: 1px solid #d9dde3; }
+.sheet td { padding: 6px; text-align: center; border: 1px solid #e2e5ea; font-variant-numeric: tabular-nums; }
+.sheet th:first-child, .sheet td:first-child { text-align: left; }
+.sheet td.ex { font-weight: 700; background: #f6f8fb; }
+.sheet td.w { font-size: 0.72rem; }
+.sheet .subj { border-top: 1px solid #e2e5ea; padding: 10px 0; display: grid; gap: 3px; }
+.sheet .subj .h { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.82rem; }
+.sheet .subj .h b { font-size: 0.9rem; color: #16304f; }
+.sheet .subj .h span { color: #5b6472; }
+.sheet .pastoral { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+@media (max-width: 640px) { .sheet .pastoral { grid-template-columns: 1fr; } }
+.sheet .pastoral > div { border: 1px solid #e2e5ea; padding: 8px 10px; }
+.sheet .pastoral .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #5b6472; }
+.sheet .pastoral .v { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sheet .key { margin-top: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.72rem; color: #5b6472; border-top: 1px solid #e2e5ea; padding-top: 8px; }
+.sheet .sig { font-style: italic; color: #4a5361; font-size: 0.85rem; }
+.pending { color: #8a8f98; font-style: italic; }
+
+.notes { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 8px; font-size: 0.88rem; max-width: 70ch; }
+.notes ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .15s; } }
+</style>
+
+<div class="wrap">
+  <div class="banner">
+    <div>
+      <h1>Report writing — mockup</h1>
+      <p class="muted small">End of Term 1 Reports 2026/27 · Years 7–12</p>
+    </div>
+    <span class="sample">Sample data: made-up students, not real records</span>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-subject" aria-selected="true" data-view="subject">1 · Subject teacher</button>
+    <button class="tab" role="tab" id="tab-pastoral" aria-selected="false" data-view="pastoral">2 · Mentor (pastoral)</button>
+    <button class="tab" role="tab" id="tab-report" aria-selected="false" data-view="report">3 · Finished report</button>
+  </div>
+
+  <section id="view-subject"></section>
+  <section id="view-pastoral" hidden></section>
+  <section id="view-report" hidden></section>
+
+  <div class="notes">
+    <h2>Where the numbers come from</h2>
+    <ul>
+      <li><b>Grades this year</b>: every row in <code>results</code> for that student and subject since the start of the academic year, short tests and the term exam, in date order.</li>
+      <li><b>Target</b>: <code>target_grades</code>. Each grade is coloured against it using the points in <code>grade_scale</code> (A* = 8 … G = 1).</li>
+      <li><b>Behaviour</b>: <code>behaviour_events</code> since 1 September, split into positive and negative points with the categories behind them.</li>
+      <li><b>Attendance</b>: the existing <code>student_attendance_summary()</code>.</li>
+      <li><b>Effort, presentation and homework grades</b> live on <code>report_subject_comments</code>. Effort is already there; presentation and homework would be two new columns on the same scale. The mentor screen shows whatever subject teachers have entered so far.</li>
+      <li>The AI draft is only given the facts listed under “What the AI draft is based on”. It is told not to invent anything else, as the current draft button already is.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---------- Sample data (invented) ----------
+  const POINTS = { 'A*': 8, A: 7, B: 6, C: 5, D: 4, E: 3, F: 2, G: 1, U: 0 };
+  const GRADES = ['U', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'A*'];
+  const EFFORT = ['Excellent', 'Good', 'Satisfactory', 'Needs Improvement'];
+  // Three teacher-judged grades per subject, all on the same four-point scale
+  const MEASURES = [
+    { key: 'effort', label: 'Effort', short: 'Effort' },
+    { key: 'presentation', label: 'Presentation of work', short: 'Pres.' },
+    { key: 'homework', label: 'Homework', short: 'H/work' },
+  ];
+
+  const ASSESSMENTS = [
+    { label: 'Baseline test', date: '15 Sep', type: 'short_test' },
+    { label: 'Short test 1', date: '6 Oct', type: 'short_test' },
+    { label: 'Short test 2', date: '3 Nov', type: 'short_test' },
+    { label: 'Short test 3', date: '24 Nov', type: 'short_test' },
+    { label: 'Term 1 exam', date: '8 Dec', type: 'term_exam' },
+  ];
+
+  const SUBJECTS = [
+    { name: 'English Language', teacher: 'Mrs A. Nwosu' },
+    { name: 'Mathematics', teacher: 'Mr K. Balogun' },
+    { name: 'Biology', teacher: 'Dr F. Ibrahim', mine: true, cls: '10A/Bi1' },
+    { name: 'Chemistry', teacher: 'Mr T. Okeke' },
+    { name: 'Physics', teacher: 'Ms R. Danjuma' },
+    { name: 'English Literature', teacher: 'Mrs A. Nwosu' },
+    { name: 'French', teacher: 'Mme C. Laurent' },
+    { name: 'Geography', teacher: 'Mr S. Ade' },
+  ];
+
+  // grades[subjectIndex] = [baseline, st1, st2, st3, exam]; target per subject
+  const STUDENTS = [
+    {
+      id: 1, first: 'Tolu', last: 'Adebayo', form: '10A', att: 97.8, presShift: 1, hwShift: 0,
+      targets: ['A', 'A*', 'A', 'A', 'A*', 'A', 'B', 'A'],
+      grades: [
+        ['B', 'A', 'A', 'A', 'A'], ['A', 'A', 'A*', 'A*', 'A*'], ['B', 'B', 'A', 'A', 'A*'], ['A', 'A', 'A', 'A*', 'A'],
+        ['A', 'A*', 'A*', 'A*', 'A*'], ['B', 'B', 'A', 'A', 'A'], ['C', 'B', 'B', 'B', 'A'], ['A', 'A', 'B', 'A', 'A'],
+      ],
+      effort: ['Good', 'Excellent', null, 'Good', 'Excellent', 'Good', 'Excellent', 'Good'],
+      behaviour: [
+        { cat: 'Excellent work', pts: 2, n: 9 }, { cat: 'Helping others', pts: 3, n: 4 }, { cat: 'Representing the school', pts: 5, n: 2 },
+        { cat: 'Leadership', pts: 3, n: 2 }, { cat: 'Homework completed', pts: 1, n: 6 },
+        { cat: 'Late to lesson', pts: -1, n: 1 },
+      ],
+    },
+    {
+      id: 2, first: 'Chiamaka', last: 'Eze', form: '10A', att: 95.1, presShift: -1, hwShift: 1,
+      targets: ['B', 'B', 'B', 'B', 'C', 'A', 'B', 'B'],
+      grades: [
+        ['B', 'B', 'A', 'B', 'A'], ['C', 'C', 'B', 'B', 'B'], ['B', 'C', 'C', 'D', 'C'], ['B', 'C', 'C', 'C', 'D'],
+        ['C', 'C', 'D', 'C', 'C'], ['A', 'A', 'A', 'A*', 'A'], ['B', 'B', 'B', 'A', 'B'], ['B', 'B', 'C', 'B', 'B'],
+      ],
+      effort: ['Excellent', 'Good', null, 'Satisfactory', 'Satisfactory', 'Excellent', 'Good', 'Good'],
+      behaviour: [
+        { cat: 'Good work', pts: 1, n: 7 }, { cat: 'Kindness', pts: 2, n: 3 }, { cat: 'Extra-curricular achievement', pts: 3, n: 2 },
+        { cat: 'Homework not completed', pts: -2, n: 3 }, { cat: 'Equipment missing', pts: -1, n: 2 },
+      ],
+    },
+    {
+      id: 3, first: 'Ifeanyi', last: 'Okafor', form: '10A', att: 88.4, presShift: 0, hwShift: 1,
+      targets: ['C', 'C', 'C', 'C', 'C', 'C', 'D', 'C'],
+      grades: [
+        ['D', 'C', 'D', 'C', 'C'], ['C', 'D', 'E', 'D', 'D'], ['D', 'E', 'C', 'D', 'E'], ['D', 'D', 'E', 'E', 'D'],
+        ['C', 'C', 'B', 'C', 'B'], ['D', 'D', 'C', 'D', 'D'], ['E', 'D', 'E', 'E', 'E'], ['C', 'C', 'C', 'B', 'C'],
+      ],
+      effort: ['Satisfactory', 'Needs Improvement', null, 'Needs Improvement', 'Good', 'Satisfactory', 'Needs Improvement', 'Good'],
+      behaviour: [
+        { cat: 'Good Effort', pts: 2, n: 3 }, { cat: 'Representing the school', pts: 5, n: 1 }, { cat: 'Punctuality', pts: 1, n: 2 },
+        { cat: 'Homework not completed', pts: -2, n: 5 }, { cat: 'Disruption in class', pts: -2, n: 3 },
+        { cat: 'Late to lesson', pts: -1, n: 4 }, { cat: 'Misuse of laptop', pts: -3, n: 1 },
+      ],
+    },
+    {
+      id: 4, first: 'Zainab', last: 'Musa', form: '10A', att: 99.2, presShift: 0, hwShift: 0,
+      targets: ['A', 'A', 'A', 'A', 'A', 'A', 'A', 'B'],
+      grades: [
+        ['A', 'A', 'A', 'A', 'A'], ['A', 'A', 'A', 'A*', 'A'], ['A', 'A*', 'A', 'A', 'A'], ['B', 'A', 'A', 'A', 'A'],
+        ['A', 'A', 'B', 'A', 'A'], ['A', 'A', 'A*', 'A', 'A*'], ['A', 'A', 'A', 'A*', 'A*'], ['B', 'B', 'A', 'B', 'B'],
+      ],
+      effort: ['Excellent', 'Excellent', null, 'Excellent', 'Good', 'Excellent', 'Excellent', 'Good'],
+      behaviour: [
+        { cat: 'Excellent work', pts: 2, n: 11 }, { cat: 'Kindness', pts: 2, n: 4 }, { cat: 'Homework completed', pts: 1, n: 8 },
+      ],
+    },
+    {
+      id: 5, first: 'David', last: 'Ogunleye', form: '10A', att: 93.6, presShift: 1, hwShift: -1,
+      targets: ['C', 'B', 'C', 'C', 'C', 'C', 'C', 'C'],
+      grades: [
+        ['D', 'D', 'C', 'C', 'C'], ['C', 'C', 'B', 'B', 'B'], ['E', 'D', 'D', 'C', 'C'], ['D', 'D', 'C', 'C', 'C'],
+        ['D', 'C', 'C', 'C', 'B'], ['E', 'D', 'D', 'D', 'C'], ['D', 'D', 'D', 'C', 'C'], ['C', 'C', 'C', 'C', 'B'],
+      ],
+      effort: ['Good', 'Excellent', null, 'Good', 'Good', 'Satisfactory', 'Good', 'Good'],
+      behaviour: [
+        { cat: 'Improvement', pts: 1, n: 8 }, { cat: 'Good Effort', pts: 2, n: 5 }, { cat: 'Helping others', pts: 3, n: 1 },
+        { cat: 'Uniform infringement', pts: -1, n: 2 }, { cat: 'Late to lesson', pts: -1, n: 1 },
+      ],
+    },
+  ];
+  const MENTOR = 'Mr J. Eke';
+  const MENTEE_IDS = [1, 2, 3, 5];
+  const MY_SUBJECT = SUBJECTS.findIndex((s) => s.mine);
+
+  // Screen state: what the teacher/mentor has typed
+  const subjState = {}; // id -> { effort, comment, status }
+  const pastState = {}; // id -> { comment, status }
+  STUDENTS.forEach((s) => {
+    subjState[s.id] = { effort: '', presentation: '', homework: '', comment: '', status: 'Draft' };
+    pastState[s.id] = { comment: '', status: 'Draft' };
+  });
+  // Tolu's pre-filled so the finished report has something in every box
+  subjState[1] = { effort: 'Excellent', presentation: 'Good', homework: 'Excellent', comment: '', status: 'Draft' };
+
+  // ---------- Helpers ----------
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function vsClass(grade, target) {
+    const d = POINTS[grade] - POINTS[target];
+    if (d > 0) return 'above';
+    if (d === 0) return 'on';
+    if (d === -1) return 'below1';
+    return 'below2';
+  }
+  const chip = (g, t, extra = '') => `<span class="g ${vsClass(g, t)} ${extra}">${g}</span>`;
+  function vsText(g, t) {
+    const d = POINTS[g] - POINTS[t];
+    if (d === 0) return 'on target';
+    return `${Math.abs(d)} grade${Math.abs(d) > 1 ? 's' : ''} ${d > 0 ? 'above' : 'below'} target`;
+  }
+  function subjectSummary(st, si) {
+    const gs = st.grades[si];
+    const t = st.targets[si];
+    let best = 0, worst = 0;
+    gs.forEach((g, i) => {
+      if (POINTS[g] > POINTS[gs[best]]) best = i;
+      if (POINTS[g] < POINTS[gs[worst]]) worst = i;
+    });
+    const avg = gs.reduce((a, g) => a + POINTS[g], 0) / gs.length;
+    const first = gs[0], latest = gs[gs.length - 1];
+    const change = POINTS[latest] - POINTS[first];
+    return { gs, t, best, worst, avg, first, latest, change };
+  }
+  function avgGrade(avg) {
+    return GRADES[Math.round(avg)];
+  }
+  function sparkline(gs, t) {
+    const w = 110, h = 34, pad = 5;
+    const ys = gs.map((g) => POINTS[g]);
+    const lo = Math.min(...ys, POINTS[t]) - 0.5, hi = Math.max(...ys, POINTS[t]) + 0.5;
+    const x = (i) => pad + (i * (w - 2 * pad)) / (gs.length - 1);
+    const y = (v) => h - pad - ((v - lo) * (h - 2 * pad)) / (hi - lo);
+    const pts = ys.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const ty = y(POINTS[t]).toFixed(1);
+    const last = ys.length - 1;
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Grade trend">
+      <line x1="${pad}" x2="${w - pad}" y1="${ty}" y2="${ty}" stroke="var(--ink-soft)" stroke-dasharray="3 3" stroke-width="1" fill="none"/>
+      <polyline points="${pts}" fill="none" stroke="var(--spark)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${x(last).toFixed(1)}" cy="${y(ys[last]).toFixed(1)}" r="3.2" fill="var(--spark)"/>
+    </svg>`;
+  }
+  function behaviourTotals(st) {
+    let plus = 0, minus = 0, plusN = 0, minusN = 0;
+    st.behaviour.forEach((b) => {
+      if (b.pts > 0) { plus += b.pts * b.n; plusN += b.n; } else { minus += b.pts * b.n; minusN += b.n; }
+    });
+    return { plus, minus, plusN, minusN, net: plus + minus };
+  }
+  function rankedSubjects(st) {
+    // Rank by latest grade (term exam), tie-break by distance from target
+    return SUBJECTS.map((sub, si) => {
+      const latest = st.grades[si][4];
+      const t = st.targets[si];
+      return { si, name: sub.name, latest, t, d: POINTS[latest] - POINTS[t] };
+    }).sort((a, b) => (POINTS[b.latest] - POINTS[a.latest]) || (b.d - a.d));
+  }
+  const a = (g) => (/^(A|E|F)/.test(g) ? 'an ' : 'a ') + g;
+  const byId = (id) => STUDENTS.find((s) => s.id === id);
+  // Grades other subject teachers have already entered (sample: derived from effort)
+  function enteredGrade(st, si, key) {
+    const e = st.effort[si];
+    if (!e) return null;
+    const shift = key === 'presentation' ? st.presShift : key === 'homework' ? st.hwShift : 0;
+    return EFFORT[Math.min(3, Math.max(0, EFFORT.indexOf(e) + shift))];
+  }
+  function gradesFor(st, si) {
+    if (si === MY_SUBJECT) return subjState[st.id];
+    return { effort: enteredGrade(st, si, 'effort'), presentation: enteredGrade(st, si, 'presentation'), homework: enteredGrade(st, si, 'homework') };
+  }
+
+  // ---------- Simulated AI drafts ----------
+  function subjectDraft(st, si, w) {
+    const effort = w.effort;
+    const s = subjectSummary(st, si);
+    const subj = SUBJECTS[si].name;
+    const n = st.first;
+    const parts = [];
+    if (s.change > 0) parts.push(`${n} has made clear progress in ${subj} this term, moving from ${a(s.first)} in the baseline test to ${a(s.latest)} in the end-of-term exam.`);
+    else if (s.change < 0) parts.push(`${n} began the term confidently in ${subj}, but results have slipped from ${a(s.first)} in the baseline test to ${a(s.latest)} in the end-of-term exam.`);
+    else parts.push(`${n} has produced consistent work in ${subj} this term, with results holding at around ${a(avgGrade(s.avg))}.`);
+    const d = POINTS[s.latest] - POINTS[s.t];
+    if (d > 0) parts.push(`This is above the target of ${s.t}, which is an excellent achievement.`);
+    else if (d === 0) parts.push(`This meets the target of ${s.t}.`);
+    else parts.push(`This is currently below the target of ${s.t}; the best result this term was ${a(s.gs[s.best])} in the ${ASSESSMENTS[s.best].label.toLowerCase()}, which shows the target is within reach.`);
+    const eff = {
+      Excellent: `${n}'s effort in lessons has been excellent throughout.`,
+      Good: `${n} works well in lessons and approaches tasks sensibly.`,
+      Satisfactory: `Effort in lessons is satisfactory, and more consistent focus would help.`,
+      'Needs Improvement': `${n} needs to put more effort into lessons and homework to make steady progress.`,
+    }[effort];
+    if (eff) parts.push(eff);
+    const good = (g) => g === 'Excellent' || g === 'Good';
+    const hw = w.homework, pr = w.presentation;
+    if (hw && pr && good(hw) && good(pr)) parts.push(`Homework is completed reliably and written work is well presented.`);
+    else if (hw && pr && !good(hw) && !good(pr)) parts.push(`Homework and the presentation of written work both need more care.`);
+    else if (hw && !good(hw)) parts.push(`Homework needs to be completed more consistently${pr && good(pr) ? ', although written work is neatly presented' : ''}.`);
+    else if (pr && !good(pr)) parts.push(`Homework is done well, but written work should be presented more carefully.`);
+    return parts.join(' ');
+  }
+  function pastoralDraft(st) {
+    const b = behaviourTotals(st);
+    const r = rankedSubjects(st);
+    const top = r.slice(0, 2).map((x) => x.name);
+    const low = r.slice(-2).map((x) => x.name);
+    const n = st.first;
+    const parts = [];
+    if (b.minusN === 0 || b.plus >= 4 * Math.abs(b.minus)) parts.push(`${n} has had an excellent first term, earning ${b.plus} positive points and making a real contribution to school life.`);
+    else if (b.net > 0) parts.push(`${n} has settled well this term, with ${b.plus} positive points, although ${b.minusN} negative behaviour event${b.minusN === 1 ? '' : 's'} for things like ${topCats(st, -1)} show there is room to improve.`);
+    else parts.push(`${n}'s term has been mixed: alongside ${b.plus} positive points there were ${b.minusN} negative behaviour events (${b.minus} points), mostly for ${topCats(st, -1)}, and this needs to change next term.`);
+    parts.push(`Academically, ${n} is strongest in ${top.join(' and ')}, and should give particular attention to ${low.join(' and ')}.`);
+    if (st.att < 90) parts.push(`Attendance of ${st.att}% is below the school's expectation and is holding ${n} back.`);
+    else if (st.att >= 97) parts.push(`Attendance of ${st.att}% is excellent.`);
+    else parts.push(`Attendance this term has been ${st.att}%.`);
+    return parts.join(' ');
+  }
+  function topCats(st, sign) {
+    return st.behaviour.filter((b) => Math.sign(b.pts) === sign).sort((a, b) => b.n - a.n).slice(0, 2)
+      .map((b) => b.cat.toLowerCase()).join(' and ');
+  }
+  function subjectFacts(st, si, w) {
+    const s = subjectSummary(st, si);
+    return [
+      `Subject: ${SUBJECTS[si].name}`,
+      ...MEASURES.map((m) => `${m.label}: ${w[m.key] || '(not set yet)'}`),
+      `Target grade: ${s.t}`,
+      `Grades this year, in order: ${s.gs.map((g, i) => `${ASSESSMENTS[i].label} ${g}`).join(', ')}`,
+      `Best: ${s.gs[s.best]} (${ASSESSMENTS[s.best].label}); lowest: ${s.gs[s.worst]} (${ASSESSMENTS[s.worst].label})`,
+    ];
+  }
+  function pastoralFacts(st) {
+    const b = behaviourTotals(st);
+    const r = rankedSubjects(st);
+    return [
+      `Positive points: +${b.plus} from ${b.plusN} events; negative points: ${b.minus} from ${b.minusN} events`,
+      `Most frequent positives: ${topCats(st, 1) || 'none'}; negatives: ${topCats(st, -1) || 'none'}`,
+      `Attendance: ${st.att}%`,
+      `Best grades: ${r.slice(0, 3).map((x) => `${x.name} ${x.latest}`).join(', ')}`,
+      `Weakest grades: ${r.slice(-3).map((x) => `${x.name} ${x.latest}`).join(', ')}`,
+      ...MEASURES.map((m) => `${m.label} grades from subject teachers: ${SUBJECTS.map((sub, i) => { const g = gradesFor(st, i)[m.key]; return g && `${sub.name} ${g}`; }).filter(Boolean).join(', ')}`),
+    ];
+  }
+
+  // ---------- View 1: subject teacher ----------
+  function renderSubject() {
+    const el = document.getElementById('view-subject');
+    const sub = SUBJECTS[MY_SUBJECT];
+    el.innerHTML = `
+      <div class="pickers">
+        <label>Report period<select id="p-period"><option>End of Term 1 Reports — due 11/12/2026</option></select></label>
+        <label>Class<select id="p-class"><option>${sub.cls} — ${sub.name}</option></select></label>
+      </div>
+      <div class="intro small">
+        <p><b>What's new:</b> every grade the student has had in your subject this year sits above the effort grade, coloured against their target, with the trend and best/lowest result picked out. Alongside effort you now also grade presentation of work and homework. “Generate draft” sends the whole run of grades and all three judgements to the AI, not just the latest result.</p>
+      </div>
+      <div class="legend">
+        <span>${chip('A', 'B')} above target</span>
+        <span>${chip('B', 'B')} on target</span>
+        <span>${chip('C', 'B')} 1 below</span>
+        <span>${chip('D', 'B')} 2+ below</span>
+        <span><span class="g target">B</span> target</span>
+        <span><span class="g on exam">B</span> term exam</span>
+      </div>
+      <div class="stack">${STUDENTS.map(subjectCard).join('')}</div>`;
+  }
+  function subjectCard(st) {
+    const si = MY_SUBJECT;
+    const s = subjectSummary(st, si);
+    const state = subjState[st.id];
+    const locked = state.status !== 'Draft';
+    const trend = s.change > 0 ? `up ${s.change} grade${s.change > 1 ? 's' : ''} since baseline` : s.change < 0 ? `down ${-s.change} grade${s.change < -1 ? 's' : ''} since baseline` : 'level since baseline';
+    return `<div class="card" data-id="${st.id}">
+      <div class="card-head">
+        <h2>${esc(st.first)} ${esc(st.last)} <span class="muted small">· ${st.form}</span></h2>
+        <span class="status ${locked ? 'done' : ''}">${locked ? 'Submitted — awaiting check' : 'Draft'}</span>
+      </div>
+      <div class="hist"><table>
+        <thead><tr><th>Grades this year</th>${ASSESSMENTS.map((a) => `<th>${a.label}<span class="d">${a.date}</span></th>`).join('')}<th class="tgt">Target</th><th>Trend</th></tr></thead>
+        <tbody><tr><td class="muted small">${SUBJECTS[si].name}</td>
+          ${s.gs.map((g, i) => `<td>${chip(g, s.t, ASSESSMENTS[i].type === 'term_exam' ? 'exam' : '')}</td>`).join('')}
+          <td class="tgt"><span class="g target">${s.t}</span></td>
+          <td>${sparkline(s.gs, s.t)}</td></tr></tbody>
+      </table></div>
+      <div class="facts">
+        <span>Best <b>${s.gs[s.best]}</b> <span class="muted">(${ASSESSMENTS[s.best].label})</span></span>
+        <span>Lowest <b>${s.gs[s.worst]}</b> <span class="muted">(${ASSESSMENTS[s.worst].label})</span></span>
+        <span>Average <b>${avgGrade(s.avg)}</b></span>
+        <span>Latest <b>${s.latest}</b> <span class="muted">— ${vsText(s.latest, s.t)}</span></span>
+        <span class="muted">${trend}</span>
+      </div>
+      <div class="measures">
+        ${MEASURES.map((m) => `<label class="field" for="${m.key}-${st.id}">${m.label}
+          <select id="${m.key}-${st.id}" data-act="measure" data-key="${m.key}" ${locked ? 'disabled' : ''}>
+            <option value="">— Select —</option>
+            ${EFFORT.map((e) => `<option ${state[m.key] === e ? 'selected' : ''}>${e}</option>`).join('')}
+          </select>
+        </label>`).join('')}
+      </div>
+      <label class="field" for="com-${st.id}">Comment
+        <textarea id="com-${st.id}" rows="3" data-act="comment" ${locked ? 'disabled' : ''}>${esc(state.comment)}</textarea>
+      </label>
+      <details class="ai"><summary>What the AI draft is based on</summary>
+        <ul>${subjectFacts(st, si, state).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+      </details>
+      ${locked ? '' : `<div class="btns">
+        <button class="b sec" data-act="gen-subject">✨ Generate draft</button>
+        <button class="b sec" data-act="noop">Save Draft</button>
+        <button class="b" data-act="submit-subject">Submit</button>
+      </div>`}
+    </div>`;
+  }
+
+  // ---------- View 2: mentor ----------
+  function renderPastoral() {
+    const el = document.getElementById('view-pastoral');
+    el.innerHTML = `
+      <div class="pickers">
+        <label>Report period<select id="m-period"><option>End of Term 1 Reports — due 11/12/2026</option></select></label>
+        <label>Writing as<select id="m-type"><option>Mentor — ${MENTOR}</option></select></label>
+      </div>
+      <div class="intro small">
+        <p><b>What's new:</b> for each mentee you see their behaviour points for the year (total plus and total minus), attendance, their best and weakest grades across all subjects, and the effort, presentation and homework grades subject teachers have already given. The AI draft is built from exactly these.</p>
+      </div>
+      <div class="stack">${MENTEE_IDS.map((id) => pastoralCard(byId(id))).join('')}</div>`;
+  }
+  function pastoralCard(st) {
+    const b = behaviourTotals(st);
+    const r = rankedSubjects(st);
+    const state = pastState[st.id];
+    const locked = state.status !== 'Draft';
+    const total = b.plus + Math.abs(b.minus) || 1;
+    const pos = st.behaviour.filter((x) => x.pts > 0).sort((a, c) => c.n * c.pts - a.n * a.pts);
+    const neg = st.behaviour.filter((x) => x.pts < 0).sort((a, c) => a.n * a.pts - c.n * c.pts);
+    const measureRows = MEASURES.map((m) => {
+      const vals = SUBJECTS.map((_, i) => gradesFor(st, i)[m.key]);
+      const counts = EFFORT.map((e) => [e, vals.filter((x) => x === e).length]).filter(([, c]) => c);
+      const missing = vals.filter((x) => !x).length;
+      return `<div class="chips"><span class="mlabel">${m.label}</span>
+        ${counts.map(([e, c]) => `<span class="chip ${e === 'Needs Improvement' ? 'ni' : ''}"><b>${c}</b> × ${e}</span>`).join('')}
+        ${missing ? `<span class="chip muted">${missing} not yet entered</span>` : ''}</div>`;
+    }).join('');
+    const gradeRow = (x) => `<li><span>${x.name}</span><span class="r">${chip(x.latest, x.t)}<span class="muted small">target ${x.t}</span></span></li>`;
+    return `<div class="card" data-id="${st.id}">
+      <div class="card-head">
+        <h2>${esc(st.first)} ${esc(st.last)} <span class="muted small">· ${st.form}</span></h2>
+        <span class="status ${locked ? 'done' : ''}">${locked ? 'Submitted — awaiting check' : 'Draft'}</span>
+      </div>
+      <div class="tiles">
+        <div class="tile"><span class="label">Plus points</span><span class="v pos">+${b.plus}</span><span class="s">${b.plusN} events</span></div>
+        <div class="tile"><span class="label">Minus points</span><span class="v ${b.minus ? 'neg' : ''}">${b.minus || 0}</span><span class="s">${b.minusN} event${b.minusN === 1 ? '' : 's'}</span></div>
+        <div class="tile"><span class="label">Net</span><span class="v">${b.net > 0 ? '+' : ''}${b.net}</span><span class="s">since 1 Sep</span></div>
+        <div class="tile"><span class="label">Attendance</span><span class="v ${st.att < 90 ? 'neg' : ''}">${st.att}%</span><span class="s">${st.att < 90 ? 'below 90% expectation' : 'this year'}</span></div>
+      </div>
+      <div class="bar" aria-hidden="true"><i class="p" style="width:${(b.plus / total) * 100}%"></i><i class="n" style="width:${(Math.abs(b.minus) / total) * 100}%"></i></div>
+      <div class="cols">
+        <div class="panel"><span class="label">Behaviour behind the points</span>
+          <ul class="list">
+            ${pos.slice(0, 4).map((x) => `<li><span>${x.cat} <span class="muted">×${x.n}</span></span><b class="num" style="color:var(--good)">+${x.pts * x.n}</b></li>`).join('')}
+            ${neg.map((x) => `<li><span>${x.cat} <span class="muted">×${x.n}</span></span><b class="num" style="color:var(--bad)">${x.pts * x.n}</b></li>`).join('') || '<li class="muted">No negative behaviour this year</li>'}
+          </ul>
+        </div>
+        <div class="panel">
+          <span class="label">Best grades · Term 1 exam</span>
+          <ul class="list">${r.slice(0, 3).map(gradeRow).join('')}</ul>
+          <span class="label">Weakest grades · Term 1 exam</span>
+          <ul class="list">${r.slice(-3).reverse().map(gradeRow).join('')}</ul>
+        </div>
+      </div>
+      <div class="panel"><span class="label">Grades from subject teachers (${SUBJECTS.length} subjects)</span>${measureRows}</div>
+      <label class="field" for="pc-${st.id}">Mentor comment
+        <textarea id="pc-${st.id}" rows="4" data-act="pcomment" ${locked ? 'disabled' : ''}>${esc(state.comment)}</textarea>
+      </label>
+      <details class="ai"><summary>What the AI draft is based on</summary>
+        <ul>${pastoralFacts(st).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+      </details>
+      ${locked ? '' : `<div class="btns">
+        <button class="b sec" data-act="gen-pastoral">✨ Generate draft</button>
+        <button class="b sec" data-act="noop">Save Draft</button>
+        <button class="b" data-act="submit-pastoral">Submit</button>
+      </div>`}
+    </div>`;
+  }
+
+  // ---------- View 3: finished report ----------
+  let reportId = 1;
+  function renderReport() {
+    const el = document.getElementById('view-report');
+    const st = byId(reportId);
+    const b = behaviourTotals(st);
+    const subjComment = (si) => {
+      if (si === MY_SUBJECT) {
+        const c = subjState[st.id].comment;
+        return c ? esc(c) : '<span class="pending">Not written yet. Write or generate it on the Subject teacher tab and it appears here.</span>';
+      }
+      return esc(subjectDraft(st, si, gradesFor(st, si)));
+    };
+    const w = (si, k) => gradesFor(st, si)[k] || '—';
+    const pc = pastState[st.id].comment || (MENTEE_IDS.includes(st.id) ? '' : pastoralDraft(st));
+    el.innerHTML = `
+      <div class="pickers">
+        <label>Student<select id="r-student">${STUDENTS.map((s) => `<option value="${s.id}" ${s.id === reportId ? 'selected' : ''}>${s.first} ${s.last}</option>`).join('')}</select></label>
+      </div>
+      <p class="muted small" style="margin-bottom:12px">The report parents receive. Subject comments and the mentor comment are the checked text from tabs 1 and 2. Grades, effort, behaviour and attendance fill in automatically.</p>
+      <div class="sheet-wrap"><article class="sheet">
+        <div class="top">
+          <div><div class="school">Adorable British College</div><div class="rtitle">End of Term 1 Report · 2026/27</div></div>
+          <div class="rtitle">Issued 18 December 2026</div>
+        </div>
+        <div class="meta">
+          <div><div class="k">Student</div><div class="v">${esc(st.first)} ${esc(st.last)}</div></div>
+          <div><div class="k">Year / Form</div><div class="v">Year 10 · ${st.form}</div></div>
+          <div><div class="k">Mentor</div><div class="v">${MENTOR}</div></div>
+          <div><div class="k">Attendance</div><div class="v">${st.att}%</div></div>
+        </div>
+
+        <h4>Grades this year</h4>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>Subject</th><th>Target</th>${ASSESSMENTS.map((a) => `<th>${a.label.replace(' test', '')}</th>`).join('')}${MEASURES.map((m) => `<th>${m.short}</th>`).join('')}</tr></thead>
+          <tbody>${SUBJECTS.map((sub, si) => `<tr><td>${sub.name}</td><td>${st.targets[si]}</td>${st.grades[si].map((g, i) => `<td class="${i === 4 ? 'ex' : ''}">${g}</td>`).join('')}${MEASURES.map((m) => `<td class="w">${w(si, m.key)}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>
+
+        <h4>Subject comments</h4>
+        ${SUBJECTS.map((sub, si) => `<div class="subj">
+          <div class="h"><b>${sub.name}</b><span>${sub.teacher} · Term exam ${st.grades[si][4]} · Target ${st.targets[si]} · Effort ${w(si, 'effort')} · Presentation ${w(si, 'presentation')} · Homework ${w(si, 'homework')}</span></div>
+          <p>${subjComment(si)}</p></div>`).join('')}
+
+        <h4>Pastoral</h4>
+        <div class="pastoral">
+          <div><div class="k">Positive points</div><div class="v">+${b.plus}</div></div>
+          <div><div class="k">Behaviour points</div><div class="v">${b.minus || 0}</div></div>
+          <div><div class="k">Attendance</div><div class="v">${st.att}%</div></div>
+        </div>
+        <p>${pc ? esc(pc) : '<span class="pending">Not written yet. Write or generate it on the Mentor tab and it appears here.</span>'}</p>
+        <p class="sig" style="margin-top:6px">${MENTOR}, Mentor</p>
+
+        <div class="key">Grades are IGCSE A*–G. Short tests are set in lessons; the Term 1 exam (shaded) is the end-of-term assessment. Effort, presentation of work (Pres.) and homework (H/work): Excellent · Good · Satisfactory · Needs Improvement. Positive and behaviour points are totals since 1 September 2026.</div>
+      </article></div>`;
+  }
+
+  // ---------- Wiring ----------
+  const views = { subject: renderSubject, pastoral: renderPastoral, report: renderReport };
+  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+    Object.keys(views).forEach((k) => { document.getElementById('view-' + k).hidden = k !== t.dataset.view; });
+    views[t.dataset.view]();
+    try { localStorage.setItem('rw-tab', t.dataset.view); } catch (e) {}
+  }));
+
+  document.addEventListener('input', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    const id = Number(card.dataset.id);
+    if (e.target.dataset.act === 'comment') subjState[id].comment = e.target.value;
+    if (e.target.dataset.act === 'pcomment') pastState[id].comment = e.target.value;
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'r-student') { reportId = Number(e.target.value); renderReport(); return; }
+    const card = e.target.closest('.card');
+    if (card && e.target.dataset.act === 'measure') {
+      subjState[Number(card.dataset.id)][e.target.dataset.key] = e.target.value;
+      renderSubject();
+    }
+  });
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const card = btn.closest('.card');
+    const id = card && Number(card.dataset.id);
+    const st = id && byId(id);
+    const act = btn.dataset.act;
+    if (act === 'gen-subject') {
+      subjState[id].comment = subjectDraft(st, MY_SUBJECT, subjState[id]);
+      renderSubject();
+      flash(`com-${id}`);
+    } else if (act === 'gen-pastoral') {
+      pastState[id].comment = pastoralDraft(st);
+      renderPastoral();
+      flash(`pc-${id}`);
+    } else if (act === 'submit-subject') {
+      subjState[id].status = 'Submitted'; renderSubject();
+    } else if (act === 'submit-pastoral') {
+      pastState[id].status = 'Submitted'; renderPastoral();
+    }
+  });
+  function flash(id) {
+    const ta = document.getElementById(id);
+    if (!ta) return;
+    const note = document.createElement('span');
+    note.className = 'simnote';
+    note.textContent = 'Simulated draft for the mockup. The real button calls the AI with the facts listed below.';
+    ta.after(note);
+  }
+
+  let start = 'subject';
+  try { start = localStorage.getItem('rw-tab') || 'subject'; } catch (e) {}
+  const startTab = document.querySelector(`.tab[data-view="${start}"]`) || document.querySelector('.tab');
+  startTab.click();
+})();
+</script>
