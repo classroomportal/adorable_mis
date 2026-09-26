@@ -212,10 +212,12 @@ const TABS = [
   },
   {
     key: 'comms', label: 'Communication', icon: '💬', accent: 'family',
-    description: 'Send announcements to parents and track read receipts.',
+    description: 'Announcements, read receipts and login emails to staff and parents.',
     items: ({ hasAccess }) => [
       { href: '/comms/compose', label: 'Send Message', desc: "Send a message to parents, groups or staff." },
       { href: '/comms/history', label: 'Sent Messages', desc: "Past messages and who has read them." },
+      { href: '/staff/welcome-emails', label: 'Staff Logins', desc: "Email staff their login link." },
+      { href: '/parents/welcome-emails', label: 'Parent Logins', desc: "Email parents their login details." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
@@ -287,9 +289,7 @@ const TABS = [
       { href: '/staff/import-emails', label: 'Import Emails', desc: "Add staff login emails from a list." },
       { href: '/admin/permissions', label: 'Permissions', desc: "Choose which roles can open which pages." },
       { href: '/admin/lookups', label: 'Lookups', desc: "Drop-down lists such as houses and behaviour types." },
-      { href: '/staff/welcome-emails', label: 'Staff Logins', desc: "Email staff their login link." },
       { href: '/parents', label: 'Parents', desc: "Parent records and their logins." },
-      { href: '/parents/welcome-emails', label: 'Parent Logins', desc: "Email parents their login details." },
       { href: '/parents/import', label: 'Import Parents', desc: "Upload the SIMS parent list." },
     ].filter((it) => hasAccess(it.href)),
   },
