@@ -193,7 +193,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
   <div class="notes">
     <h2>Where the numbers come from</h2>
     <ul>
-      <li><b>Grades this year</b>: every row in <code>results</code> for that student and subject since the start of the academic year, short tests and the term exam, in date order.</li>
+      <li><b>Grades this year</b>: every row in <code>results</code> for that student and subject since the start of the academic year, the weekly tests and the term exam, in date order and labelled by week of term.</li>
       <li><b>Target</b>: <code>target_grades</code>. Each grade is coloured against it using the points in <code>grade_scale</code> (A* = 8 … G = 1).</li>
       <li><b>Behaviour</b>: <code>behaviour_events</code> since 1 September, split into positive and negative points with the categories behind them.</li>
       <li><b>Effort, presentation and homework grades</b> live on <code>report_subject_comments</code>. Effort is already there; presentation and homework would be two new columns on the same scale. The mentor screen shows whatever subject teachers have entered so far.</li>
@@ -216,11 +216,11 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
   ];
 
   const ASSESSMENTS = [
-    { label: 'Baseline test', date: '15 Sep', type: 'short_test' },
-    { label: 'Short test 1', date: '6 Oct', type: 'short_test' },
-    { label: 'Short test 2', date: '3 Nov', type: 'short_test' },
-    { label: 'Short test 3', date: '24 Nov', type: 'short_test' },
-    { label: 'Term 1 exam', date: '8 Dec', type: 'term_exam' },
+    { label: 'Week 2', date: '14 Sep', type: 'short_test' },
+    { label: 'Week 5', date: '5 Oct', type: 'short_test' },
+    { label: 'Week 9', date: '2 Nov', type: 'short_test' },
+    { label: 'Week 12', date: '23 Nov', type: 'short_test' },
+    { label: 'Term 1 exam', date: '7 Dec', type: 'term_exam' },
   ];
 
   const SUBJECTS = [
@@ -234,7 +234,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
     { name: 'Geography', teacher: 'Mr S. Ade' },
   ];
 
-  // grades[subjectIndex] = [baseline, st1, st2, st3, exam]; target per subject
+  // grades[subjectIndex] = [week 2, week 5, week 9, week 12, exam]; target per subject
   const STUDENTS = [
     {
       id: 1, first: 'Tolu', last: 'Adebayo', form: '10A', presShift: 1, hwShift: 0,
@@ -425,13 +425,13 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
     const subj = SUBJECTS[si].name;
     const n = st.first;
     const parts = [];
-    if (s.change > 0) parts.push(`${n} has made clear progress in ${subj} this term, moving from ${a(s.first)} in the baseline test to ${a(s.latest)} in the end-of-term exam.`);
-    else if (s.change < 0) parts.push(`${n} began the term confidently in ${subj}, but results have slipped from ${a(s.first)} in the baseline test to ${a(s.latest)} in the end-of-term exam.`);
+    if (s.change > 0) parts.push(`${n} has made clear progress in ${subj} this term, moving from ${a(s.first)} in ${ASSESSMENTS[0].label} to ${a(s.latest)} in the end-of-term exam.`);
+    else if (s.change < 0) parts.push(`${n} began the term confidently in ${subj}, but results have slipped from ${a(s.first)} in ${ASSESSMENTS[0].label} to ${a(s.latest)} in the end-of-term exam.`);
     else parts.push(`${n} has produced consistent work in ${subj} this term, with results holding at around ${a(avgGrade(s.avg))}.`);
     const d = POINTS[s.latest] - POINTS[s.t];
     if (d > 0) parts.push(`This is above the target of ${s.t}, which is an excellent achievement.`);
     else if (d === 0) parts.push(`This meets the target of ${s.t}.`);
-    else parts.push(`This is currently below the target of ${s.t}; the best result this term was ${a(s.gs[s.best])} in the ${ASSESSMENTS[s.best].label.toLowerCase()}, which shows the target is within reach.`);
+    else parts.push(`This is currently below the target of ${s.t}; the best result this term was ${a(s.gs[s.best])} in ${ASSESSMENTS[s.best].type === 'term_exam' ? 'the ' + ASSESSMENTS[s.best].label : ASSESSMENTS[s.best].label}, which shows the target is within reach.`);
     const eff = {
       Excellent: `${n}'s effort in lessons has been excellent throughout.`,
       Good: `${n} works well in lessons and approaches tasks sensibly.`,
@@ -513,7 +513,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
     const s = subjectSummary(st, si);
     const state = subjState[st.id];
     const locked = state.status !== 'Draft';
-    const trend = s.change > 0 ? `up ${s.change} grade${s.change > 1 ? 's' : ''} since baseline` : s.change < 0 ? `down ${-s.change} grade${s.change < -1 ? 's' : ''} since baseline` : 'level since baseline';
+    const trend = s.change > 0 ? `up ${s.change} grade${s.change > 1 ? 's' : ''} since ${ASSESSMENTS[0].label}` : s.change < 0 ? `down ${-s.change} grade${s.change < -1 ? 's' : ''} since ${ASSESSMENTS[0].label}` : `level since ${ASSESSMENTS[0].label}`;
     return `<div class="card" data-id="${st.id}">
       <div class="card-head">
         <h2>${esc(st.first)} ${esc(st.last)} <span class="muted small">· ${st.form}</span></h2>
