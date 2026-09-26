@@ -222,6 +222,7 @@ function StudentDetail() {
       .from('behaviour_events')
       .select('*')
       .eq('student_id', id)
+      .is('voided_at', null) // appeal upheld (migration 196)
       .order('event_date', { ascending: false });
     setBehaviour(be || []);
 

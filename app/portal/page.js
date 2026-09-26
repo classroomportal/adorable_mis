@@ -57,7 +57,7 @@ function PortalInner() {
     setEnrolledSubjectIds(new Set((enrolled || []).map((l) => l.classes?.subject_id).filter(Boolean)));
     const { data: gs } = await supabase.from('grade_scale').select('*');
     setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
-    const { data: b } = await supabase.from('behaviour_events').select('*, staff!behaviour_events_staff_id_fkey(first_name, last_name)').eq('student_id', studentId).order('event_date', { ascending: false });
+    const { data: b } = await supabase.from('behaviour_events').select('*, staff!behaviour_events_staff_id_fkey(first_name, last_name)').eq('student_id', studentId).is('voided_at', null).order('event_date', { ascending: false });
     setBehaviour(b || []);
     const { data: ap } = await supabase.from('behaviour_appeals').select('*').eq('student_id', studentId);
     setAppeals(ap || []);
