@@ -115,8 +115,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
 .simnote { font-size: 0.75rem; color: var(--ink-soft); }
 
 /* Pastoral */
-.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
 .tile .v { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .tile .v.pos { color: var(--good); }
@@ -149,26 +148,20 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
 .sheet .top { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #16304f; padding-bottom: 12px; }
 .sheet .school { font-size: 1.35rem; font-weight: 700; color: #16304f; letter-spacing: 0.01em; }
 .sheet .rtitle { font-size: 0.95rem; color: #4a5361; }
-.sheet .meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 16px; margin: 14px 0 18px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.82rem; }
-@media (max-width: 640px) { .sheet .meta { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sheet .meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; margin: 14px 0 18px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.82rem; }
 .sheet .meta .k { color: #5b6472; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
 .sheet .meta .v { font-weight: 600; }
 .sheet h4 { font-size: 1.05rem; color: #16304f; margin: 22px 0 8px; }
-.sheet table { width: 100%; border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.8rem; min-width: 600px; }
-.sheet th { background: #eef2f7; color: #3b4452; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 6px; text-align: center; border: 1px solid #d9dde3; }
-.sheet td { padding: 6px; text-align: center; border: 1px solid #e2e5ea; font-variant-numeric: tabular-nums; }
-.sheet th:first-child, .sheet td:first-child { text-align: left; }
-.sheet td.ex { font-weight: 700; background: #f6f8fb; }
-.sheet td.w { font-size: 0.72rem; }
-.sheet .subj { border-top: 1px solid #e2e5ea; padding: 10px 0; display: grid; gap: 3px; }
-.sheet .subj .h { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.82rem; }
-.sheet .subj .h b { font-size: 0.9rem; color: #16304f; }
-.sheet .subj .h span { color: #5b6472; }
-.sheet .pastoral { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-@media (max-width: 640px) { .sheet .pastoral { grid-template-columns: 1fr; } }
-.sheet .pastoral > div { border: 1px solid #e2e5ea; padding: 8px 10px; }
-.sheet .pastoral .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #5b6472; }
-.sheet .pastoral .v { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sheet .rsec { display: grid; grid-template-columns: 215px 1fr; gap: 18px; border-top: 1px solid #e2e5ea; padding: 12px 0; break-inside: avoid; }
+@media (max-width: 640px) { .sheet .rsec { grid-template-columns: 1fr; gap: 8px; } }
+.sheet .rname { font-weight: 700; color: #16304f; font-size: 1rem; margin-bottom: 6px; }
+.sheet dl { margin: 0; display: grid; gap: 3px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.78rem; }
+.sheet dl > div { display: flex; justify-content: space-between; gap: 8px; }
+.sheet dt { color: #5b6472; }
+.sheet dd { margin: 0; font-weight: 600; text-align: right; }
+.sheet dl > .main { align-items: baseline; border-bottom: 1px solid #e2e5ea; padding-bottom: 4px; margin-bottom: 2px; }
+.sheet dl > .main dd { font-size: 1.3rem; font-weight: 700; color: #16304f; font-variant-numeric: tabular-nums; }
+.sheet .rcomment { display: grid; gap: 4px; align-content: start; }
 .sheet .key { margin-top: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.72rem; color: #5b6472; border-top: 1px solid #e2e5ea; padding-top: 8px; }
 .sheet .sig { font-style: italic; color: #4a5361; font-size: 0.85rem; }
 .pending { color: #8a8f98; font-style: italic; }
@@ -203,7 +196,6 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
       <li><b>Grades this year</b>: every row in <code>results</code> for that student and subject since the start of the academic year, short tests and the term exam, in date order.</li>
       <li><b>Target</b>: <code>target_grades</code>. Each grade is coloured against it using the points in <code>grade_scale</code> (A* = 8 … G = 1).</li>
       <li><b>Behaviour</b>: <code>behaviour_events</code> since 1 September, split into positive and negative points with the categories behind them.</li>
-      <li><b>Attendance</b>: the existing <code>student_attendance_summary()</code>.</li>
       <li><b>Effort, presentation and homework grades</b> live on <code>report_subject_comments</code>. Effort is already there; presentation and homework would be two new columns on the same scale. The mentor screen shows whatever subject teachers have entered so far.</li>
       <li>The AI draft is only given the facts listed under “What the AI draft is based on”. It is told not to invent anything else, as the current draft button already is.</li>
     </ul>
@@ -245,7 +237,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
   // grades[subjectIndex] = [baseline, st1, st2, st3, exam]; target per subject
   const STUDENTS = [
     {
-      id: 1, first: 'Tolu', last: 'Adebayo', form: '10A', att: 97.8, presShift: 1, hwShift: 0,
+      id: 1, first: 'Tolu', last: 'Adebayo', form: '10A', presShift: 1, hwShift: 0,
       targets: ['A', 'A*', 'A', 'A', 'A*', 'A', 'B', 'A'],
       grades: [
         ['B', 'A', 'A', 'A', 'A'], ['A', 'A', 'A*', 'A*', 'A*'], ['B', 'B', 'A', 'A', 'A*'], ['A', 'A', 'A', 'A*', 'A'],
@@ -259,7 +251,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
       ],
     },
     {
-      id: 2, first: 'Chiamaka', last: 'Eze', form: '10A', att: 95.1, presShift: -1, hwShift: 1,
+      id: 2, first: 'Chiamaka', last: 'Eze', form: '10A', presShift: -1, hwShift: 1,
       targets: ['B', 'B', 'B', 'B', 'C', 'A', 'B', 'B'],
       grades: [
         ['B', 'B', 'A', 'B', 'A'], ['C', 'C', 'B', 'B', 'B'], ['B', 'C', 'C', 'D', 'C'], ['B', 'C', 'C', 'C', 'D'],
@@ -272,7 +264,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
       ],
     },
     {
-      id: 3, first: 'Ifeanyi', last: 'Okafor', form: '10A', att: 88.4, presShift: 0, hwShift: 1,
+      id: 3, first: 'Ifeanyi', last: 'Okafor', form: '10A', presShift: 0, hwShift: 1,
       targets: ['C', 'C', 'C', 'C', 'C', 'C', 'D', 'C'],
       grades: [
         ['D', 'C', 'D', 'C', 'C'], ['C', 'D', 'E', 'D', 'D'], ['D', 'E', 'C', 'D', 'E'], ['D', 'D', 'E', 'E', 'D'],
@@ -286,7 +278,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
       ],
     },
     {
-      id: 4, first: 'Zainab', last: 'Musa', form: '10A', att: 99.2, presShift: 0, hwShift: 0,
+      id: 4, first: 'Zainab', last: 'Musa', form: '10A', presShift: 0, hwShift: 0,
       targets: ['A', 'A', 'A', 'A', 'A', 'A', 'A', 'B'],
       grades: [
         ['A', 'A', 'A', 'A', 'A'], ['A', 'A', 'A', 'A*', 'A'], ['A', 'A*', 'A', 'A', 'A'], ['B', 'A', 'A', 'A', 'A'],
@@ -298,7 +290,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
       ],
     },
     {
-      id: 5, first: 'David', last: 'Ogunleye', form: '10A', att: 93.6, presShift: 1, hwShift: -1,
+      id: 5, first: 'David', last: 'Ogunleye', form: '10A', presShift: 1, hwShift: -1,
       targets: ['C', 'B', 'C', 'C', 'C', 'C', 'C', 'C'],
       grades: [
         ['D', 'D', 'C', 'C', 'C'], ['C', 'C', 'B', 'B', 'B'], ['E', 'D', 'D', 'C', 'C'], ['D', 'D', 'C', 'C', 'C'],
@@ -312,6 +304,32 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
     },
   ];
   const MENTOR = 'Mr J. Eke';
+  const HOUSEPARENT = 'Mrs B. Adeyemi';
+  const SMT = 'Mrs O. Williams, Deputy Head';
+  // Written on the existing pastoral comments page (comment types houseparent and smt)
+  const HOUSE_COMMENTS = {
+    1: 'Tolu is a settled and cheerful member of the boarding house who keeps a tidy room and is always ready to help younger boarders find their feet. Tolu uses prep time well and is a good influence on others.',
+    2: 'Chiamaka has made many friends in the house and contributes well to house events. Chiamaka would benefit from using evening prep more consistently, particularly to keep on top of homework deadlines.',
+    3: 'Ifeanyi is friendly and well liked in the house, but needs to follow house routines more reliably, especially lights-out and the rules on laptop use. I would like to see Ifeanyi take more responsibility next term.',
+    4: 'Zainab is a model boarder: organised, considerate and a real support to others in the house. Zainab has taken on the role of prep monitor with maturity.',
+    5: 'David has grown in confidence in the boarding house this term and is making good use of prep time. David should take more care with uniform standards in the mornings.',
+  };
+  const SMT_COMMENTS = {
+    1: 'An outstanding first term, Tolu. Keep aiming high.',
+    2: 'A good term, Chiamaka. Focus on the sciences and on homework next term and the results will follow.',
+    3: 'Ifeanyi, you have shown what you can do in Physics. I expect to see the same commitment across all your subjects and in your conduct next term.',
+    4: 'Excellent work across the board, Zainab. Well done.',
+    5: 'A term of real progress, David. Keep building on it.',
+  };
+  // Report order: English, then Maths, then everything else alphabetically
+  function reportOrder() {
+    const first = ['English Language', 'Mathematics'];
+    return SUBJECTS.map((sub, si) => si).sort((x, y) => {
+      const a = first.indexOf(SUBJECTS[x].name), b = first.indexOf(SUBJECTS[y].name);
+      if (a !== -1 || b !== -1) return (a === -1 ? 99 : a) - (b === -1 ? 99 : b);
+      return SUBJECTS[x].name.localeCompare(SUBJECTS[y].name);
+    });
+  }
   const MENTEE_IDS = [1, 2, 3, 5];
   const MY_SUBJECT = SUBJECTS.findIndex((s) => s.mine);
 
@@ -440,9 +458,6 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
     else if (b.net > 0) parts.push(`${n} has settled well this term, with ${b.plus} positive points, although ${b.minusN} negative behaviour event${b.minusN === 1 ? '' : 's'} for things like ${topCats(st, -1)} show there is room to improve.`);
     else parts.push(`${n}'s term has been mixed: alongside ${b.plus} positive points there were ${b.minusN} negative behaviour events (${b.minus} points), mostly for ${topCats(st, -1)}, and this needs to change next term.`);
     parts.push(`Academically, ${n} is strongest in ${top.join(' and ')}, and should give particular attention to ${low.join(' and ')}.`);
-    if (st.att < 90) parts.push(`Attendance of ${st.att}% is below the school's expectation and is holding ${n} back.`);
-    else if (st.att >= 97) parts.push(`Attendance of ${st.att}% is excellent.`);
-    else parts.push(`Attendance this term has been ${st.att}%.`);
     return parts.join(' ');
   }
   function topCats(st, sign) {
@@ -465,7 +480,6 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
     return [
       `Positive points: +${b.plus} from ${b.plusN} events; negative points: ${b.minus} from ${b.minusN} events`,
       `Most frequent positives: ${topCats(st, 1) || 'none'}; negatives: ${topCats(st, -1) || 'none'}`,
-      `Attendance: ${st.att}%`,
       `Best grades: ${r.slice(0, 3).map((x) => `${x.name} ${x.latest}`).join(', ')}`,
       `Weakest grades: ${r.slice(-3).map((x) => `${x.name} ${x.latest}`).join(', ')}`,
       ...MEASURES.map((m) => `${m.label} grades from subject teachers: ${SUBJECTS.map((sub, i) => { const g = gradesFor(st, i)[m.key]; return g && `${sub.name} ${g}`; }).filter(Boolean).join(', ')}`),
@@ -550,7 +564,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
         <label>Writing as<select id="m-type"><option>Mentor — ${MENTOR}</option></select></label>
       </div>
       <div class="intro small">
-        <p><b>What's new:</b> for each mentee you see their behaviour points for the year (total plus and total minus), attendance, their best and weakest grades across all subjects, and the effort, presentation and homework grades subject teachers have already given. The AI draft is built from exactly these.</p>
+        <p><b>What's new:</b> for each mentee you see their behaviour points for the year (total plus and total minus), their best and weakest grades across all subjects, and the effort, presentation and homework grades subject teachers have already given. The AI draft is built from exactly these.</p>
       </div>
       <div class="stack">${MENTEE_IDS.map((id) => pastoralCard(byId(id))).join('')}</div>`;
   }
@@ -580,7 +594,6 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
         <div class="tile"><span class="label">Plus points</span><span class="v pos">+${b.plus}</span><span class="s">${b.plusN} events</span></div>
         <div class="tile"><span class="label">Minus points</span><span class="v ${b.minus ? 'neg' : ''}">${b.minus || 0}</span><span class="s">${b.minusN} event${b.minusN === 1 ? '' : 's'}</span></div>
         <div class="tile"><span class="label">Net</span><span class="v">${b.net > 0 ? '+' : ''}${b.net}</span><span class="s">since 1 Sep</span></div>
-        <div class="tile"><span class="label">Attendance</span><span class="v ${st.att < 90 ? 'neg' : ''}">${st.att}%</span><span class="s">${st.att < 90 ? 'below 90% expectation' : 'this year'}</span></div>
       </div>
       <div class="bar" aria-hidden="true"><i class="p" style="width:${(b.plus / total) * 100}%"></i><i class="n" style="width:${(Math.abs(b.minus) / total) * 100}%"></i></div>
       <div class="cols">
@@ -617,7 +630,6 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
   function renderReport() {
     const el = document.getElementById('view-report');
     const st = byId(reportId);
-    const b = behaviourTotals(st);
     const subjComment = (si) => {
       if (si === MY_SUBJECT) {
         const c = subjState[st.id].comment;
@@ -631,7 +643,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
       <div class="pickers">
         <label>Student<select id="r-student">${STUDENTS.map((s) => `<option value="${s.id}" ${s.id === reportId ? 'selected' : ''}>${s.first} ${s.last}</option>`).join('')}</select></label>
       </div>
-      <p class="muted small" style="margin-bottom:12px">The report parents receive. Subject comments and the mentor comment are the checked text from tabs 1 and 2. Grades, effort, behaviour and attendance fill in automatically.</p>
+      <p class="muted small" style="margin-bottom:12px">The report parents receive: each subject's grades beside its comment, English first, then Maths, then the rest alphabetically, followed by the mentor, houseparent and SMT comments. The Biology and mentor comments are whatever you write on tabs 1 and 2.</p>
       <div class="sheet-wrap"><article class="sheet">
         <div class="top">
           <div><div class="school">Adorable British College</div><div class="rtitle">End of Term 1 Report · 2026/27</div></div>
@@ -641,30 +653,29 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
           <div><div class="k">Student</div><div class="v">${esc(st.first)} ${esc(st.last)}</div></div>
           <div><div class="k">Year / Form</div><div class="v">Year 10 · ${st.form}</div></div>
           <div><div class="k">Mentor</div><div class="v">${MENTOR}</div></div>
-          <div><div class="k">Attendance</div><div class="v">${st.att}%</div></div>
         </div>
 
-        <h4>Grades this year</h4>
-        <div style="overflow-x:auto"><table>
-          <thead><tr><th>Subject</th><th>Target</th>${ASSESSMENTS.map((a) => `<th>${a.label.replace(' test', '')}</th>`).join('')}${MEASURES.map((m) => `<th>${m.short}</th>`).join('')}</tr></thead>
-          <tbody>${SUBJECTS.map((sub, si) => `<tr><td>${sub.name}</td><td>${st.targets[si]}</td>${st.grades[si].map((g, i) => `<td class="${i === 4 ? 'ex' : ''}">${g}</td>`).join('')}${MEASURES.map((m) => `<td class="w">${w(si, m.key)}</td>`).join('')}</tr>`).join('')}</tbody>
-        </table></div>
+        ${reportOrder().map((si) => `<section class="rsec">
+          <div class="rgrades">
+            <div class="rname">${SUBJECTS[si].name}</div>
+            <dl>
+              <div class="main"><dt>Grade</dt><dd>${st.grades[si][4]}</dd></div>
+              ${MEASURES.map((m) => `<div><dt>${m.label}</dt><dd>${w(si, m.key)}</dd></div>`).join('')}
+            </dl>
+          </div>
+          <div class="rcomment"><p>${subjComment(si)}</p><p class="sig">${SUBJECTS[si].teacher}</p></div>
+        </section>`).join('')}
 
-        <h4>Subject comments</h4>
-        ${SUBJECTS.map((sub, si) => `<div class="subj">
-          <div class="h"><b>${sub.name}</b><span>${sub.teacher} · Term exam ${st.grades[si][4]} · Target ${st.targets[si]} · Effort ${w(si, 'effort')} · Presentation ${w(si, 'presentation')} · Homework ${w(si, 'homework')}</span></div>
-          <p>${subjComment(si)}</p></div>`).join('')}
+        ${[
+          ['Mentor', pc, MENTOR, 'Mentor tab'],
+          ['Houseparent', HOUSE_COMMENTS[st.id], HOUSEPARENT, ''],
+          ['SMT', SMT_COMMENTS[st.id], SMT, ''],
+        ].map(([role, text, who, tab]) => `<section class="rsec">
+          <div class="rgrades"><div class="rname">${role}</div></div>
+          <div class="rcomment"><p>${text ? esc(text) : `<span class="pending">Not written yet. Write or generate it on the ${tab} and it appears here.</span>`}</p><p class="sig">${who}</p></div>
+        </section>`).join('')}
 
-        <h4>Pastoral</h4>
-        <div class="pastoral">
-          <div><div class="k">Positive points</div><div class="v">+${b.plus}</div></div>
-          <div><div class="k">Behaviour points</div><div class="v">${b.minus || 0}</div></div>
-          <div><div class="k">Attendance</div><div class="v">${st.att}%</div></div>
-        </div>
-        <p>${pc ? esc(pc) : '<span class="pending">Not written yet. Write or generate it on the Mentor tab and it appears here.</span>'}</p>
-        <p class="sig" style="margin-top:6px">${MENTOR}, Mentor</p>
-
-        <div class="key">Grades are IGCSE A*–G. Short tests are set in lessons; the Term 1 exam (shaded) is the end-of-term assessment. Effort, presentation of work (Pres.) and homework (H/work): Excellent · Good · Satisfactory · Needs Improvement. Positive and behaviour points are totals since 1 September 2026.</div>
+        <div class="key">Grade: Term 1 exam, IGCSE A*–G. Effort, presentation of work and homework: Excellent · Good · Satisfactory · Needs Improvement.</div>
       </article></div>`;
   }
 
