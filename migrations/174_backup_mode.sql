@@ -1,4 +1,4 @@
--- Migration 117: backup mode — a system-wide, self-healing write freeze
+-- Migration 174: backup mode — a system-wide, self-healing write freeze
 --
 -- WHY: the nightly dump is transactionally consistent on its own (pg_dump
 -- takes an MVCC snapshot), so this is not about a corrupt backup. It is

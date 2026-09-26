@@ -7,7 +7,7 @@ import { useAuth } from '../../lib/AuthContext';
 //
 // Without this, backup mode looks like the system is broken: saves fail with a
 // database error and staff have no idea why or how long for. The freeze itself
-// is enforced in Postgres (migration 117) — this banner is purely the
+// is enforced in Postgres (migration 174) — this banner is purely the
 // explanation, so it does not matter that a stale tab might miss it.
 export default function BackupModeBanner() {
   const { session } = useAuth();

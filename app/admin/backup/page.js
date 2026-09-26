@@ -42,6 +42,9 @@ function BackupInner() {
   const [steps, setSteps] = useState([]);
   const [error, setError] = useState(null);
   const [runUrl, setRunUrl] = useState(null);
+  // null while unknown; false means the server has no GitHub token, so
+  // starting a backup would only freeze the school and then fail.
+  const [canRun, setCanRun] = useState(null);
   const cancelled = useRef(false);
 
   useEffect(() => () => { cancelled.current = true; }, []);
@@ -66,6 +69,18 @@ function BackupInner() {
     if (!token) throw new Error('Your session has expired. Sign in again and retry.');
     return { Authorization: `Bearer ${token}` };
   }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/backup', { headers: await authHeader() });
+        const body = await res.json();
+        setCanRun(res.ok && body.configured === true);
+      } catch {
+        setCanRun(false);
+      }
+    })();
+  }, []);
 
   async function runBackup() {
     setBusy(true);
@@ -176,12 +191,14 @@ function BackupInner() {
       ) : null}
 
       <div className="card">
-        <button onClick={runBackup} disabled={busy || freezeLive}>
+        <button onClick={runBackup} disabled={busy || freezeLive || !canRun}>
           {busy ? 'Working…' : 'Run a backup now'}
         </button>
         {' '}
         <span style={{ color: '#666', fontSize: '0.9rem' }}>
-          Usually takes about two minutes.
+          {canRun === false
+            ? 'Not available yet: the server has no GitHub token to start the backup with (GITHUB_BACKUP_TOKEN in Vercel).'
+            : 'Usually takes about two minutes.'}
         </span>
 
         {steps.length > 0 ? (

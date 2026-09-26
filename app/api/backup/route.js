@@ -119,19 +119,23 @@ export async function POST(request) {
 }
 
 export async function GET(request) {
-  const token = process.env.GITHUB_BACKUP_TOKEN;
-  if (!token) {
-    return Response.json({ error: 'GITHUB_BACKUP_TOKEN is not configured on the server.' }, { status: 500 });
-  }
   if (!(await callerIsAdmin(request))) {
     return Response.json({ error: 'Only an admin can check backup status.' }, { status: 403 });
   }
 
-  const repo = process.env.GITHUB_BACKUP_REPO || DEFAULT_REPO;
+  // With no runId this is the page asking whether a backup can be started at
+  // all. It asks before freezing the school, so a missing token shows up as a
+  // disabled button rather than as a freeze followed by an error.
+  const token = process.env.GITHUB_BACKUP_TOKEN;
   const runId = new URL(request.url).searchParams.get('runId');
   if (!runId) {
-    return Response.json({ error: 'runId is required.' }, { status: 400 });
+    return Response.json({ configured: Boolean(token) });
   }
+  if (!token) {
+    return Response.json({ error: 'GITHUB_BACKUP_TOKEN is not configured on the server.' }, { status: 500 });
+  }
+
+  const repo = process.env.GITHUB_BACKUP_REPO || DEFAULT_REPO;
 
   const res = await github(`/repos/${repo}/actions/runs/${runId}`, token);
   if (!res.ok) {

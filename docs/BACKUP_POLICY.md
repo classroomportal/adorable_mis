@@ -11,10 +11,14 @@ becomes fiction.
 
 ## Why this exists at all
 
-The Supabase organisation is on the Free plan, which includes **no automatic
-database backups** — not a daily one, and certainly not point-in-time recovery.
-Everything below is a DIY safety net. If the school moves to Supabase Pro, PITR
-becomes available and this regime should be reviewed rather than simply kept.
+This was written when the Supabase organisation was on the Free plan, which
+includes **no automatic database backups**. The organisation moved to Pro on
+26 September 2026, so Supabase now also takes its own daily backup and keeps
+7 days of them (Database → Backups in the dashboard). Those can only be
+restored over the live project, never downloaded, and a week is shorter than
+the time a data error can go unnoticed — so the regime below is kept alongside
+them rather than replaced. Point-in-time recovery is a paid add-on on Pro and
+is not switched on.
 
 ## What is backed up
 
@@ -105,7 +109,7 @@ into backup mode, triggers the same workflow that runs nightly, then lifts the
 freeze. While it is on, staff can read everything and save nothing, and see a
 banner saying so.
 
-The freeze is enforced in Postgres (migration 117), not in the app, because
+The freeze is enforced in Postgres (migration 174), not in the app, because
 pages talk to Supabase directly from the browser and a UI-level freeze is a
 courtesy a stale tab ignores.
 
