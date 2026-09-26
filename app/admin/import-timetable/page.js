@@ -80,6 +80,7 @@ function ImportTimetableInner() {
   const [progress, setProgress] = useState(null); // { done, total }
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [dropLeft, setDropLeft] = useState(true); // remove enrolments the export no longer lists
   const fileInputRef = useRef(null);
 
   // Back to stage 1 with a clean slate — used both by "Start another
@@ -119,7 +120,7 @@ function ImportTimetableInner() {
 
       const { data: students, error: sErr } = await supabase
         .from("students")
-        .select("student_id, upn")
+        .select("student_id, upn, first_name, last_name")
         .in("upn", uniqueUpns);
       if (sErr) throw sErr;
 
@@ -236,8 +237,47 @@ function ImportTimetableInner() {
         toInsert.push(link);
       }
 
+      // The export lists every class a pupil is in, so a class Formwork still
+      // has them in that the file doesn't list is one they've left. This
+      // import used to only ever add (and swap sets within one block), so
+      // when 12 pupils moved from 7A/7C/7G into the new 7L form they kept
+      // their old 7A1/7C1/7G1 PE groups alongside 7L1/Pe — and sat two
+      // lessons at once. Only pupils in the file are touched, and not any
+      // pupil the file lists against a class code Formwork doesn't know
+      // (that's probably a renamed class: fix the code, then re-import).
+      const fileCodesByStudent = new Map();
+      const unknownCodeStudents = new Set();
+      for (const p of parsed) {
+        const sid = studentMap.get(p.upn);
+        if (!sid) continue;
+        if (!classMap.has(p.class_code)) { unknownCodeStudents.add(sid); continue; }
+        if (!fileCodesByStudent.has(sid)) fileCodesByStudent.set(sid, new Set());
+        fileCodesByStudent.get(sid).add(p.class_code);
+      }
+      const allLinks = await fetchAllRows(() =>
+        supabase
+          .from("student_class")
+          .select("student_id, class_id, classes(class_code)")
+          .in("student_id", [...fileCodesByStudent.keys()])
+      );
+      const swapRemovals = new Set(toRemove.map((r) => `${r.student_id}:${r.class_id}`));
+      const nameById = new Map(students.map((s) => [s.student_id, `${s.first_name} ${s.last_name}`]));
+      const toDrop = allLinks
+        .filter((l) => l.classes?.class_code && !unknownCodeStudents.has(l.student_id))
+        .filter((l) => !fileCodesByStudent.get(l.student_id).has(l.classes.class_code))
+        .filter((l) => !swapRemovals.has(`${l.student_id}:${l.class_id}`))
+        .map((l) => ({
+          student_id: l.student_id,
+          class_id: l.class_id,
+          class_code: l.classes.class_code,
+          student_name: nameById.get(l.student_id) || `student_id ${l.student_id}`,
+        }))
+        .sort((a, b) => a.student_name.localeCompare(b.student_name) || a.class_code.localeCompare(b.class_code));
+
       setPreview({
         totalRows: parsed.length,
+        toDrop,
+        notTidied: unknownCodeStudents.size,
         uniqueStudents: uniqueUpns.length,
         matchedStudents: matchedUpns.length,
         unmatchedUpns,
@@ -272,6 +312,20 @@ function ImportTimetableInner() {
           .eq("student_id", rem.student_id)
           .eq("class_id", rem.class_id);
         if (delErr) throw delErr;
+      }
+
+      // 1b. Enrolments the export no longer lists.
+      let droppedCount = 0;
+      if (dropLeft) {
+        for (const d of preview.toDrop) {
+          const { error: delErr } = await supabase
+            .from("student_class")
+            .delete()
+            .eq("student_id", d.student_id)
+            .eq("class_id", d.class_id);
+          if (delErr) throw delErr;
+          droppedCount++;
+        }
       }
 
       // 2. Insert new links one at a time (both genuinely new ones and the
@@ -329,6 +383,7 @@ function ImportTimetableInner() {
       setResult({
         inserted: insertedCount,
         swapped: preview.toSwap.length,
+        dropped: droppedCount,
         alreadyLinked: preview.alreadyLinkedCount,
         failed,
       });
@@ -341,7 +396,7 @@ function ImportTimetableInner() {
     }
   }
 
-  const totalToApply = preview ? preview.toInsert.length + preview.toSwap.length : 0;
+  const totalToApply = preview ? preview.toInsert.length + preview.toSwap.length + (dropLeft ? preview.toDrop.length : 0) : 0;
 
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", padding: "1rem" }}>
@@ -361,7 +416,8 @@ function ImportTimetableInner() {
             before anything is written. Existing links are never duplicated —
             and if a student has moved to a different set within the same
             subject block, the old link is swapped out rather than causing a
-            conflict.
+            conflict. A class a pupil is in here but not in the export is
+            listed for removal.
           </p>
 
           <input
@@ -390,6 +446,7 @@ function ImportTimetableInner() {
             <li>Already linked, no change needed: {preview.alreadyLinkedCount}</li>
             <li>New links to add: {preview.toInsert.length}</li>
             <li>Set changes (student moving class within a block): {preview.toSwap.length}</li>
+            <li>Classes pupils have left (in Formwork, not in the export): {preview.toDrop.length}</li>
             {preview.ambiguous.length > 0 && (
               <li style={{ color: "crimson" }}>
                 Ambiguous in file itself (excluded from import): {preview.ambiguous.length}
@@ -426,6 +483,30 @@ function ImportTimetableInner() {
                 {preview.toSwap.map((s) => `student_id ${s.student_id} -> ${s.class_code}`).join("\n")}
               </pre>
             </details>
+          )}
+
+          {preview.toDrop.length > 0 && (
+            <details open>
+              <summary style={{ color: "#b45309" }}>
+                {preview.toDrop.length} enrolment(s) the export no longer lists — review before importing
+              </summary>
+              <label style={{ display: "block", margin: "0.5rem 0" }}>
+                <input type="checkbox" checked={dropLeft} onChange={(e) => setDropLeft(e.target.checked)} />{" "}
+                Remove these pupils from these classes
+              </label>
+              <pre style={{ whiteSpace: "pre-wrap" }}>
+                {preview.toDrop.map((d) => `${d.student_name}: ${d.class_code}`).join("\n")}
+              </pre>
+              <p style={{ fontSize: "0.9em", color: "#555" }}>
+                Past registers and marks are kept — only class membership changes.
+              </p>
+            </details>
+          )}
+          {preview.notTidied > 0 && (
+            <p style={{ color: "#b45309" }}>
+              {preview.notTidied} pupil(s) are listed against a class code Formwork doesn't
+              have (below), so none of their old classes are removed this time.
+            </p>
           )}
 
           {preview.unmatchedUpns.length > 0 && (
@@ -479,6 +560,10 @@ function ImportTimetableInner() {
           <ul>
             <li>{preview.toInsert.length} new link(s)</li>
             <li>{preview.toSwap.length} set change(s) (old link removed, new one added)</li>
+            <li>
+              {dropLeft ? preview.toDrop.length : 0} enrolment(s) removed (classes pupils have left)
+              {!dropLeft && preview.toDrop.length > 0 && " — you unticked removing them"}
+            </li>
             {preview.ambiguous.length > 0 && (
               <li style={{ color: "#b45309" }}>{preview.ambiguous.length} ambiguous row(s) — skipped</li>
             )}
@@ -517,6 +602,7 @@ function ImportTimetableInner() {
           <h2>Done</h2>
           <div style={{ color: "green" }}>
             Added {result.inserted} new link(s), applied {result.swapped} set change(s),
+            {" "}removed {result.dropped} enrolment(s) pupils have left,
             {" "}{result.alreadyLinked} row(s) already matched and needed no change.
           </div>
           {result.failed.length > 0 && (

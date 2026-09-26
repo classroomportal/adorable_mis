@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { LESSON_COLUMNS, lessonRoom, lessonTeacher } from '../../lib/lessons';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
 import TermTestScoresDownload from '../components/TermTestScoresDownload';
@@ -133,7 +134,7 @@ export function ParentPortalInner() {
       setTimetableLoading(true);
       const { data: tt } = await supabase
         .from('student_class')
-        .select('classes(class_id, room, class_code, subjects(subject_name, display_name, subject_code), staff(first_name, last_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
+        .select(`classes(class_id, room, class_code, subjects(subject_name, display_name, subject_code), staff(first_name, last_name), timetable_slots(${LESSON_COLUMNS}))`)
         .eq('student_id', selectedId);
       setTimetableClasses((tt || []).map((row) => row.classes).filter(Boolean));
       const { data: oh } = await supabase.from('other_half_timetable').select('*').eq('student_id', selectedId);
@@ -205,8 +206,8 @@ export function ParentPortalInner() {
       const key = `${slot.day_of_week}-${slot.period_number}`;
       const entry = {
         subject: c.subjects?.display_name || c.subjects?.subject_name,
-        room: c.room,
-        teacher: c.staff ? `${c.staff.first_name} ${c.staff.last_name}` : null,
+        room: lessonRoom(slot, c),
+        teacher: lessonTeacher(slot, c),
         isOtherHalfClass: isOtherHalfSubject(c.subjects),
       };
       cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];

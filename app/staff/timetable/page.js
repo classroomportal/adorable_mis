@@ -2,6 +2,7 @@
 import { useEffect, useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
+import { loadStaffLessons, lessonRoom } from '../../../lib/lessons';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
@@ -50,11 +51,8 @@ function StaffTimetable() {
       if (!selectedStaffId) { setClasses([]); setCommitments([]); setOtherHalf([]); setLoading(false); return; }
       setLoading(true);
       const ohTermId = await loadCurrentOtherHalfTermId();
-      const [{ data: classData }, { data: commitmentData }, { data: ohData }] = await Promise.all([
-        supabase
-          .from('classes')
-          .select('class_id, room, class_code, subjects(subject_name, display_name), timetable_slots(day_of_week, period_number, start_time, end_time)')
-          .eq('staff_id', selectedStaffId),
+      const [{ classes: classData }, { data: commitmentData }, { data: ohData }] = await Promise.all([
+        loadStaffLessons(selectedStaffId),
         supabase
           .from('staff_commitments')
           .select('day_of_week, period_number, label')
@@ -84,7 +82,7 @@ function StaffTimetable() {
       const entry = {
         classId: c.class_id,
         subject: c.subjects?.display_name || c.subjects?.subject_name,
-        room: c.room,
+        room: lessonRoom(slot, c),
         classCode: c.class_code,
         time: formatTimeRange(slot.start_time, slot.end_time),
       };

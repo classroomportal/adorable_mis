@@ -17,8 +17,13 @@ import { classGroupKey } from "../../../lib/blockGroups";
 // "teacher_no" here and ignored.
 //
 // A class_code (group_full, e.g. "10_1/Ma") appears on one row per weekly
-// lesson — usually with the same staff/room, occasionally not. We take the
-// most frequently occurring staff_code/room per class, and every slot.
+// lesson, and each row carries that lesson's own teacher and room. Most
+// classes have the same teacher and room every lesson, but not all: 8A1/Hu
+// is LEE one lesson and VAE the other. The class keeps the most frequent
+// teacher/room as its default, and a lesson taught or held elsewhere keeps
+// its own on its timetable_slots row (migration 182). Collapsing everything
+// to the class's most frequent teacher, as this importer used to, put LEE
+// down for VAE's lesson and invented clashes that weren't in Nova-T.
 
 function subjectCodeFromSub(subcode) {
   // "Ma1" -> "Ma", "Ma" -> "Ma"
@@ -68,7 +73,9 @@ async function fetchAllRows(buildQuery) {
   return all;
 }
 
-function mostCommon(arr) {
+// On a tie (8A1/Hu: one LEE lesson, one VAE lesson) the class's current
+// value wins, so a re-import doesn't flip the class teacher back and forth.
+function mostCommon(arr, prefer = null) {
   const counts = new Map();
   for (const v of arr) {
     if (!v) continue;
@@ -78,6 +85,7 @@ function mostCommon(arr) {
   for (const [v, c] of counts) {
     if (c > bestCount) { best = v; bestCount = c; }
   }
+  if (prefer && counts.get(prefer) === bestCount) return prefer;
   return best;
 }
 
@@ -127,14 +135,23 @@ async function parseFiles(files) {
       }
       if (isOtherHalfGroup(subcode, groupFull)) { skippedOtherHalf.add(groupFull); continue; }
       if (!rowsByClass.has(groupFull)) {
-        rowsByClass.set(groupFull, { staffCodes: [], rooms: [], subcode, slots: new Map(), badSlots: [] });
+        rowsByClass.set(groupFull, { staffCodes: [], rooms: [], subcode, slots: new Map(), badSlots: [], sharedSlots: [] });
       }
       const entry = rowsByClass.get(groupFull);
       if (staffCode) entry.staffCodes.push(staffCode);
       if (room) entry.rooms.push(room);
       const decoded = decodeNovaTSlot(slotStr);
-      if (decoded) entry.slots.set(slotKey(decoded.day_of_week, decoded.period_number), decoded);
-      else entry.badSlots.push(slotStr);
+      if (!decoded) { entry.badSlots.push(slotStr); continue; }
+      const key = slotKey(decoded.day_of_week, decoded.period_number);
+      const seen = entry.slots.get(key);
+      if (seen) {
+        // Two rows for one lesson (two teachers in the room). A lesson holds
+        // one teacher here, so the first row's is kept and the lesson listed.
+        if (staffCode && staffCode !== seen.staff_code) entry.sharedSlots.push({ ...decoded, staff_codes: [seen.staff_code, staffCode] });
+        if (!seen.room && room) seen.room = room;
+        continue;
+      }
+      entry.slots.set(key, { ...decoded, staff_code: staffCode || null, room: room || null });
     }
   }
 
@@ -142,18 +159,40 @@ async function parseFiles(files) {
   for (const [classCode, entry] of rowsByClass) {
     classes.push({
       class_code: classCode,
+      staff_codes: entry.staffCodes,
+      rooms: entry.rooms,
       staff_code: mostCommon(entry.staffCodes),
       room: mostCommon(entry.rooms),
       subject_code: subjectCodeFromSub(entry.subcode),
       year_group: yearGroupFromClassCode(classCode),
       slots: [...entry.slots.values()],
       badSlots: entry.badSlots,
+      sharedSlots: entry.sharedSlots,
     });
   }
   return {
     classes,
     skippedOtherHalf: [...skippedOtherHalf].sort(),
     ignoredLines: [...ignoredLines].map(([file, count]) => ({ file, count })),
+  };
+}
+
+// A lesson's own teacher/room, stored on its timetable_slots row only where
+// it differs from the class's (NULL means "the class's"), so changing a
+// class's teacher in Formwork still moves every lesson that has no teacher
+// of its own. A room Nova-T leaves blank on a lesson of a class that has a
+// room is stored as '' — no room — not the class's: 11E's Tue/Thu
+// registration has no room in Nova-T, and giving it the class's CHEM
+// double-booked the lab FIO is teaching in.
+function lessonOverrides(slot, classDefault, staffByCode) {
+  const staffId = slot.staff_code ? staffByCode.get(slot.staff_code) ?? null : null;
+  const classRoom = classDefault.room || null;
+  let room = null;
+  if (slot.room && slot.room !== classRoom) room = slot.room;
+  else if (!slot.room && classRoom) room = "";
+  return {
+    staff_id: staffId && staffId !== (classDefault.staff_id ?? null) ? staffId : null,
+    room,
   };
 }
 
@@ -244,7 +283,7 @@ function ImportClassesInner() {
         supabase.from("curriculum_blocks").select("block_id, block_name, year_group, band, is_compound"),
         supabase.from("periods").select("period_number, period_name"),
         supabase.from("bell_times").select("day_of_week, period_number, start_time, end_time"),
-        fetchAllRows(() => supabase.from("timetable_slots").select("slot_id, class_id, day_of_week, period_number").order("slot_id")),
+        fetchAllRows(() => supabase.from("timetable_slots").select("slot_id, class_id, day_of_week, period_number, staff_id, room").order("slot_id")),
       ]);
       if (cErr) throw cErr;
       if (sErr) throw sErr;
@@ -324,9 +363,16 @@ function ImportClassesInner() {
       const parsedCodes = new Set();
       const yearGroupsInFile = new Set();
 
+      const staffCodeById = new Map(staff.map((s) => [s.staff_id, s.staff_code]));
+      const classDefaults = new Map(); // class_id -> { staff_id, room } once this import's class changes are applied
       for (const row of parsedClasses) {
         parsedCodes.add(row.class_code);
         if (row.year_group != null) yearGroupsInFile.add(row.year_group);
+        const current = classByCode.get(row.class_code);
+        if (current) {
+          row.staff_code = mostCommon(row.staff_codes, staffCodeById.get(current.staff_id));
+          row.room = mostCommon(row.rooms, current.room);
+        }
 
         const staffId = row.staff_code ? staffByCode.get(row.staff_code) : null;
         if (row.staff_code && !staffId) unmatchedStaff.add(row.staff_code);
@@ -356,6 +402,7 @@ function ImportClassesInner() {
             const diffs = ["class code"];
             if (staffId && staffId !== contentMatch.staff_id) diffs.push("teacher");
             if (row.room && row.room !== contentMatch.room) diffs.push("room");
+            classDefaults.set(contentMatch.class_id, { staff_id: staffId || contentMatch.staff_id, room: row.room || contentMatch.room });
             updates.push({
               class_id: contentMatch.class_id,
               class_code: row.class_code,
@@ -388,6 +435,7 @@ function ImportClassesInner() {
 
         claimedClassIds.add(existing.class_id);
         matchedClassIdByCode.set(row.class_code, existing.class_id);
+        classDefaults.set(existing.class_id, { staff_id: staffId || existing.staff_id, room: row.room || existing.room });
         const diffs = [];
         if (staffId && staffId !== existing.staff_id) diffs.push("teacher");
         if (row.room && row.room !== existing.room) diffs.push("room");
@@ -430,14 +478,35 @@ function ImportClassesInner() {
           continue;
         }
         const current = slotsByClass.get(classId) || new Map();
+        const def = classDefaults.get(classId) || {};
         const fileKeys = new Set(row.slots.map((t) => slotKey(t.day_of_week, t.period_number)));
-        const add = row.slots.filter((t) => !current.has(slotKey(t.day_of_week, t.period_number)));
+        const add = row.slots
+          .filter((t) => !current.has(slotKey(t.day_of_week, t.period_number)))
+          .map((t) => ({ ...t, ...lessonOverrides(t, def, staffByCode) }));
         const remove = [...current.values()].filter((t) => !fileKeys.has(slotKey(t.day_of_week, t.period_number)));
+        // Lessons that stay put but whose own teacher or room differs.
+        const retag = [];
+        for (const t of row.slots) {
+          const have = current.get(slotKey(t.day_of_week, t.period_number));
+          if (!have) continue;
+          const want = lessonOverrides(t, def, staffByCode);
+          if ((have.staff_id ?? null) !== want.staff_id || (have.room ?? null) !== want.room) {
+            retag.push({
+              ...t,
+              ...want,
+              slot_id: have.slot_id,
+              old_teacher: staffNameById.get(have.staff_id ?? def.staff_id) || "—",
+              new_teacher: staffNameById.get(want.staff_id ?? def.staff_id) || "—",
+              old_room: (have.room ?? def.room) || "none",
+              new_room: (want.room ?? def.room) || "none",
+            });
+          }
+        }
         for (const t of add) {
           if (!bellByKey.has(slotKey(t.day_of_week, t.period_number))) noBellTime.add(slotKey(t.day_of_week, t.period_number));
         }
-        if (add.length || remove.length) {
-          scheduleChanges.push({ class_id: classId, class_code: row.class_code, add, remove });
+        if (add.length || remove.length || retag.length) {
+          scheduleChanges.push({ class_id: classId, class_code: row.class_code, add, remove, retag });
         }
       }
       setScheduleSelections(Object.fromEntries(scheduleChanges.map((c) => [c.class_id, true])));
@@ -529,6 +598,7 @@ function ImportClassesInner() {
         noSlotsInFile,
         noBellTime: [...noBellTime],
         badSlotClasses: parsedClasses.filter((c) => c.badSlots.length > 0).map((c) => c.class_code),
+        sharedSlots: parsedClasses.flatMap((c) => c.sharedSlots.map((t) => ({ class_code: c.class_code, ...t }))),
         slotsByNewCode: Object.fromEntries(parsedClasses.map((c) => [c.class_code, c.slots])),
       });
     } catch (err) {
@@ -585,6 +655,8 @@ function ImportClassesInner() {
         period_number: t.period_number,
         start_time: b.start_time,
         end_time: b.end_time,
+        staff_id: t.staff_id ?? null,
+        room: t.room ?? null,
       });
     }
     return { rows, missing };
@@ -592,10 +664,12 @@ function ImportClassesInner() {
 
   // Make a class's lessons exactly the file's: used for a class just created
   // or just linked to an old one it replaces.
-  async function replaceClassSlots(classId, slots) {
+  async function replaceClassSlots(classId, slots, classDefault) {
     const { error: delErr } = await supabase.from("timetable_slots").delete().eq("class_id", classId);
     if (delErr) throw delErr;
-    const { rows, missing } = slotRowsFor(classId, slots);
+    const staffByCode = new Map(staffList.map((s) => [s.staff_code, s.staff_id]));
+    const withOwn = slots.map((t) => ({ ...t, ...lessonOverrides(t, classDefault, staffByCode) }));
+    const { rows, missing } = slotRowsFor(classId, withOwn);
     if (rows.length > 0) {
       const { error: insErr } = await supabase.from("timetable_slots").insert(rows);
       if (insErr) throw insErr;
@@ -608,10 +682,18 @@ function ImportClassesInner() {
     if (chosen.length === 0) return;
     setApplyingSchedule(true);
     setError(null);
-    let classes = 0, added = 0, removed = 0, unplaced = 0;
+    let classes = 0, added = 0, removed = 0, unplaced = 0, retagged = 0;
     const failed = [];
     for (const c of chosen) {
       try {
+        for (const t of c.retag || []) {
+          const { error: upErr } = await supabase
+            .from("timetable_slots")
+            .update({ staff_id: t.staff_id, room: t.room })
+            .eq("slot_id", t.slot_id);
+          if (upErr) throw upErr;
+          retagged++;
+        }
         if (c.remove.length > 0) {
           const { error: delErr } = await supabase
             .from("timetable_slots")
@@ -632,7 +714,7 @@ function ImportClassesInner() {
         failed.push({ class_code: c.class_code, error: err.message || String(err) });
       }
     }
-    setScheduleResult({ classes, added, removed, unplaced, failed });
+    setScheduleResult({ classes, added, removed, unplaced, retagged, failed });
     const done = new Set(chosen.filter((c) => !failed.some((f) => f.class_code === c.class_code)).map((c) => c.class_id));
     setPreview((prev) => ({ ...prev, scheduleChanges: prev.scheduleChanges.filter((c) => !done.has(c.class_id)) }));
     setApplyingSchedule(false);
@@ -723,7 +805,10 @@ function ImportClassesInner() {
             failed.push({ class_code: c.class_code, error: upErr.message });
             continue;
           }
-          if (slots.length > 0) unplaced += await replaceClassSlots(oldId, slots);
+          if (slots.length > 0) {
+            const { data: cls } = await supabase.from("classes").select("staff_id, room").eq("class_id", oldId).single();
+            unplaced += await replaceClassSlots(oldId, slots, cls || {});
+          }
           replacedIds.push(oldId);
           renamed++;
           continue;
@@ -740,13 +825,17 @@ function ImportClassesInner() {
           blockId = Number(f.block_choice);
         }
 
+        const classDefault = {
+          staff_id: f.staff_id ? Number(f.staff_id) : c.staff_id || null,
+          room: (f.room ?? c.room) || null,
+        };
         const { data: inserted, error: insErr } = await supabase
           .from("classes")
           .insert({
             class_code: c.class_code,
             subject_id: f.subject_id ? Number(f.subject_id) : c.subject_id || null,
-            staff_id: f.staff_id ? Number(f.staff_id) : c.staff_id || null,
-            room: (f.room ?? c.room) || null,
+            staff_id: classDefault.staff_id,
+            room: classDefault.room,
             year_group: c.year_group,
             block_id: blockId,
             block_group: group?.explicit ? group.groupKey || null : null,
@@ -759,7 +848,7 @@ function ImportClassesInner() {
         }
         created++;
         try {
-          if (slots.length > 0) unplaced += await replaceClassSlots(inserted.class_id, slots);
+          if (slots.length > 0) unplaced += await replaceClassSlots(inserted.class_id, slots, classDefault);
           if (group && group.studentIds.length > 0 && (f.enrol_group ?? true)) {
             const { error: scErr } = await supabase
               .from("student_class")
@@ -962,12 +1051,16 @@ function ImportClassesInner() {
           {preview.scheduleChanges.length > 0 && (
             <details open style={{ marginTop: "1rem" }}>
               <summary>
-                {preview.scheduleChanges.length} class(es) whose lessons have moved in Nova-T
+                {preview.scheduleChanges.length} class(es) whose lessons have moved, or changed teacher or room, in Nova-T
               </summary>
               <p style={{ fontSize: "0.85em", color: "#555" }}>
                 Lessons in Formwork that Nova-T no longer has are removed; lessons Nova-T
-                has that Formwork doesn't are added, at that day's bell time. Registers
-                already taken are not affected. Untick any class you want to leave as it is.
+                has that Formwork doesn't are added, at that day's bell time. A lesson
+                Nova-T gives a different teacher or room from the rest of the class keeps
+                its own (e.g. one 8A1/Hu lesson is VAE's, not LEE's). Registers already
+                taken are not affected. Untick any class you want to leave as it is. Apply
+                the class changes above first, so each lesson is compared with the class's
+                new teacher and room.
               </p>
               <table style={{ width: "100%", marginTop: "0.5rem", borderCollapse: "collapse" }}>
                 <thead>
@@ -976,6 +1069,7 @@ function ImportClassesInner() {
                     <th style={{ textAlign: "left" }}>Class</th>
                     <th style={{ textAlign: "left" }}>Remove</th>
                     <th style={{ textAlign: "left" }}>Add</th>
+                    <th style={{ textAlign: "left" }}>Teacher / room for one lesson</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -991,6 +1085,18 @@ function ImportClassesInner() {
                       <td style={{ padding: "0.3rem" }}>{c.class_code}</td>
                       <td style={{ padding: "0.3rem", color: "crimson" }}>{c.remove.map(slotLabel).join(", ") || "—"}</td>
                       <td style={{ padding: "0.3rem", color: "green" }}>{c.add.map(slotLabel).join(", ") || "—"}</td>
+                      <td style={{ padding: "0.3rem" }}>
+                        {(c.retag || []).length === 0
+                          ? "—"
+                          : c.retag.map((t) => (
+                              <div key={t.slot_id}>
+                                {slotLabel(t)}:{" "}
+                                {t.old_teacher !== t.new_teacher && `${t.old_teacher} → ${t.new_teacher}`}
+                                {t.old_teacher !== t.new_teacher && t.old_room !== t.new_room && ", "}
+                                {t.old_room !== t.new_room && `room ${t.old_room} → ${t.new_room}`}
+                              </div>
+                            ))}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1010,7 +1116,7 @@ function ImportClassesInner() {
             <div style={{ marginTop: "0.5rem" }}>
               <p style={{ color: "green" }}>
                 Timetable updated for {scheduleResult.classes} class(es): {scheduleResult.added} lesson(s) added,{" "}
-                {scheduleResult.removed} removed.
+                {scheduleResult.removed} removed, {scheduleResult.retagged} given their own teacher or room.
               </p>
               {scheduleResult.unplaced > 0 && (
                 <p style={{ color: "#b45309" }}>
@@ -1023,6 +1129,13 @@ function ImportClassesInner() {
                 </pre>
               )}
             </div>
+          )}
+          {preview.sharedSlots.length > 0 && (
+            <p style={{ color: "#b45309", marginTop: "1rem" }}>
+              Nova-T has two teachers on the same lesson for{" "}
+              {preview.sharedSlots.map((t) => `${t.class_code} ${slotLabel(t)} (${t.staff_codes.join(" + ")})`).join("; ")}.
+              A lesson holds one teacher in Formwork, so the first one is used.
+            </p>
           )}
           {(preview.noBellTime.length > 0 || preview.noSlotsInFile.length > 0 || preview.badSlotClasses.length > 0) && (
             <div style={{ marginTop: "1rem", padding: "0.6rem 0.8rem", background: "#fff8e1", border: "1px solid #f0c419", borderRadius: 4, fontSize: "0.9em" }}>

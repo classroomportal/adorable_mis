@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { LESSON_COLUMNS, lessonRoom, lessonTeacher } from '../../../lib/lessons';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 
@@ -48,7 +49,7 @@ function PrintTimetablesInner() {
       for (let from = 0; ; from += PAGE_SIZE) {
         const { data: page, error: lErr } = await supabase
           .from('student_class')
-          .select('student_id, classes(room, subjects(subject_name, display_name), staff(first_name, last_name), timetable_slots(day_of_week, period_number))')
+          .select(`student_id, classes(room, subjects(subject_name, display_name), staff(first_name, last_name), timetable_slots(${LESSON_COLUMNS}))`)
           .in('student_id', studentIds)
           .range(from, from + PAGE_SIZE - 1);
         if (lErr) throw lErr;
@@ -64,8 +65,8 @@ function PrintTimetablesInner() {
           const key = `${slot.day_of_week}-${slot.period_number}`;
           const entry = {
             subject: link.classes.subjects?.display_name || link.classes.subjects?.subject_name,
-            room: link.classes.room,
-            teacher: link.classes.staff ? `${link.classes.staff.first_name} ${link.classes.staff.last_name}` : null,
+            room: lessonRoom(slot, link.classes),
+            teacher: lessonTeacher(slot, link.classes),
           };
           cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
         });
