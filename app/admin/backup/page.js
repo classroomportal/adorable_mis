@@ -45,6 +45,7 @@ function BackupInner() {
   // null while unknown; false means the server has no GitHub token, so
   // starting a backup would only freeze the school and then fail.
   const [canRun, setCanRun] = useState(null);
+  const [downloading, setDownloading] = useState(null);
   const cancelled = useRef(false);
 
   useEffect(() => () => { cancelled.current = true; }, []);
@@ -154,6 +155,23 @@ function BackupInner() {
     }
   }
 
+  // A 60-second signed link made with the admin's own session: storage only
+  // issues it because migration 175 lets admins read db-backups, so the page
+  // never holds a key that could read the bucket by itself.
+  async function download(name) {
+    setError(null);
+    setDownloading(name);
+    const { data, error: signError } = await supabase.storage
+      .from('db-backups')
+      .createSignedUrl(name, 60, { download: true });
+    setDownloading(null);
+    if (signError || !data?.signedUrl) {
+      setError(`Could not download ${name}: ${signError?.message || 'no link returned'}.`);
+      return;
+    }
+    window.location.href = data.signedUrl;
+  }
+
   async function thawNow() {
     setBusy(true);
     const { error: thawError } = await supabase.rpc('end_backup_mode');
@@ -229,7 +247,7 @@ function BackupInner() {
         ) : (
           <table>
             <thead>
-              <tr><th>Taken</th><th>Size</th><th>File</th></tr>
+              <tr><th>Taken</th><th>Size</th><th>File</th><th></th></tr>
             </thead>
             <tbody>
               {backups.map((b) => (
@@ -237,6 +255,11 @@ function BackupInner() {
                   <td>{formatWhen(b.created_at)}</td>
                   <td>{formatBytes(b.size_bytes)}</td>
                   <td style={{ fontSize: '0.85rem', color: '#666' }}>{b.name}</td>
+                  <td>
+                    <button onClick={() => download(b.name)} disabled={downloading !== null}>
+                      {downloading === b.name ? 'Preparing…' : 'Download'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -244,7 +267,9 @@ function BackupInner() {
         )}
         <p style={{ fontSize: '0.9rem', color: '#666' }}>
           Backups are held in the private <code>db-backups</code> store and contain personal data
-          for every student and member of staff. Retention and restore-testing are set out in
+          for every student and member of staff. Keep a downloaded copy on a school-controlled
+          device only — never a personal laptop, email or a shared drive. Retention and
+          restore-testing are set out in
           <code> docs/BACKUP_POLICY.md</code>.
         </p>
       </div>

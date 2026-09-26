@@ -73,9 +73,10 @@ Two deliberate safety behaviours in the prune script:
 ## Where backups are held, and who can read them
 
 The private `db-backups` Supabase Storage bucket, in the same project as the
-live database. The bucket is `public = false` with no `storage.objects`
-policies for `anon` or `authenticated`, so only the `service_role` key used by
-the workflow can read, write or prune it.
+live database. The bucket is `public = false`. Writing and pruning need the
+`service_role` key the workflow uses. Reading is also open to Formwork admins
+(migration 175), so they can download a backup from the admin page; nobody
+else signed in to Formwork can read it.
 
 **These files contain personal data for every student, parent and member of
 staff** — names, dates of birth, contact details, pastoral and behaviour
@@ -84,9 +85,14 @@ whole MIS. Treat the service-role key and any downloaded tarball accordingly:
 do not put one on a personal laptop, in email, or in a shared drive without
 deciding first who can reach it.
 
-Admins can see the *list* of backups (names, sizes, timestamps — never
-contents) at **Administration → Run a Backup**, via the `recent_db_backups()`
-function.
+Admins can see the list of backups at **Administration → Run a Backup**, via
+the `recent_db_backups()` function, and download any of them from there. The
+download is a signed link that works for 60 seconds, created with the admin's
+own session, so the page never holds a key that could read the bucket.
+
+Every admin can therefore take a full copy of the MIS home. That was agreed
+on 26 September 2026 with the admin role trimmed to three accounts; keep it to
+the people who genuinely need it, and review who has it each term.
 
 ### Known gap: single provider
 
