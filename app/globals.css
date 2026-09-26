@@ -596,7 +596,6 @@ a.dashboard-tile { color: white; text-decoration: none; }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
-  margin-top: auto;
   padding-top: 0.4rem;
 }
 .module-chip {
@@ -670,7 +669,6 @@ a.dashboard-tile { color: white; text-decoration: none; }
 .module-card.accent-school   { --accent-color: #7a52a8; --accent-bg: #ede3f7; }
 .module-card.accent-admin    { --accent-color: #475569; --accent-bg: #e7eaee; }
 .module-card.accent-clinic   { --accent-color: #0f766e; --accent-bg: #d7efec; }
-.module-card.accent-setup    { --accent-color: #94a3b8; --accent-bg: #f1f4f7; }
 
 /* Centred welcome card for the signed-out landing page */
 .welcome-card {
