@@ -47,7 +47,7 @@ function CheckReportsInner() {
 
     const { data: subjectRows } = await supabase
       .from('report_subject_comments')
-      .select('id, student_id, subject_id, comment, effort_grade, status, students(first_name, last_name), subjects(subject_name), staff!report_subject_comments_staff_id_fkey(first_name, last_name)')
+      .select('id, student_id, subject_id, comment, effort_grade, presentation_grade, homework_grade, status, students(first_name, last_name), subjects(subject_name), staff!report_subject_comments_staff_id_fkey(first_name, last_name)')
       .eq('report_period_id', periodId)
       .eq('status', 'submitted');
 
@@ -85,6 +85,7 @@ function CheckReportsInner() {
         label: r.subjects?.subject_name,
         authorName: `${r.staff?.first_name || ''} ${r.staff?.last_name || ''}`.trim(),
         comment: r.comment || '', effortGrade: r.effort_grade,
+        presentationGrade: r.presentation_grade, homeworkGrade: r.homework_grade,
         latestGrade: perf[key]?.latestGrade, latestScorePct: perf[key]?.latestScorePct, targetGrade: targets[key],
         ai: null,
       };
@@ -213,6 +214,8 @@ function CheckReportsInner() {
                     <span style={{ fontSize: '0.8rem', color: '#666' }}>
                       {it.label} — written by {it.authorName || 'unknown'}
                       {it.effortGrade ? ` — effort: ${it.effortGrade}` : ''}
+                      {it.presentationGrade ? ` — presentation: ${it.presentationGrade}` : ''}
+                      {it.homeworkGrade ? ` — homework: ${it.homeworkGrade}` : ''}
                       {it.targetGrade ? ` — target: ${it.targetGrade}` : ''}
                       {it.latestGrade ? ` — latest: ${it.latestGrade}` : ''}
                     </span>
