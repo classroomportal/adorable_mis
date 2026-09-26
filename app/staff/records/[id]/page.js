@@ -2,6 +2,7 @@
 import { useEffect, useState, Fragment } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
+import { loadStaffLessons, lessonRoom } from '../../../../lib/lessons';
 import RequireAuth from '../../../RequireAuth';
 import RequireResource from '../../../RequireResource';
 import { useAuth } from '../../../../lib/AuthContext';
@@ -297,13 +298,10 @@ function StaffRecord() {
 
   async function loadAll() {
     setLoading(true);
-    const [{ data: s }, { data: r }, { data: cls }, { data: cm }, { data: pr }] = await Promise.all([
+    const [{ data: s }, { data: r }, { classes: cls }, { data: cm }, { data: pr }] = await Promise.all([
       supabase.from('staff').select('staff_id, first_name, last_name, staff_code, email').eq('staff_id', staffId).maybeSingle(),
       supabase.from('staff_roles').select('role_name, scope_value').eq('staff_id', staffId),
-      supabase
-        .from('classes')
-        .select('class_id, room, class_code, subjects(subject_name, display_name), timetable_slots(day_of_week, period_number, start_time, end_time)')
-        .eq('staff_id', staffId),
+      loadStaffLessons(staffId),
       supabase.from('staff_commitments').select('day_of_week, period_number, label').eq('staff_id', staffId),
       supabase.from('periods').select('*').order('period_number'),
       loadHr(),
@@ -409,7 +407,7 @@ function StaffRecord() {
       const key = `${slot.day_of_week}-${slot.period_number}`;
       const entry = {
         subject: c.subjects?.display_name || c.subjects?.subject_name,
-        room: c.room,
+        room: lessonRoom(slot, c),
         classCode: c.class_code,
         time: formatTimeRange(slot.start_time, slot.end_time),
       };

@@ -2,6 +2,7 @@
 import { useEffect, useState, Fragment } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
+import { LESSON_COLUMNS, lessonRoom } from '../../../lib/lessons';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
@@ -210,7 +211,7 @@ function StudentDetail() {
 
     const { data: tt } = await supabase
       .from('student_class')
-      .select('classes(class_id, room, subjects(subject_name, display_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
+      .select(`classes(class_id, room, subjects(subject_name, display_name), timetable_slots(${LESSON_COLUMNS}))`)
       .eq('student_id', id);
     setTimetable(tt || []);
 
@@ -614,7 +615,7 @@ function StudentDetail() {
     (tc.classes?.timetable_slots || []).forEach((slot) => {
       cellMap[`${slot.day_of_week}-${slot.period_number}`] = {
         subject: tc.classes?.subjects?.display_name || tc.classes?.subjects?.subject_name,
-        room: tc.classes?.room,
+        room: lessonRoom(slot, tc.classes),
         time: formatTimeRange(slot.start_time, slot.end_time),
       };
     });

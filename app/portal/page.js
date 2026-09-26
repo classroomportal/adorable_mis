@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, Fragment } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { LESSON_COLUMNS, lessonRoom, lessonTeacher } from '../../lib/lessons';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
 import TermTestScoresDownload from '../components/TermTestScoresDownload';
@@ -75,7 +76,7 @@ function PortalInner() {
       setTimetableLoading(true);
       const { data } = await supabase
         .from('student_class')
-        .select('classes(class_id, room, class_code, subjects(subject_name, display_name, subject_code), staff(first_name, last_name), timetable_slots(day_of_week, period_number, start_time, end_time))')
+        .select(`classes(class_id, room, class_code, subjects(subject_name, display_name, subject_code), staff(first_name, last_name), timetable_slots(${LESSON_COLUMNS}))`)
         .eq('student_id', studentId);
       setTimetableClasses((data || []).map((row) => row.classes).filter(Boolean));
       const { data: oh } = await supabase.from('other_half_timetable').select('*').eq('student_id', studentId);
@@ -136,8 +137,8 @@ function PortalInner() {
       const key = `${slot.day_of_week}-${slot.period_number}`;
       const entry = {
         subject: c.subjects?.display_name || c.subjects?.subject_name,
-        room: c.room,
-        teacher: c.staff ? `${c.staff.first_name} ${c.staff.last_name}` : null,
+        room: lessonRoom(slot, c),
+        teacher: lessonTeacher(slot, c),
         time: formatTimeRange(slot.start_time, slot.end_time),
         isOtherHalfClass: isOtherHalfSubject(c.subjects),
       };
