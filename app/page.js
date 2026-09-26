@@ -45,7 +45,7 @@ function DashboardStats({ isDemoAccount }) {
       const [{ count: studentCount }, { count: staffCount }, { data: alerts }] = await Promise.all([
         supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('status', 'active').eq('is_demo', !!isDemoAccount),
         supabase.from('staff').select('staff_id', { count: 'exact', head: true }).eq('is_demo', !!isDemoAccount),
-        supabase.from('behaviour_events').select('event_id').eq('type', 'negative').eq('is_demo', !!isDemoAccount).gte('event_date', schoolDateOffset(-7)),
+        supabase.from('behaviour_events').select('event_id').eq('type', 'negative').lte('points', -3).eq('is_demo', !!isDemoAccount).gte('event_date', schoolDateOffset(-7)),
       ]);
       setStats({
         students: studentCount ?? 0,

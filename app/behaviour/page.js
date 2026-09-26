@@ -89,6 +89,9 @@ function BehaviourPageInner() {
       .from('behaviour_events')
       .select('event_id, event_date, category, points, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('type', 'negative')
+      // Alerts are for the serious stuff only (-3, -4, -5); -1/-2 are routine
+      // low-level incidents and still show under Recent events.
+      .lte('points', -3)
       .eq('is_demo', !!profile?.is_demo_account)
       .gte('event_date', schoolDateOffset(-7))
       .order('event_date', { ascending: false });
@@ -366,7 +369,7 @@ function BehaviourPageInner() {
         <div className="card">
           <h2>Behaviour Alerts — last 7 days ({scopedAlerts.length})</h2>
           {activeHouseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {activeHouseScope} only (Houseparent view)</p>}
-          {scopedAlerts.length === 0 ? <p>No negative events logged in the last 7 days.</p> : (
+          {scopedAlerts.length === 0 ? <p>No events of -3 points or worse logged in the last 7 days.</p> : (
             <div className="table-scroll"><table>
               <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th></tr></thead>
               <tbody>
