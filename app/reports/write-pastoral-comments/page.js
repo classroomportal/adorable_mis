@@ -5,6 +5,18 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import {
+  JUDGEMENTS, JUDGEMENT_GRADES, loadAcademicYear, loadGradePoints, loadYearResults, loadTargets,
+  loadBehaviourTotals, rankSubjects,
+} from '../../../lib/reportWriting';
+import { pastoralFacts } from '../../../lib/reportFacts';
+import GradeChip from '../../components/GradeChip';
+
+// How many subjects to show as "best" and as "weakest".
+const RANKED_SUBJECTS = 3;
+// The weakest subjects, weakest first, never repeating one already shown
+// as a best subject (a student with four subjects gets 3 best, 1 weakest).
+const weakestOf = (ranked) => ranked.slice(Math.max(RANKED_SUBJECTS, ranked.length - RANKED_SUBJECTS)).reverse();
 
 const STATUS_LABEL = {
   draft: 'Draft',
@@ -35,6 +47,9 @@ function WritePastoralCommentsInner() {
   const [rows, setRows] = useState({});
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [status, setStatus] = useState(null);
+  const [generatingFor, setGeneratingFor] = useState(null); // student_id currently generating, or null
+  // student_id -> { behaviour, ranked: [...subjects best first], judgements: { effort: { Excellent: n, ... }, ... }, subjectCount }
+  const [overview, setOverview] = useState({});
 
   const [yearFilter, setYearFilter] = useState(''); // SMT only — narrows a potentially large roster
   const [search, setSearch] = useState('');
@@ -110,6 +125,42 @@ function WritePastoralCommentsInner() {
       if (!nextRows[s.student_id]) nextRows[s.student_id] = { id: null, comment: '', status: 'draft', checker_note: '' };
     }
     setRows(nextRows);
+
+    // What the writer needs to see about each student: behaviour this year,
+    // their strongest and weakest subjects, and the effort / presentation /
+    // homework grades subject teachers have given this period. Attendance
+    // is deliberately left out — as a boarding school it isn't reported on.
+    const nextOverview = {};
+    if (ids.length > 0) {
+      const [year, points] = await Promise.all([loadAcademicYear(selectedPeriod.term_id), loadGradePoints()]);
+      const [results, targets, behaviour, judgementRes] = await Promise.all([
+        loadYearResults({ studentIds: ids, year }),
+        loadTargets({ studentIds: ids }),
+        loadBehaviourTotals({ studentIds: ids, year }),
+        supabase.rpc('report_pastoral_grades', { p_report_period_id: Number(periodId), p_student_ids: ids }),
+      ]);
+      const resultsByStudent = {};
+      for (const r of results) (resultsByStudent[r.student_id] ||= []).push(r);
+      for (const id of ids) {
+        nextOverview[id] = {
+          behaviour: behaviour[id] || { plus: 0, plusEvents: 0, minus: 0, minusEvents: 0, positives: [], negatives: [] },
+          ranked: rankSubjects(resultsByStudent[id] || [], targets, id, points),
+          judgements: Object.fromEntries(JUDGEMENTS.map((j) => [j.key, {}])),
+          subjectCount: 0,
+          points,
+        };
+      }
+      for (const g of judgementRes.data || []) {
+        const o = nextOverview[g.student_id];
+        if (!o) continue;
+        o.subjectCount += 1;
+        for (const j of JUDGEMENTS) {
+          const v = g[j.column];
+          if (v) o.judgements[j.key][v] = (o.judgements[j.key][v] || 0) + 1;
+        }
+      }
+    }
+    setOverview(nextOverview);
     setLoadingRoster(false);
   }, [periodId, commentType, selectedPeriod, menteeIds, houseScope, yearFilter, search]);
 
@@ -142,6 +193,57 @@ function WritePastoralCommentsInner() {
     setRows((prev) => ({ ...prev, [studentId]: { ...prev[studentId], id: data.id, status: data.status } }));
   }
 
+  // Everything the AI draft is given for one student. Also listed on screen
+  // under "What the AI draft is based on", via the same pastoralFacts().
+  function draftPayload(student, row) {
+    const o = overview[student.student_id];
+    const fmt = (x) => `${x.subject} ${x.grade}${x.target ? ` (target ${x.target})` : ''}`;
+    const ranked = o?.ranked || [];
+    return {
+      kind: 'pastoral',
+      commentType,
+      studentFirstName: student.first_name,
+      behaviour: o && {
+        plus: o.behaviour.plus,
+        plusEvents: o.behaviour.plusEvents,
+        minus: o.behaviour.minus,
+        minusEvents: o.behaviour.minusEvents,
+        topPositive: o.behaviour.positives.slice(0, 3).map((c) => `${c.name} (${c.count})`),
+        topNegative: o.behaviour.negatives.slice(0, 3).map((c) => `${c.name} (${c.count})`),
+      },
+      bestGrades: ranked.slice(0, RANKED_SUBJECTS).map(fmt),
+      weakestGrades: weakestOf(ranked).map(fmt),
+      teacherJudgements: o ? JUDGEMENTS.map((j) => {
+        const counts = JUDGEMENT_GRADES.filter((g) => o.judgements[j.key][g]).map((g) => `${o.judgements[j.key][g]} × ${g}`);
+        return counts.length ? `${j.label} grades from subject teachers: ${counts.join(', ')}` : null;
+      }) : [],
+      priorComment: row.comment,
+    };
+  }
+
+  async function generateDraft(student) {
+    const row = rows[student.student_id] || {};
+    if (row.comment && row.comment.trim()) {
+      if (!confirm(`Replace ${student.first_name}'s existing comment with an AI draft? This can't be undone.`)) return;
+    }
+    setGeneratingFor(student.student_id);
+    setStatus(null);
+    try {
+      const res = await fetch('/api/generate-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draftPayload(student, row)),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus(`Couldn't generate a draft: ${data.error || 'unknown error'}`); return; }
+      updateComment(student.student_id, data.draft || '');
+    } catch (err) {
+      setStatus(`Couldn't generate a draft: ${err.message}`);
+    } finally {
+      setGeneratingFor(null);
+    }
+  }
+
   async function submitAllDrafts() {
     const toSubmit = roster.filter((s) => {
       const r = rows[s.student_id];
@@ -165,7 +267,7 @@ function WritePastoralCommentsInner() {
   return (
     <div>
       <h1>Write Pastoral Comments</h1>
-      <p>Pick a report period and, if you hold more than one pastoral role, which comment you're writing.</p>
+      <p>Pick a report period and, if you hold more than one pastoral role, which comment you&apos;re writing. For each student you&apos;ll see their behaviour points this year, their best and weakest grades, and the effort, presentation and homework grades subject teachers have given.</p>
 
       <form onSubmit={(e) => e.preventDefault()}>
         <label>
@@ -231,6 +333,8 @@ function WritePastoralCommentsInner() {
                     </p>
                   )}
 
+                  <StudentOverview overview={overview[s.student_id]} />
+
                   <label style={{ display: 'block', marginTop: '0.5rem' }}>
                     Comment
                     <textarea
@@ -242,8 +346,23 @@ function WritePastoralCommentsInner() {
                     />
                   </label>
 
+                  <details className="report-ai-facts">
+                    <summary>What the AI draft is based on</summary>
+                    <ul>
+                      {pastoralFacts(draftPayload(s, row)).map((f) => <li key={f}>{f}</li>)}
+                    </ul>
+                  </details>
+
                   {!locked && (
-                    <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => generateDraft(s)}
+                        disabled={generatingFor === s.student_id || !overview[s.student_id]}
+                      >
+                        {generatingFor === s.student_id ? 'Generating...' : '✨ Generate draft'}
+                      </button>
                       <button type="button" className="secondary" onClick={() => saveRow(s.student_id, 'draft')}>Save Draft</button>
                       <button type="button" onClick={() => saveRow(s.student_id, 'submitted')}>Submit</button>
                     </div>
@@ -263,6 +382,74 @@ function WritePastoralCommentsInner() {
       {!loadingRoster && commentType && periodId && roster.length === 0 && (
         <p style={{ color: '#666' }}>No students in your scope for this report period.</p>
       )}
+    </div>
+  );
+}
+
+const muted = { color: '#5b6472' };
+
+// Behaviour this year, best and weakest subjects, and the grades subject
+// teachers have given — what the writer and the AI draft both work from.
+function StudentOverview({ overview }) {
+  if (!overview) return null;
+  const { behaviour: b, ranked, judgements, subjectCount, points } = overview;
+  const best = ranked.slice(0, RANKED_SUBJECTS);
+  const weakest = weakestOf(ranked);
+  const net = b.plus + b.minus;
+  const gradeRow = (x) => (
+    <li key={x.subjectId}>
+      <span>{x.subject}</span>
+      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', whiteSpace: 'nowrap' }}>
+        <GradeChip grade={x.grade} target={x.target} points={points} />
+        <span style={{ ...muted, fontSize: '0.8rem' }}>{x.target ? `target ${x.target}` : 'no target'}</span>
+      </span>
+    </li>
+  );
+  return (
+    <div className="report-overview">
+      <div className="report-tiles">
+        <div><span>Plus points</span><strong style={{ color: '#1a7a3d' }}>+{b.plus}</strong><small>{b.plusEvents} award{b.plusEvents === 1 ? '' : 's'}</small></div>
+        <div><span>Minus points</span><strong style={{ color: b.minus ? '#b3282d' : undefined }}>{b.minus}</strong><small>{b.minusEvents} incident{b.minusEvents === 1 ? '' : 's'}</small></div>
+        <div><span>Net</span><strong>{net > 0 ? '+' : ''}{net}</strong><small>this year</small></div>
+      </div>
+      <div className="report-panels">
+        <div>
+          <h4>Behaviour behind the points</h4>
+          <ul>
+            {b.positives.slice(0, 4).map((c) => (
+              <li key={`p-${c.name}`}><span>{c.name} <span style={muted}>×{c.count}</span></span><strong style={{ color: '#1a7a3d' }}>+{c.points}</strong></li>
+            ))}
+            {b.negatives.map((c) => (
+              <li key={`n-${c.name}`}><span>{c.name} <span style={muted}>×{c.count}</span></span><strong style={{ color: '#b3282d' }}>{c.points}</strong></li>
+            ))}
+            {b.positives.length === 0 && b.negatives.length === 0 && <li style={muted}>No behaviour points yet this year.</li>}
+          </ul>
+        </div>
+        <div>
+          <h4>Best grades</h4>
+          <ul>{best.length ? best.map(gradeRow) : <li style={muted}>No grades yet this year.</li>}</ul>
+          {weakest.length > 0 && (
+            <>
+              <h4>Weakest grades</h4>
+              <ul>{weakest.map(gradeRow)}</ul>
+            </>
+          )}
+          <p style={{ ...muted, fontSize: '0.75rem', margin: 0 }}>Latest grade in each subject this year.</p>
+        </div>
+      </div>
+      <div className="report-panels-single">
+        <h4>Grades from subject teachers{subjectCount ? ` (${subjectCount} subject${subjectCount === 1 ? '' : 's'} so far)` : ''}</h4>
+        {subjectCount === 0 ? (
+          <p style={{ ...muted, fontSize: '0.85rem', margin: 0 }}>No subject teacher has entered grades for this report yet.</p>
+        ) : JUDGEMENTS.map((j) => (
+          <div key={j.key} className="report-judgement-row">
+            <span>{j.label}</span>
+            {JUDGEMENT_GRADES.filter((g) => judgements[j.key][g]).map((g) => (
+              <span key={g} className={`report-count${g === 'Needs Improvement' ? ' warn' : ''}`}><strong>{judgements[j.key][g]}</strong> × {g}</span>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -8,6 +8,8 @@
 // into a short comment. That keeps the prompt's inputs exactly what the teacher already
 // sees on screen, with nothing fetched or fabricated server-side.
 
+import { subjectFacts, pastoralFacts, PASTORAL_ROLE } from '../../../lib/reportFacts';
+
 const MODEL = 'claude-sonnet-5';
 
 export async function POST(request) {
@@ -17,39 +19,33 @@ export async function POST(request) {
   }
 
   const body = await request.json();
-  const {
-    kind, // 'subject' | 'pastoral'
-    studentFirstName,
-    subjectName,
-    effortGrade,
-    latestGrade,
-    latestScorePct,
-    targetGrade,
-    priorComment,
-  } = body || {};
+  const { kind, studentFirstName, priorComment } = body || {}; // kind: 'subject' | 'pastoral'
 
   if (!studentFirstName || !kind) {
     return Response.json({ error: 'studentFirstName and kind are required.' }, { status: 400 });
   }
 
-  const facts = [];
-  if (kind === 'subject' && subjectName) facts.push(`Subject: ${subjectName}`);
-  if (effortGrade) facts.push(`Effort grade: ${effortGrade}`);
-  if (latestGrade) facts.push(`Latest result grade: ${latestGrade}`);
-  if (typeof latestScorePct === 'number') facts.push(`Latest result: ${latestScorePct}%`);
-  if (targetGrade) facts.push(`Target grade: ${targetGrade}`);
-  if (priorComment) facts.push(`Teacher's own notes to build from: "${priorComment}"`);
+  const facts = kind === 'pastoral' ? pastoralFacts(body) : subjectFacts(body);
+  if (priorComment) facts.push(`Writer's own notes to build from: "${priorComment}"`);
 
-  const prompt = `Write ONE short school report comment (2-3 sentences, professional UK school report register) for a student named ${studentFirstName}.
+  const rules = kind === 'pastoral'
+    ? `- Written by the student's ${PASTORAL_ROLE[body.commentType] || 'mentor'}, looking at the student as a whole: conduct, contribution and academic progress across subjects.
+- Do not mention attendance; this is a boarding school and it isn't reported on.
+- Mention behaviour points only in words (e.g. "a good number of positive points"), and only name negative categories if they are a real pattern.`
+    : `- If recent results are below target, note it constructively, not critically.
+- Describe the trend through the year in words, not as a list of grades.
+- Effort, presentation of work and homework are judged Excellent / Good / Satisfactory / Needs Improvement; translate them into natural language rather than quoting the labels.`;
+
+  const prompt = `Write ONE short school report comment (${kind === 'pastoral' ? '3-4' : '2-3'} sentences, professional UK school report register) for a student named ${studentFirstName}.
 
 Known facts — use ONLY these, do not invent any other specific achievement, incident, or detail:
 ${facts.length ? facts.map((f) => `- ${f}`).join('\n') : '- (no data available — write a generic but professional placeholder comment)'}
 
 Rules:
 - Third person ("${studentFirstName} has..."), not second person.
-- If latest result is below target, note it constructively, not critically.
+${rules}
 - No markdown, no quotation marks around the output, just the comment text itself.
-- Do not mention effort grade or scores as raw numbers/labels in the prose — translate them into natural language.`;
+- Do not quote raw numbers or grade labels mechanically — weave them into natural prose.`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
