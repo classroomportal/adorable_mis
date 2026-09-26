@@ -3,39 +3,160 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
+import { closingWarning, longDate, momentLabel } from '../../../lib/tuckshopSchedule';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
 }
 
-// Most of any one item a student can order for a Saturday, across all their
-// orders for it. Enforced in submit_tuckshop_preorder() (migration 171).
+// Limits per tuckshop day, enforced in save_tuckshop_order() (migrations
+// 186-187): at most 2 of any one item, and at most 2 snacks and drinks
+// (tuckshop_items.is_food) in total.
 const MAX_PER_ITEM = 2;
-// Most snacks and drinks (tuckshop_items.is_food) in total for a Saturday,
-// across all their orders. Enforced there too (migration 180).
 const MAX_FOOD = 2;
 
-function longDate(iso) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
-    weekday: 'long', day: 'numeric', month: 'long',
+function sameBasket(a, b) {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  return [...keys].every((k) => (a[k] || 0) === (b[k] || 0));
+}
+
+// One tuckshop day whose ordering window is open: the student's basket for
+// it, which they can place, change or cancel until closesAt.
+function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved }) {
+  const saved = {};
+  const names = {};
+  savedLines.forEach((l) => {
+    saved[l.tuckshop_item_id] = (saved[l.tuckshop_item_id] || 0) + l.quantity;
+    names[l.tuckshop_item_id] = l.tuckshop_items?.name;
   });
-}
+  const onSale = new Set(items.map((i) => i.id));
+  const savedKey = JSON.stringify(saved);
 
-// Orders for a Saturday lock at 11pm Lagos time on the Friday before —
-// same rule as tuckshop_preorder_cutoff() (migration 160). Lagos is UTC+1
-// all year, so the offset can be written in.
-function dayBefore(forDate) {
-  const d = new Date(`${forDate}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
+  const [basket, setBasket] = useState({});
+  const [status, setStatus] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-function cutoffFor(forDate) {
-  return new Date(`${dayBefore(forDate)}T23:00:00+01:00`);
-}
+  // Start from what's saved, minus anything no longer on sale.
+  useEffect(() => {
+    const start = {};
+    Object.entries(saved).forEach(([id, q]) => { if (onSale.has(Number(id))) start[id] = q; });
+    setBasket(start);
+  }, [savedKey, items.length]);
 
-function isLocked(forDate) {
-  return Date.now() >= cutoffFor(forDate).getTime();
+  const noLongerSold = Object.keys(saved).filter((id) => !onSale.has(Number(id))).map((id) => names[id] || 'An item');
+  const hasOrder = Object.keys(saved).length > 0;
+  const dirty = !sameBasket(basket, saved);
+  const foodIds = new Set(items.filter((i) => i.is_food).map((i) => i.id));
+  function foodInBasket(exceptId) {
+    return Object.entries(basket)
+      .filter(([id]) => Number(id) !== exceptId && foodIds.has(Number(id)))
+      .reduce((n, [, q]) => n + q, 0);
+  }
+  const total = items.reduce((s, i) => s + (basket[i.id] || 0) * Number(i.price), 0);
+  const day = longDate(forDate);
+  const closes = momentLabel(closesAt);
+
+  function setQty(itemId, qty) {
+    setBasket((prev) => {
+      const next = { ...prev };
+      if (Number(qty) <= 0) delete next[itemId];
+      else next[itemId] = Number(qty);
+      return next;
+    });
+  }
+
+  async function save(lines, doneMessage) {
+    setSaving(true);
+    setStatus(null);
+    const payload = Object.entries(lines).map(([itemId, qty]) => ({ item_id: Number(itemId), quantity: qty }));
+    const { error } = await supabase.rpc('save_tuckshop_order', {
+      p_student_id: studentId,
+      p_for_date: forDate,
+      p_items: payload,
+    });
+    setSaving(false);
+    if (error) { setStatus(`Error: ${error.message}`); return; }
+    setStatus(doneMessage);
+    onSaved();
+  }
+
+  function cancelOrder() {
+    if (!window.confirm(`Cancel your tuckshop order for ${day}?`)) return;
+    save({}, `Your order for ${day} is cancelled.`);
+  }
+
+  return (
+    <div style={{ marginBottom: '1.25rem' }}>
+      <h3>My order for {day}</h3>
+      <p style={{ color: '#555' }}>
+        Ordering closes at <strong>{closes}</strong>. Until then you can change or cancel your order.
+        You can order up to {MAX_PER_ITEM} of each item, and no more than {MAX_FOOD} snacks and
+        drinks in total.
+      </p>
+      {noLongerSold.length > 0 && (
+        <p className="badge badge-negative" style={{ display: 'inline-block' }}>
+          {noLongerSold.join(', ')} {noLongerSold.length === 1 ? 'is' : 'are'} no longer sold and will
+          be taken off your order when you save.
+        </p>
+      )}
+      <div className="table-scroll">
+        <table style={{ minWidth: 0 }}>
+          <thead><tr><th>Item</th><th style={{ width: '6rem' }}>Qty</th></tr></thead>
+          <tbody>
+            {items.map((item) => {
+              let left = MAX_PER_ITEM;
+              if (item.is_food) left = Math.min(left, Math.max(0, MAX_FOOD - foodInBasket(item.id)));
+              return (
+                <tr key={item.id}>
+                  <td>
+                    {item.name}
+                    <div style={{ color: '#555', fontSize: '0.85rem' }}>{naira(item.price)}</div>
+                  </td>
+                  <td>
+                    {left === 0 ? (
+                      <span style={{ color: '#555' }}>Food limit reached</span>
+                    ) : (
+                      <select value={basket[item.id] || 0} onChange={(e) => setQty(item.id, e.target.value)}>
+                        {Array.from({ length: left + 1 }, (_, n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p style={{ fontWeight: 700 }}>Total: {naira(total)}</p>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        {hasOrder ? (
+          <>
+            <button
+              onClick={() => save(basket, `Your order for ${day} is updated.`)}
+              disabled={saving || !dirty || Object.keys(basket).length === 0}
+            >
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+            <button className="secondary" onClick={cancelOrder} disabled={saving}>Cancel order</button>
+            {dirty && Object.keys(basket).length > 0 && (
+              <span style={{ color: '#a3232c' }}>You have changes that aren&apos;t saved yet.</span>
+            )}
+            {Object.keys(basket).length === 0 && (
+              <span style={{ color: '#555' }}>To remove everything, use Cancel order.</span>
+            )}
+          </>
+        ) : (
+          <button
+            onClick={() => save(basket, `Order placed for ${day}. You can change or cancel it until ${closes}.`)}
+            disabled={saving || Object.keys(basket).length === 0}
+          >
+            {saving ? 'Placing…' : 'Place order'}
+          </button>
+        )}
+      </div>
+      {status && <p>{status}</p>}
+    </div>
+  );
 }
 
 function TuckshopInner() {
@@ -45,14 +166,10 @@ function TuckshopInner() {
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
   const [tuckshopHistory, setTuckshopHistory] = useState([]);
   const [tuckshopItems, setTuckshopItems] = useState([]);
-  const [preorderCart, setPreorderCart] = useState({});
-  const [preorderStatus, setPreorderStatus] = useState(null);
-  const [myPreorders, setMyPreorders] = useState([]);
   const [closedUntil, setClosedUntil] = useState(null);
-  const [orderDate, setOrderDate] = useState(null);
-  // item id -> quantity already ordered for orderDate, so the dropdown only
-  // offers what's left of the limit.
-  const [alreadyOrdered, setAlreadyOrdered] = useState({});
+  const [windows, setWindows] = useState(null);
+  const [myOrders, setMyOrders] = useState([]);
+  const [, setTick] = useState(0);
 
   async function load() {
     if (!studentId) return;
@@ -65,96 +182,69 @@ function TuckshopInner() {
       .order('purchase_date', { ascending: false })
       .limit(10);
     setTuckshopHistory(hist || []);
-    const { data: items } = await supabase.from('tuckshop_items').select('id, name, price, is_food').eq('active', true).order('name');
+    const { data: items } = await supabase
+      .from('tuckshop_items')
+      .select('id, name, price, is_food')
+      .eq('active', true)
+      .order('name');
     setTuckshopItems(items || []);
-    // system_settings is a single row, readable by any authenticated user.
-    // Ordering is shut while today is before tuckshop_ordering_closed_until;
-    // the same rule is enforced in submit_tuckshop_preorder, this is just so
-    // students see why before filling a basket.
+    // Manual closure (holidays etc.) on top of the weekly schedule.
     const { data: settings } = await supabase
       .from('system_settings')
       .select('tuckshop_ordering_closed_until')
       .maybeSingle();
     const until = settings?.tuckshop_ordering_closed_until || null;
-    // Local date, not toISOString() — that is UTC, which is an hour behind
-    // Lagos and would keep the notice up past the reopen time.
-    const today = new Date().toLocaleDateString('en-CA');
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
     setClosedUntil(until && today < until ? until : null);
-    // Which Saturday is open for ordering comes from the database, so the
-    // Friday 11pm cutoff doesn't depend on the phone's clock.
-    const { data: next } = await supabase.rpc('tuckshop_next_order_date');
-    setOrderDate(next || null);
-    const ordered = {};
-    if (next) {
-      const { data: lines } = await supabase
-        .from('tuckshop_preorder_items')
-        .select('tuckshop_item_id, quantity, tuckshop_preorders!inner(student_id, for_date, status)')
-        .eq('tuckshop_preorders.student_id', studentId)
-        .eq('tuckshop_preorders.for_date', next)
-        .neq('tuckshop_preorders.status', 'cancelled');
-      (lines || []).forEach((l) => {
-        ordered[l.tuckshop_item_id] = (ordered[l.tuckshop_item_id] || 0) + l.quantity;
-      });
-    }
-    setAlreadyOrdered(ordered);
-    const { data: pre } = await supabase
+    // Ordering windows come from the database (tuckshop_order_schedule), so
+    // they don't depend on the phone's clock.
+    const { data: w } = await supabase.rpc('tuckshop_order_windows', { p_days: 14 });
+    setWindows(w || []);
+    const { data: orders } = await supabase
       .from('tuckshop_preorders')
-      .select('id, for_date, status')
+      .select('id, for_date, status, created_at, tuckshop_preorder_items(quantity, tuckshop_item_id, tuckshop_items(name, price))')
       .eq('student_id', studentId)
       .order('for_date', { ascending: false })
-      .limit(5);
-    setMyPreorders(pre || []);
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setMyOrders(orders || []);
   }
 
   useEffect(() => { load(); }, [studentId]);
-
-  const foodIds = new Set(tuckshopItems.filter((i) => i.is_food).map((i) => i.id));
-  const foodOrdered = Object.entries(alreadyOrdered)
-    .filter(([id]) => foodIds.has(Number(id)))
-    .reduce((n, [, q]) => n + q, 0);
-  // Food already in the basket, not counting this item (its own choice is
-  // what the dropdown is setting).
-  function foodInCart(exceptId) {
-    return Object.entries(preorderCart)
-      .filter(([id]) => Number(id) !== exceptId && foodIds.has(Number(id)))
-      .reduce((n, [, q]) => n + q, 0);
-  }
-
-  function setPreorderQty(itemId, qty) {
-    setPreorderCart((prev) => {
-      const next = { ...prev };
-      if (Number(qty) <= 0) delete next[itemId];
-      else next[itemId] = Number(qty);
-      return next;
-    });
-  }
-
-  async function submitPreorder() {
-    if (closedUntil || !orderDate) return;
-    if (Object.keys(preorderCart).length === 0) return;
-    setPreorderStatus('Submitting…');
-    const payload = Object.entries(preorderCart).map(([itemId, qty]) => ({ item_id: Number(itemId), quantity: qty }));
-    const { error } = await supabase.rpc('submit_tuckshop_preorder', {
-      p_student_id: studentId,
-      p_for_date: orderDate,
-      p_items: payload,
-    });
-    if (error) {
-      setPreorderStatus(`Error: ${error.message}`);
-    } else {
-      setPreorderStatus(`Preorder submitted for ${longDate(orderDate)}.`);
-      setPreorderCart({});
-      await load();
-    }
-  }
+  // Re-check every minute so windows open/close and the warning stays current.
+  useEffect(() => {
+    const t = setInterval(() => { setTick((n) => n + 1); }, 60000);
+    return () => clearInterval(t);
+  }, []);
 
   if (!studentId) {
-    return <p>Your account isn't linked to a student record yet — ask the school office to link it.</p>;
+    return <p>Your account isn&apos;t linked to a student record yet — ask the school office to link it.</p>;
+  }
+
+  const now = Date.now();
+  const openWindows = closedUntil ? [] : (windows || []).filter(
+    (w) => now >= new Date(w.opens_at).getTime() && now < new Date(w.closes_at).getTime(),
+  );
+  const openDates = new Set(openWindows.map((w) => w.for_date));
+  const nextWindow = (windows || []).find((w) => new Date(w.opens_at).getTime() > now);
+  const warnings = openWindows.map((w) => closingWarning(w.for_date, w.closes_at)).filter(Boolean);
+  const pastOrders = myOrders.filter((o) => !(openDates.has(o.for_date) && o.status === 'pending'));
+
+  function statusLabel(o) {
+    if (o.status !== 'pending') return o.status;
+    return openDates.has(o.for_date) ? 'open' : 'locked';
   }
 
   return (
     <div>
       <h1>Tuckshop</h1>
+
+      {warnings.map((text) => (
+        <div key={text} className="card" style={{ borderLeft: '5px solid #a3232c', background: '#fff4f4' }}>
+          <strong>⏰ {text}</strong>
+        </div>
+      ))}
+
       <div className="card">
         <p>
           Balance:{' '}
@@ -163,74 +253,59 @@ function TuckshopInner() {
           </span>
         </p>
 
-        <h3>Preorder for {orderDate ? longDate(orderDate) : 'Saturday'}</h3>
         {closedUntil ? (
           <p className="badge badge-negative" style={{ display: 'inline-block' }}>
             Tuckshop ordering is closed at the moment. It reopens on {longDate(closedUntil)}.
           </p>
-        ) : (
-        <>
-        {orderDate && (
-          <p style={{ color: '#555' }}>
-            Orders close at 11pm on {longDate(dayBefore(orderDate))}.
-            After that they&apos;re locked and go to the tuckshop.
-            You can order up to {MAX_PER_ITEM} of each item, and no more than {MAX_FOOD} snacks
-            and drinks in total, for the Saturday.
+        ) : windows === null ? (
+          <p>Loading…</p>
+        ) : openWindows.length === 0 ? (
+          <p>
+            Tuckshop ordering isn&apos;t open right now.
+            {nextWindow && (
+              <> Ordering for <strong>{longDate(nextWindow.for_date)}</strong> opens at{' '}
+                <strong>{momentLabel(nextWindow.opens_at)}</strong> and closes at{' '}
+                {momentLabel(nextWindow.closes_at)}.</>
+            )}
           </p>
-        )}
-        <div className="table-scroll">
-          <table>
-            <thead><tr><th>Item</th><th>Price</th><th>Qty</th></tr></thead>
-            <tbody>
-              {tuckshopItems.map((item) => {
-                let left = Math.max(0, MAX_PER_ITEM - (alreadyOrdered[item.id] || 0));
-                if (item.is_food) left = Math.min(left, Math.max(0, MAX_FOOD - foodOrdered - foodInCart(item.id)));
-                return (
-                  <tr key={item.id}>
-                    <td>{item.name}</td>
-                    <td>{naira(item.price)}</td>
-                    <td>
-                      {left === 0 ? (
-                        <span style={{ color: '#555' }}>
-                          {(alreadyOrdered[item.id] || 0) >= MAX_PER_ITEM ? `${MAX_PER_ITEM} ordered` : 'Food limit reached'}
-                        </span>
-                      ) : (
-                        <select
-                          value={preorderCart[item.id] || 0}
-                          onChange={(e) => setPreorderQty(item.id, e.target.value)}
-                        >
-                          {Array.from({ length: left + 1 }, (_, n) => (
-                            <option key={n} value={n}>{n}</option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <button onClick={submitPreorder} disabled={!orderDate || Object.keys(preorderCart).length === 0} style={{ marginTop: '0.5rem' }}>
-          Submit preorder
-        </button>
-        {preorderStatus && <p>{preorderStatus}</p>}
-        </>
-        )}
+        ) : openWindows.map((w) => (
+          <OrderEditor
+            key={w.for_date}
+            studentId={studentId}
+            forDate={w.for_date}
+            closesAt={w.closes_at}
+            items={tuckshopItems}
+            savedLines={myOrders
+              .filter((o) => o.for_date === w.for_date && o.status === 'pending')
+              .flatMap((o) => o.tuckshop_preorder_items || [])}
+            onSaved={load}
+          />
+        ))}
 
-        {myPreorders.length > 0 && (
+        {pastOrders.length > 0 && (
           <>
-            <h3 style={{ marginTop: '1rem' }}>My preorders</h3>
+            <h3 style={{ marginTop: '1rem' }}>My orders</h3>
             <div className="table-scroll">
-              <table>
-                <thead><tr><th>For date</th><th>Status</th></tr></thead>
+              <table style={{ minWidth: 0 }}>
+                <thead><tr><th>Tuckshop day</th><th>Items</th></tr></thead>
                 <tbody>
-                  {myPreorders.map((p) => {
-                    const label = p.status === 'pending' && isLocked(p.for_date) ? 'locked' : p.status;
+                  {pastOrders.map((o) => {
+                    const lines = o.tuckshop_preorder_items || [];
+                    const total = lines.reduce((s, l) => s + l.quantity * Number(l.tuckshop_items?.price || 0), 0);
                     return (
-                      <tr key={p.id}>
-                        <td>{p.for_date}</td>
-                        <td><span className={`badge ${p.status === 'fulfilled' ? 'badge-positive' : 'badge-negative'}`}>{label}</span></td>
+                      <tr key={o.id}>
+                        <td>
+                          {longDate(o.for_date)}
+                          <div>
+                            <span className={`badge ${o.status === 'fulfilled' ? 'badge-positive' : 'badge-negative'}`}>
+                              {statusLabel(o)}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          {lines.map((l) => `${l.quantity} × ${l.tuckshop_items?.name || 'item'}`).join(', ') || '—'}
+                          <div style={{ color: '#555', fontSize: '0.85rem' }}>{naira(total)}</div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -244,7 +319,7 @@ function TuckshopInner() {
           <>
             <h3 style={{ marginTop: '1rem' }}>Recent purchases</h3>
             <div className="table-scroll">
-              <table>
+              <table style={{ minWidth: 0 }}>
                 <thead><tr><th>Date</th><th>Amount</th></tr></thead>
                 <tbody>
                   {tuckshopHistory.map((h) => (
