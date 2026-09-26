@@ -104,7 +104,7 @@ export function ParentPortalInner() {
       const { data: enrolled } = await supabase.from('student_class').select('classes(subject_id)').eq('student_id', selectedId);
       setTargets(tg || []);
       setEnrolledSubjectIds(new Set((enrolled || []).map((l) => l.classes?.subject_id).filter(Boolean)));
-      const { data: b } = await supabase.from('behaviour_events').select('*, classes(subjects(subject_name, display_name))').eq('student_id', selectedId).order('event_date', { ascending: false });
+      const { data: b } = await supabase.from('behaviour_events').select('*, classes(subjects(subject_name, display_name))').eq('student_id', selectedId).is('voided_at', null).order('event_date', { ascending: false });
       setBehaviour(b || []);
       const { data: gs } = await supabase.from('grade_scale').select('*');
       setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));

@@ -79,6 +79,7 @@ function BehaviourPageInner() {
       .from('behaviour_events')
       .select('event_id, event_date, type, category, points, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('is_demo', !!profile?.is_demo_account)
+      .is('voided_at', null)
       .order('event_date', { ascending: false })
       .limit(20);
     setEvents(data || []);
@@ -93,6 +94,7 @@ function BehaviourPageInner() {
       // low-level incidents and still show under Recent events.
       .lte('points', -3)
       .eq('is_demo', !!profile?.is_demo_account)
+      .is('voided_at', null)
       .gte('event_date', schoolDateOffset(-7))
       .order('event_date', { ascending: false });
     setAlerts(data || []);
