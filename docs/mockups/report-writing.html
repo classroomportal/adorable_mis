@@ -215,13 +215,15 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
     { key: 'homework', label: 'Homework', short: 'H/work' },
   ];
 
-  const ASSESSMENTS = [
-    { label: 'Week 2', date: '14 Sep', type: 'short_test' },
-    { label: 'Week 5', date: '5 Oct', type: 'short_test' },
-    { label: 'Week 9', date: '2 Nov', type: 'short_test' },
-    { label: 'Week 12', date: '23 Nov', type: 'short_test' },
-    { label: 'Term 1 exam', date: '7 Dec', type: 'term_exam' },
-  ];
+  // A test every week of term (week 1 = w/c 7 Sep), then the Term 1 exam in week 14
+  const TERM_START = new Date(2026, 8, 7);
+  const ASSESSMENTS = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(TERM_START);
+    d.setDate(d.getDate() + 7 * i);
+    const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return i === 13 ? { label: 'Term 1 exam', date, type: 'term_exam' } : { label: `Week ${i + 1}`, date, type: 'short_test' };
+  });
+  const SHOW_WEEKS = 5; // teacher screen shows only the last 5 weeks
 
   const SUBJECTS = [
     { name: 'English Language', teacher: 'Mrs A. Nwosu' },
@@ -234,7 +236,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
     { name: 'Geography', teacher: 'Mr S. Ade' },
   ];
 
-  // grades[subjectIndex] = [week 2, week 5, week 9, week 12, exam]; target per subject
+  // grades[subjectIndex] = anchor grades at weeks 2, 5, 9, 12 and the exam; filled out to every week below; target per subject
   const STUDENTS = [
     {
       id: 1, first: 'Tolu', last: 'Adebayo', form: '10A', presShift: 1, hwShift: 0,
@@ -333,6 +335,26 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
   const MENTEE_IDS = [1, 2, 3, 5];
   const MY_SUBJECT = SUBJECTS.findIndex((s) => s.mine);
 
+  // Fill in the weeks between the anchor grades: each week takes the nearest
+  // anchor, nudged up or down a grade now and then (seeded, so it's stable)
+  (function fillWeeks() {
+    const ANCHORS = [2, 5, 9, 12, 14];
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    STUDENTS.forEach((st) => {
+      st.grades = st.grades.map((anchorGrades) => Array.from({ length: 14 }, (_, i) => {
+        const wk = i + 1;
+        const k = ANCHORS.indexOf(wk);
+        if (k !== -1) return anchorGrades[k];
+        let near = 0;
+        ANCHORS.forEach((aw, j) => { if (Math.abs(aw - wk) < Math.abs(ANCHORS[near] - wk)) near = j; });
+        const r = rnd();
+        const pts = POINTS[anchorGrades[near]] + (r < 0.18 ? -1 : r > 0.86 ? 1 : 0);
+        return GRADES[Math.min(8, Math.max(1, pts))];
+      }));
+    });
+  })();
+
   // Screen state: what the teacher/mentor has typed
   const subjState = {}; // id -> { effort, comment, status }
   const pastState = {}; // id -> { comment, status }
@@ -399,7 +421,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
   function rankedSubjects(st) {
     // Rank by latest grade (term exam), tie-break by distance from target
     return SUBJECTS.map((sub, si) => {
-      const latest = st.grades[si][4];
+      const latest = st.grades[si][st.grades[si].length - 1];
       const t = st.targets[si];
       return { si, name: sub.name, latest, t, d: POINTS[latest] - POINTS[t] };
     }).sort((a, b) => (POINTS[b.latest] - POINTS[a.latest]) || (b.d - a.d));
@@ -496,7 +518,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
         <label>Class<select id="p-class"><option>${sub.cls} — ${sub.name}</option></select></label>
       </div>
       <div class="intro small">
-        <p><b>What's new:</b> every grade the student has had in your subject this year sits above the effort grade, coloured against their target, with the trend and best/lowest result picked out. Alongside effort you now also grade presentation of work and homework. “Generate draft” sends the whole run of grades and all three judgements to the AI, not just the latest result.</p>
+        <p><b>What's new:</b> the student's last ${SHOW_WEEKS} weeks of grades in your subject sit above the effort grade, coloured against their target, with the best and lowest result and the trend worked out over the whole year. Alongside effort you now also grade presentation of work and homework. “Generate draft” sends the whole run of grades and all three judgements to the AI, not just the latest result.</p>
       </div>
       <div class="legend">
         <span>${chip('A', 'B')} above target</span>
@@ -520,13 +542,14 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
         <span class="status ${locked ? 'done' : ''}">${locked ? 'Submitted — awaiting check' : 'Draft'}</span>
       </div>
       <div class="hist"><table>
-        <thead><tr><th>Grades this year</th>${ASSESSMENTS.map((a) => `<th>${a.label}<span class="d">${a.date}</span></th>`).join('')}<th class="tgt">Target</th><th>Trend</th></tr></thead>
-        <tbody><tr><td class="muted small">${SUBJECTS[si].name}</td>
-          ${s.gs.map((g, i) => `<td>${chip(g, s.t, ASSESSMENTS[i].type === 'term_exam' ? 'exam' : '')}</td>`).join('')}
+        <thead><tr><th>Last ${SHOW_WEEKS} weeks</th>${ASSESSMENTS.slice(-SHOW_WEEKS).map((a) => `<th>${a.label}<span class="d">${a.date}</span></th>`).join('')}<th class="tgt">Target</th><th>Trend, all year</th></tr></thead>
+        <tbody><tr><td class="muted small">${SUBJECTS[si].name}<br>${s.gs.length - SHOW_WEEKS} earlier weeks hidden</td>
+          ${s.gs.slice(-SHOW_WEEKS).map((g, i) => { const a = ASSESSMENTS[s.gs.length - SHOW_WEEKS + i]; return `<td>${chip(g, s.t, a.type === 'term_exam' ? 'exam' : '')}</td>`; }).join('')}
           <td class="tgt"><span class="g target">${s.t}</span></td>
           <td>${sparkline(s.gs, s.t)}</td></tr></tbody>
       </table></div>
       <div class="facts">
+        <span class="muted">This year:</span>
         <span>Best <b>${s.gs[s.best]}</b> <span class="muted">(${ASSESSMENTS[s.best].label})</span></span>
         <span>Lowest <b>${s.gs[s.worst]}</b> <span class="muted">(${ASSESSMENTS[s.worst].label})</span></span>
         <span>Average <b>${avgGrade(s.avg)}</b></span>
@@ -659,7 +682,7 @@ details.ai ul { margin: 6px 0 2px; padding-left: 1.2em; }
           <div class="rgrades">
             <div class="rname">${SUBJECTS[si].name}</div>
             <dl>
-              <div class="main"><dt>Grade</dt><dd>${st.grades[si][4]}</dd></div>
+              <div class="main"><dt>Grade</dt><dd>${st.grades[si][st.grades[si].length - 1]}</dd></div>
               ${MEASURES.map((m) => `<div><dt>${m.label}</dt><dd>${w(si, m.key)}</dd></div>`).join('')}
             </dl>
           </div>
