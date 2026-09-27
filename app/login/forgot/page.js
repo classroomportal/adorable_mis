@@ -29,19 +29,51 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div style={{ maxWidth: 380, margin: '3rem auto' }}>
-      <h1>Reset password</h1>
-      <p>Enter your account email and we'll send a link to set a new password.</p>
-      <form onSubmit={handleSubmit} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        <label>
-          Email
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </label>
-        <button type="submit" disabled={loading}>{loading ? 'Sending...' : 'Send reset link'}</button>
-        {error && <p style={{ color: '#a3232c' }}>{error}</p>}
-        {status && <p>{status}</p>}
-      </form>
-      <p><a href="/login">Back to sign in</a></p>
+    <div className="login-page">
+      <div className="login-backdrop" aria-hidden="true" />
+      <div className="login-card">
+        <div className="login-crest-wrap">
+          <img src="/logo.png" alt="Adorable British College" className="login-crest" />
+        </div>
+        <h1>Forgotten your password?</h1>
+        <p className="login-sub">Enter your email and we&apos;ll send you a link to choose a new one.</p>
+
+        {/* Staff and students don't need a Formwork password at all. */}
+        <p className="login-note">
+          <strong>Staff and students:</strong> you can <a href="/login">sign in with your school account</a> instead,
+          with no password to remember.
+        </p>
+
+        {status ? (
+          <div className="login-success" role="status">
+            <div className="login-success-icon" aria-hidden="true">✉️</div>
+            <p><strong>Check your email.</strong></p>
+            <p>{status} It can take a few minutes, so check your spam or junk folder too.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="login-form">
+            <label>
+              Email address
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                placeholder="you@example.com"
+                required
+              />
+            </label>
+            <button type="submit" className="login-primary" disabled={loading}>
+              {loading ? 'Sending…' : 'Send reset link'}
+            </button>
+          </form>
+        )}
+
+        {error && <p className="login-error" role="alert">{error}</p>}
+
+        <a href="/login" className="login-back">← Back to sign in</a>
+      </div>
+      <p className="login-motto">Esse Maximum, Esse Adoramus</p>
     </div>
   );
 }
