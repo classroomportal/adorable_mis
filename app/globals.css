@@ -1162,6 +1162,48 @@ a.dashboard-tile { color: white; text-decoration: none; }
   .order-sheet-table tr { break-inside: avoid; page-break-inside: avoid; }
 }
 
+/* Tuckshop hand-out (/tuckshop/hand-out): big tap targets for the counter. */
+.handout-restaurants { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+.handout-count { font-size: 0.8rem; opacity: 0.8; margin-left: 0.25rem; }
+.handout-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem; }
+.handout-row,
+.handout-row:hover,
+.handout-row:disabled,
+.handout-row:disabled:hover {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+  background: white;
+  color: inherit;
+  border: 1px solid var(--slate-200);
+  padding: 0.7rem 0.8rem;
+}
+.handout-row:hover { border-color: var(--brand-700); }
+.handout-row:disabled { opacity: 0.6; cursor: progress; }
+.handout-row.given,
+.handout-row.given:hover,
+.handout-row.given:disabled { background: #e3f4e8; border-color: #9fd3b0; }
+.handout-tick {
+  flex: 0 0 1.8rem;
+  height: 1.8rem;
+  border: 2px solid var(--slate-200);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+}
+.handout-row.given .handout-tick { background: #1a7a3d; border-color: #1a7a3d; }
+.handout-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.handout-name { font-weight: 600; }
+.handout-form { font-weight: 400; color: #666; font-size: 0.85rem; }
+.handout-items { font-size: 0.9rem; color: #444; }
+.handout-amount { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; white-space: nowrap; }
+.handout-status { font-size: 0.75rem; font-weight: 500; color: #1a7a3d; }
+
 /* Top 10 students (/results/top-ten): one list per printed page. */
 .top-ten-page { margin-bottom: 2rem; }
 .top-ten-page h2 { margin-bottom: 0.2rem; }
