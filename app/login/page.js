@@ -83,6 +83,19 @@ export default function LoginPage() {
   return (
     <div style={{ maxWidth: 380, margin: '3rem auto' }}>
       <h1>Sign in</h1>
+      {/* Who you are comes first: the Google button is only for staff and
+          students (school accounts), so a parent never sees it. */}
+      <label style={{ display: 'block', marginBottom: '1rem' }}>
+        I am a...
+        <select
+          value={loginAs}
+          onChange={(e) => { setLoginAs(e.target.value); setError(null); }}
+          style={{ display: 'block', width: '100%', marginTop: '0.3rem' }}
+        >
+          <option value="staff">ABC Staff / Student</option>
+          <option value="parent">ABC Parent</option>
+        </select>
+      </label>
       {loginAs === 'staff' && (
         <>
           <button
@@ -106,14 +119,6 @@ export default function LoginPage() {
         </>
       )}
       <form onSubmit={handleSubmit} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        <label>
-          I am a...
-          <select value={loginAs} onChange={(e) => setLoginAs(e.target.value)}>
-            <option value="staff">ABC Staff / Student</option>
-            <option value="parent">ABC Parent</option>
-          </select>
-        </label>
-
         {loginAs === 'staff' ? (
           <label>
             Username
