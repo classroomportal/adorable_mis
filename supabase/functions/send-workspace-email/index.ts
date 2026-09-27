@@ -12,7 +12,9 @@ import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 // address or an array (notify_pastoral_on_negative_behaviour emails
 // multiple smt/houseparent staff at once), and either `text` or `html`
 // body content (the welcome-email and behaviour-alert functions send HTML;
-// send_message sends plain text).
+// send_message sends plain text). `cc` (address or array) is optional: the
+// serious behaviour alert goes to the designated safeguarding address with
+// SMT and the SRO copied in (migration 202).
 //
 // Required secret (Dashboard > Edge Functions > Secrets, or
 // `supabase secrets set`): GMAIL_APP_PASSWORD
@@ -37,14 +39,14 @@ Deno.serve(async (req: Request) => {
   }
   const sender = Deno.env.get("GMAIL_SENDER") || "mis@abc.sch.ng";
 
-  let payload: { to?: string | string[]; subject?: string; text?: string; html?: string };
+  let payload: { to?: string | string[]; cc?: string | string[]; subject?: string; text?: string; html?: string };
   try {
     payload = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
   }
 
-  const { to, subject, text, html } = payload;
+  const { to, cc, subject, text, html } = payload;
   if (!to || !subject || (!text && !html)) {
     return new Response(JSON.stringify({ error: "to, subject, and text or html are required" }), { status: 400 });
   }
@@ -62,6 +64,7 @@ Deno.serve(async (req: Request) => {
     await client.send({
       from: sender,
       to,
+      ...(cc && cc.length ? { cc } : {}),
       subject,
       // denomailer requires plain-text `content` even for an HTML send —
       // fall back to a stripped version of the HTML when only html is given.

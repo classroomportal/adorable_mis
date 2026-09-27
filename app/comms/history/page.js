@@ -5,6 +5,29 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
+const AUDIENCES = [
+  { key: 'parents', label: 'To parents' },
+  { key: 'staff', label: 'To staff' },
+  { key: 'students', label: 'To students' },
+  { key: 'other', label: 'Other addresses' },
+];
+
+// One audience's emails, grouped by kind (e.g. all "Detention" emails),
+// newest group first. Rows arrive newest first from email_log().
+function groupEmails(emails, audience, filter) {
+  const f = filter.trim().toLowerCase();
+  const groups = {};
+  for (const e of emails) {
+    if (e.audience !== audience) continue;
+    if (f && !`${e.subject} ${e.recipient}`.toLowerCase().includes(f)) continue;
+    const g = (groups[e.kind] ||= { kind: e.kind, rows: [], failed: 0, waiting: 0, latest: e.created_at });
+    g.rows.push(e);
+    if (e.status === 'failed') g.failed += 1;
+    else if (e.status !== 'sent') g.waiting += 1;
+  }
+  return Object.values(groups).sort((a, b) => new Date(b.latest) - new Date(a.latest));
+}
+
 function ComposeInner() {
   const { profile, staffRoles } = useAuth();
   const allowed = profile?.role === 'admin' || ['smt', 'pastoral', 'school_office'].some((r) => staffRoles.includes(r));
@@ -14,7 +37,6 @@ function ComposeInner() {
   const [receipts, setReceipts] = useState([]);
   const [emails, setEmails] = useState([]);
   const [emailFilter, setEmailFilter] = useState('');
-  const [emailLimit, setEmailLimit] = useState(100);
 
   useEffect(() => {
     if (!allowed) return;
@@ -27,21 +49,13 @@ function ComposeInner() {
 
   // Emails Formwork sends by itself (welcome emails, behaviour alerts,
   // detention set/reminder/cancelled) go through email_outbox, not messages.
-  // Only these columns are readable from the client: the body can hold a
-  // parent's initial password (migration 201).
+  // email_log() (migration 202) says who each went to - parents, staff or
+  // students - and what kind of email it is, and never returns the body,
+  // which can hold a parent's initial password (migration 201).
   useEffect(() => {
     if (!allowed) return;
-    let q = supabase
-      .from('email_outbox')
-      .select('email_id, recipient, subject, status, attempts, last_error, created_at, sent_at')
-      .order('created_at', { ascending: false })
-      .limit(emailLimit);
-    if (emailFilter.trim()) {
-      const f = emailFilter.trim().replace(/[%,()]/g, ' ');
-      q = q.or(`subject.ilike.%${f}%,recipient.ilike.%${f}%`);
-    }
-    q.then(({ data }) => setEmails(data || []));
-  }, [allowed, emailFilter, emailLimit]);
+    supabase.rpc('email_log').then(({ data }) => setEmails(data || []));
+  }, [allowed]);
 
   async function toggleExpand(id) {
     if (expanded === id) { setExpanded(null); return; }
@@ -93,32 +107,50 @@ function ComposeInner() {
         <input
           placeholder="Search subject or recipient"
           value={emailFilter}
-          onChange={(e) => { setEmailFilter(e.target.value); setEmailLimit(100); }}
+          onChange={(e) => setEmailFilter(e.target.value)}
           style={{ maxWidth: '20rem' }}
         />
-        {emails.length === 0 ? <p>No emails found.</p> : (
-          <div className="table-scroll"><table>
-            <thead><tr><th>Subject</th><th>To</th><th>Status</th><th>Time</th></tr></thead>
-            <tbody>
-              {emails.map((e) => (
-                <tr key={e.email_id}>
-                  <td>{e.subject}</td>
-                  <td>{e.recipient}</td>
-                  <td>
-                    {e.status === 'sent' ? 'Sent' : e.status === 'failed' ? 'Failed' : 'Waiting to send'}
-                    {e.status === 'failed' && e.last_error && (
-                      <div style={{ color: '#a3232c', fontSize: '0.8rem' }}>{e.last_error}</div>
-                    )}
-                  </td>
-                  <td>{new Date(e.sent_at || e.created_at).toLocaleString()}</td>
-                </tr>
+        {AUDIENCES.map(({ key, label }) => {
+          const groups = groupEmails(emails, key, emailFilter);
+          if (groups.length === 0) return null;
+          return (
+            <div key={key} style={{ marginTop: '1rem' }}>
+              <h3>{label}</h3>
+              {groups.map((g) => (
+                <details key={g.kind} style={{ marginBottom: '0.5rem' }}>
+                  <summary style={{ cursor: 'pointer' }}>
+                    <strong>{g.kind}</strong> — {g.rows.length} email{g.rows.length === 1 ? '' : 's'}
+                    {g.failed > 0 && <span style={{ color: '#a3232c' }}>, {g.failed} failed</span>}
+                    {g.waiting > 0 && <span>, {g.waiting} waiting to send</span>}
+                    <span style={{ color: '#666', fontSize: '0.85rem' }}> · latest {new Date(g.latest).toLocaleString()}</span>
+                  </summary>
+                  <div className="table-scroll"><table>
+                    <thead><tr><th>Subject</th><th>To</th><th>Status</th><th>Time</th></tr></thead>
+                    <tbody>
+                      {g.rows.map((e) => (
+                        <tr key={e.email_id}>
+                          <td>{e.subject}</td>
+                          <td>{e.recipient}</td>
+                          <td>
+                            {e.status === 'sent' ? 'Sent' : e.status === 'failed' ? 'Failed' : 'Waiting to send'}
+                            {e.status === 'failed' && e.last_error && (
+                              <div style={{ color: '#a3232c', fontSize: '0.8rem' }}>{e.last_error}</div>
+                            )}
+                          </td>
+                          <td>{new Date(e.sent_at || e.created_at).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table></div>
+                </details>
               ))}
-            </tbody>
-          </table></div>
+            </div>
+          );
+        })}
+        {emails.length > 0 && AUDIENCES.every(({ key }) => groupEmails(emails, key, emailFilter).length === 0) && (
+          <p>No emails match that search.</p>
         )}
-        {emails.length === emailLimit && (
-          <button className="secondary" onClick={() => setEmailLimit((n) => n + 100)}>Show more</button>
-        )}
+        {emails.length === 0 && <p>No emails sent yet.</p>}
       </div>
     </div>
   );
