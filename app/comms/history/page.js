@@ -47,9 +47,10 @@ function ComposeInner() {
       .order('sent_at', { ascending: false })
       .then(async ({ data }) => {
         setMessages(data || []);
-        // Automatic notices (detention set/reminder/cancelled, migration 203)
-        // go to one student each, so show who read them inline rather than
-        // behind a button.
+        // Automatic notices (detention notices to a student, migration 203;
+        // behaviour alerts to cs@/SMT/SRO, migration 204) go to a handful of
+        // people each, so show who read them inline rather than behind a
+        // button.
         const ids = (data || []).filter((m) => !m.sent_by).map((m) => m.id);
         if (!ids.length) return;
         const { data: reads } = await supabase
@@ -118,24 +119,33 @@ function ComposeInner() {
       {composed.length === 0 && <p>No messages sent from Compose yet.</p>}
 
       <div className="card">
-        <h2>Detention notices in Formwork inboxes</h2>
+        <h2>Automatic notices in Formwork inboxes</h2>
         <p style={{ color: '#666', fontSize: '0.85rem' }}>
-          Sent to the student&apos;s Formwork inbox as well as by email. Read means they opened it in Formwork.
+          Detention notices and behaviour alerts, sent to Formwork inboxes as well as by email. Read means they opened it in Formwork.
         </p>
         {notices.length === 0 ? <p>None yet.</p> : (
           <div className="table-scroll"><table>
-            <thead><tr><th>Notice</th><th>Student</th><th>Read</th></tr></thead>
+            <thead><tr><th>Notice</th><th>To</th><th>Read</th></tr></thead>
             <tbody>
               {notices.map((m) => {
                 const reads = noticeReads[m.id] || [];
                 return (
                   <tr key={m.id}>
                     <td>{m.subject}<div style={{ color: '#666', fontSize: '0.8rem' }}>{new Date(m.sent_at).toLocaleString()}</div></td>
-                    <td>{[...new Set(reads.map((x) => x.recipient_name).filter(Boolean))].join(', ') || '—'}</td>
+                    <td>{reads.map((x) => x.recipient_name).filter(Boolean).join(', ') || '—'}</td>
                     <td>
-                      {reads.some((x) => x.read_at)
-                        ? `Read ${new Date(reads.filter((x) => x.read_at).map((x) => x.read_at).sort()[0]).toLocaleString()}`
-                        : <strong>Not read yet</strong>}
+                      {reads.length <= 1
+                        ? (reads[0]?.read_at ? `Read ${new Date(reads[0].read_at).toLocaleString()}` : <strong>Not read yet</strong>)
+                        : (
+                          <>
+                            <strong>{reads.filter((x) => x.read_at).length} of {reads.length} read</strong>
+                            {reads.filter((x) => x.read_at).map((x) => (
+                              <div key={x.recipient_name} style={{ fontSize: '0.8rem' }}>
+                                {x.recipient_name} — {new Date(x.read_at).toLocaleString()}
+                              </div>
+                            ))}
+                          </>
+                        )}
                     </td>
                   </tr>
                 );
