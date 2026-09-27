@@ -403,8 +403,10 @@ a.dashboard-tile { color: white; text-decoration: none; }
 
 .certificate-print { display: none; }
 .timetable-print { display: none; }
+.print-only { display: none; }
 @media print {
   .no-print { display: none !important; }
+  .print-only { display: inline !important; }
   .certificate-print { display: block !important; }
   .timetable-print { display: block !important; }
   nav, .navbar, header { display: none !important; }
