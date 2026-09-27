@@ -221,9 +221,11 @@ function StudentDetail() {
 
     const { data: be } = await supabase
       .from('behaviour_events')
-      .select('*')
+      // Events withdrawn on appeal (voided_at, migration 196) stay in the log,
+      // crossed out with the appeal's resolution notes (any staff can read a
+      // decided appeal, migration 223).
+      .select('*, behaviour_appeals(resolution_notes, reviewed_at)')
       .eq('student_id', id)
-      .is('voided_at', null) // appeal upheld (migration 196)
       .order('event_date', { ascending: false });
     setBehaviour(be || []);
 
@@ -673,9 +675,15 @@ function StudentDetail() {
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
   if (!student) return <p>Student not found (id: {id}).</p>;
 
+  // One appeal per event (migration 136), so PostgREST may embed it as an
+  // object rather than an array.
+  const appealNotes = (e) => {
+    const ap = Array.isArray(e.behaviour_appeals) ? e.behaviour_appeals[0] : e.behaviour_appeals;
+    return ap?.resolution_notes || '';
+  };
   const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
-  const positiveCount = behaviour.filter((b) => b.type === 'positive').length;
-  const negativeCount = behaviour.filter((b) => b.type === 'negative').length;
+  const positiveCount = behaviour.filter((b) => b.type === 'positive' && !b.voided_at).length;
+  const negativeCount = behaviour.filter((b) => b.type === 'negative' && !b.voided_at).length;
   const attendanceYear = attendanceSummary.find((r) => r.scope === 'year');
   const attendanceSessions = Number(attendanceYear?.sessions || 0);
   const attendancePct = attendanceSessions > 0
@@ -693,7 +701,7 @@ function StudentDetail() {
     { key: 'timetable', label: 'Timetable', icon: '🗓️', sub: `${student.first_name}'s week` },
     { key: 'blocks', label: 'Curriculum Blocks', icon: '🧩', sub: blocks.length === 0 ? 'None set up' : `${allocatedBlocks} of ${blocks.length} allocated` },
     { key: 'attendance', label: 'Attendance', icon: '📊', sub: attendancePct === null ? 'No data yet' : `${attendancePct}% this year` },
-    { key: 'behaviour', label: 'Behaviour', icon: '📋', sub: behaviour.length === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative` },
+    { key: 'behaviour', label: 'Behaviour', icon: '📋', sub: positiveCount + negativeCount === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative` },
     { key: 'targets', label: 'Target Grades', icon: '🎯', sub: shownTargetCount === 0 ? 'No targets set' : `${plural(shownTargetCount, 'subject')} tracked` },
     { key: 'results', label: 'Results', icon: '⭐', sub: results.length === 0 ? 'No results yet' : plural(groupResultSets(results, resultSetEvents).length, 'result set') },
     { key: 'predictive', label: 'CAT4 / NGRT', icon: '🧠', sub: cat4.length + ngrt.length === 0 ? 'No data recorded' : plural(cat4.length + ngrt.length, 'sitting') },
@@ -1147,7 +1155,24 @@ function StudentDetail() {
             <table>
               <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Points</th><th>Description</th></tr></thead>
               <tbody>
-                {behaviour.map((b) => (
+                {behaviour.map((b) => b.voided_at ? (
+                  // Withdrawn on appeal: shown as given (voided_points,
+                  // migration 222), crossed out, with the resolution notes.
+                  <tr key={b.event_id} style={{ color: 'var(--ink-soft)' }}>
+                    <td>{formatUKDate(b.event_date)}</td>
+                    <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`} style={{ opacity: 0.6 }}>{b.type}</span></td>
+                    <td><s>{b.category}</s></td>
+                    <td><s>{b.voided_points ?? b.points}</s></td>
+                    <td style={{ minWidth: '16rem' }}>
+                      {b.description && <div><s>{b.description}</s></div>}
+                      <div style={{ fontSize: '0.85em', marginTop: '0.2rem' }}>
+                        <strong>Withdrawn on appeal</strong>
+                        {b.voided_at ? ` (${formatUKDate(b.voided_at.slice(0, 10))})` : ''}
+                        {appealNotes(b) ? `: ${appealNotes(b)}` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
                   <tr key={b.event_id}>
                     <td>{formatUKDate(b.event_date)}</td>
                     <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
