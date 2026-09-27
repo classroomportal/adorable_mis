@@ -5,6 +5,7 @@ import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { schoolToday } from '../../lib/schoolTime';
 import { formatUKDate } from '../../lib/formatDate';
+import EventCommentEditor from '../components/EventCommentEditor';
 
 const STATUS_OPTIONS = ['scheduled', 'attended', 'missed', 'cancelled'];
 const STATUS_LABELS = { scheduled: 'Scheduled', attended: 'Attended', missed: 'Missed', cancelled: 'Cancelled' };
@@ -75,9 +76,10 @@ function DetentionInner() {
       // ambiguous and PostgREST rejects the whole query.
       const { data: ev, error: evErr } = await supabase
         .from('behaviour_events')
-        .select('event_id, student_id, event_date, event_time, type, category, points, description, staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+        .select('event_id, student_id, staff_id, event_date, event_time, type, category, points, description, staff!behaviour_events_staff_id_fkey(first_name, last_name)')
         .in('student_id', studentIds)
         .eq('type', 'negative')
+        .is('voided_at', null) // appeal upheld (migration 196)
         .gte('event_date', fmt(start))
         .lte('event_date', fmt(end))
         .order('event_date')
@@ -185,8 +187,8 @@ function DetentionInner() {
                     {e.description && openComments[e.event_id] && (
                       <tr>
                         <td colSpan={4} style={{ paddingLeft: '1.5rem' }}>
-                          <div style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem', background: 'var(--slate-50)', borderLeft: '3px solid var(--brand-600)', padding: '0.5rem 0.75rem', borderRadius: 4 }}>
-                            {e.description}
+                          <div style={{ fontSize: '0.9rem', background: 'var(--slate-50)', borderLeft: '3px solid var(--brand-600)', padding: '0.5rem 0.75rem', borderRadius: 4 }}>
+                            <EventCommentEditor event={e} onSaved={() => load()} />
                           </div>
                         </td>
                       </tr>
