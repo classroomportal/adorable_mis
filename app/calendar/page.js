@@ -34,6 +34,10 @@ function CalendarInner() {
   const [isReportPeriod, setIsReportPeriod] = useState(false);
   const [reportYearGroups, setReportYearGroups] = useState([]);
   const [checkDueDate, setCheckDueDate] = useState('');
+  const [termStatus, setTermStatus] = useState(null);
+  const [editingTermId, setEditingTermId] = useState(null);
+  const [termDraft, setTermDraft] = useState(null);
+  const [newTerm, setNewTerm] = useState({ term_name: '', start_date: '', end_date: '' });
 
   function toggleReportYearGroup(yg) {
     setReportYearGroups((prev) => (prev.includes(yg) ? prev.filter((y) => y !== yg) : [...prev, yg].sort((a, b) => a - b)));
@@ -44,14 +48,44 @@ function CalendarInner() {
     setEvents(e || []);
   }
 
+  async function loadTerms() {
+    const { data: t } = await supabase.from('terms').select('*').order('start_date');
+    setTerms(t || []);
+  }
+
   useEffect(() => {
-    async function load() {
-      const { data: t } = await supabase.from('terms').select('*').order('start_date');
-      setTerms(t || []);
-      loadEvents();
-    }
-    load();
+    loadTerms();
+    loadEvents();
   }, []);
+
+  function termError(t) {
+    if (!t.term_name.trim() || !t.start_date || !t.end_date) return 'Term name, start and end are required.';
+    if (t.end_date < t.start_date) return 'A term cannot end before it starts.';
+    return null;
+  }
+
+  async function saveTerm() {
+    const problem = termError(termDraft);
+    if (problem) { setTermStatus(problem); return; }
+    const { error } = await supabase.from('terms').update({
+      term_name: termDraft.term_name.trim(),
+      start_date: termDraft.start_date,
+      end_date: termDraft.end_date,
+    }).eq('term_id', editingTermId);
+    if (error) setTermStatus(`Error: ${error.message}`);
+    else { setEditingTermId(null); setTermStatus('Term saved.'); loadTerms(); }
+  }
+
+  async function addTerm(e) {
+    e.preventDefault();
+    const problem = termError(newTerm);
+    if (problem) { setTermStatus(problem); return; }
+    const { error } = await supabase.from('terms').insert([{ ...newTerm, term_name: newTerm.term_name.trim() }]);
+    if (error) { setTermStatus(`Error: ${error.message}`); return; }
+    setNewTerm({ term_name: '', start_date: '', end_date: '' });
+    setTermStatus('Term added.');
+    loadTerms();
+  }
 
   function startEdit(ev) {
     setEditingId(ev.event_id);
@@ -122,14 +156,46 @@ function CalendarInner() {
         <h2>Terms</h2>
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Term</th><th>Start</th><th>End</th></tr></thead>
+            <thead><tr><th>Term</th><th>Start</th><th>End</th>{canEdit && <th>Actions</th>}</tr></thead>
             <tbody>
               {terms.map((t) => (
-                <tr key={t.term_id}><td>{t.term_name}</td><td>{t.start_date}</td><td>{t.end_date}</td></tr>
+                editingTermId === t.term_id ? (
+                  <tr key={t.term_id}>
+                    <td><input value={termDraft.term_name} onChange={(ev) => setTermDraft({ ...termDraft, term_name: ev.target.value })} /></td>
+                    <td><input type="date" value={termDraft.start_date} onChange={(ev) => setTermDraft({ ...termDraft, start_date: ev.target.value })} /></td>
+                    <td><input type="date" value={termDraft.end_date} onChange={(ev) => setTermDraft({ ...termDraft, end_date: ev.target.value })} /></td>
+                    <td>
+                      <button onClick={saveTerm}>Save</button>{' '}
+                      <button className="secondary" onClick={() => setEditingTermId(null)}>Cancel</button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={t.term_id}>
+                    <td>{t.term_name}</td><td>{t.start_date}</td><td>{t.end_date}</td>
+                    {canEdit && (
+                      <td><button className="secondary" onClick={() => { setEditingTermId(t.term_id); setTermDraft({ ...t }); }}>Edit</button></td>
+                    )}
+                  </tr>
+                )
               ))}
             </tbody>
           </table>
         </div>
+        {canEdit && (
+          <form onSubmit={addTerm}>
+            <label>New term
+              <input value={newTerm.term_name} onChange={(e) => setNewTerm({ ...newTerm, term_name: e.target.value })} placeholder="e.g. September Term 2027" />
+            </label>
+            <label>Start
+              <input type="date" value={newTerm.start_date} onChange={(e) => setNewTerm({ ...newTerm, start_date: e.target.value })} />
+            </label>
+            <label>End
+              <input type="date" value={newTerm.end_date} onChange={(e) => setNewTerm({ ...newTerm, end_date: e.target.value })} />
+            </label>
+            <button type="submit">Add term</button>
+          </form>
+        )}
+        {termStatus && <p>{termStatus}</p>}
       </div>
 
       <div className="card">
