@@ -1,49 +1,73 @@
 // SplashScreen.js
 // (c) 2026 CBT. All rights reserved.
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 const DISPLAY_MS = 2200;
-// Long enough to read a handful of names; a tap dismisses it sooner.
-const BIRTHDAY_DISPLAY_MS = 7000;
+// On a birthday day the Formwork card goes this long after the names
+// appear; the names then stay until someone presses Continue.
+const CARD_AFTER_NAMES_MS = 1000;
+// How long to wait for the birthday lookup before closing without it.
+const MAX_WAIT_MS = 5000;
+const FADE_MS = 400;
 
 // Today's birthdays (migration 213) are shown here rather than on /login:
 // the login page is public, and a child's date of birth is a parent's first
 // password. todays_birthdays() returns names only, for signed-in staff and
 // students; parents and anyone else get nothing back.
+//
+// The close timer must not start until the lookup has answered. It used to
+// give up after 1.8s and start the normal 2.2s close; on iPhones and iPads
+// the answer often came later, so the splash was already fading out when
+// the names arrived and they were never seen.
+//
+// On a birthday day there are two steps: the Formwork card goes a second
+// after the names appear, and the names stay until Continue is pressed.
+// Nothing closes them on a timer, and a tap elsewhere doesn't either.
 export default function SplashScreen({ onDone }) {
   const [fading, setFading] = useState(false);
   const [birthdays, setBirthdays] = useState(null); // null = still asking
-  const [asked, setAsked] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
+  const [showCard, setShowCard] = useState(true);
+  const mountedAt = useRef(Date.now());
+  // The dashboard passes a new onDone on every render; keep the latest in a
+  // ref so a re-render doesn't restart the close timer.
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; });
 
   useEffect(() => {
     let cancelled = false;
-    supabase.rpc('todays_birthdays').then(({ data }) => {
-      if (cancelled) return;
-      setBirthdays(data || []);
-      setAsked(true);
-    });
-    // Don't hold the splash up if the database is slow to answer.
-    const giveUp = setTimeout(() => { if (!cancelled) setAsked(true); }, DISPLAY_MS - 400);
+    supabase.rpc('todays_birthdays')
+      .then(({ data }) => { if (!cancelled) setBirthdays(data || []); })
+      .catch(() => { if (!cancelled) setBirthdays([]); });
+    const giveUp = setTimeout(() => { if (!cancelled) setGaveUp(true); }, MAX_WAIT_MS);
     return () => { cancelled = true; clearTimeout(giveUp); };
   }, []);
 
   const hasBirthdays = birthdays && birthdays.length > 0;
+  const answered = birthdays !== null || gaveUp;
   // On a birthday day the Formwork card shrinks so the names are the focus.
   const compact = hasBirthdays;
 
   useEffect(() => {
-    if (!asked) return undefined;
-    const displayMs = hasBirthdays ? BIRTHDAY_DISPLAY_MS : DISPLAY_MS;
-    const fadeTimer = setTimeout(() => setFading(true), displayMs - 400);
-    const doneTimer = setTimeout(() => onDone(), displayMs);
+    if (!answered) return undefined;
+    setFading(false);
+    if (hasBirthdays) {
+      const cardTimer = setTimeout(() => setShowCard(false), CARD_AFTER_NAMES_MS);
+      return () => clearTimeout(cardTimer);
+    }
+    // No birthdays: close at the usual 2.2s after the splash opened, or
+    // straight away (after the fade) if the lookup took longer than that.
+    const elapsed = Date.now() - mountedAt.current;
+    const displayMs = Math.max(DISPLAY_MS - elapsed, FADE_MS);
+    const fadeTimer = setTimeout(() => setFading(true), displayMs - FADE_MS);
+    const doneTimer = setTimeout(() => onDoneRef.current(), displayMs);
     return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
-  }, [asked, hasBirthdays, onDone]);
+  }, [answered, hasBirthdays]);
 
   return (
     <div
-      onClick={() => onDone()}
       style={{
         position: 'fixed',
         inset: 0,
@@ -57,74 +81,75 @@ export default function SplashScreen({ onDone }) {
         overflowY: 'auto',
         alignItems: 'center',
         justifyContent: 'center',
-        cursor: hasBirthdays ? 'pointer' : 'default',
         opacity: fading ? 0 : 1,
         transition: 'opacity 0.4s ease',
       }}
     >
-      <div
-        style={{
-          width: compact ? 'min(56vw, 210px)' : 'min(84vw, 380px)',
-          height: compact ? 'min(56vw, 210px)' : 'min(84vw, 380px)',
-          flexShrink: 0,
-          background: '#2F6FA8',
-          borderRadius: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: compact ? '8px' : '16px',
-          padding: compact ? '1rem' : '2rem',
-          boxSizing: 'border-box',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ position: 'absolute', top: -50, right: -50, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-        <div style={{ position: 'absolute', bottom: -70, left: -70, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-
+      {showCard && (
         <div
           style={{
-            width: compact ? 46 : 80,
-            height: compact ? 46 : 80,
-            borderRadius: '50%',
-            background: '#ffffff',
+            width: compact ? 'min(56vw, 210px)' : 'min(84vw, 380px)',
+            height: compact ? 'min(56vw, 210px)' : 'min(84vw, 380px)',
+            flexShrink: 0,
+            background: '#2F6FA8',
+            borderRadius: '24px',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1,
+            gap: compact ? '8px' : '16px',
+            padding: compact ? '1rem' : '2rem',
+            boxSizing: 'border-box',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          <svg width={compact ? 22 : 38} height={compact ? 22 : 38} viewBox="0 0 24 24" fill="none" stroke="#2F6FA8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <path d="M9 12l2 2 4-4" />
-          </svg>
-        </div>
+          <div style={{ position: 'absolute', top: -50, right: -50, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+          <div style={{ position: 'absolute', bottom: -70, left: -70, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
 
-        <div style={{ textAlign: 'center', zIndex: 1 }}>
+          <div
+            style={{
+              width: compact ? 46 : 80,
+              height: compact ? 46 : 80,
+              borderRadius: '50%',
+              background: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1,
+            }}
+          >
+            <svg width={compact ? 22 : 38} height={compact ? 22 : 38} viewBox="0 0 24 24" fill="none" stroke="#2F6FA8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+          </div>
+
+          <div style={{ textAlign: 'center', zIndex: 1 }}>
+            {!compact && (
+              <div style={{ fontSize: '11px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.75)', marginBottom: '6px', textTransform: 'uppercase' }}>
+                Every school, organised
+              </div>
+            )}
+            <div style={{ fontSize: compact ? '18px' : '24px', fontWeight: 500, color: '#ffffff' }}>Formwork</div>
+            <div style={{ fontSize: compact ? '10px' : '12px', color: 'rgba(255,255,255,0.7)', marginTop: compact ? '3px' : '6px', fontStyle: 'italic' }}>
+              Esse Maximum, Esse Adoramus
+            </div>
+          </div>
+
           {!compact && (
-            <div style={{ fontSize: '11px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.75)', marginBottom: '6px', textTransform: 'uppercase' }}>
-              Every school, organised
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', zIndex: 1 }}>
+              <div style={{ width: 20, height: 4, borderRadius: 2, background: '#ffffff' }} />
+              <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
+              <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
             </div>
           )}
-          <div style={{ fontSize: compact ? '18px' : '24px', fontWeight: 500, color: '#ffffff' }}>Formwork</div>
-          <div style={{ fontSize: compact ? '10px' : '12px', color: 'rgba(255,255,255,0.7)', marginTop: compact ? '3px' : '6px', fontStyle: 'italic' }}>
-            Esse Maximum, Esse Adoramus
+
+          <div style={{ position: 'absolute', bottom: compact ? 10 : 18, fontSize: compact ? '9px' : '11px', color: 'rgba(255,255,255,0.65)', zIndex: 1 }}>
+            © 2026 CBT. All rights reserved.
           </div>
         </div>
-
-        {!compact && (
-          <div style={{ display: 'flex', gap: '6px', marginTop: '6px', zIndex: 1 }}>
-            <div style={{ width: 20, height: 4, borderRadius: 2, background: '#ffffff' }} />
-            <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
-            <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
-          </div>
-        )}
-
-        <div style={{ position: 'absolute', bottom: compact ? 10 : 18, fontSize: compact ? '9px' : '11px', color: 'rgba(255,255,255,0.65)', zIndex: 1 }}>
-          © 2026 CBT. All rights reserved.
-        </div>
-      </div>
+      )}
 
       {hasBirthdays && (
         <div
@@ -159,7 +184,7 @@ export default function SplashScreen({ onDone }) {
               treat a tap on plain text as a click, so tapping did nothing. */}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onDone(); }}
+            onClick={() => onDoneRef.current()}
             style={{ marginTop: '12px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}
           >
             Continue
