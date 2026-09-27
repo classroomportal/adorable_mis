@@ -13,7 +13,7 @@ A large amount of this schema was built directly against the live Supabase insta
 
 Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase project "adorable_mis").
 
-**Partly refreshed 27 September 2026: email only.** The `email_outbox` table and the 13 functions that queue and send email were re-introspected after migration 225 and checked by md5 against the live database (see "Email and Reply-To" below). Everything else is still the 22 September snapshot. The live database has moved well past it (148 functions and 91 tables against the 72 and 66 listed here), so a full regeneration is overdue.
+**Partly refreshed 27 September 2026: email only.** The `email_outbox` and `email_reply_routes` tables and the 17 functions that queue and send email were re-introspected after migrations 225–227 and checked by md5 against the live database (see "Email and Reply-To" below). Everything else is still the 22 September snapshot. The live database has moved well past it (152 functions and 92 tables against the 76 and 67 listed here), so a full regeneration is overdue.
 
 ## Quick facts
 
@@ -48,23 +48,25 @@ Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase proj
 - `capture_register_alerts()` stamps `register_alerts.period_date` with `school_today()` rather than the UTC `current_date`.
 - New function `student_attendance_summary(integer)` — today / this week / this academic year counts plus total minutes late for one student, invoker-rights so `attendance` RLS still applies. Backs the Attendance section of `/students/[id]`; counting in the DB avoids PostgREST's 1,000-row page limit, which a year of marks (~1,700 per student) exceeds.
 
-### Email and Reply-To (refreshed 27 September 2026, migrations 177 and 225)
+### Email and Reply-To (refreshed 27 September 2026, migrations 177, 225–227)
 
 - **All email goes through one queue.** Functions call `queue_workspace_email(jsonb)`, which inserts into `email_outbox`. The `process-email-outbox` cron job runs every 15 seconds: it posts up to 3 emails at a time to the `send-workspace-email` edge function, records each reply, and retries up to 6 times. Nothing calls the edge function directly. `queue_workspace_email`, `process_email_outbox` and `send_workspace_email_key` can't be executed by API roles.
 - **Everything is sent as `mis@abc.sch.ng`**, over Google Workspace SMTP. Password-reset emails are the exception: they come from Supabase Auth's own sender.
-- **Every email has a Reply-To** (migration 225), because nobody reads `mis@`. `queue_workspace_email` keeps a caller's `reply_to` (an address or an array), drops anything that isn't a plain address, and falls back to `sro@abc.sch.ng`:
+- **Every email has a Reply-To**, because nobody reads `mis@`. Where replies go is **set at `/admin/email-replies`** (Administration tile, SMT and admin only), stored in `email_reply_routes`, one row per kind of email. Each row can combine the member of staff behind the email (where there is one), everyone holding the SMT role (looked up when the email is queued), and a list of addresses. The functions call `email_reply_to('<kind>')`; nothing hardcodes an address. As seeded (the principal's choices, 27 Sept 2026):
 
-  | Email | Function | Replies go to |
+  | `email_kind` | Function | Seeded to |
   |---|---|---|
-  | Message to a parent | `send_message` | `sro@abc.sch.ng` (parent = the recipient's `profiles.parent_id`, never matched on `parents.email`) |
-  | Message to staff or a student | `send_message` | the sender's `staff.email` (`sro@` if they have none) |
-  | Parent welcome (batch / single) | `send_parent_welcome_email`, `parent_welcome_email_post` | `sro@abc.sch.ng` |
-  | Staff / student welcome | `send_staff_welcome_email`, `send_student_welcome_email` | `sro@abc.sch.ng` |
-  | Behaviour alert (to `cs@`, cc SMT + `sro@`) | `notify_pastoral_on_negative_behaviour` | `guardian.counselling@abc.sch.ng` |
-  | Detention set / cancelled / reminder | `send_detention_email`, `notify_student_of_cancelled_detention`, `send_detention_reminders` | every SMT email, from `smt_reply_to_addresses()` |
-  | Anything else | (fallback) | `sro@abc.sch.ng` |
+  | `message_parent` | `send_message` | `sro@abc.sch.ng` (parent = the recipient's `profiles.parent_id`, never matched on `parents.email`) |
+  | `message_staff_student` | `send_message` | the sender's `staff.email` |
+  | `parent_welcome` | `send_parent_welcome_email`, `parent_welcome_email_post` | `sro@abc.sch.ng` |
+  | `staff_student_welcome` | `send_staff_welcome_email`, `send_student_welcome_email` | `sro@abc.sch.ng` |
+  | `behaviour_alert` | `notify_pastoral_on_negative_behaviour` | `guardian.counselling@abc.sch.ng` |
+  | `detention` | `send_detention_email`, `notify_student_of_cancelled_detention`, `send_detention_reminders` | SMT |
+  | `fallback` | `queue_workspace_email` | `sro@abc.sch.ng` |
 
-- The edge function writes `reply_to` as a raw `Reply-To` header, because denomailer's `replyTo` option takes only one address. It refuses the whole email if an address isn't plain, so the SQL filter in `queue_workspace_email` must stay in step with it.
+  A kind that works out to nobody (e.g. a sender with no email on their staff record) takes the `fallback` row, which a constraint keeps non-empty; `sro@abc.sch.ng` is hardcoded in `queue_workspace_email` only as the last resort behind that.
+- **`email_reply_routes` security.** RLS checks the SMT role directly (`user_has_staff_role(array['smt'])`, which admins pass), not `has_resource_access`, so granting the page to another role only shows them the link. API grants are `authenticated` SELECT and UPDATE only (migration 227 revoked the blanket default grants). `email_reply_to()` is not executable by API roles, and the sender is always `auth.uid()`. Changes are logged in `change_history` under the `email` area, and `updated_by` is stamped from `auth.uid()`.
+- **Addresses are checked in three places, all using the same pattern:** `is_plain_email()`, used by `tidy_email_reply_route` (the trigger that lowercases and de-duplicates addresses and refuses bad ones) and by `queue_workspace_email`; and the edge function, which writes `reply_to` as a raw `Reply-To` header (denomailer's `replyTo` option takes only one address) and refuses the whole email on an address it doesn't accept. Keep the three in step.
 - `email_outbox` has RLS SELECT policies for admin and for smt/pastoral/school_office, but no table grant to `authenticated`. The Sent Messages page reads it through `email_log()`, which never returns the body (it can hold a parent's initial password).
 
 ## Known gaps / dead ends (so nobody re-discovers these the hard way)
@@ -485,6 +487,34 @@ Triggers:
 RLS policies:
 - `admin_read_email_outbox` (SELECT) USING (is_admin())
 - `staff_comms_read_email_outbox` (SELECT) USING (user_has_staff_role(ARRAY['smt'::text, 'pastoral'::text, 'school_office'::text]))
+
+
+### `email_reply_routes`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| `email_kind` 🔑 | text | NO |  |
+| `label` | text | NO |  |
+| `description` | text | NO |  |
+| `sender_label` | text | YES |  |
+| `sort_order` | integer | NO |  |
+| `reply_to_sender` | boolean | NO | false |
+| `reply_to_smt` | boolean | NO | false |
+| `addresses` | text[] | NO | '{}'::text[] |
+| `updated_at` | timestamp with time zone | NO | now() |
+| `updated_by` | uuid | YES |  |
+
+Foreign keys: `updated_by` → `users.id`
+
+Triggers:
+- `a_backup_mode_guard`: `CREATE TRIGGER a_backup_mode_guard BEFORE INSERT OR DELETE OR UPDATE ON public.email_reply_routes FOR EACH STATEMENT EXECUTE FUNCTION enforce_backup_mode()`
+- `log_email_reply_routes`: `CREATE TRIGGER log_email_reply_routes AFTER INSERT OR DELETE OR UPDATE ON public.email_reply_routes FOR EACH ROW EXECUTE FUNCTION log_change('email', 'email_kind')`
+- `stamp_email_reply_route_updated_by`: `CREATE TRIGGER stamp_email_reply_route_updated_by BEFORE INSERT OR UPDATE ON public.email_reply_routes FOR EACH ROW EXECUTE FUNCTION stamp_actor('updated_by')`
+- `tidy_email_reply_route`: `CREATE TRIGGER tidy_email_reply_route BEFORE INSERT OR UPDATE ON public.email_reply_routes FOR EACH ROW EXECUTE FUNCTION tidy_email_reply_route()`
+
+RLS policies:
+- `smt_read_email_reply_routes` (SELECT) USING (user_has_staff_role(ARRAY['smt'::text]))
+- `smt_update_email_reply_routes` (UPDATE) USING (user_has_staff_role(ARRAY['smt'::text])) WITH CHECK (user_has_staff_role(ARRAY['smt'::text]))
 
 
 ### `families`
@@ -1582,7 +1612,7 @@ RLS policies:
 - `Tuckshop purchases readable by staff or own family` (SELECT) USING (can_view_student_tuckshop(student_id))
 - `Tuckshop purchases writable by tuckshop staff` (ALL) USING (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text])) WITH CHECK (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]))
 
-## Functions (72)
+## Functions (76)
 
 Full definitions. `SECURITY DEFINER` functions run with the privileges of the function owner regardless of caller — check the body for its own permission checks (e.g. `is_admin()`, `user_has_staff_role(...)`) rather than assuming RLS protects them.
 
@@ -1964,6 +1994,49 @@ $function$
 
 ```
 
+### `email_reply_smt_preview()` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.email_reply_smt_preview()
+ RETURNS text[]
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+begin
+  if not user_has_staff_role(array['smt']) then
+    raise exception 'You do not have access to email reply settings.' using errcode = 'insufficient_privilege';
+  end if;
+  return smt_reply_to_addresses();
+end;
+$function$
+
+```
+
+### `email_reply_to(p_kind text)` — SECURITY DEFINER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.email_reply_to(p_kind text)
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+  select coalesce(jsonb_agg(distinct a), '[]'::jsonb)
+  from email_reply_routes r
+  cross join lateral (
+    select unnest(r.addresses) as a
+    union all
+    select lower(trim(st.email))
+      from profiles me
+      join staff st on st.staff_id = me.staff_id
+     where r.reply_to_sender and me.id = auth.uid()
+    union all
+    select unnest(smt_reply_to_addresses()) where r.reply_to_smt
+  ) x
+  where r.email_kind = p_kind and is_plain_email(a);
+$function$
+
+```
+
 ### `enforce_abc_domain_login()` — SECURITY DEFINER, plpgsql
 ```sql
 CREATE OR REPLACE FUNCTION public.enforce_abc_domain_login()
@@ -2260,6 +2333,18 @@ $function$
 
 ```
 
+### `is_plain_email(p text)` — SECURITY INVOKER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.is_plain_email(p text)
+ RETURNS boolean
+ LANGUAGE sql
+ IMMUTABLE
+AS $function$
+  select p ~ '^[^\s@<>(),;:"\[\]\\]+@[a-z0-9-]+(\.[a-z0-9-]+)+$';
+$function$
+
+```
+
 ### `is_staff_or_admin()` — SECURITY DEFINER, sql
 ```sql
 CREATE OR REPLACE FUNCTION public.is_staff_or_admin()
@@ -2496,7 +2581,7 @@ begin
       'cc', to_jsonb(coalesce(cc_list, array[]::text[])),
       'subject', subject,
       'html', body_html || '<p><a href="https://misform.work/students/' || new.student_id || '">View student in Adorable MIS</a></p>',
-      'reply_to', 'guardian.counselling@abc.sch.ng'
+      'reply_to', email_reply_to('behaviour_alert')
     )
   );
 
@@ -2567,7 +2652,7 @@ begin
         'to', r.student_email,
         'subject', 'Detention cancelled: ' || v_day,
         'html', '<p>Dear ' || coalesce(r.first_name, 'student') || ',</p>' || v_html || '<p>Adorable British College</p>',
-        'reply_to', to_jsonb(smt_reply_to_addresses())
+        'reply_to', email_reply_to('detention')
       ));
     end if;
   end loop;
@@ -2614,7 +2699,7 @@ begin
       'to', p_email,
       'subject', 'Your Adorable MIS parent portal account',
       'html', body_html,
-      'reply_to', 'sro@abc.sch.ng'
+      'reply_to', email_reply_to('parent_welcome')
     )
   );
 end;
@@ -2702,7 +2787,9 @@ CREATE OR REPLACE FUNCTION public.queue_workspace_email(p_body jsonb)
  SET search_path TO 'public', 'pg_temp'
 AS $function$
   with reply as (
-    select coalesce(jsonb_agg(distinct a), '["sro@abc.sch.ng"]'::jsonb) as addresses
+    select coalesce(jsonb_agg(distinct a),
+                    nullif(email_reply_to('fallback'), '[]'::jsonb),
+                    '["sro@abc.sch.ng"]'::jsonb) as addresses
     from (
       select lower(trim(x)) as a
       from jsonb_array_elements_text(
@@ -2712,9 +2799,7 @@ AS $function$
           else '[]'::jsonb
         end) x
     ) r
-    -- Must match the check in send-workspace-email, which refuses the whole
-    -- email on an address it doesn't accept.
-    where a ~ '^[^\s@<>(),;:"\[\]\\]+@[a-z0-9-]+(\.[a-z0-9-]+)+$'
+    where is_plain_email(a)
   ),
   body as (
     select p_body || jsonb_build_object('reply_to', reply.addresses) as b
@@ -3233,7 +3318,7 @@ begin
       'to', v_email,
       'subject', 'Detention: ' || v_day || ', ' || v_room || ' ' || v_time,
       'html', body_html,
-      'reply_to', to_jsonb(smt_reply_to_addresses())
+      'reply_to', email_reply_to('detention')
     )
   );
   return true;
@@ -3289,7 +3374,7 @@ begin
         'to', r.student_email,
         'subject', v_subject,
         'html', '<p>Dear ' || coalesce(r.first_name, 'student') || ',</p>' || v_html || '<p>Adorable British College</p>',
-        'reply_to', to_jsonb(smt_reply_to_addresses())
+        'reply_to', email_reply_to('detention')
       ));
     elsif not v_posted then
       continue;
@@ -3316,7 +3401,6 @@ declare
   v_message_id bigint;
   v_count int;
   v_should_email boolean;
-  v_sender_email text;
 begin
   if is_demo_account() then
     raise exception 'Communication is disabled for the training account — no message was sent.';
@@ -3341,18 +3425,12 @@ begin
   update messages set recipient_count = v_count, email_sent = v_should_email where id = v_message_id;
 
   if v_should_email then
-    -- Replies: parents' to the SRO, everyone else's to the sender. A null
-    -- (sender with no email) falls back to the SRO in queue_workspace_email.
-    select st.email into v_sender_email
-    from profiles me
-    join staff st on st.staff_id = me.staff_id
-    where me.id = auth.uid();
-
+    -- Where replies go is set at /admin/email-replies (migration 226).
     perform public.queue_workspace_email( jsonb_build_object(
         'to', coalesce(pr.email, par.email, st.student_email),
         'subject', p_subject,
         'text', p_body || E'\n\nView in your portal: https://misform.work/inbox',
-        'reply_to', case when pr.parent_id is not null then 'sro@abc.sch.ng' else v_sender_email end
+        'reply_to', email_reply_to(case when pr.parent_id is not null then 'message_parent' else 'message_staff_student' end)
       )
     )
     from profiles pr
@@ -3451,7 +3529,7 @@ begin
       'to', p_email,
       'subject', 'Introducing Formwork: your new parent account (separate from SIMS)',
       'html', body_html,
-      'reply_to', 'sro@abc.sch.ng'
+      'reply_to', email_reply_to('parent_welcome')
     )
   );
 end;
@@ -3485,7 +3563,7 @@ begin
       'to', p_email,
       'subject', 'Your Adorable MIS staff account',
       'html', body_html,
-      'reply_to', 'sro@abc.sch.ng'
+      'reply_to', email_reply_to('staff_student_welcome')
     )
   );
 end;
@@ -3519,7 +3597,7 @@ begin
       'to', p_email,
       'subject', 'Your Adorable MIS student account',
       'html', body_html,
-      'reply_to', 'sro@abc.sch.ng'
+      'reply_to', email_reply_to('staff_student_welcome')
     )
   );
 end;
@@ -3761,6 +3839,29 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
+$function$
+
+```
+
+### `tidy_email_reply_route()` — SECURITY INVOKER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.tidy_email_reply_route()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+declare
+  v_bad text;
+begin
+  new.addresses := coalesce(array(
+    select distinct lower(trim(a)) from unnest(new.addresses) a
+    where length(trim(a)) > 0 order by 1), '{}');
+  select string_agg(a, ', ') into v_bad from unnest(new.addresses) a where not is_plain_email(a);
+  if v_bad is not null then
+    raise exception 'Not an email address: %', v_bad;
+  end if;
+  new.updated_at := now();
+  return new;
+end;
 $function$
 
 ```
