@@ -14,7 +14,11 @@ import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 // body content (the welcome-email and behaviour-alert functions send HTML;
 // send_message sends plain text). `cc` (address or array) is optional: the
 // serious behaviour alert goes to the designated safeguarding address with
-// SMT and the SRO copied in (migration 202).
+// SMT and the SRO copied in (migration 202). `reply_to` (address or array)
+// becomes the Reply-To header, so replies reach a person rather than the
+// unread mis@ inbox; queue_workspace_email() always sets it (migration 225).
+// It is written as a raw header because denomailer's own `replyTo` option
+// takes a single address, and detention emails reply to all of SMT.
 //
 // Required secret (Dashboard > Edge Functions > Secrets, or
 // `supabase secrets set`): GMAIL_APP_PASSWORD
@@ -39,7 +43,14 @@ Deno.serve(async (req: Request) => {
   }
   const sender = Deno.env.get("GMAIL_SENDER") || "mis@abc.sch.ng";
 
-  let payload: { to?: string | string[]; cc?: string | string[]; subject?: string; text?: string; html?: string };
+  let payload: {
+    to?: string | string[];
+    cc?: string | string[];
+    subject?: string;
+    text?: string;
+    html?: string;
+    reply_to?: string | string[];
+  };
   try {
     payload = await req.json();
   } catch {
@@ -49,6 +60,18 @@ Deno.serve(async (req: Request) => {
   const { to, cc, subject, text, html } = payload;
   if (!to || !subject || (!text && !html)) {
     return new Response(JSON.stringify({ error: "to, subject, and text or html are required" }), { status: 400 });
+  }
+
+  // Plain addresses only: anything else (a newline especially) would let the
+  // value write extra headers. queue_workspace_email() already drops
+  // addresses that fail this same pattern, so this only refuses a payload
+  // that didn't come through it.
+  const replyTo = (Array.isArray(payload.reply_to) ? payload.reply_to : [payload.reply_to])
+    .filter((a): a is string => typeof a === "string" && a.trim() !== "")
+    .map((a) => a.trim());
+  const badReplyTo = replyTo.filter((a) => !/^[^\s@<>(),;:"\[\]\\]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(a));
+  if (badReplyTo.length) {
+    return new Response(JSON.stringify({ error: `Invalid reply_to address: ${badReplyTo.join(", ")}` }), { status: 400 });
   }
 
   const client = new SMTPClient({
@@ -65,6 +88,7 @@ Deno.serve(async (req: Request) => {
       from: sender,
       to,
       ...(cc && cc.length ? { cc } : {}),
+      ...(replyTo.length ? { headers: { "Reply-To": replyTo.join(", ") } } : {}),
       subject,
       // denomailer requires plain-text `content` even for an HTML send —
       // fall back to a stripped version of the HTML when only html is given.
