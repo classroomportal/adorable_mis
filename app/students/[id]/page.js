@@ -222,8 +222,8 @@ function StudentDetail() {
     const { data: be } = await supabase
       .from('behaviour_events')
       // Events withdrawn on appeal (voided_at, migration 196) stay in the log,
-      // crossed out with the appeal's outcome. The appeal embed is only
-      // returned to pastoral/SMT/admin by RLS; others see just "withdrawn".
+      // crossed out with the appeal's resolution notes (any staff can read a
+      // decided appeal, migration 223).
       .select('*, behaviour_appeals(resolution_notes, reviewed_at)')
       .eq('student_id', id)
       .order('event_date', { ascending: false });
