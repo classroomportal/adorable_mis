@@ -28,6 +28,7 @@ function DetentionInner() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [eventsError, setEventsError] = useState(null);
   const [openComments, setOpenComments] = useState({}); // event_id -> comment shown
 
   const baseSat = saturdayOf(new Date(`${schoolToday()}T00:00:00Z`));
@@ -69,15 +70,19 @@ function DetentionInner() {
     const studentIds = Object.keys(grouped).map(Number);
     let events = [];
     if (studentIds.length > 0) {
-      const { data: ev } = await supabase
+      // staff!…_staff_id_fkey: behaviour_events links to staff twice (who
+      // recorded it, and protocol_reviewed_by), so a bare staff(...) embed is
+      // ambiguous and PostgREST rejects the whole query.
+      const { data: ev, error: evErr } = await supabase
         .from('behaviour_events')
-        .select('event_id, student_id, event_date, event_time, type, category, points, description, staff(first_name, last_name)')
+        .select('event_id, student_id, event_date, event_time, type, category, points, description, staff!behaviour_events_staff_id_fkey(first_name, last_name)')
         .in('student_id', studentIds)
         .eq('type', 'negative')
         .gte('event_date', fmt(start))
         .lte('event_date', fmt(end))
         .order('event_date')
         .order('event_time', { nullsFirst: true });
+      setEventsError(evErr ? `Couldn't load the events behind these detentions: ${evErr.message}` : null);
       events = ev || [];
     }
     for (const g of Object.values(grouped)) {
@@ -115,6 +120,7 @@ function DetentionInner() {
           {weekOffset !== 0 && <button className="secondary" onClick={() => setWeekOffset(0)}>This week</button>}
         </div>
         {error && <p style={{ color: '#a3232c' }}>{error}</p>}
+        {eventsError && <p style={{ color: '#a3232c' }}>{eventsError}</p>}
       </div>
 
       <div className="card">
@@ -170,7 +176,7 @@ function DetentionInner() {
                               onClick={() => setOpenComments((o) => ({ ...o, [e.event_id]: !o[e.event_id] }))}
                               style={{ padding: '0.15rem 0.55rem', fontSize: '0.8rem', marginLeft: 'auto' }}
                             >
-                              {openComments[e.event_id] ? 'Hide comment' : 'Show comment'}
+                              {openComments[e.event_id] ? 'Hide staff comment' : 'Show staff comment'}
                             </button>
                           )}
                         </div>
