@@ -12,6 +12,9 @@ function ComposeInner() {
   const [messages, setMessages] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [receipts, setReceipts] = useState([]);
+  const [emails, setEmails] = useState([]);
+  const [emailFilter, setEmailFilter] = useState('');
+  const [emailLimit, setEmailLimit] = useState(100);
 
   useEffect(() => {
     if (!allowed) return;
@@ -21,6 +24,24 @@ function ComposeInner() {
       .order('sent_at', { ascending: false })
       .then(({ data }) => setMessages(data || []));
   }, [allowed]);
+
+  // Emails Formwork sends by itself (welcome emails, behaviour alerts,
+  // detention set/reminder/cancelled) go through email_outbox, not messages.
+  // Only these columns are readable from the client: the body can hold a
+  // parent's initial password (migration 201).
+  useEffect(() => {
+    if (!allowed) return;
+    let q = supabase
+      .from('email_outbox')
+      .select('email_id, recipient, subject, status, attempts, last_error, created_at, sent_at')
+      .order('created_at', { ascending: false })
+      .limit(emailLimit);
+    if (emailFilter.trim()) {
+      const f = emailFilter.trim().replace(/[%,()]/g, ' ');
+      q = q.or(`subject.ilike.%${f}%,recipient.ilike.%${f}%`);
+    }
+    q.then(({ data }) => setEmails(data || []));
+  }, [allowed, emailFilter, emailLimit]);
 
   async function toggleExpand(id) {
     if (expanded === id) { setExpanded(null); return; }
@@ -62,7 +83,43 @@ function ComposeInner() {
           </div>
         );
       })}
-      {messages.length === 0 && <p>No messages sent yet.</p>}
+      {messages.length === 0 && <p>No messages sent from Compose yet.</p>}
+
+      <div className="card">
+        <h2>Automatic emails</h2>
+        <p style={{ color: '#666', fontSize: '0.85rem' }}>
+          Emails Formwork sends by itself: welcome emails, behaviour alerts and detention emails.
+        </p>
+        <input
+          placeholder="Search subject or recipient"
+          value={emailFilter}
+          onChange={(e) => { setEmailFilter(e.target.value); setEmailLimit(100); }}
+          style={{ maxWidth: '20rem' }}
+        />
+        {emails.length === 0 ? <p>No emails found.</p> : (
+          <div className="table-scroll"><table>
+            <thead><tr><th>Subject</th><th>To</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody>
+              {emails.map((e) => (
+                <tr key={e.email_id}>
+                  <td>{e.subject}</td>
+                  <td>{e.recipient}</td>
+                  <td>
+                    {e.status === 'sent' ? 'Sent' : e.status === 'failed' ? 'Failed' : 'Waiting to send'}
+                    {e.status === 'failed' && e.last_error && (
+                      <div style={{ color: '#a3232c', fontSize: '0.8rem' }}>{e.last_error}</div>
+                    )}
+                  </td>
+                  <td>{new Date(e.sent_at || e.created_at).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        )}
+        {emails.length === emailLimit && (
+          <button className="secondary" onClick={() => setEmailLimit((n) => n + 100)}>Show more</button>
+        )}
+      </div>
     </div>
   );
 }
