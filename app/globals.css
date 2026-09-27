@@ -1208,3 +1208,87 @@ table.report-grades td span + span { margin-left: 4px; }
 .report-judgement-row > span:first-child { font-weight: 600; min-width: 11em; }
 .report-count { border: 1px solid var(--slate-200); border-radius: 99px; padding: 1px 8px; background: var(--slate-50); }
 .report-count.warn { background: var(--yellow-100); border-color: var(--yellow-200); }
+
+/* /behaviour — the logging form. The app-wide `form` and `label` rules lay
+   fields out in a wrapping row; stacked in a column they stretched every
+   label to 140px tall. This form sets its own compact layout. */
+form.behaviour-log {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+form.behaviour-log label { flex: 0 0 auto; }
+.bl-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-bottom: -0.35rem;
+}
+.bl-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem 0.75rem;
+  align-items: end;
+}
+.bl-field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: var(--ink-soft); }
+.bl-seg { display: flex; border: 1px solid var(--slate-200); border-radius: 8px; overflow: hidden; }
+.bl-seg button {
+  flex: 1;
+  background: white;
+  color: var(--ink);
+  border-radius: 0;
+  font-weight: 500;
+}
+.bl-seg button + button { border-left: 1px solid var(--slate-200); }
+.bl-seg button:hover { background: var(--slate-50); }
+.bl-seg button.on-pos, .bl-seg button.on-pos:hover { background: #e3f4e8; color: #1d6b3a; font-weight: 700; }
+.bl-seg button.on-neg, .bl-seg button.on-neg:hover { background: #fbe4e4; color: var(--red-800); font-weight: 700; }
+.bl-points { margin-left: 0.5rem; font-size: 0.8rem; }
+.bl-date-hint { margin-left: 0.5rem; font-size: 0.8rem; color: var(--ink); }
+.bl-points.positive { color: #1d6b3a; }
+.bl-points.negative { color: var(--red-700); }
+.bl-hint { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 0.3rem; }
+.bl-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.bl-chip {
+  display: flex; flex-direction: row; align-items: center; gap: 0.3rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--slate-200); border-radius: 999px;
+  padding: 0.2rem 0.65rem; font-size: 0.85rem; color: var(--ink); cursor: pointer;
+}
+.bl-chip.on { background: var(--brand-100); border-color: var(--brand-600); }
+.bl-chip input, .bl-roster input { width: auto; flex: 0 0 auto; margin: 0; }
+.bl-small { padding: 0.2rem 0.6rem; font-size: 0.8rem; }
+.bl-roster-bar { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.35rem; font-size: 0.85rem; color: var(--ink-soft); }
+.bl-roster-bar span { margin-right: auto; }
+.bl-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0 0.75rem;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+}
+.bl-roster label {
+  display: flex; flex-direction: row; align-items: center; gap: 0.45rem;
+  padding: 0.3rem 0; font-size: 0.9rem; color: var(--ink);
+}
+.bl-serious {
+  border: 1px solid #b45309; background: #fff8eb; border-radius: 8px;
+  padding: 0.5rem 0.7rem; font-size: 0.85rem; color: var(--ink);
+}
+.bl-serious strong { color: #b45309; }
+form.behaviour-log textarea { width: 100%; font: inherit; padding: 0.5rem 0.65rem; border: 1px solid var(--slate-200); border-radius: 8px; }
+.bl-submit { align-self: flex-start; padding: 0.65rem 1.4rem; }
+@media (max-width: 640px) {
+  form.behaviour-log { padding: 0.8rem; gap: 0.6rem; }
+  .bl-row { grid-template-columns: 1fr; }
+  .bl-submit { align-self: stretch; }
+  .bl-roster { grid-template-columns: 1fr; }
+}

@@ -37,7 +37,7 @@ function StatCard({ label, value, icon, accent, href }) {
   );
 }
 
-function DashboardStats({ isDemoAccount }) {
+function DashboardStats({ isDemoAccount, hasAccess }) {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -58,9 +58,21 @@ function DashboardStats({ isDemoAccount }) {
 
   return (
     <div className="stat-card-row">
+      {/* Logging behaviour is the thing most staff come here to do, so it
+          gets a big tile of its own rather than only a chip on the Students
+          card. */}
+      {hasAccess('/behaviour') && (
+        <a className="stat-card quick-link accent-students" href="/behaviour">
+          <div className="stat-card-icon">✍️</div>
+          <div>
+            <div className="quick-link-label">Log behaviour</div>
+            <div className="stat-card-label">Positive or negative, one student or a group</div>
+          </div>
+        </a>
+      )}
       <StatCard label="Active students" value={stats?.students} icon="🎓" accent="myinfo" href="/students" />
       <StatCard label="Staff" value={stats?.staff} icon="🧑‍🏫" accent="school" href="/staff/roles" />
-      <StatCard label="Behaviour alerts (7 days)" value={stats?.alerts} icon="⚠️" accent="students" href="/behaviour" />
+      <StatCard label="Behaviour alerts (7 days)" value={stats?.alerts} icon="⚠️" accent="students" href="/behaviour/alerts" />
     </div>
   );
 }
@@ -431,7 +443,7 @@ export default function Home() {
   return (
     <div>
       <QuickLinks hasAccess={hasAccess} />
-      <DashboardStats isDemoAccount={profile?.is_demo_account} />
+      <DashboardStats isDemoAccount={profile?.is_demo_account} hasAccess={hasAccess} />
       <div className="module-card-grid">
         {TABS.map((t) => (
           <ModuleCard
