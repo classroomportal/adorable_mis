@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { formatUKDate } from '../../lib/formatDate';
-import ResultSetPicker, { confirmResultSetDate, ResultSetDateNote, fieldStyle } from '../components/ResultSetPicker';
+import ResultSetPicker, { currentYearSets, confirmResultSetDate, ResultSetDateNote, fieldStyle } from '../components/ResultSetPicker';
 import { classifyGrade, STYLE, LABEL } from '../../lib/gradeCompare';
 
 function ResultsPageInner() {
@@ -51,7 +51,7 @@ function ResultsPageInner() {
       setStudents(s || []);
       setSubjects(sub || []);
       const { data: rl } = await supabase.from('calendar_events').select('event_id, event_date, event_name').eq('is_result_set', true).order('event_date', { ascending: false });
-      setRelps(rl || []);
+      setRelps(currentYearSets(rl || []));
 
       const { data: gs } = await supabase.from('grade_scale').select('*');
       setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));

@@ -5,7 +5,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { loadResultSetScopes, scopeToReportPeriod, inReportPeriod } from '../../../lib/reportWriting';
-import ResultSetPicker, { confirmResultSetDate, ResultSetDateNote, fieldStyle } from '../../components/ResultSetPicker';
+import ResultSetPicker, { currentYearSets, confirmResultSetDate, ResultSetDateNote, fieldStyle } from '../../components/ResultSetPicker';
 
 const RESULT_TYPES = [
   { value: 'short_test', label: 'Short Test' },
@@ -61,7 +61,7 @@ function EnterResultsInner() {
       .select('event_id, event_date, event_name')
       .eq('is_result_set', true)
       .order('event_date', { ascending: false })
-      .then(({ data }) => setResultSets(data || []));
+      .then(({ data }) => setResultSets(currentYearSets(data || [])));
 
     loadResultSetScopes().then(setSetScopes);
   }, [staffId, canEnterAnyClass]);
