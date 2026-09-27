@@ -84,99 +84,112 @@ export default function LoginPage() {
     else router.push('/');
   }
 
-  return (
-    <div style={{ maxWidth: 380, margin: '3rem auto' }}>
-      <h1>Sign in</h1>
-      {/* Who you are comes first: the Google button is only for staff and
-          students (school accounts), so a parent never sees it. */}
-      <label style={{ display: 'block', marginBottom: '1rem' }}>
-        I am a...
-        <select
-          value={loginAs}
-          onChange={(e) => { setLoginAs(e.target.value); setError(null); }}
-          style={{ display: 'block', width: '100%', marginTop: '0.3rem' }}
-        >
-          <option value="staff">ABC Staff / Student</option>
-          <option value="parent">ABC Parent</option>
-        </select>
-      </label>
-      {loginAs === 'staff' && (
-        <>
-          <button
-            type="button"
-            onClick={signInWithGoogle}
-            disabled={loading}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
-              background: '#ffffff', color: '#1f2933', border: '1px solid #c9ced6', padding: '0.7rem 1rem',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z" />
-              <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.2 5.6c4.2-3.9 7.1-9.6 7.1-17z" />
-              <path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z" />
-              <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2 1.4-4.7 2.3-8.7 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
-            </svg>
-            Sign in with your school account
-          </button>
-          {!showPassword && (
-            <p style={{ textAlign: 'center', margin: '1rem 0 0' }}>
-              <button
-                type="button"
-                onClick={() => { setShowPassword(true); setError(null); }}
-                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--ink-soft)', textDecoration: 'underline', fontSize: '0.9rem', cursor: 'pointer' }}
-              >
-                Sign in with a password instead
-              </button>
-            </p>
-          )}
-          {showPassword && (
-            <p style={{ textAlign: 'center', color: 'var(--ink-soft)', margin: '0.9rem 0 0.3rem' }}>or sign in with a password</p>
-          )}
-        </>
-      )}
-      {(loginAs === 'parent' || showPassword) && (
-      <form onSubmit={handleSubmit} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        {loginAs === 'staff' ? (
-          <label>
-            Username
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="jbloggs"
-                autoComplete="username"
-                required
-                style={{ flex: 1 }}
-              />
-              {!username.includes('@') && (
-                <span style={{ color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>@{STAFF_STUDENT_DOMAIN}</span>
-              )}
-            </div>
-          </label>
-        ) : (
-          <label>
-            Email
+  const googleIcon = (
+    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.2 5.6c4.2-3.9 7.1-9.6 7.1-17z" />
+      <path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z" />
+      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2 1.4-4.7 2.3-8.7 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
+    </svg>
+  );
+
+  const passwordForm = (
+    <form onSubmit={handleSubmit} className="login-form">
+      {loginAs === 'staff' ? (
+        <label>
+          Username
+          <div className="login-username">
             <input
-              type="email"
-              value={parentEmail}
-              onChange={(e) => setParentEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="jbloggs"
               autoComplete="username"
               required
             />
-          </label>
-        )}
-
-        <label>
-          Password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+            {!username.includes('@') && <span>@{STAFF_STUDENT_DOMAIN}</span>}
+          </div>
         </label>
-        <button type="submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button>
-      </form>
+      ) : (
+        <label>
+          Email address
+          <input
+            type="email"
+            value={parentEmail}
+            onChange={(e) => setParentEmail(e.target.value)}
+            autoComplete="username"
+            placeholder="you@example.com"
+            required
+          />
+        </label>
       )}
-      {error && <p style={{ color: '#a3232c' }}>{error}</p>}
-      {(loginAs === 'parent' || showPassword) && <p><a href="/login/forgot">Forgot password?</a></p>}
+      <label>
+        Password
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+      </label>
+      <button type="submit" className="login-primary" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
+      <a href="/login/forgot" className="login-forgot">Forgot your password?</a>
+    </form>
+  );
+
+  return (
+    <div className="login-page">
+      <div className="login-backdrop" aria-hidden="true" />
+      <div className="login-card">
+        <div className="login-crest-wrap">
+          <img src="/logo.png" alt="Adorable British College" className="login-crest" />
+        </div>
+        <h1>Welcome</h1>
+        <p className="login-sub">Sign in to the Adorable British College portal</p>
+
+        {/* Who you are comes first: the school-account button is only for
+            staff and students, so a parent never sees it. */}
+        <div className="login-roles" role="radiogroup" aria-label="I am a">
+          {[
+            { key: 'staff', title: 'Staff or student', icon: '🎓' },
+            { key: 'parent', title: 'Parent', icon: '👪' },
+          ].map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              role="radio"
+              aria-checked={loginAs === r.key}
+              className={`login-role${loginAs === r.key ? ' is-active' : ''}`}
+              onClick={() => { setLoginAs(r.key); setError(null); }}
+            >
+              <span className="login-role-icon" aria-hidden="true">{r.icon}</span>
+              {r.title}
+            </button>
+          ))}
+        </div>
+
+        {loginAs === 'staff' ? (
+          <>
+            <button type="button" className="login-school" onClick={signInWithGoogle} disabled={loading}>
+              {googleIcon}
+              Sign in with your school account
+            </button>
+            <p className="login-hint">Use your @{STAFF_STUDENT_DOMAIN} email</p>
+            {showPassword ? (
+              <>
+                <div className="login-divider"><span>or with a password</span></div>
+                {passwordForm}
+              </>
+            ) : (
+              <button
+                type="button"
+                className="login-link"
+                onClick={() => { setShowPassword(true); setError(null); }}
+              >
+                Sign in with a password instead
+              </button>
+            )}
+          </>
+        ) : passwordForm}
+
+        {error && <p className="login-error" role="alert">{error}</p>}
+      </div>
+      <p className="login-motto">Esse Maximum, Esse Adoramus</p>
     </div>
   );
 }
