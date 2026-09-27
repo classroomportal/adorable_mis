@@ -21,8 +21,9 @@ const CATEGORY_LABELS = {
 const ALL_YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
 
 function CalendarInner() {
-  const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const { profile, staffRoles } = useAuth();
+  // Matches the calendar_events write policy (migration 205): SMT, plus the admin login.
+  const canEdit = profile?.role === 'admin' || staffRoles.includes('smt');
   const [terms, setTerms] = useState([]);
   const [events, setEvents] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -131,7 +132,64 @@ function CalendarInner() {
         </div>
       </div>
 
-      {isAdmin && (
+      <div className="card">
+        <h2>Events</h2>
+        <form onSubmit={(e) => e.preventDefault()}>
+          <label>
+            Category
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="">All</option>
+              {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+        </form>
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Date</th><th>Event</th><th>Category</th><th>Note</th><th>Result set</th>{canEdit && <th>Actions</th>}</tr></thead>
+            <tbody>
+              {filtered.map((e) => (
+                editingId === e.event_id ? (
+                  <tr key={e.event_id}>
+                    <td><input type="date" value={editDraft.event_date} onChange={(ev) => setEditDraft({ ...editDraft, event_date: ev.target.value })} /></td>
+                    <td><input value={editDraft.event_name} onChange={(ev) => setEditDraft({ ...editDraft, event_name: ev.target.value })} /></td>
+                    <td>
+                      <select value={editDraft.category} onChange={(ev) => setEditDraft({ ...editDraft, category: ev.target.value })}>
+                        {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </td>
+                    <td><input value={editDraft.year_group_note || ''} onChange={(ev) => setEditDraft({ ...editDraft, year_group_note: ev.target.value })} /></td>
+                    <td style={{ textAlign: 'center' }}>
+                      <input type="checkbox" checked={!!editDraft.is_result_set} onChange={(ev) => setEditDraft({ ...editDraft, is_result_set: ev.target.checked })} />
+                    </td>
+                    <td>
+                      <button onClick={saveEdit}>Save</button>{' '}
+                      <button className="secondary" onClick={() => setEditingId(null)}>Cancel</button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={e.event_id}>
+                    <td>{formatUKDate(e.event_date)}</td>
+                    <td>{e.event_name}</td>
+                    <td>{CATEGORY_LABELS[e.category] || e.category}</td>
+                    <td>{e.year_group_note || ''}</td>
+                    <td style={{ textAlign: 'center' }}>{e.is_result_set ? '✅' : ''}</td>
+                    {canEdit && (
+                      <td>
+                        <button className="secondary" onClick={() => startEdit(e)}>Edit</button>{' '}
+                        <button className="secondary" onClick={() => deleteEvent(e.event_id)}>Delete</button>
+                      </td>
+                    )}
+                  </tr>
+                )
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {status && <p>{status}</p>}
+
+      {canEdit && (
         <div className="card">
           <h2>Add event</h2>
           <form onSubmit={addEvent}>
@@ -182,63 +240,6 @@ function CalendarInner() {
           </form>
         </div>
       )}
-
-      {status && <p>{status}</p>}
-
-      <div className="card">
-        <h2>Events</h2>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <label>
-            Category
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-              <option value="">All</option>
-              {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </label>
-        </form>
-        <div className="table-scroll">
-          <table>
-            <thead><tr><th>Date</th><th>Event</th><th>Category</th><th>Note</th><th>Result set</th>{isAdmin && <th>Actions</th>}</tr></thead>
-            <tbody>
-              {filtered.map((e) => (
-                editingId === e.event_id ? (
-                  <tr key={e.event_id}>
-                    <td><input type="date" value={editDraft.event_date} onChange={(ev) => setEditDraft({ ...editDraft, event_date: ev.target.value })} /></td>
-                    <td><input value={editDraft.event_name} onChange={(ev) => setEditDraft({ ...editDraft, event_name: ev.target.value })} /></td>
-                    <td>
-                      <select value={editDraft.category} onChange={(ev) => setEditDraft({ ...editDraft, category: ev.target.value })}>
-                        {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                      </select>
-                    </td>
-                    <td><input value={editDraft.year_group_note || ''} onChange={(ev) => setEditDraft({ ...editDraft, year_group_note: ev.target.value })} /></td>
-                    <td style={{ textAlign: 'center' }}>
-                      <input type="checkbox" checked={!!editDraft.is_result_set} onChange={(ev) => setEditDraft({ ...editDraft, is_result_set: ev.target.checked })} />
-                    </td>
-                    <td>
-                      <button onClick={saveEdit}>Save</button>{' '}
-                      <button className="secondary" onClick={() => setEditingId(null)}>Cancel</button>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr key={e.event_id}>
-                    <td>{formatUKDate(e.event_date)}</td>
-                    <td>{e.event_name}</td>
-                    <td>{CATEGORY_LABELS[e.category] || e.category}</td>
-                    <td>{e.year_group_note || ''}</td>
-                    <td style={{ textAlign: 'center' }}>{e.is_result_set ? '✅' : ''}</td>
-                    {isAdmin && (
-                      <td>
-                        <button className="secondary" onClick={() => startEdit(e)}>Edit</button>{' '}
-                        <button className="secondary" onClick={() => deleteEvent(e.event_id)}>Delete</button>
-                      </td>
-                    )}
-                  </tr>
-                )
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
