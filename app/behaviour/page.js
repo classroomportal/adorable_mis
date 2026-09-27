@@ -542,7 +542,10 @@ function BehaviourPageInner() {
         {status && <p style={{ margin: 0 }}>{status}</p>}
       </form>
 
-      <h2>Recent events</h2>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <h2>Recently logged</h2>
+        <a href="/behaviour/log">Full behaviour log →</a>
+      </div>
       {houseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {houseScope} only (Houseparent view)</p>}
       <div className="table-scroll"><table>
         <thead>

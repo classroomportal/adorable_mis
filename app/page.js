@@ -172,7 +172,7 @@ const TABS = [
     description: 'Core records, behaviour, attendance, results and certificates.',
     items: ({ hasAccess }) => [
       { href: '/students', label: 'Core Data', desc: "Find a student and open their full record." },
-      { href: '/behaviour', label: 'Behaviour Log', desc: "Log and look up behaviour points." },
+      { href: '/behaviour/log', label: 'Behaviour Log', resource: '/behaviour', desc: "Look up, open and correct logged behaviour. Log new behaviour from the big tile at the top." },
       { href: '/attendance', label: 'Attendance', desc: "Take a register for a lesson or mentor group." },
       { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
       { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
