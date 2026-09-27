@@ -65,6 +65,7 @@ function ChangeHistoryInner() {
   const [discountTypes, setDiscountTypes] = useState({});
   const [students, setStudents] = useState({});
   const [parents, setParents] = useState({});
+  const [loginNames, setLoginNames] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -121,6 +122,29 @@ function ChangeHistoryInner() {
       const { data: pa } = await supabase.from('parents').select('parent_id, first_name, last_name').in('parent_id', needParents);
       setParents((prev) => ({ ...prev, ...Object.fromEntries((pa || []).map((p) => [p.parent_id, p])) }));
     }
+    // Entries from before migration 219 have no stored name for a parent or
+    // student who made a change; look their login up (admins only, by RLS).
+    const needLogins = [...new Set([
+      ...list.filter((h) => h.changed_by && !h.changed_by_staff_id && !h.changed_by_name).map((h) => h.changed_by),
+      // ...and whose login an older "login" row is about.
+      ...list.filter((h) => h.table_name === 'profiles' && !h.record_key?.name).map((h) => rowOf(h).id),
+    ].filter((id) => id && !loginNames[id]))];
+    if (needLogins.length) {
+      const { data: pr } = await supabase.from('profiles').select('id, staff_id, parent_id, student_id').in('id', needLogins);
+      const pIds = (pr || []).map((p) => p.parent_id).filter(Boolean);
+      const sIds = (pr || []).map((p) => p.student_id).filter(Boolean);
+      const [{ data: pa }, { data: st }] = await Promise.all([
+        pIds.length ? supabase.from('parents').select('parent_id, first_name, last_name').in('parent_id', pIds) : { data: [] },
+        sIds.length ? supabase.from('students').select('student_id, first_name, last_name').in('student_id', sIds) : { data: [] },
+      ]);
+      const pn = Object.fromEntries((pa || []).map((p) => [p.parent_id, `${p.first_name || ''} ${p.last_name || ''}`.trim()]));
+      const sn = Object.fromEntries((st || []).map((s) => [s.student_id, `${s.first_name} ${s.last_name}`]));
+      const found = Object.fromEntries((pr || [])
+        .map((p) => [p.id, pn[p.parent_id] || sn[p.student_id] || (p.staff_id && staffById[p.staff_id]
+          ? `${staffById[p.staff_id].first_name} ${staffById[p.staff_id].last_name}` : null)])
+        .filter(([, n]) => n));
+      setLoginNames((prev) => ({ ...prev, ...found }));
+    }
     setRows(list);
     setLoading(false);
   }
@@ -142,9 +166,17 @@ function ChangeHistoryInner() {
     return p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : `Parent #${id}`;
   }
 
+  // Staff by their staff record; anyone else by the name the database stored
+  // with the entry (migration 219), or, for entries from before that, by
+  // looking up their login (only admins can read other people's logins, so
+  // SMT see the role). A change made through the database connection has no
+  // sign-in, and carries the note it was made with ("Principal (direct)").
   function changedBy(h) {
     if (h.changed_by_staff_id) return staffName(h.changed_by_staff_id);
+    const name = h.changed_by_name || loginNames[h.changed_by];
+    if (name) return `${name} (${h.changed_by_role || 'account'})`;
     if (h.changed_by_role) return h.changed_by_role === 'admin' ? 'Admin account' : `${h.changed_by_role} account`;
+    if (h.note) return h.note;
     return 'Directly in the database (no one signed in)';
   }
 
@@ -172,8 +204,12 @@ function ChangeHistoryInner() {
         return `Role "${r.role_name}" for ${staffName(r.staff_id)}`;
       case 'role_permissions':
         return `Permission: ${r.role_name} can open ${r.resource_key}`;
-      case 'profiles':
-        return `Login ${r.email || ''} (${r.role || ''})`;
+      case 'profiles': {
+        // Name and sign-in email stored with the entry since migration 219.
+        const k = h.record_key || {};
+        const who = [k.name || loginNames[r.id], k.email || r.email].filter(Boolean).join(', ');
+        return `Login${who ? ` of ${who}` : ''} (${r.role || ''})`;
+      }
       case 'student_parent':
         return `Parent link: ${parentName(r.parent_id)}`;
       default:

@@ -139,9 +139,15 @@ function GradeHistoryInner() {
     return s ? `${s.first_name} ${s.last_name}${s.staff_code ? ` (${s.staff_code})` : ''}` : `staff #${id}`;
   }
 
+  // Staff by their staff record; anyone else by the name the database stored
+  // with the entry (migration 219). A change made through the database
+  // connection has no sign-in, and carries the note it was made with
+  // ("Principal (direct)") if one was set.
   function changedBy(h) {
     if (h.changed_by_staff_id) return staffName(h.changed_by_staff_id);
+    if (h.changed_by_name) return `${h.changed_by_name} (${h.changed_by_role || 'account'})`;
     if (h.changed_by_role) return h.changed_by_role === 'admin' ? 'Admin account' : `${h.changed_by_role} account`;
+    if (h.note) return h.note;
     return 'Directly in the database (no one signed in)';
   }
 
