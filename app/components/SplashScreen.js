@@ -30,6 +30,8 @@ export default function SplashScreen({ onDone }) {
   }, []);
 
   const hasBirthdays = birthdays && birthdays.length > 0;
+  // On a birthday day the Formwork card shrinks so the names are the focus.
+  const compact = hasBirthdays;
 
   useEffect(() => {
     if (!asked) return undefined;
@@ -41,7 +43,7 @@ export default function SplashScreen({ onDone }) {
 
   return (
     <div
-      onClick={hasBirthdays ? () => onDone() : undefined}
+      onClick={() => onDone()}
       style={{
         position: 'fixed',
         inset: 0,
@@ -62,16 +64,17 @@ export default function SplashScreen({ onDone }) {
     >
       <div
         style={{
-          width: 'min(84vw, 380px)',
-          height: 'min(84vw, 380px)',
+          width: compact ? 'min(56vw, 210px)' : 'min(84vw, 380px)',
+          height: compact ? 'min(56vw, 210px)' : 'min(84vw, 380px)',
+          flexShrink: 0,
           background: '#2F6FA8',
           borderRadius: '24px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '16px',
-          padding: '2rem',
+          gap: compact ? '8px' : '16px',
+          padding: compact ? '1rem' : '2rem',
           boxSizing: 'border-box',
           position: 'relative',
           overflow: 'hidden',
@@ -82,8 +85,8 @@ export default function SplashScreen({ onDone }) {
 
         <div
           style={{
-            width: 80,
-            height: 80,
+            width: compact ? 46 : 80,
+            height: compact ? 46 : 80,
             borderRadius: '50%',
             background: '#ffffff',
             display: 'flex',
@@ -92,29 +95,33 @@ export default function SplashScreen({ onDone }) {
             zIndex: 1,
           }}
         >
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#2F6FA8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width={compact ? 22 : 38} height={compact ? 22 : 38} viewBox="0 0 24 24" fill="none" stroke="#2F6FA8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             <path d="M9 12l2 2 4-4" />
           </svg>
         </div>
 
         <div style={{ textAlign: 'center', zIndex: 1 }}>
-          <div style={{ fontSize: '11px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.75)', marginBottom: '6px', textTransform: 'uppercase' }}>
-            Every school, organised
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 500, color: '#ffffff' }}>Formwork</div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '6px', fontStyle: 'italic' }}>
+          {!compact && (
+            <div style={{ fontSize: '11px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.75)', marginBottom: '6px', textTransform: 'uppercase' }}>
+              Every school, organised
+            </div>
+          )}
+          <div style={{ fontSize: compact ? '18px' : '24px', fontWeight: 500, color: '#ffffff' }}>Formwork</div>
+          <div style={{ fontSize: compact ? '10px' : '12px', color: 'rgba(255,255,255,0.7)', marginTop: compact ? '3px' : '6px', fontStyle: 'italic' }}>
             Esse Maximum, Esse Adoramus
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '6px', marginTop: '6px', zIndex: 1 }}>
-          <div style={{ width: 20, height: 4, borderRadius: 2, background: '#ffffff' }} />
-          <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
-          <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
-        </div>
+        {!compact && (
+          <div style={{ display: 'flex', gap: '6px', marginTop: '6px', zIndex: 1 }}>
+            <div style={{ width: 20, height: 4, borderRadius: 2, background: '#ffffff' }} />
+            <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
+            <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
+          </div>
+        )}
 
-        <div style={{ position: 'absolute', bottom: 18, fontSize: '11px', color: 'rgba(255,255,255,0.65)', zIndex: 1 }}>
+        <div style={{ position: 'absolute', bottom: compact ? 10 : 18, fontSize: compact ? '9px' : '11px', color: 'rgba(255,255,255,0.65)', zIndex: 1 }}>
           © 2026 CBT. All rights reserved.
         </div>
       </div>
@@ -148,7 +155,15 @@ export default function SplashScreen({ onDone }) {
               </li>
             ))}
           </ul>
-          <div style={{ fontSize: '11px', color: '#5b6472', marginTop: '10px' }}>Tap to continue</div>
+          {/* A real button, not text: some phones (iPhones especially) don't
+              treat a tap on plain text as a click, so tapping did nothing. */}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDone(); }}
+            style={{ marginTop: '12px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}
+          >
+            Continue
+          </button>
         </div>
       )}
     </div>
