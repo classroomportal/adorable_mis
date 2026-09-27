@@ -6,8 +6,10 @@
 -- the database as base64 JPEG text, like staff photos (lib/photo.js), rather
 -- than in Storage: parents then reach it through the same row-level security
 -- as the event itself, and it is in the database backups. The browser shrinks
--- it to at most 1280px before upload, which puts a picture at roughly
--- 150-250 KB of text; the check below refuses anything much bigger.
+-- it to 800px on the long side at JPEG quality 0.6 before upload: enough to
+-- see on a phone, not high definition. Real iPad photos (1.1-1.8 MB) came out
+-- at 18-35 KB. The check below refuses anything over ~150 KB, so nothing
+-- large can be stored even if it doesn't come through the app.
 --
 -- A picture is its own row, and events point at it. Logging for a group (a
 -- whole boarding house) stores the picture once and links every event to it,
@@ -23,7 +25,7 @@
 
 create table public.behaviour_photos (
   photo_id serial primary key,
-  image_jpeg_base64 text not null check (length(image_jpeg_base64) <= 700000),
+  image_jpeg_base64 text not null check (length(image_jpeg_base64) <= 200000),
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
   uploaded_by integer references public.staff(staff_id),
   created_at timestamptz not null default now(),

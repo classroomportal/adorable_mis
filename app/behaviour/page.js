@@ -277,17 +277,18 @@ function BehaviourPageInner() {
 
   const isSerious = form.type === 'negative' && Number(form.points) <= -5 && form.points !== '';
 
-  // Shrink on the device before upload: a phone photo is 3-5 MB, this is
-  // ~150-250 KB. If an unusually detailed picture is still over the database
-  // limit, try once more smaller.
+  // Shrink on the device before upload: 800px on the long side is plenty to
+  // see on a phone without being high definition. Measured on real iPad
+  // photos (1.1-1.8 MB), that comes out at 18-35 KB. An unusually detailed
+  // picture that is still over 100 KB is tried again at 640px.
   async function handlePhotoChosen(e) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     setPhotoBusy(true);
     try {
-      let b64 = await resizePhotoToBase64(file, 1280, 0.72);
-      if (b64.length > 690000) b64 = await resizePhotoToBase64(file, 1024, 0.6);
+      let b64 = await resizePhotoToBase64(file, 800, 0.6);
+      if (b64.length > 136000) b64 = await resizePhotoToBase64(file, 640, 0.5);
       setPhoto(b64);
     } catch {
       setStatus("That file couldn't be read as a picture.");
