@@ -41,7 +41,7 @@ function InboxInner() {
           style={{ cursor: 'pointer', fontWeight: item.read_at ? 400 : 700 }}
         >
           <p>{item.messages?.subject}</p>
-          <p style={{ fontWeight: 400 }}>{item.messages?.body}</p>
+          <p style={{ fontWeight: 400, whiteSpace: 'pre-line' }}>{item.messages?.body}</p>
           <p style={{ fontWeight: 400, color: '#666', fontSize: '0.85rem' }}>
             {item.messages?.sent_at && new Date(item.messages.sent_at).toLocaleString()}
             {!item.read_at && ' — unread'}

@@ -37,14 +37,29 @@ function ComposeInner() {
   const [receipts, setReceipts] = useState([]);
   const [emails, setEmails] = useState([]);
   const [emailFilter, setEmailFilter] = useState('');
+  const [noticeReads, setNoticeReads] = useState({}); // message_id -> [{ recipient_name, read_at }]
 
   useEffect(() => {
     if (!allowed) return;
     supabase
       .from('messages')
-      .select('id, subject, body, target_type, target_value, recipient_count, email_sent, sent_at')
+      .select('id, subject, body, sent_by, target_type, target_value, recipient_count, email_sent, sent_at')
       .order('sent_at', { ascending: false })
-      .then(({ data }) => setMessages(data || []));
+      .then(async ({ data }) => {
+        setMessages(data || []);
+        // Automatic notices (detention set/reminder/cancelled, migration 203)
+        // go to one student each, so show who read them inline rather than
+        // behind a button.
+        const ids = (data || []).filter((m) => !m.sent_by).map((m) => m.id);
+        if (!ids.length) return;
+        const { data: reads } = await supabase
+          .from('message_read_status')
+          .select('message_id, recipient_name, read_at')
+          .in('message_id', ids);
+        const byMessage = {};
+        (reads || []).forEach((row) => { (byMessage[row.message_id] ||= []).push(row); });
+        setNoticeReads(byMessage);
+      });
   }, [allowed]);
 
   // Emails Formwork sends by itself (welcome emails, behaviour alerts,
@@ -69,10 +84,13 @@ function ComposeInner() {
 
   if (!allowed) return <p>Only SMT, Pastoral, or School Office can view message history.</p>;
 
+  const composed = messages.filter((m) => m.sent_by);
+  const notices = messages.filter((m) => !m.sent_by);
+
   return (
     <div>
       <h1>Message history</h1>
-      {messages.map((m) => {
+      {composed.map((m) => {
         const readCount = expanded === m.id ? receipts.filter((r) => r.read_at).length : null;
         return (
           <div className="card" key={m.id}>
@@ -97,7 +115,35 @@ function ComposeInner() {
           </div>
         );
       })}
-      {messages.length === 0 && <p>No messages sent from Compose yet.</p>}
+      {composed.length === 0 && <p>No messages sent from Compose yet.</p>}
+
+      <div className="card">
+        <h2>Detention notices in Formwork inboxes</h2>
+        <p style={{ color: '#666', fontSize: '0.85rem' }}>
+          Sent to the student&apos;s Formwork inbox as well as by email. Read means they opened it in Formwork.
+        </p>
+        {notices.length === 0 ? <p>None yet.</p> : (
+          <div className="table-scroll"><table>
+            <thead><tr><th>Notice</th><th>Student</th><th>Read</th></tr></thead>
+            <tbody>
+              {notices.map((m) => {
+                const reads = noticeReads[m.id] || [];
+                return (
+                  <tr key={m.id}>
+                    <td>{m.subject}<div style={{ color: '#666', fontSize: '0.8rem' }}>{new Date(m.sent_at).toLocaleString()}</div></td>
+                    <td>{[...new Set(reads.map((x) => x.recipient_name).filter(Boolean))].join(', ') || '—'}</td>
+                    <td>
+                      {reads.some((x) => x.read_at)
+                        ? `Read ${new Date(reads.filter((x) => x.read_at).map((x) => x.read_at).sort()[0]).toLocaleString()}`
+                        : <strong>Not read yet</strong>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table></div>
+        )}
+      </div>
 
       <div className="card">
         <h2>Automatic emails</h2>
