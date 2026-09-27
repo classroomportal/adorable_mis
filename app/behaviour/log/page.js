@@ -13,8 +13,8 @@ const LIMIT = 200;
 // The Behaviour Log: look up behaviour that has already been logged, and
 // open or correct it. Logging new behaviour is /behaviour, reached from the
 // big "Log behaviour" tile on the home page, so this page has no add form.
-// A house-only houseparent (my_house_access().exclusive) sees their house,
-// as on /behaviour.
+// A house-only houseparent (my_house_access().exclusive) sees their house
+// here. Logging on /behaviour is not limited to it.
 function BehaviourLogInner() {
   const { profile } = useAuth();
   const canEdit = useCanEditEventComment();

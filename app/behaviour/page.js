@@ -38,9 +38,6 @@ function BehaviourPageInner() {
   const [restaurants, setRestaurants] = useState([]);
   const [yearGroups, setYearGroups] = useState([]);
   const [houseScope, setHouseScope] = useState(null);
-  // Assume locked until my_house_access() answers, so a slow RPC never briefly
-  // shows other houses to a house-only houseparent.
-  const [houseScopeExclusive, setHouseScopeExclusive] = useState(true);
   const [showAllHouses, setShowAllHouses] = useState(!!searchParams.get('classId'));
 
   // /attendance links here as ?classId=<lesson>&date=<date> ("Log behaviour for
@@ -92,18 +89,17 @@ function BehaviourPageInner() {
     setEvents(data || []);
   }
 
-  // houseScope NULL means unscoped (admin, pastoral, SMT, etc.) — see
-  // everything, same as today. A house means the viewer is a Houseparent, and
-  // that house is their default: the group picker defaults to it, the
-  // single-student list narrows to it, and the recent-events table only
-  // shows it. A houseparent who also teaches or mentors (exclusive false, see
-  // migration 126) can untick that and log behaviour for any student they meet
-  // during the day; for a house-only houseparent the pickers stay locked.
-  const canWidenScope = !!houseScope && !houseScopeExclusive;
-  const activeHouseScope = houseScope && !(canWidenScope && showAllHouses) ? houseScope : null;
+  // houseScope NULL means unscoped (admin, pastoral, SMT, etc.). A house
+  // means the viewer is a Houseparent: the group picker starts on their house
+  // and the recent-events table shows only it until they untick the box.
+  // Houseparents award merits and demerits to students from other houses
+  // (evening duty, cover, whole-boarding events), so none of the pickers are
+  // locked to their own house, including for a house-only houseparent
+  // (my_house_access().exclusive). RLS on behaviour_events has always let any
+  // member of staff log for any student; the old lock was a page filter only.
+  const activeHouseScope = houseScope && !showAllHouses ? houseScope : null;
 
   const scopedEvents = activeHouseScope ? events.filter((e) => e.students?.boarding_house === activeHouseScope) : events;
-  const scopedAllStudents = activeHouseScope ? allStudents.filter((s) => s.boarding_house === activeHouseScope) : allStudents;
 
   // Room numbers restart at 1 in every house — there is a room 1 in Birmingham
   // and a room 1 in Buckingham — so the list is always derived from the house
@@ -160,7 +156,6 @@ function BehaviourPageInner() {
       const { data: access } = await supabase.rpc('my_house_access');
       if (access?.house) {
         setHouseScope(access.house);
-        setHouseScopeExclusive(!!access.exclusive);
         // Only default to the house when the viewer arrived here cold. A lesson
         // link already says which group they want.
         if (!linkedClassId) {
@@ -227,21 +222,6 @@ function BehaviourPageInner() {
   }
 
   useEffect(() => { loadRoster(); }, [groupType, classId, boardingHouse, restaurant, yearFilter, roomFilter, allStudents]);
-
-  // Coming back to the house-only view drops any group picked while the whole
-  // school was visible, which the re-locked pickers could otherwise not clear.
-  // This runs from the toggle rather than an effect on activeHouseScope: as an
-  // effect it also fired on first load and wiped a ?classId= lesson link.
-  function handleHouseOnlyChange(houseOnly) {
-    setShowAllHouses(!houseOnly);
-    if (!houseOnly || !houseScope) return;
-    setGroupType('boarding');
-    setBoardingHouse(houseScope);
-    setClassId('');
-    setRestaurant('');
-    setYearFilter('');
-    setRoomFilter(new Set());
-  }
 
   function handleGroupTypeChange(newType) {
     setGroupType(newType);
@@ -382,20 +362,6 @@ function BehaviourPageInner() {
     <div>
       <h1>Log behaviour</h1>
 
-      {canWidenScope && (
-        <p style={{ background: '#fdecad', padding: '0.4rem 0.6rem', borderRadius: '4px' }}>
-          <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <input
-              type="checkbox"
-              checked={!showAllHouses}
-              onChange={(e) => handleHouseOnlyChange(e.target.checked)}
-              style={{ flex: '0 0 auto', width: 'auto' }}
-            />
-            <span>{houseScope} only (Houseparent view) — untick to log for any student you teach</span>
-          </label>
-        </p>
-      )}
-
       {/* One compact card: who, then what. The app-wide form/label rules lay
           fields out in a wrapping row, which in a column stretched every
           label to 140px tall — the big gaps between fields. .behaviour-log
@@ -405,7 +371,7 @@ function BehaviourPageInner() {
         <div className="bl-row">
           <label>
             Log for
-            <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)} disabled={!!activeHouseScope}>
+            <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)}>
               <option value="">One student</option>
               <option value="mentor">My lesson or mentor group</option>
               <option value="boarding">Boarding house</option>
@@ -418,7 +384,7 @@ function BehaviourPageInner() {
               Student
               <select value={singleStudentId} onChange={(e) => setSingleStudentId(e.target.value)}>
                 <option value="">Select...</option>
-                {scopedAllStudents.map((s) => (
+                {allStudents.map((s) => (
                   <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name}</option>
                 ))}
               </select>
@@ -463,10 +429,9 @@ function BehaviourPageInner() {
                 <select
                   value={boardingHouse}
                   onChange={(e) => { setBoardingHouse(e.target.value); setRoomFilter(new Set()); }}
-                  disabled={!!activeHouseScope}
                 >
                   <option value="">Select...</option>
-                  {(activeHouseScope ? [activeHouseScope] : boardingHouses).map((h) => <option key={h} value={h}>{h}</option>)}
+                  {boardingHouses.map((h) => <option key={h} value={h}>{h}</option>)}
                 </select>
               </label>
               <label>
@@ -610,7 +575,17 @@ function BehaviourPageInner() {
         <h2>Recently logged</h2>
         <a href="/behaviour/log">Full behaviour log →</a>
       </div>
-      {houseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {houseScope} only (Houseparent view)</p>}
+      {houseScope && (
+        <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', color: '#666', fontSize: '0.85rem' }}>
+          <input
+            type="checkbox"
+            checked={!showAllHouses}
+            onChange={(e) => setShowAllHouses(!e.target.checked)}
+            style={{ flex: '0 0 auto', width: 'auto' }}
+          />
+          <span>{houseScope} only (Houseparent view)</span>
+        </label>
+      )}
       <div className="table-scroll"><table>
         <thead>
           <tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th><th></th>{profile?.role === 'admin' && <th></th>}</tr>
