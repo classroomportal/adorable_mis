@@ -6,8 +6,8 @@ import RequireResource from '../../RequireResource';
 import { formatUKDate } from '../../../lib/formatDate';
 import { schoolToday, schoolDateOffset, SCHOOL_TIMEZONE } from '../../../lib/schoolTime';
 
-// Changes to registers, fees, behaviour, access and parent links, from
-// change_history (migration 218). The database writes it and nobody can
+// Changes to registers, fees, behaviour, access, parent links and email
+// reply settings, from change_history (migrations 218, 226). The database writes it and nobody can
 // edit it; RLS limits reading to SMT and admins whatever this page shows.
 // Grades have their own page, /assessments/grade-history.
 //
@@ -21,9 +21,10 @@ const AREAS = {
   behaviour: 'Behaviour',
   access: 'Roles & logins',
   parent_links: 'Parent links',
+  email: 'Email replies',
 };
 const ACTIONS = { INSERT: 'Added', UPDATE: 'Changed', DELETE: 'Removed' };
-const HIDDEN_FIELDS = new Set(['updated_at', 'created_at', 'is_demo']);
+const HIDDEN_FIELDS = new Set(['updated_at', 'updated_by', 'created_at', 'is_demo']);
 
 function whenLabel(ts) {
   return new Date(ts).toLocaleString('en-GB', {
@@ -44,6 +45,7 @@ function nextDay(isoDate) {
 function show(v) {
   if (v === null || v === undefined || v === '') return '—';
   if (typeof v === 'boolean') return v ? 'yes' : 'no';
+  if (Array.isArray(v)) return v.length ? v.join(', ') : '—';
   return String(v);
 }
 
@@ -212,6 +214,8 @@ function ChangeHistoryInner() {
       }
       case 'student_parent':
         return `Parent link: ${parentName(r.parent_id)}`;
+      case 'email_reply_routes':
+        return `Where replies go: ${r.label}`;
       default:
         return h.table_name;
     }
