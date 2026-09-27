@@ -21,7 +21,7 @@ function compareRooms(a, b) {
 }
 
 function BehaviourPageInner() {
-  const { isPastoralOrSmt, profile } = useAuth();
+  const { profile } = useAuth();
   const canEditComment = useCanEditEventComment();
   const [openEvent, setOpenEvent] = useState(null); // event_id whose comment is shown
   const searchParams = useSearchParams();
@@ -31,7 +31,6 @@ function BehaviourPageInner() {
   const [allStudents, setAllStudents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
-  const [alerts, setAlerts] = useState([]);
 
   const [boardingHouses, setBoardingHouses] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
@@ -88,33 +87,17 @@ function BehaviourPageInner() {
     setEvents(data || []);
   }
 
-  async function loadAlerts() {
-    const { data } = await supabase
-      .from('behaviour_events')
-      .select('event_id, event_date, category, points, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
-      .eq('type', 'negative')
-      // Alerts are for the serious stuff only (-3, -4, -5); -1/-2 are routine
-      // low-level incidents and still show under Recent events.
-      .lte('points', -3)
-      .eq('is_demo', !!profile?.is_demo_account)
-      .is('voided_at', null)
-      .gte('event_date', schoolDateOffset(-7))
-      .order('event_date', { ascending: false });
-    setAlerts(data || []);
-  }
-
   // houseScope NULL means unscoped (admin, pastoral, SMT, etc.) — see
   // everything, same as today. A house means the viewer is a Houseparent, and
   // that house is their default: the group picker defaults to it, the
-  // single-student list narrows to it, and the alerts/recent-events tables only
-  // show it. A houseparent who also teaches or mentors (exclusive false, see
+  // single-student list narrows to it, and the recent-events table only
+  // shows it. A houseparent who also teaches or mentors (exclusive false, see
   // migration 126) can untick that and log behaviour for any student they meet
   // during the day; for a house-only houseparent the pickers stay locked.
   const canWidenScope = !!houseScope && !houseScopeExclusive;
   const activeHouseScope = houseScope && !(canWidenScope && showAllHouses) ? houseScope : null;
 
   const scopedEvents = activeHouseScope ? events.filter((e) => e.students?.boarding_house === activeHouseScope) : events;
-  const scopedAlerts = activeHouseScope ? alerts.filter((a) => a.students?.boarding_house === activeHouseScope) : alerts;
   const scopedAllStudents = activeHouseScope ? allStudents.filter((s) => s.boarding_house === activeHouseScope) : allStudents;
 
   // Room numbers restart at 1 in every house — there is a room 1 in Birmingham
@@ -195,7 +178,6 @@ function BehaviourPageInner() {
     }
     loadOptions();
     loadEvents();
-    loadAlerts();
     // profile arrives after the first render, and staff_id decides which
     // classes are "mine", so this re-runs once it lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -341,7 +323,6 @@ function BehaviourPageInner() {
       setForm({ ...form, category: '', points: '', description: '' });
       if (usingGroup) selectAll(); else setSingleStudentId('');
       loadEvents();
-      loadAlerts();
     }
   }
 
@@ -349,12 +330,14 @@ function BehaviourPageInner() {
     if (!window.confirm('Delete this behaviour event? This cannot be undone.')) return;
     const { error } = await supabase.from('behaviour_events').delete().eq('event_id', eventId);
     if (error) setStatus(`Error: ${error.message}`);
-    else { loadEvents(); loadAlerts(); }
+    else loadEvents();
   }
+
+  const pointsLabel = form.points === '' ? null : `${Number(form.points) > 0 ? '+' : ''}${form.points} pts`;
 
   return (
     <div>
-      <h1>Behaviour Events</h1>
+      <h1>Log behaviour</h1>
 
       {canWidenScope && (
         <p style={{ background: '#fdecad', padding: '0.4rem 0.6rem', borderRadius: '4px' }}>
@@ -370,121 +353,112 @@ function BehaviourPageInner() {
         </p>
       )}
 
-      {isPastoralOrSmt && (
-        <div className="card">
-          <h2>Behaviour Alerts — last 7 days ({scopedAlerts.length})</h2>
-          {activeHouseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {activeHouseScope} only (Houseparent view)</p>}
-          {scopedAlerts.length === 0 ? <p>No events of -3 points or worse logged in the last 7 days.</p> : (
-            <div className="table-scroll"><table>
-              <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th></tr></thead>
-              <tbody>
-                {scopedAlerts.map((a) => (
-                  <tr key={a.event_id} className="student-link" onClick={() => window.location.href = `/students/${a.students?.student_id}`}>
-                    <td>{formatUKDate(a.event_date)}</td>
-                    <td>{a.students?.first_name} {a.students?.last_name}</td>
-                    <td>{a.category ?? '—'}</td>
-                    <td>{a.points ?? '—'}</td>
-                    <td>{a.staff ? `${a.staff.first_name} ${a.staff.last_name}` : '—'}</td>
-                  </tr>
+      {/* One compact card: who, then what. The app-wide form/label rules lay
+          fields out in a wrapping row, which in a column stretched every
+          label to 140px tall — the big gaps between fields. .behaviour-log
+          sets its own layout instead. */}
+      <form onSubmit={handleSubmit} className="card behaviour-log">
+        <div className="bl-section-title">Who</div>
+        <div className="bl-row">
+          <label>
+            Log for
+            <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)} disabled={!!activeHouseScope}>
+              <option value="">One student</option>
+              <option value="mentor">My lesson or mentor group</option>
+              <option value="boarding">Boarding house</option>
+              <option value="restaurant">Restaurant</option>
+            </select>
+          </label>
+
+          {!groupType && (
+            <label>
+              Student
+              <select value={singleStudentId} onChange={(e) => setSingleStudentId(e.target.value)}>
+                <option value="">Select...</option>
+                {scopedAllStudents.map((s) => (
+                  <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name}</option>
                 ))}
-              </tbody>
-            </table></div>
+              </select>
+            </label>
+          )}
+
+          {groupType === 'mentor' && (
+            <label>
+              Class or mentor group
+              <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+                <option value="">Select...</option>
+                {extraClasses.map((c) => (
+                  <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
+                ))}
+                {myClasses.length > 0 && (
+                  <optgroup label="My lessons">
+                    {myClasses.map((c) => (
+                      <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {mentorClasses.length > 0 && (
+                  <optgroup label="Mentor groups">
+                    {mentorClasses.map((c) => (
+                      <option key={c.class_id} value={c.class_id}>{c.class_code}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              {!hasClassOptions && (
+                <span style={{ color: '#5a6b8c', fontSize: '0.85rem' }}>
+                  You have no timetabled lessons or mentor groups.
+                </span>
+              )}
+            </label>
+          )}
+
+          {groupType === 'boarding' && (
+            <>
+              <label>
+                Boarding house
+                <select
+                  value={boardingHouse}
+                  onChange={(e) => { setBoardingHouse(e.target.value); setRoomFilter(new Set()); }}
+                  disabled={!!activeHouseScope}
+                >
+                  <option value="">Select...</option>
+                  {(activeHouseScope ? [activeHouseScope] : boardingHouses).map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </label>
+              <label>
+                Year group
+                <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+                  <option value="">All years</option>
+                  {yearGroups.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </label>
+            </>
+          )}
+
+          {groupType === 'restaurant' && (
+            <label>
+              Restaurant
+              <select value={restaurant} onChange={(e) => setRestaurant(e.target.value)}>
+                <option value="">Select...</option>
+                {restaurants.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </label>
           )}
         </div>
-      )}
-
-      <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        <label>
-          Group (optional — pick to log for several students at once)
-          <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)} disabled={!!activeHouseScope}>
-            <option value="">No group — pick one student below</option>
-            <option value="mentor">My lesson or mentor group</option>
-            <option value="boarding">Boarding house</option>
-            <option value="restaurant">Restaurant</option>
-          </select>
-        </label>
-
-        {groupType === 'mentor' && (
-          <label style={{ marginTop: '0.5rem' }}>
-            Class or mentor group
-            <select value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="">Select...</option>
-              {extraClasses.map((c) => (
-                <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
-              ))}
-              {myClasses.length > 0 && (
-                <optgroup label="My lessons">
-                  {myClasses.map((c) => (
-                    <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
-                  ))}
-                </optgroup>
-              )}
-              {mentorClasses.length > 0 && (
-                <optgroup label="Mentor groups">
-                  {mentorClasses.map((c) => (
-                    <option key={c.class_id} value={c.class_id}>{c.class_code}</option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            {!hasClassOptions && (
-              <span style={{ color: '#5a6b8c', fontSize: '0.85rem' }}>
-                You have no timetabled lessons or mentor groups.
-              </span>
-            )}
-          </label>
-        )}
-
-        {groupType === 'boarding' && (
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-            <label style={{ flex: 1, minWidth: '160px' }}>
-              Boarding house
-              <select
-                value={boardingHouse}
-                onChange={(e) => { setBoardingHouse(e.target.value); setRoomFilter(new Set()); }}
-                disabled={!!activeHouseScope}
-              >
-                <option value="">Select...</option>
-                {(activeHouseScope ? [activeHouseScope] : boardingHouses).map((h) => <option key={h} value={h}>{h}</option>)}
-              </select>
-            </label>
-            <label style={{ flex: 1, minWidth: '120px' }}>
-              Year group (optional)
-              <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
-                <option value="">All years</option>
-                {yearGroups.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </label>
-          </div>
-        )}
 
         {groupType === 'boarding' && boardingHouse && roomsInHouse.length > 0 && (
-          <div style={{ marginTop: '0.75rem' }}>
-            <div style={{ fontSize: '0.9rem', marginBottom: '0.35rem' }}>
-              Rooms (optional — tick none for the whole house)
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
+          <div>
+            <div className="bl-hint">Rooms — tick none for the whole house</div>
+            <div className="bl-chips">
               {roomsInHouse.map((room) => (
-                <label
-                  key={room}
-                  style={{
-                    display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.3rem', margin: 0,
-                    border: '1px solid #d3d9f0', borderRadius: '999px', padding: '0.15rem 0.6rem',
-                    fontSize: '0.85rem', cursor: 'pointer',
-                    background: roomFilter.has(room) ? '#eef1fb' : 'transparent',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={roomFilter.has(room)}
-                    onChange={() => toggleRoom(room)}
-                    style={{ flex: '0 0 auto', width: 'auto' }}
-                  />
+                <label key={room} className={`bl-chip${roomFilter.has(room) ? ' on' : ''}`}>
+                  <input type="checkbox" checked={roomFilter.has(room)} onChange={() => toggleRoom(room)} />
                   <span>{room}</span>
                 </label>
               ))}
               {roomFilter.size > 0 && (
-                <button type="button" className="secondary" onClick={() => setRoomFilter(new Set())} style={{ fontSize: '0.8rem' }}>
+                <button type="button" className="secondary bl-small" onClick={() => setRoomFilter(new Set())}>
                   Whole house
                 </button>
               )}
@@ -492,145 +466,119 @@ function BehaviourPageInner() {
           </div>
         )}
 
-        {groupType === 'restaurant' && (
-          <label style={{ marginTop: '0.5rem' }}>
-            Restaurant
-            <select value={restaurant} onChange={(e) => setRestaurant(e.target.value)}>
-              <option value="">Select...</option>
-              {restaurants.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </label>
+        {usingGroup && (
+          loadingRoster ? <p style={{ margin: 0 }}>Loading students…</p> : roster.length === 0 ? (
+            <p style={{ margin: 0 }}>No students in this group yet.</p>
+          ) : (
+            <div>
+              <div className="bl-roster-bar">
+                <span>{selected.size} of {roster.length} selected</span>
+                <button type="button" className="secondary bl-small" onClick={selectAll}>All</button>
+                <button type="button" className="secondary bl-small" onClick={selectNone}>None</button>
+              </div>
+              <div className="bl-roster">
+                {roster.map((s) => (
+                  <label key={s.student_id}>
+                    <input type="checkbox" checked={selected.has(s.student_id)} onChange={() => toggleStudent(s.student_id)} />
+                    <span>{s.first_name} {s.last_name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )
         )}
 
-        {usingGroup ? (
-          <div style={{ marginTop: '0.75rem' }}>
-            {loadingRoster ? <p>Loading roster...</p> : roster.length === 0 ? (
-              <p>No students in this group yet.</p>
-            ) : (
-              <>
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <button type="button" className="secondary" onClick={selectAll}>Select all</button>
-                  <button type="button" className="secondary" onClick={selectNone}>Select none</button>
-                  <span style={{ alignSelf: 'center', color: '#666', fontSize: '0.9em' }}>{selected.size} of {roster.length} selected</span>
-                </div>
-                <div className="table-scroll" style={{ maxHeight: '260px', overflowY: 'auto' }}>
-                  {roster.map((s) => (
-                    <label key={s.student_id} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0' }}>
-                      <input type="checkbox" checked={selected.has(s.student_id)} onChange={() => toggleStudent(s.student_id)} style={{ flex: '0 0 auto', width: 'auto' }} />
-                      <span>{s.first_name} {s.last_name}</span>
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
+        <div className="bl-section-title">What</div>
+        <div className="bl-row">
+          <label>
+            {/* Devices set to US format show the picker as MM/DD/YYYY, so the
+                date is repeated here the UK way. */}
+            <span>Date{form.event_date && <span className="bl-date-hint">{formatUKDate(form.event_date, { weekday: true })}</span>}</span>
+            <input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required />
+          </label>
+          <div className="bl-field">
+            Type
+            <div className="bl-seg" role="group" aria-label="Type">
+              <button type="button" className={form.type === 'positive' ? 'on-pos' : ''} onClick={() => handleTypeChange('positive')} aria-pressed={form.type === 'positive'}>
+                Positive
+              </button>
+              <button type="button" className={form.type === 'negative' ? 'on-neg' : ''} onClick={() => handleTypeChange('negative')} aria-pressed={form.type === 'negative'}>
+                Negative
+              </button>
+            </div>
           </div>
-        ) : !groupType ? (
-          <label style={{ marginTop: '0.75rem' }}>
-            Student
-            <select value={singleStudentId} onChange={(e) => setSingleStudentId(e.target.value)}>
+          <label>
+            <span>Category{pointsLabel && <strong className={`bl-points ${form.type}`}>{pointsLabel}</strong>}</span>
+            <select value={form.category} onChange={(e) => handleCategoryChange(e.target.value)} required>
               <option value="">Select...</option>
-              {scopedAllStudents.map((s) => (
-                <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name}</option>
+              {categoriesForType.map((c) => (
+                <option key={c.category_id} value={c.name}>{c.name} ({c.default_points > 0 ? '+' : ''}{c.default_points})</option>
               ))}
             </select>
           </label>
-        ) : null}
-      </div>
-
-      <form onSubmit={handleSubmit} className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        <label>
-          Date
-          <input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} required />
-          {form.event_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(form.event_date)}</span>}
-        </label>
-
-        <label>
-          Type
-          <select value={form.type} onChange={(e) => handleTypeChange(e.target.value)}>
-            <option value="positive">Positive</option>
-            <option value="negative">Negative</option>
-          </select>
-        </label>
-
-        <label>
-          Category
-          <select value={form.category} onChange={(e) => handleCategoryChange(e.target.value)} required>
-            <option value="">Select...</option>
-            {categoriesForType.map((c) => (
-              <option key={c.category_id} value={c.name}>{c.name}</option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Points
-          <input type="number" value={form.points} readOnly tabIndex={-1} placeholder="Set by category" style={{ background: '#f3f4f6' }} />
-        </label>
+        </div>
 
         {isSerious && (
-          <div className="card" style={{ borderColor: '#b45309', flexDirection: 'column', alignItems: 'stretch' }}>
-            <strong style={{ color: '#b45309' }}>This is a serious event (-5 points).</strong>
-            <p style={{ margin: '0.3rem 0 0', fontSize: '0.9em' }}>
-              Explain what happened, in your own words, following school protocol.
-              Do not name any other student — describe what they did without
-              identifying them. Write clearly, in good English: a school office
-              reviewer checks this before it's shown to the student's parents.
-            </p>
+          <div className="bl-serious">
+            <strong>Serious event (-5 points) — an explanation is required.</strong>{' '}
+            Explain what happened in your own words, following school protocol. Don&apos;t name any other
+            student. A school office reviewer checks this before parents see it.
           </div>
         )}
 
         <label>
-          {isSerious ? 'Explanation (required)' : 'Description'}
+          {isSerious ? 'Explanation (required)' : 'Comment (optional)'}
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             required={isSerious}
-            rows={isSerious ? 4 : 2}
+            rows={isSerious ? 5 : 3}
           />
         </label>
 
-        <button type="submit" disabled={saving} style={{ width: 'fit-content' }}>
-          {saving ? 'Saving…' : usingGroup ? `Add event for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Add event'}
+        <button type="submit" className="bl-submit" disabled={saving}>
+          {saving ? 'Saving…' : usingGroup ? `Log for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Log event'}
         </button>
+        {status && <p style={{ margin: 0 }}>{status}</p>}
       </form>
-
-      {status && <p>{status}</p>}
 
       <h2>Recent events</h2>
       {houseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {houseScope} only (Houseparent view)</p>}
       <div className="table-scroll"><table>
         <thead>
-          <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th><th>Logged by</th><th>Comment</th>{profile?.role === 'admin' && <th></th>}</tr>
+          <tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th><th></th>{profile?.role === 'admin' && <th></th>}</tr>
         </thead>
         <tbody>
           {scopedEvents.map((ev) => (
             <Fragment key={ev.event_id}>
             <tr className="student-link" onClick={() => window.location.href = `/students/${ev.students?.student_id}`}>
-              <td>{formatUKDate(ev.event_date)}</td>
+              <td style={{ whiteSpace: 'nowrap' }}>{formatUKDate(ev.event_date).replace(/ \d{4}$/, '')}</td>
               <td>{ev.students?.first_name} {ev.students?.last_name}</td>
-              <td>{ev.type}</td>
               <td>{ev.category ?? '—'}</td>
-              <td>{ev.points ?? '—'}</td>
+              <td style={{ color: ev.type === 'negative' ? 'var(--red-700)' : '#1d6b3a', fontWeight: 600 }}>
+                {ev.points == null ? '—' : `${ev.points > 0 ? '+' : ''}${ev.points}`}
+              </td>
               <td>{ev.staff ? `${ev.staff.first_name} ${ev.staff.last_name}` : '—'}</td>
               <td>
                 <button
-                  className="secondary"
+                  type="button"
+                  className="secondary bl-small"
                   onClick={(e) => { e.stopPropagation(); setOpenEvent((o) => (o === ev.event_id ? null : ev.event_id)); }}
-                  style={{ padding: '0.15rem 0.55rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                  style={{ whiteSpace: 'nowrap' }}
                 >
                   {openEvent === ev.event_id ? 'Hide' : canEditComment(ev) ? 'View / edit' : 'View'}
                 </button>
               </td>
               {profile?.role === 'admin' && (
-                <td><button className="secondary" onClick={(e) => { e.stopPropagation(); handleDelete(ev.event_id); }}>Delete</button></td>
+                <td><button type="button" className="secondary bl-small" onClick={(e) => { e.stopPropagation(); handleDelete(ev.event_id); }}>Delete</button></td>
               )}
             </tr>
             {openEvent === ev.event_id && (
               <tr>
-                <td colSpan={profile?.role === 'admin' ? 8 : 7} style={{ paddingLeft: '1.5rem' }}>
+                <td colSpan={profile?.role === 'admin' ? 7 : 6} style={{ paddingLeft: '1.5rem' }}>
                   <EventCommentEditor
                     event={ev}
-                    onSaved={(text) => setEvents((list) => list.map((x) => (x.event_id === ev.event_id ? { ...x, description: text } : x)))}
+                    onSaved={(changes) => setEvents((list) => list.map((x) => (x.event_id === ev.event_id ? { ...x, ...changes } : x)))}
                   />
                 </td>
               </tr>

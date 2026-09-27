@@ -1157,7 +1157,7 @@ function StudentDetail() {
                       <EventCommentEditor
                         event={b}
                         emptyText="—"
-                        onSaved={(text) => setBehaviour((list) => list.map((x) => (x.event_id === b.event_id ? { ...x, description: text } : x)))}
+                        onSaved={(changes) => setBehaviour((list) => list.map((x) => (x.event_id === b.event_id ? { ...x, ...changes } : x)))}
                       />
                     </td>
                   </tr>
