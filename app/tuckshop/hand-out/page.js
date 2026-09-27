@@ -9,7 +9,9 @@ import RequireResource from '../../RequireResource';
 // a student when their order has been given. That charges their balance,
 // exactly as "Fulfil" on /tuckshop/preorders does, and a given order can be
 // undone if it was tapped by mistake. Both go through
-// set_tuckshop_orders_given() (migration 228).
+// set_tuckshop_orders_given() (migration 228). When a restaurant is done,
+// Save locks its list for the day; after that only the tuckshop owner can
+// unlock it (migration 229). The database enforces the lock, not this page.
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -36,8 +38,14 @@ function HandOutInner() {
   const [busy, setBusy] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [saves, setSaves] = useState(new Map());
+  const [isOwner, setIsOwner] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => { loadDates(); }, []);
+  useEffect(() => {
+    loadDates();
+    supabase.rpc('is_tuckshop_owner').then(({ data }) => setIsOwner(!!data));
+  }, []);
   useEffect(() => { if (forDate) loadOrders(forDate); }, [forDate]);
 
   async function loadDates() {
@@ -81,6 +89,14 @@ function HandOutInner() {
       itemsByOrder.get(it.preorder_id).push(it);
     });
     setOrders((rows || []).map((o) => ({ ...o, items: itemsByOrder.get(o.id) || [] })));
+    // Saved (locked) restaurant lists for this day.
+    const { data: saveRows, error: saveErr } = await supabase
+      .from('tuckshop_handout_saves')
+      .select('restaurant, saved_at, given_count, not_given_count, given_value')
+      .eq('for_date', date)
+      .is('unlocked_at', null);
+    if (saveErr) setError(saveErr.message);
+    setSaves(new Map((saveRows || []).map((r) => [r.restaurant, r])));
     setLoading(false);
   }
 
@@ -147,6 +163,7 @@ function HandOutInner() {
     return `${s.student?.first_name} ${s.student?.last_name} ${s.student?.form_class || ''}`.toLowerCase().includes(q);
   });
   const outstanding = inRestaurant.filter((s) => !s.done);
+  const saved = saves.get(restaurant ?? '');
 
   async function setGiven(studentIds, given) {
     if (studentIds.length === 0) return;
@@ -161,7 +178,7 @@ function HandOutInner() {
   }
 
   function tap(s) {
-    if (busy.has(s.studentId)) return;
+    if (busy.has(s.studentId) || saved) return;
     if (!s.done) { setGiven([s.studentId], true); return; }
     const name = `${s.student?.first_name} ${s.student?.last_name}`;
     if (window.confirm(`Undo ${name}'s order? It goes back to not given and ${naira(s.total)} is put back on their balance.`)) {
@@ -179,12 +196,38 @@ function HandOutInner() {
     }
   }
 
+  async function saveList() {
+    const given = inRestaurant.length - outstanding.length;
+    const value = inRestaurant.filter((s) => s.done).reduce((n, s) => n + s.total, 0);
+    const msg = `Save ${restaurantLabel(restaurant)} for ${longDate(forDate)}?\n\n`
+      + `${given} given (${naira(value)}), ${outstanding.length} not given.\n\n`
+      + 'Once saved, the list is locked and only the tuckshop owner can unlock it.';
+    if (!window.confirm(msg)) return;
+    setSaving(true);
+    setError(null);
+    const { error: err } = await supabase.rpc('save_tuckshop_handout', { p_for_date: forDate, p_restaurant: restaurant ?? '' });
+    if (err) setError(err.message);
+    await loadOrders(forDate);
+    setSaving(false);
+  }
+
+  async function unlockList() {
+    if (!window.confirm(`Unlock ${restaurantLabel(restaurant)} for ${longDate(forDate)}? Tuckshop staff will be able to change it again until it is saved.`)) return;
+    setSaving(true);
+    setError(null);
+    const { error: err } = await supabase.rpc('unlock_tuckshop_handout', { p_for_date: forDate, p_restaurant: restaurant ?? '' });
+    if (err) setError(err.message);
+    await loadOrders(forDate);
+    setSaving(false);
+  }
+
   return (
     <div>
       <h1>Hand Out Orders</h1>
       <p style={{ color: '#555', marginTop: 0 }}>
         Tap a student when their order has been given. This takes the order&apos;s value from their
-        tuckshop balance. Tap again to undo.
+        tuckshop balance. Tap again to undo. When a restaurant is finished, press Save: the list
+        is then locked and only the tuckshop owner can unlock it.
       </p>
 
       <div className="card" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -217,7 +260,7 @@ function HandOutInner() {
                 className={r.key === restaurant ? '' : 'secondary'}
                 onClick={() => setRestaurant(r.key)}
               >
-                {restaurantLabel(r.key)}{' '}
+                {saves.has(r.key) ? '🔒 ' : ''}{restaurantLabel(r.key)}{' '}
                 <span className="handout-count">{r.given}/{r.count}</span>
               </button>
             ))}
@@ -227,10 +270,32 @@ function HandOutInner() {
             <strong>
               {restaurantLabel(restaurant)}: {inRestaurant.length - outstanding.length} of {inRestaurant.length} given
             </strong>
-            <button className="secondary" onClick={giveAll} disabled={outstanding.length === 0 || busy.size > 0}>
-              Mark all {outstanding.length} remaining as given
-            </button>
+            {!saved && (
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button className="secondary" onClick={giveAll} disabled={outstanding.length === 0 || busy.size > 0 || saving}>
+                  Mark all {outstanding.length} remaining as given
+                </button>
+                <button onClick={saveList} disabled={busy.size > 0 || saving}>
+                  {saving ? 'Saving…' : 'Save and lock'}
+                </button>
+              </div>
+            )}
           </div>
+
+          {saved && (
+            <div className="handout-saved">
+              <span>
+                🔒 Saved {new Date(saved.saved_at).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
+                {' '}· {saved.given_count} given ({naira(saved.given_value)}), {saved.not_given_count} not given.
+                {' '}{isOwner ? 'You can unlock it as tuckshop owner.' : 'Only the tuckshop owner can unlock it.'}
+              </span>
+              {isOwner && (
+                <button className="secondary" onClick={unlockList} disabled={saving}>
+                  {saving ? 'Unlocking…' : 'Unlock'}
+                </button>
+              )}
+            </div>
+          )}
 
           {shown.length === 0 ? (
             <p>{q ? 'No student matches that search here.' : 'Every order here has been given.'}</p>
@@ -239,9 +304,9 @@ function HandOutInner() {
               {shown.map((s) => (
                 <li key={s.studentId}>
                   <button
-                    className={`handout-row${s.done ? ' given' : ''}`}
+                    className={`handout-row${s.done ? ' given' : ''}${saved ? ' locked' : ''}`}
                     onClick={() => tap(s)}
-                    disabled={busy.has(s.studentId)}
+                    disabled={busy.has(s.studentId) || !!saved}
                   >
                     <span className="handout-tick" aria-hidden="true">{s.done ? '✓' : ''}</span>
                     <span className="handout-main">

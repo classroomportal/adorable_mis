@@ -1203,6 +1203,15 @@ a.dashboard-tile { color: white; text-decoration: none; }
 .handout-items { font-size: 0.9rem; color: #444; }
 .handout-amount { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; white-space: nowrap; }
 .handout-status { font-size: 0.75rem; font-weight: 500; color: #1a7a3d; }
+.handout-row.locked,
+.handout-row.locked:hover,
+.handout-row.locked:disabled { opacity: 1; cursor: default; }
+.handout-row.locked:not(.given) { background: #f6f6f6; }
+.handout-saved {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem;
+  background: #fff8e1; border: 1px solid #f0d78c; border-radius: 8px;
+  padding: 0.6rem 0.8rem; margin-bottom: 0.75rem; font-size: 0.9rem;
+}
 
 /* Top 10 students (/results/top-ten): one list per printed page. */
 .top-ten-page { margin-bottom: 2rem; }
