@@ -5,11 +5,15 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import EventCommentEditor from '../../components/EventCommentEditor';
 
 // A "serious" behaviour event is negative with -5 points (migration 166; 106 and 135 used -4 and -3).
 // It can't be saved without an explanation, but it stays hidden from the
 // parent portal until someone here confirms it follows school protocol, names
 // no other student, and reads clearly — then releases it with the toggle.
+// The office can correct the explanation here themselves (migration 211). An
+// event they keep hidden stays listed under "Kept hidden" until it's
+// released, rather than dropping into history with no way back to it.
 function ReviewInner() {
   const { profile, staffRoles } = useAuth();
   const canReview = profile?.role === 'admin' || (staffRoles || []).includes('school_office');
@@ -32,11 +36,11 @@ function ReviewInner() {
       supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active'),
       supabase
         .from('behaviour_events')
-        .select('event_id, event_date, category, points, description, student_id, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+        .select('event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, protocol_reviewed_at, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
         .eq('type', 'negative')
         .lte('points', -5)
         .eq('visible_to_parents', false)
-        .is('protocol_reviewed_at', null)
+        .is('voided_at', null)
         .order('event_date', { ascending: false }),
       supabase
         .from('behaviour_events')
@@ -113,9 +117,68 @@ function ReviewInner() {
     if (error) {
       setStatus(`Error: ${error.message}`);
     } else {
-      setStatus(visibleToParents ? 'Released to parents.' : 'Kept hidden from parents.');
+      setStatus(visibleToParents ? 'Released to parents.' : 'Kept hidden from parents — it stays under "Kept hidden" below until it\'s released.');
       load();
     }
+  }
+
+  const awaiting = pending.filter((ev) => !ev.protocol_reviewed_at);
+  const keptHidden = pending.filter((ev) => ev.protocol_reviewed_at);
+
+  function renderSerious(ev) {
+    const flagged = mentionsAnotherStudent(ev.description, ev.student_id);
+    return (
+      <div key={ev.event_id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <strong>{ev.students?.first_name} {ev.students?.last_name}</strong>
+          <span>{formatUKDate(ev.event_date)} · {ev.category ?? '—'} · {ev.points} points</span>
+        </div>
+        <EventCommentEditor
+          event={ev}
+          onSaved={(changes) => {
+            setPending((list) => list.map((x) => (x.event_id === ev.event_id ? { ...x, ...changes } : x)));
+            // The confirmation was for the old wording.
+            setConfirmed((c) => ({ ...c, [ev.event_id]: false }));
+          }}
+        />
+        <span style={{ fontSize: '0.85em', color: '#666' }}>
+          Logged by {ev.staff ? `${ev.staff.first_name} ${ev.staff.last_name}` : '—'}
+        </span>
+        {flagged && (
+          <p style={{ color: '#b45309', fontWeight: 'bold', margin: 0 }}>
+            ⚠ This explanation may name another enrolled student — edit it before releasing.
+          </p>
+        )}
+        <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+          <input
+            type="checkbox"
+            checked={!!confirmed[ev.event_id]}
+            onChange={(e) => setConfirmed({ ...confirmed, [ev.event_id]: e.target.checked })}
+            style={{ flex: '0 0 auto', width: 'auto' }}
+          />
+          I confirm this follows school behaviour protocol, names no other student, and is written in good English.
+        </label>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            disabled={busyId === ev.event_id || !confirmed[ev.event_id]}
+            onClick={() => review(ev.event_id, true)}
+            style={{ width: 'fit-content' }}
+          >
+            Release to parents
+          </button>
+          {!ev.protocol_reviewed_at && (
+            <button
+              className="secondary"
+              disabled={busyId === ev.event_id}
+              onClick={() => review(ev.event_id, false)}
+              style={{ width: 'fit-content' }}
+            >
+              Keep hidden for now
+            </button>
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (!canReview) {
@@ -128,9 +191,9 @@ function ReviewInner() {
       <p style={{ color: '#555' }}>
         A -5 point event needs checking before parents see it: does the
         explanation follow school protocol, does it avoid naming any other
-        student, and is it written in clear, good English? Tick the
-        confirmation and release it, or leave it hidden if it needs the
-        writer to redo it.
+        student, and is it written in clear, good English? If it needs
+        changing, use Edit to correct it yourself, then tick the
+        confirmation and release it.
       </p>
 
       {status && <p>{status}</p>}
@@ -181,56 +244,17 @@ function ReviewInner() {
             );
           })}
 
-          <h2 style={{ marginTop: '1.5rem' }}>Serious events awaiting review ({pending.length})</h2>
-          {pending.length === 0 ? <p>Nothing waiting.</p> : (
-            <div className="table-scroll">
-              {pending.map((ev) => {
-                const flagged = mentionsAnotherStudent(ev.description, ev.student_id);
-                return (
-                  <div key={ev.event_id} className="card" style={{ flexDirection: 'column', alignItems: 'stretch', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <strong>{ev.students?.first_name} {ev.students?.last_name}</strong>
-                      <span>{formatUKDate(ev.event_date)} · {ev.category ?? '—'} · {ev.points} points</span>
-                    </div>
-                    <p style={{ margin: '0.5rem 0', whiteSpace: 'pre-wrap' }}>{ev.description}</p>
-                    <p style={{ fontSize: '0.85em', color: '#666' }}>
-                      Logged by {ev.staff ? `${ev.staff.first_name} ${ev.staff.last_name}` : '—'}
-                    </p>
-                    {flagged && (
-                      <p style={{ color: '#b45309', fontWeight: 'bold' }}>
-                        ⚠ This explanation may name another enrolled student — check carefully before releasing.
-                      </p>
-                    )}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={!!confirmed[ev.event_id]}
-                        onChange={(e) => setConfirmed({ ...confirmed, [ev.event_id]: e.target.checked })}
-                        style={{ flex: '0 0 auto', width: 'auto' }}
-                      />
-                      I confirm this follows school behaviour protocol, names no other student, and is written in good English.
-                    </label>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                      <button
-                        disabled={busyId === ev.event_id || !confirmed[ev.event_id]}
-                        onClick={() => review(ev.event_id, true)}
-                        style={{ width: 'fit-content' }}
-                      >
-                        Release to parents
-                      </button>
-                      <button
-                        className="secondary"
-                        disabled={busyId === ev.event_id}
-                        onClick={() => review(ev.event_id, false)}
-                        style={{ width: 'fit-content' }}
-                      >
-                        Keep hidden (needs rewriting)
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <h2 style={{ marginTop: '1.5rem' }}>Serious events awaiting review ({awaiting.length})</h2>
+          {awaiting.length === 0 ? <p>Nothing waiting.</p> : awaiting.map((ev) => renderSerious(ev))}
+
+          {keptHidden.length > 0 && (
+            <>
+              <h2 style={{ marginTop: '1.5rem' }}>Kept hidden ({keptHidden.length})</h2>
+              <p style={{ color: '#555', marginTop: 0 }}>
+                Reviewed but not yet shown to parents. Correct the explanation, then release it.
+              </p>
+              {keptHidden.map((ev) => renderSerious(ev))}
+            </>
           )}
 
           <h2 style={{ marginTop: '1.5rem' }}>Recently reviewed</h2>

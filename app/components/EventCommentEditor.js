@@ -5,12 +5,14 @@ import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
 import BehaviourPhoto from './BehaviourPhoto';
 
-// Who may edit a behaviour event: the member of staff who logged it, or
-// pastoral/houseparents/SMT/admin. Mirrors the check inside
-// edit_behaviour_event() (migration 208), which is what enforces it.
+// Who may edit a behaviour event: the member of staff who logged it,
+// pastoral/houseparents/SMT/admin, or the school office (who fix serious
+// events' explanations on /behaviour/review). Mirrors the check inside
+// edit_behaviour_event() (migration 211), which is what enforces it.
 export function useCanEditEventComment() {
-  const { profile, isPastoralOrSmt } = useAuth();
-  return (event) => isPastoralOrSmt || (!!profile?.staff_id && profile.staff_id === event?.staff_id);
+  const { profile, isPastoralOrSmt, staffRoles } = useAuth();
+  const isOffice = (staffRoles || []).includes('school_office');
+  return (event) => isPastoralOrSmt || isOffice || (!!profile?.staff_id && profile.staff_id === event?.staff_id);
 }
 
 // Categories are the same for every event on a page, so fetch them once.
