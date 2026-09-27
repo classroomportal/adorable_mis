@@ -50,7 +50,7 @@ function BehaviourLogInner() {
     if (matchingIds && matchingIds.length === 0) { setEvents([]); return; }
     let q = supabase
       .from('behaviour_events')
-      .select('event_id, event_date, type, category, points, description, staff_id, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+      .select('event_id, event_date, type, category, points, description, staff_id, photo_id, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('is_demo', !!profile.is_demo_account)
       .is('voided_at', null)
       .gte('event_date', filters.from || '1900-01-01')
@@ -147,7 +147,7 @@ function BehaviourLogInner() {
                         {ev.students?.first_name} {ev.students?.last_name}
                       </a>
                     </td>
-                    <td>{ev.category ?? '—'}</td>
+                    <td>{ev.category ?? '—'}{ev.photo_id && <span title="Has a picture"> 📷</span>}</td>
                     <td style={{ color: ev.type === 'negative' ? 'var(--red-700)' : '#1d6b3a', fontWeight: 600 }}>
                       {ev.points == null ? '—' : `${ev.points > 0 ? '+' : ''}${ev.points}`}
                     </td>

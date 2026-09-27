@@ -14,6 +14,7 @@ import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 import { schoolToday, schoolWeekdayShort } from '../../lib/schoolTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
 import ChildOtherHalf from '../components/ChildOtherHalf';
+import BehaviourPhoto from '../components/BehaviourPhoto';
 import {
   AttendanceScopeCards,
   AttendanceTodayTable,
@@ -21,6 +22,17 @@ import {
   attendanceTodayLessons,
   formatLateness,
 } from '../components/AttendanceSummary';
+
+
+// Which of these events have a picture this viewer may see. Row-level
+// security (migration 209) only returns approved pictures on the viewer's own
+// visible events, so this asks for ids only — images load when tapped.
+async function loadVisiblePhotoIds(events) {
+  const ids = [...new Set((events || []).map((e) => e.photo_id).filter(Boolean))];
+  if (ids.length === 0) return new Set();
+  const { data } = await supabase.from('behaviour_photos').select('photo_id').in('photo_id', ids);
+  return new Set((data || []).map((p) => p.photo_id));
+}
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -35,6 +47,7 @@ export function ParentPortalInner() {
   const [targets, setTargets] = useState([]);
   const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(null); // null = enrolment not loaded yet
   const [behaviour, setBehaviour] = useState([]);
+  const [photoIds, setPhotoIds] = useState(new Set()); // approved pictures this viewer may see
   const [feeTerm, setFeeTerm] = useState(null);
   const [feeLineItems, setFeeLineItems] = useState([]);
   const [feePayments, setFeePayments] = useState([]);
@@ -106,6 +119,7 @@ export function ParentPortalInner() {
       setEnrolledSubjectIds(new Set((enrolled || []).map((l) => l.classes?.subject_id).filter(Boolean)));
       const { data: b } = await supabase.from('behaviour_events').select('*, classes(subjects(subject_name, display_name))').eq('student_id', selectedId).is('voided_at', null).order('event_date', { ascending: false });
       setBehaviour(b || []);
+      setPhotoIds(await loadVisiblePhotoIds(b));
       const { data: gs } = await supabase.from('grade_scale').select('*');
       setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
       // Counted in Postgres rather than pulled row by row: a full academic year
@@ -396,7 +410,10 @@ export function ParentPortalInner() {
                       <tr key={b.event_id}>
                         <td>{b.event_date}</td>
                         <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
-                        <td>{b.category}</td>
+                        <td>
+                          {b.category}
+                          {photoIds.has(b.photo_id) && <div style={{ marginTop: '0.3rem' }}><BehaviourPhoto photoId={b.photo_id} /></div>}
+                        </td>
                         {/* Parents see the subject, not the teacher (students see who gave it). */}
                         <td>{b.classes?.subjects?.display_name || b.classes?.subjects?.subject_name || '—'}</td>
                         <td>{b.points}</td>

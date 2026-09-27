@@ -25,7 +25,7 @@ function AlertsInner() {
       setHouse(access?.house || null);
       const { data } = await supabase
         .from('behaviour_events')
-        .select('event_id, event_date, type, category, points, description, staff_id, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+        .select('event_id, event_date, type, category, points, description, staff_id, photo_id, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
         .eq('type', 'negative')
         .lte('points', -3)
         .eq('is_demo', !!profile?.is_demo_account)
@@ -59,7 +59,7 @@ function AlertsInner() {
                 <tr className="student-link" onClick={() => window.location.href = `/students/${a.students?.student_id}`}>
                   <td style={{ whiteSpace: 'nowrap' }}>{formatUKDate(a.event_date).replace(/ \d{4}$/, '')}</td>
                   <td>{a.students?.first_name} {a.students?.last_name}</td>
-                  <td>{a.category ?? '—'}</td>
+                  <td>{a.category ?? '—'}{a.photo_id && <span title="Has a picture"> 📷</span>}</td>
                   <td style={{ color: 'var(--red-700)', fontWeight: 600 }}>{a.points}</td>
                   <td>{a.staff ? `${a.staff.first_name} ${a.staff.last_name}` : '—'}</td>
                   <td>

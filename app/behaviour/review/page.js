@@ -21,6 +21,10 @@ function ReviewInner() {
   const [confirmed, setConfirmed] = useState({}); // event_id -> boolean
   const [busyId, setBusyId] = useState(null);
   const [status, setStatus] = useState(null);
+  // Pictures added to behaviour events (migration 209), waiting for approval
+  // before parents can see them: [{ photo, events: [...] }].
+  const [pendingPhotos, setPendingPhotos] = useState([]);
+  const [photoBusy, setPhotoBusy] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -46,7 +50,36 @@ function ReviewInner() {
     setStudents(s || []);
     setPending(p || []);
     setHistory(h || []);
+    await loadPhotos();
     setLoading(false);
+  }
+
+  async function loadPhotos() {
+    const { data: photos } = await supabase
+      .from('behaviour_photos')
+      .select('photo_id, image_jpeg_base64, created_at, uploader:staff!behaviour_photos_uploaded_by_fkey(first_name, last_name)')
+      .eq('status', 'pending')
+      .order('created_at');
+    const list = photos || [];
+    if (list.length === 0) { setPendingPhotos([]); return; }
+    const { data: evs } = await supabase
+      .from('behaviour_events')
+      .select('event_id, photo_id, event_date, type, category, points, description, students(first_name, last_name)')
+      .in('photo_id', list.map((ph) => ph.photo_id))
+      .is('voided_at', null);
+    setPendingPhotos(list.map((photo) => ({ photo, events: (evs || []).filter((e) => e.photo_id === photo.photo_id) })));
+  }
+
+  async function reviewPhoto(photoId, approve) {
+    setPhotoBusy(photoId);
+    setStatus(null);
+    const { error } = await supabase.rpc('review_behaviour_photo', { p_photo_id: photoId, p_approve: approve });
+    setPhotoBusy(null);
+    if (error) setStatus(`Error: ${error.message}`);
+    else {
+      setStatus(approve ? 'Picture approved — parents can now see it.' : 'Picture kept from parents.');
+      loadPhotos();
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -91,7 +124,7 @@ function ReviewInner() {
 
   return (
     <div>
-      <h1>Review Serious Behaviour Events</h1>
+      <h1>Behaviour Review</h1>
       <p style={{ color: '#555' }}>
         A -5 point event needs checking before parents see it: does the
         explanation follow school protocol, does it avoid naming any other
@@ -104,7 +137,51 @@ function ReviewInner() {
 
       {loading ? <p>Loading…</p> : (
         <>
-          <h2>Awaiting review ({pending.length})</h2>
+          <h2>Pictures to check ({pendingPhotos.length})</h2>
+          <p style={{ color: '#555', marginTop: 0 }}>
+            Pictures staff added to behaviour events. Parents only see one once it&apos;s approved here —
+            check it shows only what it should and no other student can be identified.
+          </p>
+          {pendingPhotos.length === 0 ? <p>No pictures waiting.</p> : pendingPhotos.map(({ photo, events }) => {
+            const first = events[0];
+            const names = events.map((e) => `${e.students?.first_name} ${e.students?.last_name}`);
+            return (
+              <div key={photo.photo_id} className="card" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`data:image/jpeg;base64,${photo.image_jpeg_base64}`}
+                  alt="Picture waiting for review"
+                  style={{ width: 'min(100%, 360px)', borderRadius: 8, border: '1px solid var(--slate-200)' }}
+                />
+                <div style={{ flex: '1 1 240px', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {first ? (
+                    <>
+                      <strong>
+                        {first.category} ({first.points > 0 ? '+' : ''}{first.points}) · {formatUKDate(first.event_date)}
+                      </strong>
+                      <span>
+                        {names.length <= 4 ? names.join(', ') : `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`}
+                      </span>
+                      {first.description && <span style={{ whiteSpace: 'pre-wrap', color: '#444' }}>{first.description}</span>}
+                    </>
+                  ) : <span style={{ color: '#666' }}>Not attached to any event (it may have been withdrawn on appeal).</span>}
+                  <span style={{ fontSize: '0.85em', color: '#666' }}>
+                    Added by {photo.uploader ? `${photo.uploader.first_name} ${photo.uploader.last_name}` : '—'}
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                    <button disabled={photoBusy === photo.photo_id} onClick={() => reviewPhoto(photo.photo_id, true)} style={{ width: 'fit-content' }}>
+                      Approve — parents can see it
+                    </button>
+                    <button className="secondary" disabled={photoBusy === photo.photo_id} onClick={() => reviewPhoto(photo.photo_id, false)} style={{ width: 'fit-content' }}>
+                      Don&apos;t show parents
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          <h2 style={{ marginTop: '1.5rem' }}>Serious events awaiting review ({pending.length})</h2>
           {pending.length === 0 ? <p>Nothing waiting.</p> : (
             <div className="table-scroll">
               {pending.map((ev) => {

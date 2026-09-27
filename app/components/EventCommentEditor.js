@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
+import BehaviourPhoto from './BehaviourPhoto';
 
 // Who may edit a behaviour event: the member of staff who logged it, or
 // pastoral/houseparents/SMT/admin. Mirrors the check inside
@@ -140,6 +141,7 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
         )}
       </div>
       {message && <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{message}</span>}
+      {event.photo_id && <BehaviourPhoto photoId={event.photo_id} showStatus />}
     </div>
   );
 }
