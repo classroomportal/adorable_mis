@@ -5,34 +5,33 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 const DISPLAY_MS = 2200;
-// On a birthday day the Formwork card goes this long after the names
-// appear; the names then stay until someone presses Continue.
-const CARD_AFTER_NAMES_MS = 1000;
 // How long to wait for the birthday lookup before closing without it.
 const MAX_WAIT_MS = 5000;
 const FADE_MS = 400;
+const BIRTHDAY_RED = '#c8102e';
 
 // Today's birthdays (migration 213) are shown here rather than on /login:
 // the login page is public, and a child's date of birth is a parent's first
 // password. todays_birthdays() returns names only, for signed-in staff and
 // students; parents and anyone else get nothing back.
 //
-// The close timer must not start until the lookup has answered. It used to
-// give up after 1.8s and start the normal 2.2s close; on iPhones and iPads
-// the answer often came later, so the splash was already fading out when
-// the names arrived and they were never seen.
+// Two separate screens, one after the other:
+//   1. the Formwork card, exactly as on any other day, for the usual 2.2s;
+//   2. on a birthday day only, the birthday names on their own, large and
+//      with a red border, until someone presses Continue. Nothing closes
+//      them on a timer, and a tap elsewhere doesn't either.
 //
-// On a birthday day there are two steps: the Formwork card goes a second
-// after the names appear, and the names stay until Continue is pressed.
-// Nothing closes them on a timer, and a tap elsewhere doesn't either.
+// The card doesn't move on until the lookup has answered (at most 5s). It
+// used to give up after 1.8s, and on iPhones and iPads the answer often
+// came later, so the names were never seen.
 export default function SplashScreen({ onDone }) {
+  const [phase, setPhase] = useState('card'); // 'card' | 'birthdays'
   const [fading, setFading] = useState(false);
   const [birthdays, setBirthdays] = useState(null); // null = still asking
   const [gaveUp, setGaveUp] = useState(false);
-  const [showCard, setShowCard] = useState(true);
   const mountedAt = useRef(Date.now());
   // The dashboard passes a new onDone on every render; keep the latest in a
-  // ref so a re-render doesn't restart the close timer.
+  // ref so a re-render doesn't restart the timer.
   const onDoneRef = useRef(onDone);
   useEffect(() => { onDoneRef.current = onDone; });
 
@@ -47,24 +46,25 @@ export default function SplashScreen({ onDone }) {
 
   const hasBirthdays = birthdays && birthdays.length > 0;
   const answered = birthdays !== null || gaveUp;
-  // On a birthday day the Formwork card shrinks so the names are the focus.
-  const compact = hasBirthdays;
 
+  // Screen 1: keep the card up for 2.2s from opening (longer if the lookup
+  // is slow), fade it out, then go to the birthdays or close.
   useEffect(() => {
-    if (!answered) return undefined;
-    setFading(false);
-    if (hasBirthdays) {
-      const cardTimer = setTimeout(() => setShowCard(false), CARD_AFTER_NAMES_MS);
-      return () => clearTimeout(cardTimer);
-    }
-    // No birthdays: close at the usual 2.2s after the splash opened, or
-    // straight away (after the fade) if the lookup took longer than that.
+    if (!answered || phase !== 'card') return undefined;
     const elapsed = Date.now() - mountedAt.current;
     const displayMs = Math.max(DISPLAY_MS - elapsed, FADE_MS);
+    setFading(false);
     const fadeTimer = setTimeout(() => setFading(true), displayMs - FADE_MS);
-    const doneTimer = setTimeout(() => onDoneRef.current(), displayMs);
-    return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
-  }, [answered, hasBirthdays]);
+    const nextTimer = setTimeout(() => {
+      if (hasBirthdays) {
+        setPhase('birthdays');
+        setFading(false);
+      } else {
+        onDoneRef.current();
+      }
+    }, displayMs);
+    return () => { clearTimeout(fadeTimer); clearTimeout(nextTimer); };
+  }, [answered, hasBirthdays, phase]);
 
   return (
     <div
@@ -75,30 +75,30 @@ export default function SplashScreen({ onDone }) {
         background: '#f6f6f4',
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
         padding: '16px',
         boxSizing: 'border-box',
         overflowY: 'auto',
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: fading ? 0 : 1,
-        transition: 'opacity 0.4s ease',
       }}
     >
-      {showCard && (
+      <style>{'@keyframes birthday-pop { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }'}</style>
+      {phase === 'card' && (
         <div
           style={{
-            width: compact ? 'min(56vw, 210px)' : 'min(84vw, 380px)',
-            height: compact ? 'min(56vw, 210px)' : 'min(84vw, 380px)',
+            width: 'min(84vw, 380px)',
+            height: 'min(84vw, 380px)',
             flexShrink: 0,
+            opacity: fading ? 0 : 1,
+            transition: `opacity ${FADE_MS}ms ease`,
             background: '#2F6FA8',
             borderRadius: '24px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: compact ? '8px' : '16px',
-            padding: compact ? '1rem' : '2rem',
+            gap: '16px',
+            padding: '2rem',
             boxSizing: 'border-box',
             position: 'relative',
             overflow: 'hidden',
@@ -109,8 +109,8 @@ export default function SplashScreen({ onDone }) {
 
           <div
             style={{
-              width: compact ? 46 : 80,
-              height: compact ? 46 : 80,
+              width: 80,
+              height: 80,
               borderRadius: '50%',
               background: '#ffffff',
               display: 'flex',
@@ -119,73 +119,84 @@ export default function SplashScreen({ onDone }) {
               zIndex: 1,
             }}
           >
-            <svg width={compact ? 22 : 38} height={compact ? 22 : 38} viewBox="0 0 24 24" fill="none" stroke="#2F6FA8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#2F6FA8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="M9 12l2 2 4-4" />
             </svg>
           </div>
 
           <div style={{ textAlign: 'center', zIndex: 1 }}>
-            {!compact && (
-              <div style={{ fontSize: '11px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.75)', marginBottom: '6px', textTransform: 'uppercase' }}>
-                Every school, organised
-              </div>
-            )}
-            <div style={{ fontSize: compact ? '18px' : '24px', fontWeight: 500, color: '#ffffff' }}>Formwork</div>
-            <div style={{ fontSize: compact ? '10px' : '12px', color: 'rgba(255,255,255,0.7)', marginTop: compact ? '3px' : '6px', fontStyle: 'italic' }}>
+            <div style={{ fontSize: '11px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.75)', marginBottom: '6px', textTransform: 'uppercase' }}>
+              Every school, organised
+            </div>
+            <div style={{ fontSize: '24px', fontWeight: 500, color: '#ffffff' }}>Formwork</div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '6px', fontStyle: 'italic' }}>
               Esse Maximum, Esse Adoramus
             </div>
           </div>
 
-          {!compact && (
-            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', zIndex: 1 }}>
-              <div style={{ width: 20, height: 4, borderRadius: 2, background: '#ffffff' }} />
-              <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
-              <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: '6px', marginTop: '6px', zIndex: 1 }}>
+            <div style={{ width: 20, height: 4, borderRadius: 2, background: '#ffffff' }} />
+            <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
+            <div style={{ width: 8, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.4)' }} />
+          </div>
 
-          <div style={{ position: 'absolute', bottom: compact ? 10 : 18, fontSize: compact ? '9px' : '11px', color: 'rgba(255,255,255,0.65)', zIndex: 1 }}>
+          <div style={{ position: 'absolute', bottom: 18, fontSize: '11px', color: 'rgba(255,255,255,0.65)', zIndex: 1 }}>
             © 2026 CBT. All rights reserved.
           </div>
         </div>
       )}
 
-      {hasBirthdays && (
+      {phase === 'birthdays' && (
         <div
           role="status"
           style={{
-            width: 'min(84vw, 380px)',
+            width: 'min(92vw, 560px)',
             background: '#ffffff',
-            border: '2px solid #f0b429',
-            borderRadius: '16px',
-            padding: '14px 18px',
+            border: `5px solid ${BIRTHDAY_RED}`,
+            borderRadius: '24px',
+            padding: '32px 24px',
             boxSizing: 'border-box',
             textAlign: 'center',
+            boxShadow: '0 12px 40px rgba(200, 16, 46, 0.18)',
             animation: 'birthday-pop 0.5s ease',
           }}
         >
-          <style>{'@keyframes birthday-pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }'}</style>
-          <div style={{ fontSize: '28px', lineHeight: 1 }}>🎂</div>
-          <div style={{ fontWeight: 700, fontSize: '16px', color: '#1f2933', margin: '6px 0 8px' }}>
-            Happy birthday today to
+          <div style={{ fontSize: '64px', lineHeight: 1 }}>🎂</div>
+          <div style={{ fontWeight: 800, fontSize: '30px', color: BIRTHDAY_RED, margin: '14px 0 4px' }}>
+            Happy Birthday!
           </div>
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, fontSize: '15px', color: '#1f2933', maxHeight: '30vh', overflowY: 'auto' }}>
+          <div style={{ fontSize: '17px', color: '#5b6472', marginBottom: '18px' }}>
+            Celebrating today
+          </div>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: '45vh', overflowY: 'auto' }}>
             {birthdays.map((b, i) => (
-              <li key={i} style={{ padding: '2px 0' }}>
-                {b.first_name} {b.last_name}
-                <span style={{ color: '#5b6472', fontSize: '13px' }}>
-                  {' '}— {b.person_type === 'staff' ? 'staff' : (b.form_class || 'student')}
-                </span>
+              <li key={i} style={{ padding: '8px 0', borderTop: i ? '1px solid #eee' : 'none' }}>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1f2933' }}>
+                  {b.first_name} {b.last_name}
+                </div>
+                <div style={{ fontSize: '16px', color: '#5b6472' }}>
+                  {b.person_type === 'staff' ? 'Staff' : (b.form_class || 'Student')}
+                </div>
               </li>
             ))}
           </ul>
           {/* A real button, not text: some phones (iPhones especially) don't
-              treat a tap on plain text as a click, so tapping did nothing. */}
+              treat a tap on plain text as a click. */}
           <button
             type="button"
             onClick={() => onDoneRef.current()}
-            style={{ marginTop: '12px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}
+            style={{
+              marginTop: '24px',
+              padding: '14px 40px',
+              fontSize: '18px',
+              fontWeight: 700,
+              background: BIRTHDAY_RED,
+              borderColor: BIRTHDAY_RED,
+              color: '#ffffff',
+              borderRadius: '12px',
+              cursor: 'pointer',
+            }}
           >
             Continue
           </button>
