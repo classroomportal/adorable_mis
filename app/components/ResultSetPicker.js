@@ -23,6 +23,21 @@ export function describeDistance(days) {
   return days > 0 ? `in ${days} days` : `${-days} days ago`;
 }
 
+// First day of the current school year, taken as 1 August: the school runs
+// September to July, so "T3 Exam — 19 Jul 2026" is last year's.
+export function schoolYearStart() {
+  const [y, m] = localToday().split('-').map(Number);
+  return `${m >= 8 ? y : y - 1}-08-01`;
+}
+
+// Result sets from an earlier school year are there to look at (Subject
+// Overview, student and class progress), not to enter marks against, so
+// the pages that save marks leave them out of their pickers.
+export function currentYearSets(resultSets) {
+  const start = schoolYearStart();
+  return resultSets.filter((r) => r.event_date >= start);
+}
+
 // A result set dated more than this many days ago asks "are you sure?" before
 // marks are entered against it. Anything dated in the future always does.
 const STALE_AFTER_DAYS = 14;
