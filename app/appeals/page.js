@@ -15,7 +15,7 @@ function AppealsInner() {
   async function load() {
     const { data } = await supabase
       .from('behaviour_appeals')
-      .select('*, students(first_name,last_name), behaviour_events(event_date, category, points, description, staff!behaviour_events_staff_id_fkey(first_name, last_name)))')
+      .select('*, students(first_name,last_name), reviewer:staff!behaviour_appeals_reviewed_by_fkey(first_name, last_name), behaviour_events(event_date, category, points, voided_points, voided_at, description, staff!behaviour_events_staff_id_fkey(first_name, last_name)))')
       .order('created_at', { ascending: false });
     setAppeals(data || []);
   }
@@ -27,6 +27,27 @@ function AppealsInner() {
   function awardedBy(a) {
     const s = a.behaviour_events?.staff;
     return s ? `${s.first_name} ${s.last_name}` : '—';
+  }
+
+  // The event as it was given. An upheld appeal zeroes the event's points but
+  // keeps the original in voided_points (migration 222), so the negative that
+  // was withdrawn is still shown here.
+  function eventCell(a) {
+    const e = a.behaviour_events;
+    if (!e) return '—';
+    const pts = e.voided_at ? e.voided_points : e.points;
+    return (
+      <>
+        {formatUKDate(e.event_date, { weekday: true })} — {e.category}{pts != null ? ` (${pts})` : ''}
+        {e.description && <div style={{ fontSize: '0.85em', color: 'var(--ink-soft)' }}>{e.description}</div>}
+      </>
+    );
+  }
+
+  function outcome(a) {
+    if (a.status === 'upheld') return 'Upheld — negative withdrawn';
+    if (a.status === 'rejected') return 'Rejected — negative stands';
+    return a.status;
   }
 
   async function resolve(appealId, newStatus) {
@@ -61,7 +82,7 @@ function AppealsInner() {
               {pending.map((a) => (
                 <tr key={a.appeal_id}>
                   <td>{a.students?.first_name} {a.students?.last_name}</td>
-                  <td>{formatUKDate(a.behaviour_events?.event_date, { weekday: true })} — {a.behaviour_events?.category} ({a.behaviour_events?.points})</td>
+                  <td>{eventCell(a)}</td>
                   <td>{awardedBy(a)}</td>
                   <td>{a.reason}</td>
                   <td>
@@ -87,15 +108,25 @@ function AppealsInner() {
         <h2>Resolved</h2>
         {resolved.length === 0 ? <p>None yet.</p> : (
           <div className="table-scroll"><table>
-            <thead><tr><th>Student</th><th>Event</th><th>Awarded by</th><th>Status</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Student</th><th>Event</th><th>Awarded by</th><th>Reason for appeal</th><th>Outcome</th><th>Resolution notes</th></tr></thead>
             <tbody>
               {resolved.map((a) => (
                 <tr key={a.appeal_id}>
                   <td>{a.students?.first_name} {a.students?.last_name}</td>
-                  <td>{formatUKDate(a.behaviour_events?.event_date, { weekday: true })} — {a.behaviour_events?.category}</td>
+                  <td>{eventCell(a)}</td>
                   <td>{awardedBy(a)}</td>
-                  <td>{a.status}</td>
-                  <td>{a.resolution_notes ?? ''}</td>
+                  <td>{a.reason}</td>
+                  <td>
+                    {outcome(a)}
+                    {(a.reviewer || a.reviewed_at) && (
+                      <div style={{ fontSize: '0.85em', color: 'var(--ink-soft)' }}>
+                        {a.reviewer ? `${a.reviewer.first_name} ${a.reviewer.last_name}` : ''}
+                        {a.reviewer && a.reviewed_at ? ', ' : ''}
+                        {a.reviewed_at ? formatUKDate(a.reviewed_at.slice(0, 10)) : ''}
+                      </div>
+                    )}
+                  </td>
+                  <td>{a.resolution_notes || '—'}</td>
                 </tr>
               ))}
             </tbody>
