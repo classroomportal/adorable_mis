@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useRef, useState, Suspense } from 'react';
+import { Fragment, useEffect, useRef, useState, Suspense } from 'react';
+import EventCommentEditor, { useCanEditEventComment } from '../components/EventCommentEditor';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { schoolToday, schoolDateOffset } from '../../lib/schoolTime';
@@ -21,6 +22,8 @@ function compareRooms(a, b) {
 
 function BehaviourPageInner() {
   const { isPastoralOrSmt, profile } = useAuth();
+  const canEditComment = useCanEditEventComment();
+  const [openEvent, setOpenEvent] = useState(null); // event_id whose comment is shown
   const searchParams = useSearchParams();
 
   const [mentorClasses, setMentorClasses] = useState([]);
@@ -77,7 +80,7 @@ function BehaviourPageInner() {
   async function loadEvents() {
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, type, category, points, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+      .select('event_id, event_date, type, category, points, description, staff_id, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('is_demo', !!profile?.is_demo_account)
       .is('voided_at', null)
       .order('event_date', { ascending: false })
@@ -597,21 +600,42 @@ function BehaviourPageInner() {
       {houseScope && <p style={{ color: '#666', fontSize: '0.85rem' }}>Showing {houseScope} only (Houseparent view)</p>}
       <div className="table-scroll"><table>
         <thead>
-          <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th><th>Logged by</th>{profile?.role === 'admin' && <th></th>}</tr>
+          <tr><th>Date</th><th>Student</th><th>Type</th><th>Category</th><th>Points</th><th>Logged by</th><th>Comment</th>{profile?.role === 'admin' && <th></th>}</tr>
         </thead>
         <tbody>
           {scopedEvents.map((ev) => (
-            <tr key={ev.event_id} className="student-link" onClick={() => window.location.href = `/students/${ev.students?.student_id}`}>
+            <Fragment key={ev.event_id}>
+            <tr className="student-link" onClick={() => window.location.href = `/students/${ev.students?.student_id}`}>
               <td>{formatUKDate(ev.event_date)}</td>
               <td>{ev.students?.first_name} {ev.students?.last_name}</td>
               <td>{ev.type}</td>
               <td>{ev.category ?? '—'}</td>
               <td>{ev.points ?? '—'}</td>
               <td>{ev.staff ? `${ev.staff.first_name} ${ev.staff.last_name}` : '—'}</td>
+              <td>
+                <button
+                  className="secondary"
+                  onClick={(e) => { e.stopPropagation(); setOpenEvent((o) => (o === ev.event_id ? null : ev.event_id)); }}
+                  style={{ padding: '0.15rem 0.55rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                >
+                  {openEvent === ev.event_id ? 'Hide' : canEditComment(ev) ? 'View / edit' : 'View'}
+                </button>
+              </td>
               {profile?.role === 'admin' && (
                 <td><button className="secondary" onClick={(e) => { e.stopPropagation(); handleDelete(ev.event_id); }}>Delete</button></td>
               )}
             </tr>
+            {openEvent === ev.event_id && (
+              <tr>
+                <td colSpan={profile?.role === 'admin' ? 8 : 7} style={{ paddingLeft: '1.5rem' }}>
+                  <EventCommentEditor
+                    event={ev}
+                    onSaved={(text) => setEvents((list) => list.map((x) => (x.event_id === ev.event_id ? { ...x, description: text } : x)))}
+                  />
+                </td>
+              </tr>
+            )}
+            </Fragment>
           ))}
         </tbody>
       </table></div>

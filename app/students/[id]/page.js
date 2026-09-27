@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import { LESSON_COLUMNS, lessonRoom } from '../../../lib/lessons';
 import RequireAuth from '../../RequireAuth';
+import EventCommentEditor from '../../components/EventCommentEditor';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import TermTestScoresDownload from '../../components/TermTestScoresDownload';
@@ -1152,7 +1153,13 @@ function StudentDetail() {
                     <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
                     <td>{b.category}</td>
                     <td>{b.points}</td>
-                    <td>{b.description}</td>
+                    <td style={{ minWidth: '16rem' }}>
+                      <EventCommentEditor
+                        event={b}
+                        emptyText="—"
+                        onSaved={(text) => setBehaviour((list) => list.map((x) => (x.event_id === b.event_id ? { ...x, description: text } : x)))}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
