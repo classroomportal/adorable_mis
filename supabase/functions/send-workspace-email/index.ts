@@ -14,7 +14,10 @@ import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 // body content (the welcome-email and behaviour-alert functions send HTML;
 // send_message sends plain text). `cc` (address or array) is optional: the
 // serious behaviour alert goes to the designated safeguarding address with
-// SMT and the SRO copied in (migration 202).
+// SMT and the SRO copied in (migration 202). `reply_to` (one address) is
+// optional and becomes the Reply-To header, so replies reach a person
+// rather than the unread mis@ inbox: queue_workspace_email() sets it to the
+// sending staff member, or to sro@abc.sch.ng for parents (migration 225).
 //
 // Required secret (Dashboard > Edge Functions > Secrets, or
 // `supabase secrets set`): GMAIL_APP_PASSWORD
@@ -39,7 +42,14 @@ Deno.serve(async (req: Request) => {
   }
   const sender = Deno.env.get("GMAIL_SENDER") || "mis@abc.sch.ng";
 
-  let payload: { to?: string | string[]; cc?: string | string[]; subject?: string; text?: string; html?: string };
+  let payload: {
+    to?: string | string[];
+    cc?: string | string[];
+    subject?: string;
+    text?: string;
+    html?: string;
+    reply_to?: string;
+  };
   try {
     payload = await req.json();
   } catch {
@@ -47,6 +57,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const { to, cc, subject, text, html } = payload;
+  const replyTo = typeof payload.reply_to === "string" ? payload.reply_to.trim() : "";
   if (!to || !subject || (!text && !html)) {
     return new Response(JSON.stringify({ error: "to, subject, and text or html are required" }), { status: 400 });
   }
@@ -65,6 +76,7 @@ Deno.serve(async (req: Request) => {
       from: sender,
       to,
       ...(cc && cc.length ? { cc } : {}),
+      ...(replyTo ? { replyTo } : {}),
       subject,
       // denomailer requires plain-text `content` even for an HTML send —
       // fall back to a stripped version of the HTML when only html is given.
