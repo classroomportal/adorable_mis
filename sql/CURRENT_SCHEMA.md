@@ -13,12 +13,16 @@ A large amount of this schema was built directly against the live Supabase insta
 
 Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase project "adorable_mis").
 
+**Partly refreshed 27 September 2026: email only.** The `email_outbox` table and the 13 functions that queue and send email were re-introspected after migration 225 and checked by md5 against the live database (see "Email and Reply-To" below). Everything else is still the 22 September snapshot. The live database has moved well past it (148 functions and 91 tables against the 72 and 66 listed here), so a full regeneration is overdue.
+
 ## Quick facts
 
 - 65 tables, 4 views, 67 functions, 22 triggers, 166 RLS policies, 65 tables with RLS enabled
 - Extensions: pg_cron 1.6.4, pg_net 0.20.4, pg_stat_statements 1.11, pgcrypto 1.3, plpgsql 1.0, supabase_vault 0.3.1, uuid-ossp 1.1
 - Scheduled jobs (`pg_cron`):
   - `capture-register-alerts` — `*/15 * * * *` — `SELECT capture_register_alerts();` (active)
+  - `process-email-outbox` — `15 seconds` — `select public.process_email_outbox();` (active; checked 27 Sept)
+  - `detention-thursday-reminder` — `30 18 * * 4` (UTC) — `select public.send_detention_reminders();` (active; checked 27 Sept)
   - The `reset-demo-data-nightly` job present in the previous snapshot **is gone**, consistent with the demo account having been removed.
 - `staff_roles.role_name` values actually assigned to staff: admin, admissions, assessment_manager, assessment_user, bursar, head_of_department, houseparent, hr, mentor, pastoral, school_office, smt, teacher
   - Note: `mentor` is a live role on some staff records but is **not** in the `ROLE_LABELS` map on `app/staff/roles/page.js` — it can't be assigned/removed from that screen.
@@ -44,10 +48,29 @@ Generated: 22 September 2026. Project ref: `drjtcegtucovhbyfdpbx` (Supabase proj
 - `capture_register_alerts()` stamps `register_alerts.period_date` with `school_today()` rather than the UTC `current_date`.
 - New function `student_attendance_summary(integer)` — today / this week / this academic year counts plus total minutes late for one student, invoker-rights so `attendance` RLS still applies. Backs the Attendance section of `/students/[id]`; counting in the DB avoids PostgREST's 1,000-row page limit, which a year of marks (~1,700 per student) exceeds.
 
+### Email and Reply-To (refreshed 27 September 2026, migrations 177 and 225)
+
+- **All email goes through one queue.** Functions call `queue_workspace_email(jsonb)`, which inserts into `email_outbox`. The `process-email-outbox` cron job runs every 15 seconds: it posts up to 3 emails at a time to the `send-workspace-email` edge function, records each reply, and retries up to 6 times. Nothing calls the edge function directly. `queue_workspace_email`, `process_email_outbox` and `send_workspace_email_key` can't be executed by API roles.
+- **Everything is sent as `mis@abc.sch.ng`**, over Google Workspace SMTP. Password-reset emails are the exception: they come from Supabase Auth's own sender.
+- **Every email has a Reply-To** (migration 225), because nobody reads `mis@`. `queue_workspace_email` keeps a caller's `reply_to` (an address or an array), drops anything that isn't a plain address, and falls back to `sro@abc.sch.ng`:
+
+  | Email | Function | Replies go to |
+  |---|---|---|
+  | Message to a parent | `send_message` | `sro@abc.sch.ng` (parent = the recipient's `profiles.parent_id`, never matched on `parents.email`) |
+  | Message to staff or a student | `send_message` | the sender's `staff.email` (`sro@` if they have none) |
+  | Parent welcome (batch / single) | `send_parent_welcome_email`, `parent_welcome_email_post` | `sro@abc.sch.ng` |
+  | Staff / student welcome | `send_staff_welcome_email`, `send_student_welcome_email` | `sro@abc.sch.ng` |
+  | Behaviour alert (to `cs@`, cc SMT + `sro@`) | `notify_pastoral_on_negative_behaviour` | `guardian.counselling@abc.sch.ng` |
+  | Detention set / cancelled / reminder | `send_detention_email`, `notify_student_of_cancelled_detention`, `send_detention_reminders` | every SMT email, from `smt_reply_to_addresses()` |
+  | Anything else | (fallback) | `sro@abc.sch.ng` |
+
+- The edge function writes `reply_to` as a raw `Reply-To` header, because denomailer's `replyTo` option takes only one address. It refuses the whole email if an address isn't plain, so the SQL filter in `queue_workspace_email` must stay in step with it.
+- `email_outbox` has RLS SELECT policies for admin and for smt/pastoral/school_office, but no table grant to `authenticated`. The Sent Messages page reads it through `email_log()`, which never returns the body (it can hold a parent's initial password).
+
 ## Known gaps / dead ends (so nobody re-discovers these the hard way)
 
 - **`message_read_status`** (view) is still **`SECURITY DEFINER`** — it has no `security_invoker` reloption, so it runs with the owner's privileges and bypasses RLS. It exposes recipient email addresses and names for staff, students and parents. Its own `WHERE` clause is the only thing scoping it (`is_admin()`, sender, or `smt`/`pastoral`/`school_office`). The other three views were fixed; this one wasn't. Worth closing the same way.
-- **Four `SECURITY DEFINER` functions hardcode a Supabase JWT** in an `Authorization: Bearer` header — `notify_pastoral_on_negative_behaviour()`, `send_message()`, `send_parent_welcome_email()`, `send_staff_welcome_email()`/`send_student_welcome_email()`. Decoded, its claims are `{"role":"anon"}`: it is the **publishable anon key**, the same one the browser bundle ships, so this is not a secret leak. It is still worth moving to Vault or a setting — the day someone swaps it for a service-role key to "make it work", it becomes one.
+- ~~Four `SECURITY DEFINER` functions hardcode a Supabase JWT~~ — **closed** (checked 27 Sept 2026). No function contains a JWT any more. Only `process_email_outbox()` calls the edge function, and it reads the key from Vault through `send_workspace_email_key()` (migration 169).
 - **`house_assignments`** — has real FKs (`houseparent_staff_id → staff`) but 0 rows, 0 RLS policies (so RLS-enabled and unreadable), and nothing reads or writes it. Houseparent-to-house scoping actually works through `staff_roles.scope_value` (`scope_type='house'`) read by `my_house_scope()`, mirroring `my_department_scope()` for Heads of Department. Treat `house_assignments` as superseded/dead, not a gap to fill.
 - **`behaviour_event_audit`** — has FK wiring (cascades from `behaviour_events`, `profiles`) but 0 rows and 0 policies; nothing inserts into it. Scaffolding for an audit trail that was never finished.
 - **The demo/training mechanism is dormant, not removed.** `is_demo_account()`, `set_is_demo()`, `reset_demo_data()` and the `is_demo` columns on 15 tables all still exist, but there are 0 demo profiles and 0 demo students, and the nightly reset job is gone. Every `is_demo = is_demo_account()` clause in the RLS policies below therefore reduces to `is_demo = false` in practice. Treat this as historical: don't build new features assuming a demo account is reachable, and if one is reintroduced it needs a fresh design pass rather than resurrecting this.
@@ -438,6 +461,30 @@ Foreign keys: `student_id` → `students.student_id`, `behaviour_event_id` → `
 RLS policies:
 - `pastoral_read_detentions` (SELECT) USING ((is_pastoral_or_smt() AND ((is_demo = is_demo_account()) OR is_admin())))
 - `pastoral_update_detentions` (UPDATE) USING ((is_pastoral_or_smt() AND ((is_demo = is_demo_account()) OR is_admin())))
+
+
+### `email_outbox`
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| `email_id` 🔑 | bigint | NO |  |
+| `payload` | jsonb | NO |  |
+| `recipient` | text | YES |  |
+| `subject` | text | YES |  |
+| `status` | text | NO | 'queued'::text |
+| `attempts` | integer | NO | 0 |
+| `next_attempt_at` | timestamp with time zone | NO | now() |
+| `request_id` | bigint | YES |  |
+| `last_error` | text | YES |  |
+| `created_at` | timestamp with time zone | NO | now() |
+| `sent_at` | timestamp with time zone | YES |  |
+
+Triggers:
+- `a_backup_mode_guard`: `CREATE TRIGGER a_backup_mode_guard BEFORE INSERT OR DELETE OR UPDATE ON public.email_outbox FOR EACH STATEMENT EXECUTE FUNCTION enforce_backup_mode()`
+
+RLS policies:
+- `admin_read_email_outbox` (SELECT) USING (is_admin())
+- `staff_comms_read_email_outbox` (SELECT) USING (user_has_staff_role(ARRAY['smt'::text, 'pastoral'::text, 'school_office'::text]))
 
 
 ### `families`
@@ -1535,7 +1582,7 @@ RLS policies:
 - `Tuckshop purchases readable by staff or own family` (SELECT) USING (can_view_student_tuckshop(student_id))
 - `Tuckshop purchases writable by tuckshop staff` (ALL) USING (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text])) WITH CHECK (user_has_staff_role(ARRAY['tuckshop'::text, 'bursar'::text]))
 
-## Functions (67)
+## Functions (72)
 
 Full definitions. `SECURITY DEFINER` functions run with the privileges of the function owner regardless of caller — check the body for its own permission checks (e.g. `is_admin()`, `user_has_staff_role(...)`) rather than assuming RLS protects them.
 
@@ -2377,14 +2424,16 @@ CREATE OR REPLACE FUNCTION public.notify_pastoral_on_negative_behaviour()
  SET search_path TO 'public', 'pg_temp'
 AS $function$
 declare
+  alert_to constant text := 'cs@abc.sch.ng';
   student_name text;
-  recipients text[];
+  cc_list text[];
   subject text;
   body_html text;
   week_start date;
   week_end date;
   week_total integer;
   reason text;
+  v_key text;
 begin
   if new.is_demo then
     return new;
@@ -2398,7 +2447,7 @@ begin
   where student_id = new.student_id and type = 'negative'
     and event_date between week_start and week_end;
 
-  if new.points <= -4 then
+  if new.points <= -5 then
     reason := 'A single severe event was logged (' || new.points || ' points).';
   elsif week_total <= -8 then
     reason := 'Their running total for the week (Sat ' || week_start || ' – Fri ' || week_end || ') has reached ' || week_total || ' points.';
@@ -2408,14 +2457,16 @@ begin
 
   select first_name || ' ' || last_name into student_name from students where student_id = new.student_id;
 
-  select array_agg(distinct st.email) into recipients
-  from staff st
-  join staff_roles sr on sr.staff_id = st.staff_id
-  where sr.role_name in ('smt','houseparent') and st.email is not null;
-
-  if recipients is null or array_length(recipients, 1) = 0 then
-    return new;
-  end if;
+  select array_agg(distinct lower(e)) into cc_list
+  from (
+    select st.email as e
+    from staff st
+    join staff_roles sr on sr.staff_id = st.staff_id
+    where sr.role_name = 'smt' and st.email is not null and length(trim(st.email)) > 0
+    union
+    select 'sro@abc.sch.ng'
+  ) x
+  where lower(e) <> alert_to;
 
   subject := 'Behaviour alert: ' || student_name || ' — ' || coalesce(new.category, 'Negative event');
   body_html := '<p><strong>' || student_name || '</strong> has triggered a behaviour alert.</p>' ||
@@ -2423,23 +2474,105 @@ begin
                '<p><strong>Latest event — Category:</strong> ' || coalesce(new.category, '—') || '<br/>' ||
                '<strong>Points:</strong> ' || coalesce(new.points::text, '—') || '<br/>' ||
                '<strong>Date:</strong> ' || new.event_date::text || '</p>' ||
-               '<p>' || coalesce(new.description, '') || '</p>' ||
-               '<p><a href="https://misform.work/students/' || new.student_id || '">View student in Adorable MIS</a></p>';
+               '<p>' || coalesce(new.description, '') || '</p>';
 
-  perform net.http_post(
-    url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
-      'Content-Type', 'application/json'
-    ),
-    body := jsonb_build_object(
-      'to', to_jsonb(recipients),
+  perform post_inbox_notice(
+    (select array_agg(p.id)
+       from profiles p
+       join staff st on st.staff_id = p.staff_id
+      where lower(st.email) = any (array_append(coalesce(cc_list, array[]::text[]), alert_to))),
+    subject,
+    body_html || '<p>Student record: https://misform.work/students/' || new.student_id || '</p>',
+    'behaviour_alert');
+
+  select decrypted_secret into v_key
+  from vault.decrypted_secrets where name = 'send_workspace_email_key';
+  if v_key is null then
+    return new;
+  end if;
+
+  perform public.queue_workspace_email(jsonb_build_object(
+      'to', alert_to,
+      'cc', to_jsonb(coalesce(cc_list, array[]::text[])),
       'subject', subject,
-      'html', body_html
+      'html', body_html || '<p><a href="https://misform.work/students/' || new.student_id || '">View student in Adorable MIS</a></p>',
+      'reply_to', 'guardian.counselling@abc.sch.ng'
     )
   );
 
   return new;
+end;
+$function$
+
+```
+
+### `notify_student_of_cancelled_detention()` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.notify_student_of_cancelled_detention()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
+AS $function$
+declare
+  r record;
+  v_day text;
+  v_remaining text;
+  v_room text;
+  v_time text;
+  v_html text;
+begin
+  select detention_room, detention_time into v_room, v_time from system_settings limit 1;
+  v_room := coalesce(v_room, 'CG4');
+  v_time := coalesce(v_time, 'after lesson 7');
+
+  for r in
+    select n.student_id, n.detention_date, s.first_name, s.student_email,
+           string_agg(detention_reason(n.detention_id), '; ' order by n.detention_id) as reasons
+    from new_rows n
+    join old_rows o on o.detention_id = n.detention_id
+    join students s on s.student_id = n.student_id
+    where o.status = 'scheduled' and n.status = 'cancelled'
+      and not n.is_demo
+      and n.detention_date >= school_today()
+    group by n.student_id, n.detention_date, s.first_name, s.student_email
+  loop
+    if not exists (
+      select 1 from detentions
+      where student_id = r.student_id and detention_date = r.detention_date
+        and student_notified_at is not null
+    ) then
+      continue;
+    end if;
+
+    v_day := to_char(r.detention_date, 'FMDay FMDD FMMonth YYYY');
+
+    select string_agg(detention_reason(detention_id), '; ' order by detention_id) into v_remaining
+    from detentions
+    where student_id = r.student_id and detention_date = r.detention_date and status = 'scheduled';
+
+    v_html := '<p>Your detention on <strong>' || v_day || '</strong> has been <strong>cancelled</strong>. ' ||
+              'It had been given for ' || r.reasons || '.</p>';
+    if v_remaining is null then
+      v_html := v_html || '<p>You do not need to attend detention that day.</p>';
+    else
+      v_html := v_html || '<p>You still have a detention that day, given for ' || v_remaining ||
+                '. Report to <strong>' || v_room || '</strong> ' || v_time || ' as before.</p>';
+    end if;
+
+    perform post_student_notice(r.student_id, 'Detention cancelled: ' || v_day, v_html);
+
+    if r.student_email is not null and length(trim(r.student_email)) > 0 then
+      perform public.queue_workspace_email(jsonb_build_object(
+        'to', r.student_email,
+        'subject', 'Detention cancelled: ' || v_day,
+        'html', '<p>Dear ' || coalesce(r.first_name, 'student') || ',</p>' || v_html || '<p>Adorable British College</p>',
+        'reply_to', to_jsonb(smt_reply_to_addresses())
+      ));
+    end if;
+  end loop;
+
+  return null;
 end;
 $function$
 
@@ -2454,6 +2587,153 @@ CREATE OR REPLACE FUNCTION public.parent_emails_paused()
  SET search_path TO 'public', 'pg_temp'
 AS $function$
   select coalesce((select parent_emails_paused from system_settings limit 1), false);
+$function$
+
+```
+
+### `parent_welcome_email_post(p_email text, p_name text, p_temp_password text)` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.parent_welcome_email_post(p_email text, p_name text, p_temp_password text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
+AS $function$
+declare
+  body_html text;
+  safe_name text := replace(replace(replace(coalesce(p_name, ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;');
+begin
+  body_html := '<p>Dear ' || safe_name || ',</p>' ||
+    '<p>Adorable British College now has an online parent portal, <strong>Adorable MIS</strong>, where you can view your child''s weekly results compared to their target grades, and their behaviour record.</p>' ||
+    '<p><strong>Login email:</strong> ' || p_email || '<br/>' ||
+    '<strong>Temporary password:</strong> ' || p_temp_password || '</p>' ||
+    '<p>Please sign in at <a href="https://misform.work">misform.work</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
+    '<p>Kind regards,<br/>Adorable British College</p>';
+
+  perform public.queue_workspace_email( jsonb_build_object(
+      'to', p_email,
+      'subject', 'Your Adorable MIS parent portal account',
+      'html', body_html,
+      'reply_to', 'sro@abc.sch.ng'
+    )
+  );
+end;
+$function$
+
+```
+
+### `process_email_outbox()` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.process_email_outbox()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  max_in_flight constant integer := 3;
+  max_attempts constant integer := 6;
+  rec record;
+  v_free integer;
+  v_request bigint;
+begin
+  for rec in
+    select o.email_id, o.attempts, r.status_code, r.timed_out,
+           coalesce(r.error_msg, left(r.content, 500)) as detail
+    from email_outbox o
+    join net._http_response r on r.id = o.request_id
+    where o.status = 'sending'
+  loop
+    if rec.status_code between 200 and 299 then
+      update email_outbox set status = 'sent', sent_at = now(), last_error = null
+      where email_id = rec.email_id;
+    else
+      update email_outbox
+         set status = case when rec.attempts >= max_attempts then 'failed' else 'queued' end,
+             next_attempt_at = now() + make_interval(mins => rec.attempts),
+             last_error = coalesce(rec.status_code::text, case when rec.timed_out then 'timeout' end, 'error')
+                          || ': ' || coalesce(rec.detail, '')
+       where email_id = rec.email_id;
+    end if;
+  end loop;
+
+  update email_outbox
+     set status = case when attempts >= max_attempts then 'failed' else 'queued' end,
+         last_error = 'no reply recorded'
+   where status = 'sending' and next_attempt_at < now() - interval '10 minutes';
+
+  select max_in_flight - count(*) into v_free from email_outbox where status = 'sending';
+  if v_free <= 0 then
+    return;
+  end if;
+
+  for rec in
+    select email_id, payload from email_outbox
+    where status = 'queued' and next_attempt_at <= now()
+    order by next_attempt_at, email_id
+    limit v_free
+    for update skip locked
+  loop
+    select net.http_post(
+      url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
+      body := rec.payload,
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer ' || coalesce(public.send_workspace_email_key(), ''),
+        'Content-Type', 'application/json'
+      ),
+      timeout_milliseconds := 60000
+    ) into v_request;
+
+    update email_outbox
+       set status = 'sending', request_id = v_request, attempts = attempts + 1, next_attempt_at = now()
+     where email_id = rec.email_id;
+  end loop;
+end;
+$function$
+
+```
+
+### `queue_workspace_email(p_body jsonb)` — SECURITY DEFINER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.queue_workspace_email(p_body jsonb)
+ RETURNS bigint
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+  with reply as (
+    select coalesce(jsonb_agg(distinct a), '["sro@abc.sch.ng"]'::jsonb) as addresses
+    from (
+      select lower(trim(x)) as a
+      from jsonb_array_elements_text(
+        case jsonb_typeof(p_body -> 'reply_to')
+          when 'array' then p_body -> 'reply_to'
+          when 'string' then jsonb_build_array(p_body -> 'reply_to')
+          else '[]'::jsonb
+        end) x
+    ) r
+    -- Must match the check in send-workspace-email, which refuses the whole
+    -- email on an address it doesn't accept.
+    where a ~ '^[^\s@<>(),;:"\[\]\\]+@[a-z0-9-]+(\.[a-z0-9-]+)+$'
+  ),
+  body as (
+    select p_body || jsonb_build_object('reply_to', reply.addresses) as b
+    from reply
+  )
+  insert into email_outbox (payload, recipient, subject)
+  select
+    b,
+    case jsonb_typeof(b -> 'to')
+      when 'array' then (select string_agg(x, ', ') from jsonb_array_elements_text(b -> 'to') x)
+      else b ->> 'to'
+    end
+    || coalesce(' (cc: ' || case jsonb_typeof(b -> 'cc')
+      when 'array' then (select string_agg(x, ', ') from jsonb_array_elements_text(b -> 'cc') x)
+      else b ->> 'cc'
+    end || ')', ''),
+    b ->> 'subject'
+  from body
+  returning email_id;
 $function$
 
 ```
@@ -2907,6 +3187,124 @@ $function$
 
 ```
 
+### `send_detention_email(p_student_id integer, p_detention_date date, p_reason text)` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.send_detention_email(p_student_id integer, p_detention_date date, p_reason text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
+AS $function$
+declare
+  v_key text;
+  v_first_name text;
+  v_email text;
+  v_room text;
+  v_time text;
+  v_day text;
+  body_html text;
+begin
+  select decrypted_secret into v_key
+  from vault.decrypted_secrets where name = 'send_workspace_email_key';
+  if v_key is null then
+    return false;
+  end if;
+
+  select first_name, student_email into v_first_name, v_email
+  from students where student_id = p_student_id;
+  if v_email is null or length(trim(v_email)) = 0 then
+    return false;
+  end if;
+
+  select detention_room, detention_time into v_room, v_time from system_settings limit 1;
+  v_room := coalesce(v_room, 'CG4');
+  v_time := coalesce(v_time, 'after lesson 7');
+
+  v_day := to_char(p_detention_date, 'FMDay FMDD FMMonth YYYY');
+
+  body_html := '<p>Dear ' || coalesce(v_first_name, 'student') || ',</p>' ||
+               '<p>You have a detention on <strong>' || v_day || '</strong>.</p>' ||
+               '<p>Report to <strong>' || v_room || '</strong> ' || v_time || '.</p>' ||
+               '<p>This detention was given for ' || p_reason || '.</p>' ||
+               '<p>If you have a question about it, speak to your form tutor or houseparent before Friday.</p>' ||
+               '<p>Adorable British College</p>';
+
+  perform public.queue_workspace_email( jsonb_build_object(
+      'to', v_email,
+      'subject', 'Detention: ' || v_day || ', ' || v_room || ' ' || v_time,
+      'html', body_html,
+      'reply_to', to_jsonb(smt_reply_to_addresses())
+    )
+  );
+  return true;
+end;
+$function$
+
+```
+
+### `send_detention_reminders()` — SECURITY DEFINER, plpgsql
+```sql
+CREATE OR REPLACE FUNCTION public.send_detention_reminders()
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'pg_temp'
+AS $function$
+declare
+  v_date date := school_today() + 1;
+  v_day text := to_char(school_today() + 1, 'FMDay FMDD FMMonth YYYY');
+  v_room text;
+  v_time text;
+  v_sent integer := 0;
+  v_subject text;
+  v_html text;
+  v_posted boolean;
+  r record;
+begin
+  select detention_room, detention_time into v_room, v_time from system_settings limit 1;
+  v_room := coalesce(v_room, 'CG4');
+  v_time := coalesce(v_time, 'after lesson 7');
+  v_subject := 'Reminder - detention tomorrow: ' || v_day || ', ' || v_room || ' ' || v_time;
+
+  for r in
+    select d.student_id, s.first_name, s.student_email,
+           array_agg(d.detention_id) as detention_ids,
+           string_agg(detention_reason(d.detention_id), '; ' order by d.detention_id) as reasons
+    from detentions d
+    join students s on s.student_id = d.student_id
+    where d.detention_date = v_date
+      and d.status = 'scheduled'
+      and d.reminded_at is null
+      and not d.is_demo
+    group by d.student_id, s.first_name, s.student_email
+  loop
+    v_html := '<p>This is a reminder that you have a detention tomorrow, <strong>' || v_day || '</strong>.</p>' ||
+              '<p>Report to <strong>' || v_room || '</strong> ' || v_time || '.</p>' ||
+              '<p>It was given for ' || r.reasons || '.</p>';
+
+    v_posted := post_student_notice(r.student_id, v_subject, v_html);
+
+    if r.student_email is not null and length(trim(r.student_email)) > 0 then
+      perform public.queue_workspace_email(jsonb_build_object(
+        'to', r.student_email,
+        'subject', v_subject,
+        'html', '<p>Dear ' || coalesce(r.first_name, 'student') || ',</p>' || v_html || '<p>Adorable British College</p>',
+        'reply_to', to_jsonb(smt_reply_to_addresses())
+      ));
+    elsif not v_posted then
+      continue;
+    end if;
+
+    update detentions set reminded_at = now() where detention_id = any (r.detention_ids);
+    v_sent := v_sent + 1;
+  end loop;
+
+  return v_sent;
+end;
+$function$
+
+```
+
 ### `send_message(p_subject text, p_body text, p_target_type text, p_target_value text)` — SECURITY DEFINER, plpgsql
 ```sql
 CREATE OR REPLACE FUNCTION public.send_message(p_subject text, p_body text, p_target_type text, p_target_value text)
@@ -2918,6 +3316,7 @@ declare
   v_message_id bigint;
   v_count int;
   v_should_email boolean;
+  v_sender_email text;
 begin
   if is_demo_account() then
     raise exception 'Communication is disabled for the training account — no message was sent.';
@@ -2942,16 +3341,18 @@ begin
   update messages set recipient_count = v_count, email_sent = v_should_email where id = v_message_id;
 
   if v_should_email then
-    perform net.http_post(
-      url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
-      headers := jsonb_build_object(
-        'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
-        'Content-Type', 'application/json'
-      ),
-      body := jsonb_build_object(
+    -- Replies: parents' to the SRO, everyone else's to the sender. A null
+    -- (sender with no email) falls back to the SRO in queue_workspace_email.
+    select st.email into v_sender_email
+    from profiles me
+    join staff st on st.staff_id = me.staff_id
+    where me.id = auth.uid();
+
+    perform public.queue_workspace_email( jsonb_build_object(
         'to', coalesce(pr.email, par.email, st.student_email),
         'subject', p_subject,
-        'text', p_body || E'\n\nView in your portal: https://misform.work/inbox'
+        'text', p_body || E'\n\nView in your portal: https://misform.work/inbox',
+        'reply_to', case when pr.parent_id is not null then 'sro@abc.sch.ng' else v_sender_email end
       )
     )
     from profiles pr
@@ -2978,6 +3379,8 @@ CREATE OR REPLACE FUNCTION public.send_parent_welcome_email(p_email text, p_name
 AS $function$
 declare
   body_html text;
+  password_html text;
+  v_parent_id integer;
 begin
   if not is_admin() then
     raise exception 'Only admin can send welcome emails';
@@ -2987,23 +3390,68 @@ begin
     raise exception 'Parent emails are currently paused system-wide — no email was sent. Re-enable with: update system_settings set parent_emails_paused = false;';
   end if;
 
+  -- Resolve through the login, not parents.email: 47 emails are shared by
+  -- more than one parent row, but each login belongs to exactly one parent.
+  select pr.parent_id into v_parent_id
+  from auth.users u
+  join profiles pr on pr.id = u.id
+  where lower(u.email) = lower(p_email) and pr.role = 'parent'
+  limit 1;
+
+  if p_temp_password is not distinct from parent_first_password(v_parent_id) then
+    password_html := '<strong>Password:</strong> ' || p_temp_password || '</p>' ||
+      '<p>Your password is your oldest child''s date of birth, written as 8 numbers: day, month, year, ' ||
+      'with no spaces or slashes. For example, a child born on 24 March 2012 would be <strong>24032012</strong>.</p>';
+  else
+    password_html := '<strong>Password:</strong> ' || p_temp_password || '</p>';
+  end if;
+
   body_html := '<p>Dear ' || p_name || ',</p>' ||
-    '<p>Adorable British College now has an online parent portal, <strong>Adorable MIS</strong>, where you can view your child''s weekly results compared to their target grades, and their behaviour record.</p>' ||
-    '<p><strong>Login email:</strong> ' || p_email || '<br/>' ||
-    '<strong>Temporary password:</strong> ' || p_temp_password || '</p>' ||
-    '<p>Please sign in at <a href="https://misform.work">misform.work</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
+    '<p><strong>Introducing Formwork, our new school information system</strong></p>' ||
+    '<p>Adorable British College has introduced a new online system called <strong>Formwork</strong>. ' ||
+    'It gives you a parent account where you can follow your child''s school life in one place, ' ||
+    'at any time, from a phone, tablet or computer.</p>' ||
+
+    '<p><strong>Formwork is separate from SIMS</strong></p>' ||
+    '<p>You may already be familiar with SIMS, including the SIMS Parent app. Formwork is a completely ' ||
+    'separate system that runs on a different server from SIMS. This means:</p>' ||
+    '<ul>' ||
+      '<li>Your SIMS username and password will <strong>not</strong> work on Formwork. Please use the new login details below.</li>' ||
+      '<li>Formwork has its own web address, <a href="https://misform.work">misform.work</a>. It is not reached through the SIMS Parent app or the SIMS website.</li>' ||
+      '<li>Changing your password in one system does not change it in the other.</li>' ||
+    '</ul>' ||
+
+    '<p><strong>What you can see in Formwork</strong></p>' ||
+    '<p>For each of your children:</p>' ||
+    '<ul>' ||
+      '<li>their timetable</li>' ||
+      '<li>their results compared with their target grades</li>' ||
+      '<li>their behaviour record</li>' ||
+      '<li>their attendance, including today lesson by lesson</li>' ||
+      '<li>school fees and payment history</li>' ||
+      '<li>their tuckshop balance and spending</li>' ||
+      '<li>messages from the school in your inbox</li>' ||
+    '</ul>' ||
+
+    '<p><strong>Your login details</strong></p>' ||
+    '<p><strong>Web address:</strong> <a href="https://misform.work">misform.work</a><br/>' ||
+    '<strong>Login email:</strong> ' || p_email || '<br/>' ||
+    password_html ||
+    '<p>The first time you sign in, Formwork will ask you to choose your own new password ' ||
+    '(at least 8 characters). After that, use the new password you chose. ' ||
+    'Keep it private: the school will never ask you for it.</p>' ||
+
+    '<p><strong>Need help?</strong></p>' ||
+    '<p>If you cannot sign in, or something about your child looks wrong, please contact the school office ' ||
+    'and we will be happy to help.</p>' ||
+
     '<p>Kind regards,<br/>Adorable British College</p>';
 
-  perform net.http_post(
-    url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
-      'Content-Type', 'application/json'
-    ),
-    body := jsonb_build_object(
+  perform public.queue_workspace_email( jsonb_build_object(
       'to', p_email,
-      'subject', 'Your Adorable MIS parent portal account',
-      'html', body_html
+      'subject', 'Introducing Formwork: your new parent account (separate from SIMS)',
+      'html', body_html,
+      'reply_to', 'sro@abc.sch.ng'
     )
   );
 end;
@@ -3033,16 +3481,11 @@ begin
     '<p>Please sign in at <a href="https://misform.work">misform.work</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
     '<p>Kind regards,<br/>Adorable British College</p>';
 
-  perform net.http_post(
-    url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
-      'Content-Type', 'application/json'
-    ),
-    body := jsonb_build_object(
+  perform public.queue_workspace_email( jsonb_build_object(
       'to', p_email,
       'subject', 'Your Adorable MIS staff account',
-      'html', body_html
+      'html', body_html,
+      'reply_to', 'sro@abc.sch.ng'
     )
   );
 end;
@@ -3072,19 +3515,28 @@ begin
     '<p>Please sign in at <a href="https://misform.work">misform.work</a> and change your password on first login (use "Change Password" in the menu).</p>' ||
     '<p>Kind regards,<br/>Adorable British College</p>';
 
-  perform net.http_post(
-    url := 'https://drjtcegtucovhbyfdpbx.supabase.co/functions/v1/send-workspace-email',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyanRjZWd0dWNvdmhieWZkcGJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODk1ODgsImV4cCI6MjEwMzg2NTU4OH0.E6WlnKIOyFtKVTyi0S6sAobUIjThlrCDxNOnK1sGV4k',
-      'Content-Type', 'application/json'
-    ),
-    body := jsonb_build_object(
+  perform public.queue_workspace_email( jsonb_build_object(
       'to', p_email,
       'subject', 'Your Adorable MIS student account',
-      'html', body_html
+      'html', body_html,
+      'reply_to', 'sro@abc.sch.ng'
     )
   );
 end;
+$function$
+
+```
+
+### `send_workspace_email_key()` — SECURITY DEFINER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.send_workspace_email_key()
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_temp'
+AS $function$
+  select decrypted_secret from vault.decrypted_secrets
+  where name = 'send_workspace_email_key';
 $function$
 
 ```
@@ -3177,6 +3629,23 @@ begin
   new.updated_at = now();
   return new;
 end;
+$function$
+
+```
+
+### `smt_reply_to_addresses()` — SECURITY DEFINER, sql
+```sql
+CREATE OR REPLACE FUNCTION public.smt_reply_to_addresses()
+ RETURNS text[]
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+  select coalesce(array_agg(distinct lower(trim(st.email))), array[]::text[])
+  from staff st
+  join staff_roles sr on sr.staff_id = st.staff_id
+  where sr.role_name = 'smt'
+    and st.email is not null and length(trim(st.email)) > 0;
 $function$
 
 ```
