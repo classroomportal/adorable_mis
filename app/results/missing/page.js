@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
-import { formatUKDate } from '../../../lib/formatDate';
+import ResultSetPicker, { localToday, ResultSetDateNote, fieldStyle } from '../../components/ResultSetPicker';
 
 // Marks not yet entered for a result set, one row per class, so they can be
 // chased with the teacher. missing_grades_by_class() (migration 175) does the
@@ -32,7 +32,7 @@ function MissingGradesInner() {
         const sets = data || [];
         setResultSets(sets);
         // Open on the most recent set that has already happened.
-        const today = new Date().toISOString().slice(0, 10);
+        const today = localToday();
         const current = sets.find((s) => s.event_date <= today) || sets[0];
         if (current) setEventId(String(current.event_id));
       });
@@ -81,15 +81,11 @@ function MissingGradesInner() {
       </p>
 
       <div className="card">
-        <label>
+        <div style={{ ...fieldStyle, margin: '0.5rem 0' }}>
           Result set
-          <select value={eventId} onChange={(e) => setEventId(e.target.value)}>
-            <option value="">Select a result set...</option>
-            {resultSets.map((s) => (
-              <option key={s.event_id} value={s.event_id}>{s.event_name} — {formatUKDate(s.event_date)}</option>
-            ))}
-          </select>
-        </label>
+          <ResultSetPicker resultSets={resultSets} value={eventId} onChange={setEventId} />
+          <ResultSetDateNote resultSet={resultSets.find((s) => String(s.event_id) === eventId)} />
+        </div>
         <label>
           Subject
           <select value={activeSubject} onChange={(e) => setSubject(e.target.value)} disabled={subjects.length === 0}>
