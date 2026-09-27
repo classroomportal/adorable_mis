@@ -76,7 +76,7 @@ function DetentionInner() {
       // ambiguous and PostgREST rejects the whole query.
       const { data: ev, error: evErr } = await supabase
         .from('behaviour_events')
-        .select('event_id, student_id, staff_id, event_date, event_time, type, category, points, description, staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+        .select('event_id, student_id, staff_id, photo_id, event_date, event_time, type, category, points, description, staff!behaviour_events_staff_id_fkey(first_name, last_name)')
         .in('student_id', studentIds)
         .eq('type', 'negative')
         .is('voided_at', null) // appeal upheld (migration 196)
@@ -171,20 +171,20 @@ function DetentionInner() {
                           <strong style={{ whiteSpace: 'nowrap' }}>{e.points} pts</strong>
                           {e.serious && <span className="badge" style={{ background: 'var(--yellow-200)', color: 'var(--ink)' }}>Serious — detention on its own</span>}
                           {e.staff && <span style={{ color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>{e.staff.first_name} {e.staff.last_name}</span>}
-                          {e.description && (
+                          {(e.description || e.photo_id) && (
                             <button
                               type="button"
                               className="secondary no-print"
                               onClick={() => setOpenComments((o) => ({ ...o, [e.event_id]: !o[e.event_id] }))}
                               style={{ padding: '0.15rem 0.55rem', fontSize: '0.8rem', marginLeft: 'auto' }}
                             >
-                              {openComments[e.event_id] ? 'Hide staff comment' : 'Show staff comment'}
+                              {openComments[e.event_id] ? 'Hide' : e.description ? `Show staff comment${e.photo_id ? ' 📷' : ''}` : 'Show picture'}
                             </button>
                           )}
                         </div>
                       </td>
                     </tr>
-                    {e.description && openComments[e.event_id] && (
+                    {(e.description || e.photo_id) && openComments[e.event_id] && (
                       <tr>
                         <td colSpan={4} style={{ paddingLeft: '1.5rem' }}>
                           <div style={{ fontSize: '0.9rem', background: 'var(--slate-50)', borderLeft: '3px solid var(--brand-600)', padding: '0.5rem 0.75rem', borderRadius: 4 }}>

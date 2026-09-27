@@ -13,6 +13,18 @@ import { formatTimeRange } from '../../lib/formatTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
 import { useHashView, DashboardTile, DashboardBack } from '../components/Dashboard';
 import { closingWarning } from '../../lib/tuckshopSchedule';
+import BehaviourPhoto from '../components/BehaviourPhoto';
+
+
+// Which of these events have a picture this viewer may see. Row-level
+// security (migration 209) only returns approved pictures on the viewer's own
+// visible events, so this asks for ids only — images load when tapped.
+async function loadVisiblePhotoIds(events) {
+  const ids = [...new Set((events || []).map((e) => e.photo_id).filter(Boolean))];
+  if (ids.length === 0) return new Set();
+  const { data } = await supabase.from('behaviour_photos').select('photo_id').in('photo_id', ids);
+  return new Set((data || []).map((p) => p.photo_id));
+}
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -22,6 +34,7 @@ function PortalInner() {
   const [results, setResults] = useState([]);
   const [targets, setTargets] = useState([]);
   const [behaviour, setBehaviour] = useState([]);
+  const [photoIds, setPhotoIds] = useState(new Set()); // approved pictures this viewer may see
   const [appeals, setAppeals] = useState([]);
   const [gradePoints, setGradePoints] = useState({});
   const [appealForm, setAppealForm] = useState(null); // event_id being appealed
@@ -59,6 +72,7 @@ function PortalInner() {
     setGradePoints(Object.fromEntries((gs || []).map((g) => [g.grade, Number(g.points)])));
     const { data: b } = await supabase.from('behaviour_events').select('*, staff!behaviour_events_staff_id_fkey(first_name, last_name)').eq('student_id', studentId).is('voided_at', null).order('event_date', { ascending: false });
     setBehaviour(b || []);
+    setPhotoIds(await loadVisiblePhotoIds(b));
     const { data: ap } = await supabase.from('behaviour_appeals').select('*').eq('student_id', studentId);
     setAppeals(ap || []);
     const { data: bal } = await supabase.rpc('get_tuckshop_balance', { p_student_id: studentId });
@@ -313,7 +327,10 @@ function PortalInner() {
                   <tr key={b.event_id}>
                     <td>{b.event_date}</td>
                     <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
-                    <td>{b.category}</td>
+                    <td>
+                      {b.category}
+                      {photoIds.has(b.photo_id) && <div style={{ marginTop: '0.3rem' }}><BehaviourPhoto photoId={b.photo_id} /></div>}
+                    </td>
                     <td>{b.points}</td>
                     {/* Recorded automatically since migration 138; older events have no staff member. */}
                     <td>{b.staff ? `${b.staff.first_name} ${b.staff.last_name}` : '—'}</td>

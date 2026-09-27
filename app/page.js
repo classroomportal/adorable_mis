@@ -193,7 +193,7 @@ const TABS = [
     items: ({ hasAccess }) => [
       { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
       { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
-      { href: '/behaviour/review', label: 'Serious Incidents', desc: "Check serious incidents before parents can see them." },
+      { href: '/behaviour/review', label: 'Behaviour Review', desc: "Check serious incidents and behaviour pictures before parents can see them." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
       { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
       { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },

@@ -8,6 +8,8 @@ import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
+import { resizePhotoToBase64 } from '../../lib/photo';
+import BehaviourPhoto from '../components/BehaviourPhoto';
 
 // boarding_room_number is text, so a plain sort puts "10" before "2". Sort the
 // numeric ones by value and leave anything non-numeric (e.g. "3A") after them.
@@ -65,6 +67,9 @@ function BehaviourPageInner() {
     type: 'positive', category: '', points: '', description: '',
   });
   const [status, setStatus] = useState(null);
+  // One optional picture (migration 209), already shrunk to base64 JPEG.
+  const [photo, setPhoto] = useState(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   // On a slow connection staff assumed the first tap hadn't registered and
   // tapped again, logging every event twice. The ref blocks a second submit
   // synchronously (state alone can let a fast double tap through before the
@@ -79,7 +84,7 @@ function BehaviourPageInner() {
   async function loadEvents() {
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, type, category, points, description, staff_id, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+      .select('event_id, event_date, type, category, points, description, staff_id, photo_id, students(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('is_demo', !!profile?.is_demo_account)
       .is('voided_at', null)
       .order('event_date', { ascending: false })
@@ -272,6 +277,26 @@ function BehaviourPageInner() {
 
   const isSerious = form.type === 'negative' && Number(form.points) <= -5 && form.points !== '';
 
+  // Shrink on the device before upload: 800px on the long side is plenty to
+  // see on a phone without being high definition. Measured on real iPad
+  // photos (1.1-1.8 MB), that comes out at 18-35 KB. An unusually detailed
+  // picture that is still over 100 KB is tried again at 640px.
+  async function handlePhotoChosen(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      let b64 = await resizePhotoToBase64(file, 800, 0.6);
+      if (b64.length > 136000) b64 = await resizePhotoToBase64(file, 640, 0.5);
+      setPhoto(b64);
+    } catch {
+      setStatus("That file couldn't be read as a picture.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
 
@@ -297,6 +322,22 @@ function BehaviourPageInner() {
     savingRef.current = true;
     setSaving(true);
     setStatus('Saving...');
+    // The picture is stored once and every event logged here points at it.
+    let photoId = null;
+    if (photo) {
+      const { data: ph, error: phErr } = await supabase
+        .from('behaviour_photos')
+        .insert({ image_jpeg_base64: photo })
+        .select('photo_id')
+        .single();
+      if (phErr) {
+        savingRef.current = false;
+        setSaving(false);
+        setStatus(`Couldn't save the picture: ${phErr.message}`);
+        return;
+      }
+      photoId = ph.photo_id;
+    }
     const rows = studentIds.map((student_id) => ({
       student_id,
       event_date: form.event_date,
@@ -306,6 +347,7 @@ function BehaviourPageInner() {
       // The lesson or mentor group picked, so parents can see the subject
       // (migration 145 works it out from the timetable otherwise).
       class_id: groupType === 'mentor' && classId ? Number(classId) : null,
+      photo_id: photoId,
     }));
     let error;
     try {
@@ -321,6 +363,7 @@ function BehaviourPageInner() {
     } else {
       setStatus(`Saved ${rows.length} event${rows.length > 1 ? 's' : ''}.`);
       setForm({ ...form, category: '', points: '', description: '' });
+      setPhoto(null);
       if (usingGroup) selectAll(); else setSingleStudentId('');
       loadEvents();
     }
@@ -536,7 +579,28 @@ function BehaviourPageInner() {
           />
         </label>
 
-        <button type="submit" className="bl-submit" disabled={saving}>
+        <div className="bl-field">
+          Picture (optional)
+          {photo ? (
+            <div className="bl-photo-preview">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`data:image/jpeg;base64,${photo}`} alt="Picture to add" />
+              <div>
+                <button type="button" className="secondary bl-small" onClick={() => setPhoto(null)}>Remove picture</button>
+                <div className="bl-hint" style={{ marginTop: '0.35rem' }}>
+                  About {Math.round((photo.length * 0.75) / 1024)} KB. Parents see it once the school office approves it.
+                </div>
+              </div>
+            </div>
+          ) : (
+            <label className="bl-photo-pick">
+              <input type="file" accept="image/*" onChange={handlePhotoChosen} disabled={photoBusy} />
+              <span>{photoBusy ? 'Preparing picture…' : '📷 Take or choose a picture'}</span>
+            </label>
+          )}
+        </div>
+
+        <button type="submit" className="bl-submit" disabled={saving || photoBusy}>
           {saving ? 'Saving…' : usingGroup ? `Log for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Log event'}
         </button>
         {status && <p style={{ margin: 0 }}>{status}</p>}
@@ -557,7 +621,7 @@ function BehaviourPageInner() {
             <tr className="student-link" onClick={() => window.location.href = `/students/${ev.students?.student_id}`}>
               <td style={{ whiteSpace: 'nowrap' }}>{formatUKDate(ev.event_date).replace(/ \d{4}$/, '')}</td>
               <td>{ev.students?.first_name} {ev.students?.last_name}</td>
-              <td>{ev.category ?? '—'}</td>
+              <td>{ev.category ?? '—'}{ev.photo_id && <span title="Has a picture"> 📷</span>}</td>
               <td style={{ color: ev.type === 'negative' ? 'var(--red-700)' : '#1d6b3a', fontWeight: 600 }}>
                 {ev.points == null ? '—' : `${ev.points > 0 ? '+' : ''}${ev.points}`}
               </td>
