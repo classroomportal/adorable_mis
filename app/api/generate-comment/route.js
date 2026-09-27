@@ -7,12 +7,19 @@
 // gathers the real data client-side and sends it here; this route only turns that data
 // into a short comment. That keeps the prompt's inputs exactly what the teacher already
 // sees on screen, with nothing fetched or fabricated server-side.
+//
+// Only for people who can open one of the two comment-writing pages
+// (lib/serverAuth.js).
 
+import { requireResource } from '../../../lib/serverAuth';
 import { subjectFacts, pastoralFacts, PASTORAL_ROLE } from '../../../lib/reportFacts';
 
 const MODEL = 'claude-sonnet-5';
 
 export async function POST(request) {
+  const auth = await requireResource(request, ['/reports/write-subject-comments', '/reports/write-pastoral-comments']);
+  if (auth.denied) return auth.denied;
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return Response.json({ error: 'ANTHROPIC_API_KEY is not configured on the server.' }, { status: 500 });

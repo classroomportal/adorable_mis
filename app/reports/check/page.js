@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { apiPost } from '../../../lib/apiFetch';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
@@ -117,15 +118,11 @@ function CheckReportsInner() {
     setChecking(true);
     setPageStatus(null);
     try {
-      const res = await fetch('/api/check-comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: items.map((it) => ({
-            id: itemKey(it), studentFirstName: it.studentFirstName, comment: it.comment,
-            effortGrade: it.effortGrade, latestGrade: it.latestGrade, latestScorePct: it.latestScorePct, targetGrade: it.targetGrade,
-          })),
-        }),
+      const res = await apiPost('/api/check-comments', {
+        items: items.map((it) => ({
+          id: itemKey(it), studentFirstName: it.studentFirstName, comment: it.comment,
+          effortGrade: it.effortGrade, latestGrade: it.latestGrade, latestScorePct: it.latestScorePct, targetGrade: it.targetGrade,
+        })),
       });
       const data = await res.json();
       if (!res.ok) { setPageStatus(`AI check failed: ${data.error || 'unknown error'}`); return; }

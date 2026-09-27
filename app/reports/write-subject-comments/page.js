@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { apiPost } from '../../../lib/apiFetch';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
@@ -213,11 +214,7 @@ function WriteSubjectCommentsInner() {
     setGeneratingFor(student.student_id);
     setStatus(null);
     try {
-      const res = await fetch('/api/generate-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draftPayload(student, row)),
-      });
+      const res = await apiPost('/api/generate-comment', draftPayload(student, row));
       const data = await res.json();
       if (!res.ok) {
         setStatus(`Couldn't generate a draft: ${data.error || 'unknown error'}`);

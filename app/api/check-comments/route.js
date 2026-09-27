@@ -2,10 +2,17 @@
 // the caller sends the data already visible on screen, this route never touches
 // Supabase. One call per "Run AI check" click covers every submitted comment on
 // screen rather than one round trip per comment.
+//
+// Only for people who can open /reports/check (lib/serverAuth.js).
+
+import { requireResource } from '../../../lib/serverAuth';
 
 const MODEL = 'claude-sonnet-5';
 
 export async function POST(request) {
+  const auth = await requireResource(request, '/reports/check');
+  if (auth.denied) return auth.denied;
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return Response.json({ error: 'ANTHROPIC_API_KEY is not configured on the server.' }, { status: 500 });
