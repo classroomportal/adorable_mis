@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { formatUKDate } from '../../lib/formatDate';
+import ResultSetPicker, { confirmResultSetDate, ResultSetDateNote, fieldStyle } from '../components/ResultSetPicker';
 import { classifyGrade, STYLE, LABEL } from '../../lib/gradeCompare';
 
 function ResultsPageInner() {
@@ -59,6 +60,16 @@ function ResultsPageInner() {
     loadResults();
   }, []);
 
+  // This form stores the result set's date, not its id, so the picker shows
+  // whichever set falls on the chosen date (none for a custom date).
+  const chosenSet = relps.find((r) => r.event_date === form.week_start_date);
+
+  function chooseResultSet(id) {
+    const rs = relps.find((r) => String(r.event_id) === String(id));
+    if (!rs || !confirmResultSetDate(rs)) return;
+    setForm({ ...form, week_start_date: rs.event_date });
+  }
+
   function compareToTarget(result) {
     const target = targetMap[`${result.student_id}-${result.subject_id}`];
     if (!target) return null;
@@ -112,18 +123,16 @@ function ResultsPageInner() {
           </select>
         </label>
 
-        <label>
+        <div style={{ ...fieldStyle, flex: '2 1 300px' }}>
           Result Set
-          <select
-            value={form.week_start_date}
-            onChange={(e) => setForm({ ...form, week_start_date: e.target.value })}
-          >
-            <option value="">Select a result set, or type a custom date below...</option>
-            {relps.map((r) => (
-              <option key={r.event_id} value={r.event_date}>{r.event_name} — {formatUKDate(r.event_date)}</option>
-            ))}
-          </select>
-        </label>
+          <ResultSetPicker
+            resultSets={relps}
+            value={chosenSet?.event_id ?? ''}
+            onChange={chooseResultSet}
+            placeholder="Select a result set, or type a custom date..."
+          />
+          <ResultSetDateNote resultSet={chosenSet} checkDate />
+        </div>
 
         <label>
           Or custom date

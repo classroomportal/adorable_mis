@@ -23,6 +23,42 @@ export function describeDistance(days) {
   return days > 0 ? `in ${days} days` : `${-days} days ago`;
 }
 
+// A result set dated more than this many days ago asks "are you sure?" before
+// marks are entered against it. Anything dated in the future always does.
+const STALE_AFTER_DAYS = 14;
+
+// Why this result set's date looks wrong for entering marks today, or null.
+export function dateWarning(resultSet) {
+  const days = daysFromToday(resultSet.event_date);
+  const when = `${formatUKDate(resultSet.event_date, { weekday: true })}, ${describeDistance(days)}`;
+  if (days > 0) return `"${resultSet.event_name}" is dated ${when} — it hasn't happened yet.`;
+  if (days < -STALE_AFTER_DAYS) return `"${resultSet.event_name}" is dated ${when}.`;
+  return null;
+}
+
+// For pages that save marks: asks before choosing a set whose date looks
+// wrong. Returns false if the user backs out.
+export function confirmResultSetDate(resultSet) {
+  const warning = resultSet && dateWarning(resultSet);
+  return !warning || confirm(`${warning}\n\nAre you sure this is the result set you want?`);
+}
+
+// The line under a picker: the chosen set's date and how far off it is, in
+// red when checkDate is on and the date looks wrong for entering marks.
+export function ResultSetDateNote({ resultSet, checkDate = false }) {
+  if (!resultSet) return null;
+  const warning = checkDate ? dateWarning(resultSet) : null;
+  return (
+    <span style={{ color: warning ? 'var(--red-700)' : 'var(--ink-soft)' }}>
+      {warning || `Dated ${formatUKDate(resultSet.event_date, { weekday: true })}, ${describeDistance(daysFromToday(resultSet.event_date))}.`}
+    </span>
+  );
+}
+
+// Field wrapper matching the app's <label> look. A div, not a <label>: a
+// label would route every tap inside the open list back to the toggle button.
+export const fieldStyle = { display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--ink-soft)', flex: '1 1 140px' };
+
 // A result-set picker in place of a native <select>. On iPad, Safari draws a
 // <select>'s options in a narrow popover that CSS can't widen, so names like
 // "New students check — 5 Oct 2026" wrapped onto two lines. This list is as
@@ -30,7 +66,7 @@ export function describeDistance(days) {
 //
 // Result sets dated today or earlier come first, most recent at the top; ones
 // still to come sit underneath under "Upcoming", soonest first.
-export default function ResultSetPicker({ resultSets, value, onChange }) {
+export default function ResultSetPicker({ resultSets, value, onChange, placeholder = 'Select a result set...' }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -96,7 +132,7 @@ export default function ResultSetPicker({ resultSets, value, onChange }) {
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {selected ? `${selected.event_name} — ${formatUKDate(selected.event_date)}` : 'Select a result set...'}
+          {selected ? `${selected.event_name} — ${formatUKDate(selected.event_date)}` : placeholder}
         </span>
         <span aria-hidden="true" style={{ color: 'var(--ink-soft)' }}>▾</span>
       </button>
