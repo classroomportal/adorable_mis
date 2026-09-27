@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/check-api-auth.js",
     "build": "next build",
+    "check:api-auth": "node scripts/check-api-auth.js",
     "start": "next start"
   },
   "dependencies": {

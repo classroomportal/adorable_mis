@@ -18,33 +18,17 @@
 //                         this repo only. Nothing else.
 //   GITHUB_BACKUP_REPO   optional, defaults to classroomportal/adorable_mis.
 
+import { requireResource, ADMIN_ONLY } from '../../../lib/serverAuth';
+
 const DEFAULT_REPO = 'classroomportal/adorable_mis';
 const WORKFLOW_FILE = 'nightly-backup.yml';
 
-// The caller sends their own Supabase session token and we ask the database
-// who they are. The route never holds a service-role key, so a bug here
-// cannot escalate beyond what the signed-in user could already do.
-async function callerIsAdmin(request) {
-  const authHeader = request.headers.get('authorization') || '';
-  const token = authHeader.replace(/^Bearer /i, '').trim();
-  if (!token) return false;
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return false;
-
-  const res = await fetch(`${url}/rest/v1/rpc/is_admin`, {
-    method: 'POST',
-    headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: '{}',
-  });
-  if (!res.ok) return false;
-  return (await res.json()) === true;
-}
+// The caller sends their own Supabase session token and requireResource()
+// asks the database who they are (lib/serverAuth.js). ADMIN_ONLY means
+// is_admin(), not the page's role_permissions, so granting /admin/backup to
+// another role can't let them start a backup. The route never holds a
+// service-role key, so a bug here cannot escalate beyond what the signed-in
+// user could already do.
 
 function github(path, token, init = {}) {
   return fetch(`https://api.github.com${path}`, {
@@ -60,15 +44,15 @@ function github(path, token, init = {}) {
 }
 
 export async function POST(request) {
+  const auth = await requireResource(request, ADMIN_ONLY);
+  if (auth.denied) return auth.denied;
+
   const token = process.env.GITHUB_BACKUP_TOKEN;
   if (!token) {
     return Response.json(
       { error: 'GITHUB_BACKUP_TOKEN is not configured on the server, so backups cannot be triggered from here.' },
       { status: 500 },
     );
-  }
-  if (!(await callerIsAdmin(request))) {
-    return Response.json({ error: 'Only an admin can trigger a backup.' }, { status: 403 });
   }
 
   const repo = process.env.GITHUB_BACKUP_REPO || DEFAULT_REPO;
@@ -119,9 +103,8 @@ export async function POST(request) {
 }
 
 export async function GET(request) {
-  if (!(await callerIsAdmin(request))) {
-    return Response.json({ error: 'Only an admin can check backup status.' }, { status: 403 });
-  }
+  const auth = await requireResource(request, ADMIN_ONLY);
+  if (auth.denied) return auth.denied;
 
   // With no runId this is the page asking whether a backup can be started at
   // all. It asks before freezing the school, so a missing token shows up as a
