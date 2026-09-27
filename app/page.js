@@ -295,6 +295,7 @@ const TABS = [
       { href: '/tuckshop/preorders', label: 'Preorders', desc: "Student preorders waiting to be handed out." },
       { href: '/tuckshop/items', label: 'Items & Prices', desc: "Tuckshop items and prices." },
       { href: '/tuckshop/order-sheets', label: 'Order Sheets', desc: "Printable order sheets for each tuckshop day." },
+      { href: '/tuckshop/hand-out', label: 'Hand Out Orders', desc: "Tick off orders as they're given, by restaurant." },
       { href: '/tuckshop/ordering', label: 'Ordering On/Off', desc: "Close and reopen student ordering." },
     ].filter((it) => hasAccess(it.href)),
   },
