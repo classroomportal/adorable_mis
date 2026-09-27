@@ -1,49 +1,65 @@
 // SplashScreen.js
 // (c) 2026 CBT. All rights reserved.
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 const DISPLAY_MS = 2200;
 // Long enough to read a handful of names; a tap dismisses it sooner.
 const BIRTHDAY_DISPLAY_MS = 7000;
+// How long to wait for the birthday lookup before closing without it.
+const MAX_WAIT_MS = 5000;
+const FADE_MS = 400;
 
 // Today's birthdays (migration 213) are shown here rather than on /login:
 // the login page is public, and a child's date of birth is a parent's first
 // password. todays_birthdays() returns names only, for signed-in staff and
 // students; parents and anyone else get nothing back.
+//
+// The close timer must not start until the lookup has answered. It used to
+// give up after 1.8s and start the normal 2.2s close; on iPhones and iPads
+// the answer often came later, so the splash was already fading out when
+// the names arrived and they were never seen.
 export default function SplashScreen({ onDone }) {
   const [fading, setFading] = useState(false);
   const [birthdays, setBirthdays] = useState(null); // null = still asking
-  const [asked, setAsked] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
+  const mountedAt = useRef(Date.now());
+  // The dashboard passes a new onDone on every render; keep the latest in a
+  // ref so a re-render doesn't restart the close timer.
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; });
 
   useEffect(() => {
     let cancelled = false;
-    supabase.rpc('todays_birthdays').then(({ data }) => {
-      if (cancelled) return;
-      setBirthdays(data || []);
-      setAsked(true);
-    });
-    // Don't hold the splash up if the database is slow to answer.
-    const giveUp = setTimeout(() => { if (!cancelled) setAsked(true); }, DISPLAY_MS - 400);
+    supabase.rpc('todays_birthdays')
+      .then(({ data }) => { if (!cancelled) setBirthdays(data || []); })
+      .catch(() => { if (!cancelled) setBirthdays([]); });
+    const giveUp = setTimeout(() => { if (!cancelled) setGaveUp(true); }, MAX_WAIT_MS);
     return () => { cancelled = true; clearTimeout(giveUp); };
   }, []);
 
   const hasBirthdays = birthdays && birthdays.length > 0;
+  const answered = birthdays !== null || gaveUp;
   // On a birthday day the Formwork card shrinks so the names are the focus.
   const compact = hasBirthdays;
 
   useEffect(() => {
-    if (!asked) return undefined;
-    const displayMs = hasBirthdays ? BIRTHDAY_DISPLAY_MS : DISPLAY_MS;
-    const fadeTimer = setTimeout(() => setFading(true), displayMs - 400);
-    const doneTimer = setTimeout(() => onDone(), displayMs);
+    if (!answered) return undefined;
+    // Birthdays get their full time from the moment they appear. Otherwise
+    // close at the usual 2.2s after the splash opened, or straight away
+    // (after the fade) if the lookup took longer than that.
+    const elapsed = Date.now() - mountedAt.current;
+    const displayMs = hasBirthdays ? BIRTHDAY_DISPLAY_MS : Math.max(DISPLAY_MS - elapsed, FADE_MS);
+    setFading(false);
+    const fadeTimer = setTimeout(() => setFading(true), displayMs - FADE_MS);
+    const doneTimer = setTimeout(() => onDoneRef.current(), displayMs);
     return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
-  }, [asked, hasBirthdays, onDone]);
+  }, [answered, hasBirthdays]);
 
   return (
     <div
-      onClick={() => onDone()}
+      onClick={() => onDoneRef.current()}
       style={{
         position: 'fixed',
         inset: 0,
@@ -159,7 +175,7 @@ export default function SplashScreen({ onDone }) {
               treat a tap on plain text as a click, so tapping did nothing. */}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onDone(); }}
+            onClick={(e) => { e.stopPropagation(); onDoneRef.current(); }}
             style={{ marginTop: '12px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}
           >
             Continue
