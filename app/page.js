@@ -320,6 +320,7 @@ const TABS = [
       { href: '/students/import', label: 'Import Students', desc: "Upload a student list." },
       { href: '/students/photos/import', label: 'Import Photos', desc: "Upload student photos." },
       { href: '/admin/backup', label: 'Run a Backup', desc: "Take a full backup of the database." },
+      { href: '/admin/change-history', label: 'Change History', desc: "Changes to registers, fees, behaviour, roles and parent links, and who made them." },
       // /admin/import-timetable (SIMS student-class upload) is no longer used:
       // allocations are kept in Formwork, and that upload only ever added
       // students to classes, never took them out. Hidden, not deleted.
