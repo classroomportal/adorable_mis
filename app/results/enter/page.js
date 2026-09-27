@@ -6,12 +6,26 @@ import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import { loadResultSetScopes, scopeToReportPeriod, inReportPeriod } from '../../../lib/reportWriting';
+import ResultSetPicker, { daysFromToday, describeDistance } from '../../components/ResultSetPicker';
 
 const RESULT_TYPES = [
   { value: 'short_test', label: 'Short Test' },
   { value: 'teacher_assessment', label: 'Teacher Assessment' },
   { value: 'exam_grade', label: 'Exam Grade' },
 ];
+
+// A result set dated more than this many days ago asks "are you sure?".
+// Anything dated in the future always does.
+const STALE_AFTER_DAYS = 14;
+
+// Why this result set's date looks wrong for today, or null if it's fine.
+function dateWarning(resultSet) {
+  const days = daysFromToday(resultSet.event_date);
+  const when = `${formatUKDate(resultSet.event_date, { weekday: true })}, ${describeDistance(days)}`;
+  if (days > 0) return `"${resultSet.event_name}" is dated ${when} — it hasn't happened yet.`;
+  if (days < -STALE_AFTER_DAYS) return `"${resultSet.event_name}" is dated ${when}.`;
+  return null;
+}
 
 function EnterResultsInner() {
   const { profile, staffRoles } = useAuth();
@@ -185,6 +199,17 @@ function EnterResultsInner() {
   }
 
   const selectedResultSet = resultSets.find((r) => String(r.event_id) === String(resultSetEventId));
+  const selectedWarning = selectedResultSet ? dateWarning(selectedResultSet) : null;
+
+  // Picking a result set whose date doesn't fit today (not happened yet, or
+  // weeks old) asks first — scores saved against the wrong set land in the
+  // wrong column of every tracker and report.
+  function chooseResultSet(id) {
+    const rs = resultSets.find((r) => String(r.event_id) === String(id));
+    const warning = rs && dateWarning(rs);
+    if (warning && !confirm(`${warning}\n\nAre you sure this is the result set you want?`)) return;
+    setResultSetEventId(id);
+  }
 
   // A result set for some students only offers the classes they're in.
   const shownClasses = scopeClassIds ? classes.filter((c) => scopeClassIds.has(c.class_id)) : classes;
@@ -227,17 +252,17 @@ function EnterResultsInner() {
           </select>
         </label>
 
-        <label>
+        {/* A div, not a <label>: a label would route every tap inside the
+            open list back to the picker's toggle button. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem', color: 'var(--ink-soft)', margin: '0.5rem 0' }}>
           Result Set
-          <select value={resultSetEventId} onChange={(e) => setResultSetEventId(e.target.value)}>
-            <option value="">Select a result set...</option>
-            {resultSets.map((r) => (
-              <option key={r.event_id} value={r.event_id}>
-                {r.event_name} — {formatUKDate(r.event_date)}
-              </option>
-            ))}
-          </select>
-        </label>
+          <ResultSetPicker resultSets={resultSets} value={resultSetEventId} onChange={chooseResultSet} />
+          {selectedResultSet && (
+            <span style={{ color: selectedWarning ? 'var(--red-700)' : 'var(--ink-soft)' }}>
+              {selectedWarning || `Dated ${formatUKDate(selectedResultSet.event_date, { weekday: true })}, ${describeDistance(daysFromToday(selectedResultSet.event_date))}.`}
+            </span>
+          )}
+        </div>
 
         <label>
           Result Type
