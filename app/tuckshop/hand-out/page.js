@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { useAuth } from '../../../lib/AuthContext';
+import { canHandOut } from '../../../lib/tuckshopHandout';
 
 // Handing out tuckshop orders at the counter, one restaurant at a time: tap
 // a student when their order has been given. That charges their balance,
@@ -333,10 +335,19 @@ function HandOutInner() {
   );
 }
 
+// Tuckshop staff and the tuckshop owner only. RequireResource alone would
+// let every admin in, so the staff roles are checked as well.
+function HandOutGate() {
+  const { profileLoaded, staffRoles } = useAuth();
+  if (!profileLoaded) return <p>Loading...</p>;
+  if (!canHandOut(staffRoles)) return <p>Only tuckshop staff and the tuckshop owner can hand out orders.</p>;
+  return <HandOutInner />;
+}
+
 export default function HandOutPage() {
   return (
     <RequireAuth><RequireResource resourceKey="/tuckshop/hand-out">
-      <HandOutInner />
+      <HandOutGate />
     </RequireResource></RequireAuth>
   );
 }
