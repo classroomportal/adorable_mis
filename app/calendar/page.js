@@ -276,7 +276,7 @@ function CalendarInner() {
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <input type="checkbox" checked={newEvent.is_result_set} onChange={(e) => setNewEvent({ ...newEvent, is_result_set: e.target.checked })} />
-              Result set (show in Subject Overview dataset picker)
+              Result set (show in Review Results dataset picker)
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <input type="checkbox" checked={isReportPeriod} onChange={(e) => setIsReportPeriod(e.target.checked)} />
