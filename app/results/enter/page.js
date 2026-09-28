@@ -184,6 +184,33 @@ function EnterResultsInner() {
     }
   }
 
+  // Removes a saved score entered by mistake. Clearing the box and saving
+  // doesn't do this (Save all only sends rows with a score), so it's a
+  // separate, confirmed action. The deleted row is kept in grade_history.
+  async function handleDelete(student) {
+    const row = rows[student.student_id];
+    if (!row?.resultId) return;
+    if (!window.confirm(`Delete the saved score for ${student.first_name} ${student.last_name}? This removes it from trackers and reports.`)) return;
+
+    setStatus('Deleting...');
+    const { data, error } = await supabase
+      .from('results')
+      .delete()
+      .eq('result_id', row.resultId)
+      .select('result_id');
+
+    if (error) {
+      setStatus(`Error: ${error.message}`);
+    } else if (!data || data.length === 0) {
+      // RLS hides rows you can't delete rather than raising, so nothing
+      // coming back means it wasn't theirs to delete.
+      setStatus("That score couldn't be deleted — you can only delete results for classes you are the teacher of record for.");
+    } else {
+      setStatus(`Deleted the score for ${student.first_name} ${student.last_name}.`);
+      loadRosterAndExisting();
+    }
+  }
+
   const selectedResultSet = resultSets.find((r) => String(r.event_id) === String(resultSetEventId));
 
   // Picking a result set whose date doesn't fit today (not happened yet, or
@@ -262,7 +289,7 @@ function EnterResultsInner() {
           <div className="table-scroll">
             <table>
               <thead>
-                <tr><th>Student</th><th>Score (%)</th><th>Grade</th></tr>
+                <tr><th>Student</th><th>Score (%)</th><th>Grade</th><th></th></tr>
               </thead>
               <tbody>
                 {roster.map((s) => (
@@ -280,6 +307,13 @@ function EnterResultsInner() {
                       />
                     </td>
                     <td>{rows[s.student_id]?.grade || '—'}</td>
+                    <td>
+                      {rows[s.student_id]?.resultId && (
+                        <button type="button" className="secondary" onClick={() => handleDelete(s)}>
+                          Delete
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
