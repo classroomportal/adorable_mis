@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
-import ResultSetPicker, { localToday, ResultSetDateNote, fieldStyle } from '../../components/ResultSetPicker';
+import ResultSetPicker, { localToday, schoolYearStart, ResultSetDateNote, fieldStyle } from '../../components/ResultSetPicker';
 
 // Marks not yet entered for a result set, one row per class, so they can be
 // chased with the teacher. missing_grades_by_class() (migration 175) does the
@@ -25,11 +25,15 @@ function MissingGradesInner() {
   useEffect(() => {
     supabase
       .from('calendar_events')
-      .select('event_id, event_date, event_name')
+      .select('event_id, event_date, event_name, exam_year_group')
       .eq('is_result_set', true)
       .order('event_date', { ascending: false })
       .then(({ data }) => {
-        const sets = data || [];
+        // Missing grades are worked out against today's classes, so a past
+        // year's per-year-group exam set (migration 246: 117 of them, back to
+        // 2017) would only ever list gaps that aren't gaps.
+        const yearStart = schoolYearStart();
+        const sets = (data || []).filter((s) => s.exam_year_group == null || s.event_date >= yearStart);
         setResultSets(sets);
         // Open on the most recent set that has already happened.
         const today = localToday();
