@@ -3,8 +3,11 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
+import { useAuth } from '../../lib/AuthContext';
 
 function ParentsInner() {
+  const { hasAccess } = useAuth();
+  const canViewAs = hasAccess('/parents/view-as');
   const [parents, setParents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -49,7 +52,7 @@ function ParentsInner() {
 
       {loading ? <p>Loading...</p> : (
         <div className="table-scroll"><table>
-          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Relationship</th><th>Login</th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Relationship</th><th>Login</th>{canViewAs && <th></th>}</tr></thead>
           <tbody>
             {filtered.map((p) => (
               <tr key={p.parent_id}>
@@ -58,6 +61,7 @@ function ParentsInner() {
                 <td>{p.phone ?? '—'}</td>
                 <td>{p.relationship_type ?? '—'}</td>
                 <td>{p.hasLogin ? '✅' : p.email ? 'Not created yet' : '—'}</td>
+                {canViewAs && <td><a href={`/parents/view-as?parent=${p.parent_id}`}>View as parent</a></td>}
               </tr>
             ))}
           </tbody>

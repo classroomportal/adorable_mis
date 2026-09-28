@@ -38,9 +38,15 @@ async function loadVisiblePhotoIds(events) {
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-export function ParentPortalInner() {
+// viewAsParentId: staff previewing the portal as a given parent sees
+// (/parents/view-as). Everything below reads through the staff member's own
+// login, so any rule that narrows what a parent sees beyond "their own
+// children" must also be applied here in the query, not left to RLS — see
+// the behaviour and picture filters.
+export function ParentPortalInner({ viewAsParentId = null } = {}) {
   const { profile } = useAuth();
-  const [resolvedParentId, setResolvedParentId] = useState(profile?.parent_id || null);
+  const viewingAs = !!viewAsParentId;
+  const [resolvedParentId, setResolvedParentId] = useState(viewAsParentId || profile?.parent_id || null);
   const [children, setChildren] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [activeView, setActiveView] = useState(null); // null = dashboard grid
@@ -70,6 +76,7 @@ export function ParentPortalInner() {
   // the parents table so the same "My Children" view works for both.
   useEffect(() => {
     async function resolveParent() {
+      if (viewAsParentId) { setResolvedParentId(viewAsParentId); return; }
       if (profile?.parent_id) { setResolvedParentId(profile.parent_id); return; }
       if (!profile?.email) return;
       const { data } = await supabase
@@ -80,12 +87,14 @@ export function ParentPortalInner() {
       setResolvedParentId(data?.parent_id || null);
     }
     resolveParent();
-  }, [profile]);
+  }, [profile, viewAsParentId]);
 
   const parentId = resolvedParentId;
 
   useEffect(() => {
     async function loadChildren() {
+      setSelectedId('');
+      setActiveView(null);
       if (!parentId) return;
       const { data } = await supabase
         .from('student_parent')
@@ -257,7 +266,7 @@ export function ParentPortalInner() {
 
   return (
     <div>
-      <h1>My Children</h1>
+      {!viewingAs && <h1>My Children</h1>}
 
       {children.length === 0 ? (
         <p>No linked children found.</p>
@@ -331,16 +340,19 @@ export function ParentPortalInner() {
                   </button>
                 )}
 
-                <a href="/parent-portal/tuckshop" className="dashboard-tile" style={{ textDecoration: 'none' }}>
+                {/* These open pages for whoever is signed in, so when staff
+                    are viewing as a parent they'd show the staff member's own
+                    inbox and tuckshop — show the tiles but don't link them. */}
+                <a href={viewingAs ? undefined : '/parent-portal/tuckshop'} className="dashboard-tile" style={{ textDecoration: 'none', cursor: viewingAs ? 'default' : undefined }}>
                   <span className="dashboard-tile-label">Tuckshop</span>
                   <span className="dashboard-tile-icon">🛒</span>
                   <span className="dashboard-tile-sub">{tuckshopBalance === null ? 'No data yet' : `₦${Number(tuckshopBalance).toLocaleString()} balance`}</span>
                 </a>
 
-                <a href="/inbox" className="dashboard-tile" style={{ textDecoration: 'none' }}>
+                <a href={viewingAs ? undefined : '/inbox'} className="dashboard-tile" style={{ textDecoration: 'none', cursor: viewingAs ? 'default' : undefined }}>
                   <span className="dashboard-tile-label">Messages</span>
                   <span className="dashboard-tile-icon">📬</span>
-                  <span className="dashboard-tile-sub">View inbox</span>
+                  <span className="dashboard-tile-sub">{viewingAs ? 'Their inbox (not shown here)' : 'View inbox'}</span>
                 </a>
               </div>
             </>
