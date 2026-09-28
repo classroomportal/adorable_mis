@@ -14,6 +14,9 @@ import { canHandOut } from '../../../lib/tuckshopHandout';
 // set_tuckshop_orders_given() (migration 228). When a restaurant is done,
 // Save locks its list for the day; after that only the tuckshop owner can
 // unlock it (migration 229). The database enforces the lock, not this page.
+// When some items aren't available, Edit gives part of an order and charges
+// only what was handed over (give_tuckshop_order_edited(), migration 233);
+// the order itself keeps what the student asked for.
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -43,6 +46,8 @@ function HandOutInner() {
   const [saves, setSaves] = useState(new Map());
   const [isOwner, setIsOwner] = useState(false);
   const [saving, setSaving] = useState(false);
+  // The order being edited: { studentId, qty: Map(itemId -> quantity given) }.
+  const [editing, setEditing] = useState(null);
 
   useEffect(() => {
     loadDates();
@@ -71,7 +76,7 @@ function HandOutInner() {
     setError(null);
     const { data: rows, error: err } = await supabase
       .from('tuckshop_preorders')
-      .select('id, status, student_id, students(first_name, last_name, form_class, year_group, restaurant)')
+      .select('id, status, student_id, purchase_id, students(first_name, last_name, form_class, year_group, restaurant)')
       .eq('for_date', date)
       .neq('status', 'cancelled');
     if (err) { setError(err.message); setLoading(false); return; }
@@ -80,7 +85,7 @@ function HandOutInner() {
     if (ids.length > 0) {
       const { data, error: itemErr } = await supabase
         .from('tuckshop_preorder_items')
-        .select('preorder_id, quantity, tuckshop_items(name, price)')
+        .select('preorder_id, quantity, tuckshop_item_id, tuckshop_items(name, price)')
         .in('preorder_id', ids);
       if (itemErr) { setError(itemErr.message); setLoading(false); return; }
       items = data || [];
@@ -90,7 +95,28 @@ function HandOutInner() {
       if (!itemsByOrder.has(it.preorder_id)) itemsByOrder.set(it.preorder_id, []);
       itemsByOrder.get(it.preorder_id).push(it);
     });
-    setOrders((rows || []).map((o) => ({ ...o, items: itemsByOrder.get(o.id) || [] })));
+    // What was actually handed over (and charged) for given orders, which
+    // is less than the order when some items weren't available.
+    const purchaseIds = (rows || []).map((o) => o.purchase_id).filter(Boolean);
+    let bought = [];
+    if (purchaseIds.length > 0) {
+      const { data, error: buyErr } = await supabase
+        .from('tuckshop_purchase_items')
+        .select('purchase_id, tuckshop_item_id, quantity, line_total')
+        .in('purchase_id', purchaseIds);
+      if (buyErr) { setError(buyErr.message); setLoading(false); return; }
+      bought = data || [];
+    }
+    const boughtByPurchase = new Map();
+    bought.forEach((b) => {
+      if (!boughtByPurchase.has(b.purchase_id)) boughtByPurchase.set(b.purchase_id, []);
+      boughtByPurchase.get(b.purchase_id).push(b);
+    });
+    setOrders((rows || []).map((o) => ({
+      ...o,
+      items: itemsByOrder.get(o.id) || [],
+      bought: boughtByPurchase.get(o.purchase_id) || [],
+    })));
     // Saved (locked) restaurant lists for this day.
     const { data: saveRows, error: saveErr } = await supabase
       .from('tuckshop_handout_saves')
@@ -108,25 +134,43 @@ function HandOutInner() {
     const byStudent = new Map();
     orders.forEach((o) => {
       if (!byStudent.has(o.student_id)) {
-        byStudent.set(o.student_id, { studentId: o.student_id, student: o.students, lines: new Map(), pending: 0, given: 0 });
+        byStudent.set(o.student_id, {
+          studentId: o.student_id, student: o.students, lines: new Map(), pending: 0, given: 0, charged: 0,
+        });
       }
       const s = byStudent.get(o.student_id);
       if (o.status === 'fulfilled') s.given += 1; else s.pending += 1;
       o.items.forEach((it) => {
-        const name = it.tuckshop_items?.name || 'Unknown item';
-        const cur = s.lines.get(name) || { name, price: Number(it.tuckshop_items?.price || 0), qty: 0 };
+        const cur = s.lines.get(it.tuckshop_item_id) || {
+          itemId: it.tuckshop_item_id,
+          name: it.tuckshop_items?.name || 'Unknown item',
+          price: Number(it.tuckshop_items?.price || 0),
+          qty: 0,
+          givenQty: 0,
+        };
         cur.qty += it.quantity;
-        s.lines.set(name, cur);
+        s.lines.set(it.tuckshop_item_id, cur);
+      });
+      o.bought.forEach((b) => {
+        s.charged += Number(b.line_total || 0);
+        const cur = s.lines.get(b.tuckshop_item_id);
+        if (cur) cur.givenQty += b.quantity;
       });
     });
     return [...byStudent.values()]
       .map((s) => {
         const lines = [...s.lines.values()].sort((a, b) => a.name.localeCompare(b.name));
+        const done = s.pending === 0;
+        const ordered = lines.reduce((n, l) => n + l.qty * l.price, 0);
         return {
           ...s,
           lines,
-          total: lines.reduce((n, l) => n + l.qty * l.price, 0),
-          done: s.pending === 0,
+          ordered,
+          // A given order shows what was charged; otherwise what it will cost.
+          total: done ? s.charged : ordered,
+          // Given, but not everything the student ordered.
+          short: done && lines.some((l) => l.givenQty < l.qty),
+          done,
           restaurant: s.student?.restaurant || '',
         };
       })
@@ -198,6 +242,37 @@ function HandOutInner() {
     }
   }
 
+  function startEdit(s) {
+    if (busy.has(s.studentId) || saved) return;
+    setEditing({
+      studentId: s.studentId,
+      qty: new Map(s.lines.map((l) => [l.itemId, s.done ? l.givenQty : l.qty])),
+    });
+  }
+
+  function setEditQty(itemId, qty) {
+    setEditing((e) => ({ ...e, qty: new Map(e.qty).set(itemId, qty) }));
+  }
+
+  async function giveEdited(s) {
+    const items = s.lines.map((l) => ({ item_id: l.itemId, quantity: editing.qty.get(l.itemId) ?? 0 }));
+    const value = s.lines.reduce((n, l) => n + (editing.qty.get(l.itemId) ?? 0) * l.price, 0);
+    const name = `${s.student?.first_name} ${s.student?.last_name}`;
+    const msg = value === 0
+      ? `Nothing was available for ${name}? The order is marked given and nothing is charged.`
+      : `Give ${name} these items? ${naira(value)} will be taken from their balance`
+        + `${s.done ? `, instead of the ${naira(s.total)} charged before` : ''}.`;
+    if (!window.confirm(msg)) return;
+    setError(null);
+    setBusy((b) => new Set([...b, s.studentId]));
+    const { error: err } = await supabase.rpc('give_tuckshop_order_edited', {
+      p_student_id: s.studentId, p_for_date: forDate, p_items: items,
+    });
+    if (err) setError(err.message); else setEditing(null);
+    await loadOrders(forDate);
+    setBusy((b) => { const n = new Set(b); n.delete(s.studentId); return n; });
+  }
+
   async function saveList() {
     const given = inRestaurant.length - outstanding.length;
     const value = inRestaurant.filter((s) => s.done).reduce((n, s) => n + s.total, 0);
@@ -228,14 +303,15 @@ function HandOutInner() {
       <h1>Hand Out Orders</h1>
       <p style={{ color: '#555', marginTop: 0 }}>
         Tap a student when their order has been given. This takes the order&apos;s value from their
-        tuckshop balance. Tap again to undo. When a restaurant is finished, press Save: the list
-        is then locked and only the tuckshop owner can unlock it.
+        tuckshop balance. Tap again to undo. If some items weren&apos;t available, press Edit and
+        give only what the student got: they are charged just for that. When a restaurant is
+        finished, press Save: the list is then locked and only the tuckshop owner can unlock it.
       </p>
 
       <div className="card" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <label>
           Orders for<br />
-          <select value={forDate} onChange={(e) => { setForDate(e.target.value); setRestaurant(null); }}>
+          <select value={forDate} onChange={(e) => { setForDate(e.target.value); setRestaurant(null); setEditing(null); }}>
             {dates.map((d) => <option key={d} value={d}>{longDate(d)}</option>)}
           </select>
         </label>
@@ -304,27 +380,83 @@ function HandOutInner() {
           ) : (
             <ul className="handout-list">
               {shown.map((s) => (
-                <li key={s.studentId}>
-                  <button
-                    className={`handout-row${s.done ? ' given' : ''}${saved ? ' locked' : ''}`}
-                    onClick={() => tap(s)}
-                    disabled={busy.has(s.studentId) || !!saved}
-                  >
-                    <span className="handout-tick" aria-hidden="true">{s.done ? '✓' : ''}</span>
-                    <span className="handout-main">
-                      <span className="handout-name">
-                        {s.student?.last_name}, {s.student?.first_name}
-                        <span className="handout-form"> {s.student?.form_class || s.student?.year_group || ''}</span>
+                <li key={s.studentId} className="handout-item">
+                  <div className="handout-line">
+                    <button
+                      className={`handout-row${s.done ? ' given' : ''}${saved ? ' locked' : ''}`}
+                      onClick={() => tap(s)}
+                      disabled={busy.has(s.studentId) || !!saved || editing?.studentId === s.studentId}
+                    >
+                      <span className="handout-tick" aria-hidden="true">{s.done ? '✓' : ''}</span>
+                      <span className="handout-main">
+                        <span className="handout-name">
+                          {s.student?.last_name}, {s.student?.first_name}
+                          <span className="handout-form"> {s.student?.form_class || s.student?.year_group || ''}</span>
+                        </span>
+                        <span className="handout-items">
+                          {s.lines.map((l, i) => (
+                            <span key={l.itemId}>
+                              {i > 0 && ', '}
+                              {!s.done || l.givenQty === l.qty ? `${l.qty} × ${l.name}` : l.givenQty === 0 ? (
+                                <s className="handout-missing">{l.qty} × {l.name}</s>
+                              ) : (
+                                <>{l.givenQty} × {l.name} <span className="handout-missing">(ordered {l.qty})</span></>
+                              )}
+                            </span>
+                          ))}
+                        </span>
                       </span>
-                      <span className="handout-items">{s.lines.map((l) => `${l.qty} × ${l.name}`).join(', ')}</span>
-                    </span>
-                    <span className="handout-amount">
-                      {naira(s.total)}
-                      <span className="handout-status">
-                        {busy.has(s.studentId) ? 'Saving…' : s.done ? 'Given' : s.given > 0 ? 'Part given' : ''}
+                      <span className="handout-amount">
+                        {naira(s.total)}
+                        {s.short && <s className="handout-was">{naira(s.ordered)}</s>}
+                        <span className="handout-status">
+                          {busy.has(s.studentId) ? 'Saving…'
+                            : s.done ? (s.short ? (s.total === 0 ? 'None available' : 'Part given') : 'Given')
+                              : s.given > 0 ? 'Part given' : ''}
+                        </span>
                       </span>
-                    </span>
-                  </button>
+                    </button>
+                    {!saved && editing?.studentId !== s.studentId && (
+                      <button
+                        className="secondary handout-edit"
+                        onClick={() => startEdit(s)}
+                        disabled={busy.has(s.studentId)}
+                        aria-label={`Edit ${s.student?.first_name} ${s.student?.last_name}'s order`}
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  {editing?.studentId === s.studentId && !saved && (
+                    <div className="handout-editor">
+                      <p style={{ margin: '0 0 0.5rem' }}>
+                        How many of each item did {s.student?.first_name} get? Set anything that wasn&apos;t available to 0.
+                      </p>
+                      {s.lines.map((l) => {
+                        const q = editing.qty.get(l.itemId) ?? 0;
+                        return (
+                          <div key={l.itemId} className="handout-edit-line">
+                            <span className="handout-edit-name">
+                              {l.name}
+                              <span className="handout-form"> {naira(l.price)} each · ordered {l.qty}</span>
+                            </span>
+                            <span className="handout-stepper">
+                              <button className="secondary" onClick={() => setEditQty(l.itemId, Math.max(0, q - 1))} disabled={q === 0} aria-label={`One less ${l.name}`}>−</button>
+                              <span className={`handout-qty${q < l.qty ? ' short' : ''}`}>{q}</span>
+                              <button className="secondary" onClick={() => setEditQty(l.itemId, Math.min(l.qty, q + 1))} disabled={q >= l.qty} aria-label={`One more ${l.name}`}>+</button>
+                            </span>
+                          </div>
+                        );
+                      })}
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                        <button className="secondary" onClick={() => setEditing(null)} disabled={busy.has(s.studentId)}>Cancel</button>
+                        <button onClick={() => giveEdited(s)} disabled={busy.has(s.studentId)}>
+                          {busy.has(s.studentId) ? 'Saving…'
+                            : `Give these · ${naira(s.lines.reduce((n, l) => n + (editing.qty.get(l.itemId) ?? 0) * l.price, 0))}`}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
