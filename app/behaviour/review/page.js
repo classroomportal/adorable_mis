@@ -7,48 +7,56 @@ import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import EventCommentEditor from '../../components/EventCommentEditor';
 
-// A "serious" behaviour event is negative with -5 points (migration 166; 106 and 135 used -4 and -3).
-// It can't be saved without an explanation, but it stays hidden from the
-// parent portal until someone here confirms it follows school protocol, names
-// no other student, and reads clearly — then releases it with the toggle.
-// The office can correct the explanation here themselves (migration 211). An
-// event they keep hidden stays listed under "Kept hidden" until it's
-// released, rather than dropping into history with no way back to it.
-//
-// The picture and the text are two separate decisions. A serious event with a
-// picture carries both on its own card: approve or decline the picture
-// (review_behaviour_photo), and release or keep back the text
-// (review_serious_behaviour_event), in either order and independently. Parents
-// only ever see an approved picture on an event whose text has been released
-// (RLS on behaviour_photos), so declining the text holds the picture back too.
-// Pictures on other events are listed on their own under "Pictures to check".
-const PICTURE_STATUS = { pending: 'Waiting', approved: 'Approved', rejected: 'Declined' };
+// What the school office checks before parents see it (migration 238):
+//   - a -5 event's text (it can't be saved without an explanation, and stays
+//     hidden until someone here confirms it follows school protocol, names no
+//     other student, and reads clearly);
+//   - any picture staff added to an event (migration 209).
+// The text and the picture are decided separately on one card: send the text
+// with the picture, send it without, or edit the text first and then send.
+// An event with a picture can be sent whatever its points; a -1 to -4 event
+// without one still never reaches parents. On a positive event the text is
+// already shown, so only the picture is decided. Parents see a picture only
+// on an event whose text they can see. A -5 event kept back stays under
+// "Kept hidden" until it's sent, rather than dropping into history with no way
+// back to it. review_behaviour_for_parents() enforces all of this.
+const EVENT_FIELDS = 'event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, visible_to_parents, protocol_reviewed_at, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)';
+
+const PICTURE_STATUS = { pending: 'Waiting', approved: 'Sent', rejected: 'Not sent' };
+
+// Beyond this many students on one picture (a whole boarding house), the
+// comments are shown once rather than with an editor each.
+const MAX_EDITORS = 5;
+
+function fullName(p) {
+  return p ? `${p.first_name} ${p.last_name}` : '—';
+}
 
 function ReviewInner() {
   const { profile, staffRoles } = useAuth();
   const canReview = profile?.role === 'admin' || (staffRoles || []).includes('school_office');
 
   const [students, setStudents] = useState([]);
-  const [pending, setPending] = useState([]);
+  // Cards: { key, events: [...], photo: { photo_id, status, image_jpeg_base64, uploader } | null }
+  const [items, setItems] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [confirmed, setConfirmed] = useState({}); // event_id -> boolean
-  const [busyId, setBusyId] = useState(null);
+  const [confirmed, setConfirmed] = useState({}); // item key -> boolean
+  const [busyKey, setBusyKey] = useState(null);
   const [status, setStatus] = useState(null);
-  // Pictures added to behaviour events (migration 209), waiting for approval
-  // before parents can see them: [{ photo, events: [...] }]. Pictures on a
-  // serious event still waiting to be released are left out: they're
-  // reviewed on that event's own card.
-  const [pendingPhotos, setPendingPhotos] = useState([]);
-  const [photoBusy, setPhotoBusy] = useState(null);
 
   async function load() {
     setLoading(true);
-    const [{ data: s }, { data: p }, { data: h }] = await Promise.all([
+    const [{ data: s }, { data: photos }, { data: serious }, { data: h }] = await Promise.all([
       supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active'),
       supabase
+        .from('behaviour_photos')
+        .select('photo_id, status, image_jpeg_base64, created_at, uploader:staff!behaviour_photos_uploaded_by_fkey(first_name, last_name)')
+        .eq('status', 'pending')
+        .order('created_at'),
+      supabase
         .from('behaviour_events')
-        .select('event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, protocol_reviewed_at, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name), photo:behaviour_photos(photo_id, status, image_jpeg_base64)')
+        .select(`${EVENT_FIELDS}, photo:behaviour_photos(photo_id, status, image_jpeg_base64)`)
         .eq('type', 'negative')
         .lte('points', -5)
         .eq('visible_to_parents', false)
@@ -56,53 +64,38 @@ function ReviewInner() {
         .order('event_date', { ascending: false }),
       supabase
         .from('behaviour_events')
-        .select('event_id, event_date, category, points, visible_to_parents, protocol_reviewed_at, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name), reviewer:staff!behaviour_events_protocol_reviewed_by_fkey(first_name, last_name), photo:behaviour_photos(status)')
-        .eq('type', 'negative')
-        .lte('points', -5)
+        .select('event_id, event_date, category, points, visible_to_parents, protocol_reviewed_at, students(first_name, last_name), reviewer:staff!behaviour_events_protocol_reviewed_by_fkey(first_name, last_name), photo:behaviour_photos(status)')
         .not('protocol_reviewed_at', 'is', null)
         .order('protocol_reviewed_at', { ascending: false })
         .limit(30),
     ]);
-    setStudents(s || []);
-    setPending(p || []);
-    setHistory(h || []);
-    await loadPhotos();
-    setLoading(false);
-  }
 
-  async function loadPhotos() {
-    const { data: photos } = await supabase
-      .from('behaviour_photos')
-      .select('photo_id, image_jpeg_base64, created_at, uploader:staff!behaviour_photos_uploaded_by_fkey(first_name, last_name)')
-      .eq('status', 'pending')
-      .order('created_at');
-    const list = photos || [];
-    if (list.length === 0) { setPendingPhotos([]); return; }
-    const { data: evs } = await supabase
-      .from('behaviour_events')
-      .select('event_id, photo_id, event_date, type, category, points, description, visible_to_parents, students(first_name, last_name)')
-      .in('photo_id', list.map((ph) => ph.photo_id))
-      .is('voided_at', null);
-    const onSeriousCard = (e) => e.type === 'negative' && e.points <= -5 && !e.visible_to_parents;
-    setPendingPhotos(
-      list
-        .map((photo) => ({ photo, events: (evs || []).filter((e) => e.photo_id === photo.photo_id) }))
-        .filter(({ events }) => !events.some(onSeriousCard))
-    );
-  }
-
-  async function reviewPhoto(photoId, approve) {
-    setPhotoBusy(photoId);
-    setStatus(null);
-    const { error } = await supabase.rpc('review_behaviour_photo', { p_photo_id: photoId, p_approve: approve });
-    setPhotoBusy(null);
-    if (error) setStatus(`Error: ${error.message}`);
-    else {
-      setStatus(approve ? 'Picture approved.' : 'Picture declined — parents won\'t see it.');
-      // The picture may be on a serious event's card as well as in the list.
-      setPending((list) => list.map((x) => (x.photo?.photo_id === photoId ? { ...x, photo: { ...x.photo, status: approve ? 'approved' : 'rejected' } } : x)));
-      loadPhotos();
+    const pendingPhotos = photos || [];
+    let photoEvents = [];
+    if (pendingPhotos.length > 0) {
+      const { data: evs } = await supabase
+        .from('behaviour_events')
+        .select(EVENT_FIELDS)
+        .in('photo_id', pendingPhotos.map((ph) => ph.photo_id))
+        .is('voided_at', null)
+        .order('student_id');
+      photoEvents = evs || [];
     }
+
+    const photoItems = pendingPhotos.map((photo) => ({
+      key: `photo-${photo.photo_id}`,
+      photo,
+      events: photoEvents.filter((e) => e.photo_id === photo.photo_id),
+    }));
+    // A -5 event whose picture is still waiting is already on that picture's card.
+    const seriousItems = (serious || [])
+      .filter((ev) => ev.photo?.status !== 'pending')
+      .map(({ photo, ...ev }) => ({ key: `event-${ev.event_id}`, photo: photo || null, events: [ev] }));
+
+    setStudents(s || []);
+    setItems([...photoItems, ...seriousItems]);
+    setHistory(h || []);
+    setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
@@ -120,135 +113,168 @@ function ReviewInner() {
     });
   }
 
-  async function review(eventId, visibleToParents) {
-    if (visibleToParents && !confirmed[eventId]) {
-      setStatus('Tick the protocol confirmation before releasing the text to parents.');
+  async function decide(item, sendText, sendPicture, message) {
+    if (sendText && !confirmed[item.key]) {
+      setStatus('Tick the protocol confirmation before sending the text to parents.');
       return;
     }
-    setBusyId(eventId);
+    setBusyKey(item.key);
     setStatus(null);
-    const { error } = await supabase.rpc('review_serious_behaviour_event', {
-      p_event_id: eventId,
-      p_visible_to_parents: visibleToParents,
-      p_protocol_confirmed: !!confirmed[eventId],
-    });
-    setBusyId(null);
+    // A picture whose events were all withdrawn has no event to send with it.
+    const { error } = item.events.length === 0
+      ? await supabase.rpc('review_behaviour_photo', { p_photo_id: item.photo.photo_id, p_approve: sendPicture })
+      : await supabase.rpc('review_behaviour_for_parents', {
+        p_event_ids: item.events.map((e) => e.event_id),
+        p_send_text: sendText,
+        p_send_picture: sendPicture,
+        p_protocol_confirmed: !!confirmed[item.key],
+      });
+    setBusyKey(null);
     if (error) {
       setStatus(`Error: ${error.message}`);
     } else {
-      setStatus(visibleToParents ? 'Text released to parents.' : 'Text declined — kept from parents. It stays under "Kept hidden" below until it\'s released.');
+      setStatus(message);
+      setConfirmed((c) => ({ ...c, [item.key]: false }));
       load();
     }
   }
 
-  const awaiting = pending.filter((ev) => !ev.protocol_reviewed_at);
-  const keptHidden = pending.filter((ev) => ev.protocol_reviewed_at);
+  function renderItem(item) {
+    const { events, photo } = item;
+    const first = events[0];
+    const busy = busyKey === item.key;
+    // Negative events are hidden until sent; positive ones are always shown.
+    const textWaiting = events.some((e) => e.type === 'negative' && !e.visible_to_parents);
+    const reviewedBefore = events.every((e) => e.protocol_reviewed_at);
+    const photoWaiting = photo?.status === 'pending';
+    const flagged = events.some((e) => mentionsAnotherStudent(e.description, e.student_id));
+    const names = events.map((e) => fullName(e.students));
+    const loggers = [...new Set(events.map((e) => fullName(e.staff)))];
 
-  function renderPicture(ev) {
-    const ph = ev.photo;
-    const decided = ph.status !== 'pending';
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-start' }}>
-        <strong>Picture</strong>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`data:image/jpeg;base64,${ph.image_jpeg_base64}`}
-          alt="Picture added with this behaviour event"
-          style={{ width: 'min(100%, 360px)', borderRadius: 8, border: '1px solid var(--slate-200)' }}
-        />
-        <span style={{ fontSize: '0.85em', color: ph.status === 'rejected' ? 'var(--red-700)' : '#666' }}>
-          {ph.status === 'pending' && 'Waiting for a decision. Check it shows only what it should and no other student can be identified.'}
-          {ph.status === 'approved' && 'Approved. Parents see it once the text is released.'}
-          {ph.status === 'rejected' && 'Declined. Parents won\u2019t see it.'}
-        </span>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {ph.status !== 'approved' && (
-            <button
-              className={decided ? 'secondary' : undefined}
-              disabled={photoBusy === ph.photo_id}
-              onClick={() => reviewPhoto(ph.photo_id, true)}
-              style={{ width: 'fit-content' }}
-            >
-              {decided ? 'Approve picture instead' : 'Approve picture'}
-            </button>
-          )}
-          {ph.status !== 'rejected' && (
-            <button
-              className="secondary"
-              disabled={photoBusy === ph.photo_id}
-              onClick={() => reviewPhoto(ph.photo_id, false)}
-              style={{ width: 'fit-content' }}
-            >
-              {decided ? 'Decline picture instead' : 'Decline picture'}
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+    const updateEvent = (eventId, changes) => {
+      setItems((list) => list.map((it) => (it.key === item.key
+        ? { ...it, events: it.events.map((x) => (x.event_id === eventId ? { ...x, ...changes } : x)) }
+        : it)));
+      // The confirmation was for the old wording.
+      setConfirmed((c) => ({ ...c, [item.key]: false }));
+    };
 
-  function renderSerious(ev) {
-    const flagged = mentionsAnotherStudent(ev.description, ev.student_id);
     return (
-      <div key={ev.event_id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
+      <div key={item.key} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <strong>{ev.students?.first_name} {ev.students?.last_name}</strong>
-          <span>{formatUKDate(ev.event_date)} · {ev.category ?? '—'} · {ev.points} points</span>
+          <strong>
+            {names.length === 0 ? 'Not attached to any event (it may have been withdrawn on appeal)'
+              : names.length <= 4 ? names.join(', ') : `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`}
+          </strong>
+          {first && (
+            <span>{formatUKDate(first.event_date)} · {first.category ?? '—'} · {first.points > 0 ? '+' : ''}{first.points} points</span>
+          )}
         </div>
-        <span style={{ fontSize: '0.85em', color: '#666', marginTop: '-0.5rem' }}>
-          Logged by {ev.staff ? `${ev.staff.first_name} ${ev.staff.last_name}` : '—'}
-        </span>
+        {first && (
+          <span style={{ fontSize: '0.85em', color: '#666', marginTop: '-0.5rem' }}>
+            Logged by {loggers.join(', ')}
+            {photo?.uploader && ` · picture added by ${fullName(photo.uploader)}`}
+          </span>
+        )}
 
         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <div style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <strong>Text</strong>
-            {/* The picture has its own decision alongside, so the editor doesn't show it again. */}
-            <EventCommentEditor
-              event={{ ...ev, photo_id: null }}
-              onSaved={(changes) => {
-                setPending((list) => list.map((x) => (x.event_id === ev.event_id ? { ...x, ...changes } : x)));
-                // The confirmation was for the old wording.
-                setConfirmed((c) => ({ ...c, [ev.event_id]: false }));
-              }}
-            />
-            {flagged && (
-              <p style={{ color: '#b45309', fontWeight: 'bold', margin: 0 }}>
-                ⚠ This explanation may name another enrolled student — edit it before releasing.
-              </p>
-            )}
-            <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-              <input
-                type="checkbox"
-                checked={!!confirmed[ev.event_id]}
-                onChange={(e) => setConfirmed({ ...confirmed, [ev.event_id]: e.target.checked })}
-                style={{ flex: '0 0 auto', width: 'auto' }}
-              />
-              I confirm this follows school behaviour protocol, names no other student, and is written in good English.
-            </label>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button
-                disabled={busyId === ev.event_id || !confirmed[ev.event_id]}
-                onClick={() => review(ev.event_id, true)}
-                style={{ width: 'fit-content' }}
-              >
-                Approve text — release to parents
-              </button>
-              {!ev.protocol_reviewed_at && (
-                <button
-                  className="secondary"
-                  disabled={busyId === ev.event_id}
-                  onClick={() => review(ev.event_id, false)}
-                  style={{ width: 'fit-content' }}
-                >
-                  Decline text — keep hidden
-                </button>
+          {first && (
+            <div style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <strong>Text</strong>
+              {events.length <= MAX_EDITORS ? events.map((ev) => (
+                <div key={ev.event_id} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  {events.length > 1 && <span style={{ fontSize: '0.85em', color: '#666' }}>{fullName(ev.students)}</span>}
+                  {/* The picture is shown alongside, so the editor doesn't show it again. */}
+                  <EventCommentEditor event={{ ...ev, photo_id: null }} onSaved={(changes) => updateEvent(ev.event_id, changes)} />
+                </div>
+              )) : (
+                <span style={{ whiteSpace: 'pre-wrap', color: first.description ? 'inherit' : '#666' }}>
+                  {first.description || 'No comment.'}
+                  <span style={{ display: 'block', fontSize: '0.85em', color: '#666' }}>
+                    Comment on the first of {events.length} events. Edit individual ones from the student&apos;s behaviour page.
+                  </span>
+                </span>
+              )}
+              {!textWaiting && (
+                <span style={{ fontSize: '0.85em', color: '#666' }}>Parents can already see this text.</span>
+              )}
+              {flagged && (
+                <p style={{ color: '#b45309', fontWeight: 'bold', margin: 0 }}>
+                  ⚠ This text may name another enrolled student. Edit it before sending.
+                </p>
               )}
             </div>
-          </div>
-          {ev.photo && (
-            <div style={{ flex: '1 1 240px' }}>
-              {renderPicture(ev)}
+          )}
+          {photo && (
+            <div style={{ flex: '1 1 240px', display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-start' }}>
+              <strong>Picture</strong>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`data:image/jpeg;base64,${photo.image_jpeg_base64}`}
+                alt="Picture added with this behaviour event"
+                style={{ width: 'min(100%, 360px)', borderRadius: 8, border: '1px solid var(--slate-200)' }}
+              />
+              <span style={{ fontSize: '0.85em', color: '#666' }}>
+                {photoWaiting && 'Check it shows only what it should and no other student can be identified.'}
+                {photo.status === 'approved' && 'Approved earlier.'}
+                {photo.status === 'rejected' && 'Not sent earlier.'}
+              </span>
             </div>
+          )}
+        </div>
+
+        {textWaiting && (
+          <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={!!confirmed[item.key]}
+              onChange={(e) => setConfirmed({ ...confirmed, [item.key]: e.target.checked })}
+              style={{ flex: '0 0 auto', width: 'auto' }}
+            />
+            I confirm the text follows school behaviour protocol, names no other student, and is written in good English.
+          </label>
+        )}
+
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {textWaiting && photo && (
+            <>
+              <button disabled={busy || !confirmed[item.key]} onClick={() => decide(item, true, true, 'Text and picture sent to parents.')} style={{ width: 'fit-content' }}>
+                Send text with picture
+              </button>
+              <button disabled={busy || !confirmed[item.key]} onClick={() => decide(item, true, false, 'Text sent to parents, without the picture.')} style={{ width: 'fit-content' }}>
+                Send text without picture
+              </button>
+            </>
+          )}
+          {textWaiting && !photo && (
+            <button disabled={busy || !confirmed[item.key]} onClick={() => decide(item, true, null, 'Text sent to parents.')} style={{ width: 'fit-content' }}>
+              Send text
+            </button>
+          )}
+          {textWaiting && !reviewedBefore && (
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => decide(
+                item, false, photoWaiting ? false : null,
+                first.points <= -5
+                  ? 'Not sent. It stays under "Kept hidden" below until it\'s sent.'
+                  : 'Not sent to parents.',
+              )}
+              style={{ width: 'fit-content' }}
+            >
+              {photo ? "Don't send text or picture" : "Don't send yet"}
+            </button>
+          )}
+          {!textWaiting && photoWaiting && (
+            <>
+              <button disabled={busy} onClick={() => decide(item, null, true, 'Picture sent to parents.')} style={{ width: 'fit-content' }}>
+                Send picture
+              </button>
+              <button className="secondary" disabled={busy} onClick={() => decide(item, null, false, 'Picture not sent.')} style={{ width: 'fit-content' }}>
+                Don&apos;t send picture
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -259,99 +285,50 @@ function ReviewInner() {
     return <p>This page is for school office staff and admin only.</p>;
   }
 
+  const waiting = items.filter((it) => !it.events.length || !it.events.every((e) => e.protocol_reviewed_at) || it.photo?.status === 'pending');
+  const keptHidden = items.filter((it) => !waiting.includes(it));
+
   return (
     <div>
       <h1>Behaviour Review</h1>
       <p style={{ color: '#555' }}>
-        A -5 point event needs checking before parents see it: does the
-        explanation follow school protocol, does it avoid naming any other
-        student, and is it written in clear, good English? If it needs
-        changing, use Edit to correct it yourself, then tick the
-        confirmation and release it. If the event has a picture, approve or
-        decline the picture separately on the same card. Declining one
-        doesn&apos;t decline the other, but a picture only reaches parents
-        once the text has been released too.
+        Check each event before parents see it. The text and the picture are
+        separate. You can send the text with the picture, send the text without
+        it, or use Edit to correct the text first and then send it. Before
+        sending text, check it follows school protocol, names no other student
+        and is written in clear, good English. Check a picture shows only what
+        it should and no other student can be identified.
       </p>
 
       {status && <p>{status}</p>}
 
       {loading ? <p>Loading…</p> : (
         <>
-          <h2>Pictures to check ({pendingPhotos.length})</h2>
-          <p style={{ color: '#555', marginTop: 0 }}>
-            Pictures staff added to other behaviour events. Parents only see one once it&apos;s approved here —
-            check it shows only what it should and no other student can be identified. This decides the
-            picture only, not the event&apos;s text. Pictures on -5 events are checked on the event&apos;s own card below.
-          </p>
-          {pendingPhotos.length === 0 ? <p>No pictures waiting.</p> : pendingPhotos.map(({ photo, events }) => {
-            const first = events[0];
-            const names = events.map((e) => `${e.students?.first_name} ${e.students?.last_name}`);
-            return (
-              <div key={photo.photo_id} className="card" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`data:image/jpeg;base64,${photo.image_jpeg_base64}`}
-                  alt="Picture waiting for review"
-                  style={{ width: 'min(100%, 360px)', borderRadius: 8, border: '1px solid var(--slate-200)' }}
-                />
-                <div style={{ flex: '1 1 240px', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  {first ? (
-                    <>
-                      <strong>
-                        {first.category} ({first.points > 0 ? '+' : ''}{first.points}) · {formatUKDate(first.event_date)}
-                      </strong>
-                      <span>
-                        {names.length <= 4 ? names.join(', ') : `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`}
-                      </span>
-                      {first.description && <span style={{ whiteSpace: 'pre-wrap', color: '#444' }}>{first.description}</span>}
-                      <span style={{ fontSize: '0.85em', color: '#666' }}>
-                        {first.visible_to_parents
-                          ? 'Parents can already see this event\u2019s text. Only the picture is being decided here.'
-                          : 'Parents don\u2019t see this event, so they won\u2019t see the picture either. The student will if it\u2019s approved.'}
-                      </span>
-                    </>
-                  ) : <span style={{ color: '#666' }}>Not attached to any event (it may have been withdrawn on appeal).</span>}
-                  <span style={{ fontSize: '0.85em', color: '#666' }}>
-                    Added by {photo.uploader ? `${photo.uploader.first_name} ${photo.uploader.last_name}` : '—'}
-                  </span>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                    <button disabled={photoBusy === photo.photo_id} onClick={() => reviewPhoto(photo.photo_id, true)} style={{ width: 'fit-content' }}>
-                      Approve picture
-                    </button>
-                    <button className="secondary" disabled={photoBusy === photo.photo_id} onClick={() => reviewPhoto(photo.photo_id, false)} style={{ width: 'fit-content' }}>
-                      Decline picture
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          <h2 style={{ marginTop: '1.5rem' }}>Serious events awaiting review ({awaiting.length})</h2>
-          {awaiting.length === 0 ? <p>Nothing waiting.</p> : awaiting.map((ev) => renderSerious(ev))}
+          <h2>Waiting for review ({waiting.length})</h2>
+          {waiting.length === 0 ? <p>Nothing waiting.</p> : waiting.map(renderItem)}
 
           {keptHidden.length > 0 && (
             <>
               <h2 style={{ marginTop: '1.5rem' }}>Kept hidden ({keptHidden.length})</h2>
               <p style={{ color: '#555', marginTop: 0 }}>
-                Reviewed but not yet shown to parents. Correct the explanation, then release it.
+                -5 events reviewed but not yet sent to parents. Correct the text, then send it.
               </p>
-              {keptHidden.map((ev) => renderSerious(ev))}
+              {keptHidden.map(renderItem)}
             </>
           )}
 
           <h2 style={{ marginTop: '1.5rem' }}>Recently reviewed</h2>
           {history.length === 0 ? <p>None yet.</p> : (
             <div className="table-scroll"><table>
-              <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Reviewed by</th><th>Text shown to parents</th><th>Picture</th></tr></thead>
+              <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Reviewed by</th><th>Text sent</th><th>Picture</th></tr></thead>
               <tbody>
                 {history.map((ev) => (
                   <tr key={ev.event_id}>
                     <td>{formatUKDate(ev.event_date)}</td>
-                    <td>{ev.students?.first_name} {ev.students?.last_name}</td>
+                    <td>{fullName(ev.students)}</td>
                     <td>{ev.category ?? '—'}</td>
                     <td>{ev.points}</td>
-                    <td>{ev.reviewer ? `${ev.reviewer.first_name} ${ev.reviewer.last_name}` : '—'}</td>
+                    <td>{ev.reviewer ? fullName(ev.reviewer) : '—'}</td>
                     <td>{ev.visible_to_parents ? 'Yes' : 'No'}</td>
                     <td>{PICTURE_STATUS[ev.photo?.status] ?? '—'}</td>
                   </tr>
