@@ -56,16 +56,29 @@ function academicYearStart(date) {
 // A dataset (calendar event) is labelled with the year group the selected student
 // was actually in when it happened, not their current year group — e.g. a July 2026
 // exam sat by a student now in Y12 was sat while they were in Y11, one academic year
-// earlier, so it's labelled "Y11 T3 Exam" rather than "Y12 T3 Exam".
+// earlier, so it's labelled "Y11 T3 Exam" rather than "Y12 T3 Exam". An
+// end-of-term exam set already names its year group ("Y11 Term 3 Exam",
+// migration 246), so it keeps its own name.
+function yearGroupThen(event, currentYearGroup) {
+  if (currentYearGroup == null) return null;
+  const yearsAgo = academicYearStart(new Date()) - academicYearStart(new Date(event.event_date));
+  return currentYearGroup - Math.max(0, yearsAgo);
+}
+
 function datasetLabel(event, currentYearGroup) {
   if (!event) return '';
-  if (currentYearGroup == null) return event.event_name;
-  const eventYear = academicYearStart(new Date(event.event_date));
-  const thisYear = academicYearStart(new Date());
-  const yearsAgo = thisYear - eventYear;
-  if (yearsAgo <= 0) return event.event_name;
-  const yearGroupThen = currentYearGroup - yearsAgo;
-  return `Y${yearGroupThen} ${event.event_name}`;
+  if (event.exam_year_group != null) return event.event_name;
+  const then = yearGroupThen(event, currentYearGroup);
+  if (then == null || then === currentYearGroup) return event.event_name;
+  return `Y${then} ${event.event_name}`;
+}
+
+// An end-of-term exam set belongs to one year group, so once a student is
+// chosen only the sets their year group sat are offered; the rest would
+// always be empty for them.
+function datasetFitsStudent(event, currentYearGroup) {
+  if (event.exam_year_group == null || currentYearGroup == null) return true;
+  return event.exam_year_group === yearGroupThen(event, currentYearGroup);
 }
 
 function SubjectOverviewInner() {
@@ -110,7 +123,7 @@ function SubjectOverviewInner() {
   // Datasets = calendar events, most recent first (any category — exam, relp, etc.).
   useEffect(() => {
     if (!isStaff && !isStudent) return;
-    supabase.from('calendar_events').select('event_id, event_date, event_name, category')
+    supabase.from('calendar_events').select('event_id, event_date, event_name, category, exam_year_group')
       .eq('is_result_set', true)
       .order('event_date', { ascending: false })
       .then(({ data }) => setDatasets(data || []));
@@ -153,6 +166,15 @@ function SubjectOverviewInner() {
   const matchedStudent = students.find((s) => String(s.student_id) === String(selectedStudentId));
   const selectedStudentYearGroup = isStudent ? ownStudent?.year_group : matchedStudent?.year_group;
   const selectedEvent = datasets.find((d) => String(d.event_id) === String(selectedEventId));
+  const shownDatasets = datasets.filter((d) => datasetFitsStudent(d, selectedStudentYearGroup));
+
+  // Choosing a student from another year group can hide the chosen set; move to
+  // the newest one they sat rather than leave an option that isn't in the list.
+  useEffect(() => {
+    if (selectedEvent && !datasetFitsStudent(selectedEvent, selectedStudentYearGroup)) {
+      setSelectedEventId(shownDatasets[0] ? String(shownDatasets[0].event_id) : '');
+    }
+  }, [selectedEvent, selectedStudentYearGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = useCallback(async () => {
     if (!profile) return;
@@ -173,7 +195,7 @@ function SubjectOverviewInner() {
     const eventDate = selectedEvent?.event_date;
     if (!eventDate) { setLoading(false); return; }
 
-    // Base query (exact dataset date + result type) shared by both the selected
+    // Base query (the dataset's marks) shared by both the selected
     // student's results and the whole-cohort results used for the average line.
     // Paginated explicitly: Supabase/PostgREST caps a single request at 1000 rows by
     // default, and one dataset can match several thousand rows school-wide — an
@@ -187,10 +209,14 @@ function SubjectOverviewInner() {
         .from('results')
         .select('score, max_score, student_id, week_start_date, result_type, subject_id, subjects(subject_name, display_name)')
         .gt('max_score', 0)
-        // Every result type counts: the dataset's date already picks out the exam or
-        // assessment week, and term exams (term_exam_import) and weekly tests
-        // (short_test) are both results a mentor needs to see.
-        .eq('week_start_date', eventDate);
+        // Every result type counts: term exams (term_exam_import) and weekly tests
+        // (short_test) are both results a mentor needs to see. A mark belongs to the
+        // dataset if it carries its id, or carries none and sits on its date (the
+        // gradebook import doesn't tag), as in lib/resultSets.js. Matching on the
+        // date alone would pull in other sets sharing it: all five year groups'
+        // "Term 3 Exam" sets are dated 19 July 2026, and the cohort average would
+        // mix them.
+        .or(`result_set_event_id.eq.${selectedEvent.event_id},and(result_set_event_id.is.null,week_start_date.eq.${eventDate})`);
       pageQuery = pageQuery.range(from, from + PAGE_SIZE - 1);
 
       const { data: page, error: pageError } = await pageQuery;
@@ -310,7 +336,7 @@ function SubjectOverviewInner() {
             style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '220px' }}
           >
             <option value="">Select a dataset...</option>
-            {datasets.map((d) => (
+            {shownDatasets.map((d) => (
               <option key={d.event_id} value={d.event_id}>
                 {datasetLabel(d, selectedStudentYearGroup)} — {formatUKDate(d.event_date)}
               </option>
