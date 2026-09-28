@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import ScheduleEditor from './ScheduleEditor';
+import SpecialSessions from './SpecialSessions';
 
 // Local date, not toISOString() — that is UTC, an hour behind Lagos, which
 // would make "tomorrow" look like today for the first hour of the day.
@@ -145,6 +146,8 @@ function TuckshopOrderingInner() {
           )}
 
           {status && <p>{status}</p>}
+
+          <SpecialSessions />
 
           <ScheduleEditor />
 

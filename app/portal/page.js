@@ -80,7 +80,13 @@ function PortalInner() {
     const { data: settings } = await supabase.from('system_settings').select('tuckshop_ordering_closed_until').maybeSingle();
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
     const closed = settings?.tuckshop_ordering_closed_until && today < settings.tuckshop_ordering_closed_until;
-    const { data: windows } = closed ? { data: [] } : await supabase.rpc('tuckshop_order_windows', { p_days: 7 });
+    const { data: allWindows } = await supabase.rpc('tuckshop_order_windows', { p_days: 7 });
+    // The manual closure doesn't stop a special session (migration 241).
+    const { data: specials } = closed
+      ? await supabase.from('tuckshop_special_sessions').select('for_date')
+      : { data: null };
+    const specialDates = new Set((specials || []).map((s) => s.for_date));
+    const windows = closed ? (allWindows || []).filter((w) => specialDates.has(w.for_date)) : allWindows;
     const closing = (windows || []).find((w) => w.is_open && closingWarning(w.for_date, w.closes_at));
     const warning = closing ? closingWarning(closing.for_date, closing.closes_at) : null;
     if (warning) {
