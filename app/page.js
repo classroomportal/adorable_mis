@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { schoolDateOffset } from '../lib/schoolTime';
+import { canHandOut } from '../lib/tuckshopHandout';
 import SplashScreen from './components/SplashScreen';
 import { ParentPortalInner } from './parent-portal/page';
 
@@ -288,7 +289,7 @@ const TABS = [
   {
     key: 'tuckshop', label: 'Tuckshop', icon: '🍭', accent: 'family',
     description: 'Sell items, top up balances and manage stock.',
-    items: ({ hasAccess }) => [
+    items: ({ hasAccess, staffRoles }) => [
       { href: '/tuckshop/purchase', label: 'Sell Items', desc: "Sell items from a student's balance." },
       { href: '/tuckshop/topup', label: 'Top Up Balance', desc: "Add money to tuckshop balances." },
       { href: '/tuckshop/balances', label: 'Balances', desc: "Every student's tuckshop balance." },
@@ -297,7 +298,7 @@ const TABS = [
       { href: '/tuckshop/order-sheets', label: 'Order Sheets', desc: "Printable order sheets for each tuckshop day." },
       { href: '/tuckshop/hand-out', label: 'Hand Out Orders', desc: "Tick off orders as they're given, by restaurant." },
       { href: '/tuckshop/ordering', label: 'Ordering On/Off', desc: "Close and reopen student ordering." },
-    ].filter((it) => hasAccess(it.href)),
+    ].filter((it) => (it.href === '/tuckshop/hand-out' ? canHandOut(staffRoles) : hasAccess(it.href))),
   },
   {
     key: 'staff', label: 'Staff & Access', icon: '🔐', accent: 'admin',
@@ -413,7 +414,7 @@ export default function Home() {
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ hasAccess })}
+              items={t.items({ hasAccess, staffRoles })}
               allowedHrefs={demoAllowedHrefs}
             />
           ))}
@@ -437,7 +438,7 @@ export default function Home() {
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ hasAccess })}
+              items={t.items({ hasAccess, staffRoles })}
             />
           ))}
         </div>
@@ -457,7 +458,7 @@ export default function Home() {
             label={t.label}
             accent={t.accent}
             description={t.description}
-            items={t.items({ hasAccess })}
+            items={t.items({ hasAccess, staffRoles })}
           />
         ))}
       </div>
