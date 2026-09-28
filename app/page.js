@@ -179,7 +179,7 @@ const TABS = [
       { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
       // Shares the /results grant rather than having a resource of its own.
       { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
-      { href: '/results/subject-overview', label: 'Subject Overview', desc: "Chart a student's results over time." },
+      { href: '/results/subject-overview', label: 'Review Results', desc: "A student's exam results in each subject against the cohort average." },
       { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
       { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },

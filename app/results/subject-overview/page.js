@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ComposedChart, Bar, Cell, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -10,10 +10,10 @@ import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 
-// All result_type values currently in use — extend as new types appear.
-const RESULT_TYPES = [
-  { value: 'term_exam_import', label: 'Term Exam Import' },
-];
+// The result_type values charted here. Only one is in use, so there's no picker for
+// it on the page (a lone, always-ticked checkbox just confused people) — add one back
+// if a second type ever needs choosing between.
+const RESULT_TYPES = ['term_exam_import'];
 
 // Maths -> blue shades, English -> green shades, Science (and its sciences) -> yellow
 // shades. Everything else gets a fixed, distinct colour assigned deterministically by
@@ -87,10 +87,13 @@ function SubjectOverviewInner() {
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [datasets, setDatasets] = useState([]);
   const [selectedEventId, setSelectedEventId] = useState('');
-  const [selectedTypes, setSelectedTypes] = useState(RESULT_TYPES.map((t) => t.value));
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // A mentor's own TG, worked out from students.mentor_staff_id, so the page opens
+  // on their mentees rather than the whole school.
+  const [ownGroup, setOwnGroup] = useState(null);
+  const defaultsApplied = useRef({ group: false, dataset: false });
 
   // Student login is locked to their own record. Staff pick Year Group -> TG (mentor
   // group) -> student, all fetched once and filtered client-side (student count is small).
@@ -102,7 +105,7 @@ function SubjectOverviewInner() {
       return;
     }
     if (isStaff) {
-      supabase.from('students').select('student_id, first_name, last_name, year_group, mentor_group_id').eq('status', 'active').order('last_name')
+      supabase.from('students').select('student_id, first_name, last_name, year_group, mentor_group_id, mentor_staff_id').eq('status', 'active').order('last_name')
         .then(({ data }) => setStudents(data || []));
       supabase.from('mentor_groups').select('mentor_group_id, group_name, year_group').order('group_name')
         .then(({ data }) => setMentorGroups(data || []));
@@ -117,6 +120,30 @@ function SubjectOverviewInner() {
       .order('event_date', { ascending: false })
       .then(({ data }) => setDatasets(data || []));
   }, [isStaff, isStudent]);
+
+  useEffect(() => {
+    if (!isStaff || students.length === 0 || defaultsApplied.current.group) return;
+    defaultsApplied.current.group = true;
+    const counts = new Map();
+    for (const s of students) {
+      if (String(s.mentor_staff_id) !== String(profile.staff_id) || s.mentor_group_id == null) continue;
+      counts.set(s.mentor_group_id, (counts.get(s.mentor_group_id) || 0) + 1);
+    }
+    if (counts.size === 0) return;
+    const groupId = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    const yearGroup = students.find((s) => s.mentor_group_id === groupId && String(s.mentor_staff_id) === String(profile.staff_id))?.year_group;
+    const group = { groupId: String(groupId), yearGroup: yearGroup == null ? '' : String(yearGroup) };
+    setOwnGroup(group);
+    setSelectedYearGroup(group.yearGroup);
+    setSelectedMentorGroupId(group.yearGroup ? group.groupId : '');
+  }, [isStaff, students, profile]);
+
+  // Open on the most recent dataset, which is almost always the one wanted.
+  useEffect(() => {
+    if (datasets.length === 0 || defaultsApplied.current.dataset) return;
+    defaultsApplied.current.dataset = true;
+    setSelectedEventId(String(datasets[0].event_id));
+  }, [datasets]);
 
   const yearGroups = Array.from(new Set(students.map((s) => s.year_group).filter((y) => y != null))).sort((a, b) => a - b);
   const mentorGroupsForYear = selectedYearGroup
@@ -165,8 +192,8 @@ function SubjectOverviewInner() {
         .from('results')
         .select('score, max_score, student_id, week_start_date, result_type, subject_id, subjects(subject_name, display_name)')
         .gt('max_score', 0)
-        .eq('week_start_date', eventDate);
-      if (selectedTypes.length > 0) pageQuery = pageQuery.in('result_type', selectedTypes);
+        .eq('week_start_date', eventDate)
+        .in('result_type', RESULT_TYPES);
       pageQuery = pageQuery.range(from, from + PAGE_SIZE - 1);
 
       const { data: page, error: pageError } = await pageQuery;
@@ -215,15 +242,11 @@ function SubjectOverviewInner() {
 
     setChartData(summary);
     setLoading(false);
-  }, [profile, isStaff, isStudent, selectedStudentId, selectedEventId, selectedEvent, selectedTypes]);
+  }, [profile, isStaff, isStudent, selectedStudentId, selectedEventId, selectedEvent]);
 
   useEffect(() => {
     if (!authLoading) fetchData();
   }, [authLoading, fetchData]);
-
-  const toggleType = (value) => {
-    setSelectedTypes((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
-  };
 
   if (authLoading) return <p>Loading...</p>;
 
@@ -234,7 +257,7 @@ function SubjectOverviewInner() {
   return (
     <div style={{ padding: '1rem', maxWidth: '100%' }}>
       <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
-        {selectedStudentName ? `${selectedStudentName} Subject Overview` : 'Subject Overview'} — % vs Cohort Average
+        {selectedStudentName ? `${selectedStudentName} Results` : 'Review Results'} — % vs Cohort Average
       </h1>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-end' }}>
@@ -297,26 +320,20 @@ function SubjectOverviewInner() {
             ))}
           </select>
         </div>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Result type</label>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {RESULT_TYPES.map((t) => (
-              <label key={t.value} style={{ fontSize: '0.85rem', display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                <input type="checkbox" checked={selectedTypes.includes(t.value)} onChange={() => toggleType(t.value)} />
-                {t.label}
-              </label>
-            ))}
-          </div>
-        </div>
         <button
-          onClick={() => { setSelectedEventId(''); setSelectedTypes(RESULT_TYPES.map((t) => t.value)); }}
+          onClick={() => {
+            setSelectedYearGroup(ownGroup?.yearGroup || '');
+            setSelectedMentorGroupId(ownGroup?.yearGroup ? ownGroup.groupId : '');
+            setSelectedStudentId(isStudent ? String(profile.student_id) : '');
+            setSelectedEventId(datasets[0] ? String(datasets[0].event_id) : '');
+          }}
           style={{ padding: '0.4rem 0.75rem', border: '1px solid #A6192E', color: '#A6192E', background: 'white', borderRadius: '4px', fontSize: '0.85rem' }}
         >
           Reset
         </button>
       </div>
 
-      {isStaff && !selectedStudentId && <p>Select a student to see their subject breakdown against the cohort average.</p>}
+      {isStaff && !selectedStudentId && <p>Choose a student to see their results in each subject against the cohort average.</p>}
       {selectedStudentId && !selectedEventId && <p>Select a dataset (exam or ReLP) to see results.</p>}
       {loading && <p>Loading…</p>}
       {error && <p style={{ color: '#A6192E' }}>{error}</p>}
