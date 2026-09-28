@@ -122,7 +122,7 @@ function ComposeInner() {
               style={{ display: 'block', width: '100%' }}
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Type a name to search..."
+              placeholder="Type a name, or a parent's email, to search..."
             />
             {searchResults.length > 0 && (
               <ul style={{ border: '1px solid #ddd', marginTop: '0.25rem', padding: 0, listStyle: 'none' }}>
