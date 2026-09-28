@@ -309,6 +309,7 @@ const TABS = [
       { href: '/staff/import-emails', label: 'Import Emails', desc: "Add staff login emails from a list." },
       { href: '/admin/permissions', label: 'Permissions', desc: "Choose which roles can open which pages." },
       { href: '/parents', label: 'Parents', desc: "Parent records and their logins." },
+      { href: '/parents/view-as', label: 'View as Parent', desc: "See the parent portal as a parent sees it." },
       { href: '/parents/import', label: 'Import Parents', desc: "Upload the SIMS parent list." },
     ].filter((it) => hasAccess(it.href)),
   },
