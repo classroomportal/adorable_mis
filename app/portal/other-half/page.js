@@ -7,9 +7,9 @@ import { formatTimeRange } from '../../../lib/formatTime';
 import { OH_DAY_NAMES, loadOtherHalfSlots, loadCurrentOtherHalfTermId, staffByActivity, staffNames } from '../../../lib/otherHalf';
 
 // Students choose one activity per Other Half day. Every rule (choices open,
-// their year, the activity not full) is enforced by
-// choose_other_half_activity() in the database; this page just offers what
-// those rules will accept.
+// only during Evening Prep as Bell Times sets it, their year, the activity
+// not full) is enforced by choose_other_half_activity() in the database;
+// this page just offers what those rules will accept.
 function StudentOtherHalfInner() {
   const { profile } = useAuth();
   const studentId = profile?.student_id;
@@ -24,6 +24,8 @@ function StudentOtherHalfInner() {
   const [mine, setMine] = useState({}); // day_of_week -> activity_id
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
+  const [prepSlots, setPrepSlots] = useState([]); // Evening Prep rows from Bell Times
+  const [inPrep, setInPrep] = useState(false);
 
   useEffect(() => {
     async function loadStatic() {
@@ -71,6 +73,17 @@ function StudentOtherHalfInner() {
 
   useEffect(() => { loadTerm(); }, [termId, studentId]);
 
+  // Choices can only change during Evening Prep; the database decides, and
+  // this re-asks every half minute so the buttons open and close on time.
+  useEffect(() => {
+    supabase.from('school_day').select('day_of_week, start_time, end_time').eq('short_label', 'EP')
+      .then(({ data }) => setPrepSlots(data || []));
+    const check = () => supabase.rpc('in_evening_prep').then(({ data }) => setInPrep(!!data));
+    check();
+    const timer = setInterval(check, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
   function isOpen(w) {
     return !!w?.choices_open && (!w.choices_close_at || new Date(w.choices_close_at) > new Date());
   }
@@ -99,6 +112,14 @@ function StudentOtherHalfInner() {
 
   const w = windows[termId];
   const open = isOpen(w);
+  const canEdit = open && inPrep;
+  // "19:00–20:00" if prep is the same every day, else day by day.
+  const prepTimes = (() => {
+    const ranges = [...new Set(prepSlots.map((p) => formatTimeRange(p.start_time, p.end_time)))];
+    if (ranges.length === 1) return ranges[0];
+    return Object.keys(OH_DAY_NAMES).map((d) => prepSlots.find((p) => p.day_of_week === d))
+      .filter(Boolean).map((p) => `${p.day_of_week} ${formatTimeRange(p.start_time, p.end_time)}`).join(', ');
+  })();
   const mineForYear = activities.filter((a) => a.year_groups.includes(student.year_group));
   const days = slots.days.filter((d) => mineForYear.some((a) => a.day_of_week === d) || mine[d]);
 
@@ -118,9 +139,18 @@ function StudentOtherHalfInner() {
           </label>
         )}
         {open ? (
-          <p style={{ margin: 0, color: '#1a7f37', fontWeight: 600 }}>
-            Choices are open{w?.choices_close_at ? ` until ${new Date(w.choices_close_at).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}.
-          </p>
+          <div>
+            <p style={{ margin: 0, color: '#1a7f37', fontWeight: 600 }}>
+              Choices are open{w?.choices_close_at ? ` until ${new Date(w.choices_close_at).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}.
+            </p>
+            {inPrep ? (
+              <p style={{ margin: '0.25rem 0 0' }}>It&apos;s Evening Prep — you can change your choices now.</p>
+            ) : (
+              <p style={{ margin: '0.25rem 0 0', color: '#b45309', fontWeight: 600 }}>
+                You can only change your choices during Evening Prep{prepTimes ? ` (${prepTimes})` : ''}.
+              </p>
+            )}
+          </div>
         ) : (
           <p style={{ margin: 0, color: '#666' }}>Choices are closed — ask your Other Half coordinator if you need to change.</p>
         )}
@@ -143,7 +173,7 @@ function StudentOtherHalfInner() {
               </h2>
               <span>
                 {chosenActivity ? <>Your choice: <strong>{chosenActivity.activity_name}</strong></> : <span style={{ color: '#b45309', fontWeight: 600 }}>Not chosen yet</span>}
-                {chosen && open && <> <button type="button" className="secondary" disabled={busy} onClick={() => clearChoice(d)}>Clear</button></>}
+                {chosen && canEdit && <> <button type="button" className="secondary" disabled={busy} onClick={() => clearChoice(d)}>Clear</button></>}
               </span>
             </div>
             <div className="student-card-grid" style={{ marginTop: '0.75rem' }}>
@@ -172,7 +202,7 @@ function StudentOtherHalfInner() {
                       {isMine ? (
                         <span style={{ color: '#1a7f37', fontWeight: 600 }}>✓ Chosen</span>
                       ) : (
-                        <button type="button" disabled={!open || full || busy} onClick={() => choose(a)}>
+                        <button type="button" disabled={!canEdit || full || busy} onClick={() => choose(a)}>
                           {chosen ? 'Switch to this' : 'Choose'}
                         </button>
                       )}
