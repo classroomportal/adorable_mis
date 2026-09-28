@@ -54,6 +54,7 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved,
   }
   const total = items.reduce((s, i) => s + (basket[i.id] || 0) * Number(i.price), 0);
   const day = longDate(forDate);
+  const weekday = new Date(`${forDate}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long' });
   const closes = momentLabel(closesAt);
 
   function setQty(itemId, qty) {
@@ -86,13 +87,17 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved,
   }
 
   return (
-    <div style={{ marginBottom: '1.25rem' }}>
-      <h3>My order for {day}{sessionName ? ` — ${sessionName}` : ''}</h3>
-      {sessionName && (
-        <p style={{ color: '#555' }}>
-          This is a special pre-order session: only the items below are on sale.
-        </p>
-      )}
+    <div style={{ marginBottom: '1.25rem', border: '2px solid #1f3b73', borderRadius: 6, padding: '0.75rem' }}>
+      <div style={{ background: '#1f3b73', color: '#fff', margin: '-0.75rem -0.75rem 0.75rem', padding: '0.5rem 0.75rem', borderRadius: '4px 4px 0 0' }}>
+        <div style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {sessionName || 'Tuckshop order'}
+        </div>
+        <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>For {day}</div>
+      </div>
+      <p style={{ marginTop: 0 }}>
+        Everything you choose in this box is handed out on <strong>{day}</strong>.
+        {sessionName && ' This is a special pre-order: only the items below are on sale.'}
+      </p>
       <p style={{ color: '#555' }}>
         Ordering closes at <strong>{closes}</strong>. Until then you can change or cancel your order.
         You can order up to {MAX_PER_ITEM} of each item, and no more than {MAX_FOOD} snacks and
@@ -140,9 +145,9 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved,
               onClick={() => save(basket, `Your order for ${day} is updated.`)}
               disabled={saving || !dirty || Object.keys(basket).length === 0}
             >
-              {saving ? 'Saving…' : 'Save changes'}
+              {saving ? 'Saving…' : `Save ${weekday} order`}
             </button>
-            <button className="secondary" onClick={cancelOrder} disabled={saving}>Cancel order</button>
+            <button className="secondary" onClick={cancelOrder} disabled={saving}>Cancel {weekday} order</button>
             {dirty && Object.keys(basket).length > 0 && (
               <span style={{ color: '#a3232c' }}>You have changes that aren&apos;t saved yet.</span>
             )}
@@ -155,7 +160,7 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved,
             onClick={() => save(basket, `Order placed for ${day}. You can change or cancel it until ${closes}.`)}
             disabled={saving || Object.keys(basket).length === 0}
           >
-            {saving ? 'Placing…' : 'Place order'}
+            {saving ? 'Placing…' : `Place order for ${weekday}`}
           </button>
         )}
       </div>
@@ -305,20 +310,31 @@ function TuckshopInner() {
                 {momentLabel(nextWindow.closes_at)}.</>
             )}
           </p>
-        ) : openWindows.map((w) => (
-          <OrderEditor
-            key={w.for_date}
-            studentId={studentId}
-            forDate={w.for_date}
-            closesAt={w.closes_at}
-            items={itemsFor(w.for_date)}
-            sessionName={specialFor(w.for_date)?.name}
-            savedLines={myOrders
-              .filter((o) => o.for_date === w.for_date && o.status === 'pending')
-              .flatMap((o) => o.tuckshop_preorder_items || [])}
-            onSaved={load}
-          />
-        ))}
+        ) : (
+          <>
+            {openWindows.length > 1 && (
+              <p style={{ background: '#fff8e1', border: '1px solid #e0c060', borderRadius: 4, padding: '0.5rem' }}>
+                <strong>{openWindows.length} separate orders are open:</strong>{' '}
+                {openWindows.map((w) => `${longDate(w.for_date)}${specialFor(w.for_date) ? ` (${specialFor(w.for_date).name})` : ''}`).join(' and ')}.
+                Each box below is its own order, handed out on its own day. Check you are ordering in the right one.
+              </p>
+            )}
+            {openWindows.map((w) => (
+              <OrderEditor
+                key={w.for_date}
+                studentId={studentId}
+                forDate={w.for_date}
+                closesAt={w.closes_at}
+                items={itemsFor(w.for_date)}
+                sessionName={specialFor(w.for_date)?.name}
+                savedLines={myOrders
+                  .filter((o) => o.for_date === w.for_date && o.status === 'pending')
+                  .flatMap((o) => o.tuckshop_preorder_items || [])}
+                onSaved={load}
+              />
+            ))}
+          </>
+        )}
 
         {pastOrders.length > 0 && (
           <>
@@ -334,6 +350,9 @@ function TuckshopInner() {
                       <tr key={o.id}>
                         <td>
                           {longDate(o.for_date)}
+                          {specialFor(o.for_date) && (
+                            <div style={{ color: '#555', fontSize: '0.85rem' }}>{specialFor(o.for_date).name}</div>
+                          )}
                           <div>
                             <span className={`badge ${o.status === 'fulfilled' ? 'badge-positive' : 'badge-negative'}`}>
                               {statusLabel(o)}
