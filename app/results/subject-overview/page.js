@@ -66,6 +66,29 @@ function academicYearStart(date) {
 // earlier, so it's labelled "Y11 T3 Exam" rather than "Y12 T3 Exam". An
 // end-of-term exam set already names its year group ("Y11 Term 3 Exam",
 // migration 246), so it keeps its own name.
+// The school year a dataset falls in, from its YYYY-MM-DD date string (not via
+// Date, so a time zone can't move 1 September into the year before), and its
+// label: 2023 -> "2023/24".
+function schoolYearOf(isoDate) {
+  const [y, m] = isoDate.split('-').map(Number);
+  return m >= 9 ? y : y - 1;
+}
+const schoolYearLabel = (y) => `${y}/${String((y + 1) % 100).padStart(2, '0')}`;
+
+// Today as YYYY-MM-DD in the device's time zone, to compare with event_date.
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// The dataset to open on from a newest-first list: the latest one that has
+// already happened, since a set still to come has nothing in it yet. If none
+// has happened, the soonest to come.
+function defaultDataset(list) {
+  const today = todayISO();
+  return list.find((d) => d.event_date <= today) || list[list.length - 1] || null;
+}
+
 function yearGroupThen(event, currentYearGroup) {
   if (currentYearGroup == null) return null;
   const yearsAgo = academicYearStart(new Date()) - academicYearStart(new Date(event.event_date));
@@ -163,11 +186,13 @@ function SubjectOverviewInner() {
     setSelectedMentorGroupId(group.yearGroup ? group.groupId : '');
   }, [isStaff, students, profile]);
 
-  // Open on the most recent dataset, which is almost always the one wanted.
+  // Open on the most recent dataset that has happened, which is almost always the
+  // one wanted.
   useEffect(() => {
     if (datasets.length === 0 || defaultsApplied.current.dataset) return;
     defaultsApplied.current.dataset = true;
-    setSelectedEventId(String(datasets[0].event_id));
+    const first = defaultDataset(datasets);
+    if (first) setSelectedEventId(String(first.event_id));
   }, [datasets]);
 
   const yearGroups = Array.from(new Set(students.map((s) => s.year_group).filter((y) => y != null))).sort((a, b) => a - b);
@@ -185,11 +210,24 @@ function SubjectOverviewInner() {
   const selectedEvent = datasets.find((d) => String(d.event_id) === String(selectedEventId));
   const shownDatasets = datasets.filter((d) => datasetFitsStudent(d, selectedStudentYearGroup));
 
+  // Datasets are picked in two steps, school year then dataset, since there are
+  // over a hundred of them back to 2017. The year shown is the chosen dataset's;
+  // picking another year moves to that year's latest dataset that has happened.
+  const schoolYears = [...new Set(shownDatasets.map((d) => schoolYearOf(d.event_date)))].sort((a, b) => b - a);
+  const selectedSchoolYear = selectedEvent ? schoolYearOf(selectedEvent.event_date) : schoolYears[0];
+  const yearDatasets = shownDatasets.filter((d) => schoolYearOf(d.event_date) === selectedSchoolYear);
+
+  function chooseSchoolYear(year) {
+    const pick = defaultDataset(shownDatasets.filter((d) => schoolYearOf(d.event_date) === Number(year)));
+    setSelectedEventId(pick ? String(pick.event_id) : '');
+  }
+
   // Choosing a student from another year group can hide the chosen set; move to
   // the newest one they sat rather than leave an option that isn't in the list.
   useEffect(() => {
     if (selectedEvent && !datasetFitsStudent(selectedEvent, selectedStudentYearGroup)) {
-      setSelectedEventId(shownDatasets[0] ? String(shownDatasets[0].event_id) : '');
+      const pick = defaultDataset(shownDatasets);
+      setSelectedEventId(pick ? String(pick.event_id) : '');
     }
   }, [selectedEvent, selectedStudentYearGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -322,7 +360,7 @@ function SubjectOverviewInner() {
   return (
     <div style={{ padding: '1rem', maxWidth: '100%' }}>
       <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
-        {selectedStudentName ? `${selectedStudentName} Results` : 'Review Results'} — % vs Cohort Average
+        {selectedStudentName ? `${selectedStudentName} Results` : 'Review Results'} — {byGrade && chartData.length > 0 ? 'Grades' : '%'} vs Cohort Average
       </h1>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-end' }}>
@@ -371,6 +409,18 @@ function SubjectOverviewInner() {
           </>
         )}
         <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>School year</label>
+          <select
+            value={selectedSchoolYear ?? ''}
+            onChange={(e) => chooseSchoolYear(e.target.value)}
+            style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px' }}
+          >
+            {schoolYears.map((y) => (
+              <option key={y} value={y}>{schoolYearLabel(y)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Dataset</label>
           <select
             value={selectedEventId}
@@ -378,7 +428,7 @@ function SubjectOverviewInner() {
             style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '220px' }}
           >
             <option value="">Select a dataset...</option>
-            {shownDatasets.map((d) => (
+            {yearDatasets.map((d) => (
               <option key={d.event_id} value={d.event_id}>
                 {datasetLabel(d, selectedStudentYearGroup)} — {formatUKDate(d.event_date)}
               </option>
@@ -390,7 +440,8 @@ function SubjectOverviewInner() {
             setSelectedYearGroup(ownGroup?.yearGroup || '');
             setSelectedMentorGroupId(ownGroup?.yearGroup ? ownGroup.groupId : '');
             setSelectedStudentId(isStudent ? String(profile.student_id) : '');
-            setSelectedEventId(datasets[0] ? String(datasets[0].event_id) : '');
+            const first = defaultDataset(datasets);
+            setSelectedEventId(first ? String(first.event_id) : '');
           }}
           style={{ padding: '0.4rem 0.75rem', border: '1px solid #A6192E', color: '#A6192E', background: 'white', borderRadius: '4px', fontSize: '0.85rem' }}
         >
@@ -417,7 +468,7 @@ function SubjectOverviewInner() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="subject" angle={-35} textAnchor="end" interval={0} height={80} tick={{ fontSize: 12 }} />
               {byGrade ? (
-                <YAxis domain={[0, maxPoints]} ticks={Array.from({ length: maxPoints }, (_, i) => i + 1)} tickFormatter={(v) => gradeScale?.[v] || v} />
+                <YAxis domain={[0, maxPoints + 0.5]} ticks={Array.from({ length: maxPoints }, (_, i) => i + 1)} tickFormatter={(v) => gradeScale?.[v] || v} />
               ) : (
                 <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
               )}
@@ -433,7 +484,7 @@ function SubjectOverviewInner() {
                 {chartData.map((entry) => (
                   <Cell key={entry.subject} fill={subjectColor(entry.subject)} />
                 ))}
-                {byGrade && <LabelList dataKey="student_grade" position="top" style={{ fontSize: 12, fontWeight: 600 }} />}
+                {byGrade && <LabelList dataKey="student_grade" position="top" fill="#1a1a1a" style={{ fontSize: 12, fontWeight: 600 }} />}
               </Bar>
               <Line dataKey="cohort_value" name={byGrade ? 'Cohort average grade' : 'Cohort Average %'} stroke="#1a1a1a" strokeWidth={3} dot={{ r: 4 }} type="monotone" connectNulls />
             </ComposedChart>
