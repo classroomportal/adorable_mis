@@ -2,13 +2,20 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  ComposedChart, Bar, Cell, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ComposedChart, Bar, Cell, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList,
 } from 'recharts';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import { isWaecGrade } from '../../../lib/gradeCompare';
+
+// The grade each point value stands for on either scale (grade_scale): IGCSE
+// runs A* = 8 down to G = 1, WAEC A1+ = 10 down to F9 = 1. Used to label the
+// axis and the cohort average when a dataset is charted by grade.
+const IGCSE_BY_POINTS = { 8: 'A*', 7: 'A', 6: 'B', 5: 'C', 4: 'D', 3: 'E', 2: 'F', 1: 'G' };
+const WAEC_BY_POINTS = { 10: 'A1+', 9: 'A1', 8: 'B2', 7: 'B3', 6: 'C4', 5: 'C5', 4: 'C6', 3: 'D7', 2: 'E8', 1: 'F9' };
 
 // Maths -> blue shades, English -> green shades, Science (and its sciences) -> yellow
 // shades. Everything else gets a fixed, distinct colour assigned deterministically by
@@ -59,6 +66,29 @@ function academicYearStart(date) {
 // earlier, so it's labelled "Y11 T3 Exam" rather than "Y12 T3 Exam". An
 // end-of-term exam set already names its year group ("Y11 Term 3 Exam",
 // migration 246), so it keeps its own name.
+// The school year a dataset falls in, from its YYYY-MM-DD date string (not via
+// Date, so a time zone can't move 1 September into the year before), and its
+// label: 2023 -> "2023/24".
+function schoolYearOf(isoDate) {
+  const [y, m] = isoDate.split('-').map(Number);
+  return m >= 9 ? y : y - 1;
+}
+const schoolYearLabel = (y) => `${y}/${String((y + 1) % 100).padStart(2, '0')}`;
+
+// Today as YYYY-MM-DD in the device's time zone, to compare with event_date.
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// The dataset to open on from a newest-first list: the latest one that has
+// already happened, since a set still to come has nothing in it yet. If none
+// has happened, the soonest to come.
+function defaultDataset(list) {
+  const today = todayISO();
+  return list.find((d) => d.event_date <= today) || list[list.length - 1] || null;
+}
+
 function yearGroupThen(event, currentYearGroup) {
   if (currentYearGroup == null) return null;
   const yearsAgo = academicYearStart(new Date()) - academicYearStart(new Date(event.event_date));
@@ -96,6 +126,11 @@ function SubjectOverviewInner() {
   const [datasets, setDatasets] = useState([]);
   const [selectedEventId, setSelectedEventId] = useState('');
   const [chartData, setChartData] = useState([]);
+  // 'percent' when the student's marks in the dataset have scores; 'grade' when
+  // they only have grades, as the exams before July 2026 do (migration 247
+  // copied them from transcript_grades, which never held a score).
+  const [measure, setMeasure] = useState('percent');
+  const [gradePoints, setGradePoints] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   // A mentor's own TG, worked out from students.mentor_staff_id, so the page opens
@@ -119,6 +154,11 @@ function SubjectOverviewInner() {
         .then(({ data }) => setMentorGroups(data || []));
     }
   }, [isStaff, isStudent, profile]);
+
+  useEffect(() => {
+    supabase.from('grade_scale').select('grade, points')
+      .then(({ data }) => setGradePoints(Object.fromEntries((data || []).map((g) => [g.grade, Number(g.points)]))));
+  }, []);
 
   // Datasets = calendar events, most recent first (any category — exam, relp, etc.).
   useEffect(() => {
@@ -146,11 +186,13 @@ function SubjectOverviewInner() {
     setSelectedMentorGroupId(group.yearGroup ? group.groupId : '');
   }, [isStaff, students, profile]);
 
-  // Open on the most recent dataset, which is almost always the one wanted.
+  // Open on the most recent dataset that has happened, which is almost always the
+  // one wanted.
   useEffect(() => {
     if (datasets.length === 0 || defaultsApplied.current.dataset) return;
     defaultsApplied.current.dataset = true;
-    setSelectedEventId(String(datasets[0].event_id));
+    const first = defaultDataset(datasets);
+    if (first) setSelectedEventId(String(first.event_id));
   }, [datasets]);
 
   const yearGroups = Array.from(new Set(students.map((s) => s.year_group).filter((y) => y != null))).sort((a, b) => a - b);
@@ -168,11 +210,24 @@ function SubjectOverviewInner() {
   const selectedEvent = datasets.find((d) => String(d.event_id) === String(selectedEventId));
   const shownDatasets = datasets.filter((d) => datasetFitsStudent(d, selectedStudentYearGroup));
 
+  // Datasets are picked in two steps, school year then dataset, since there are
+  // over a hundred of them back to 2017. The year shown is the chosen dataset's;
+  // picking another year moves to that year's latest dataset that has happened.
+  const schoolYears = [...new Set(shownDatasets.map((d) => schoolYearOf(d.event_date)))].sort((a, b) => b - a);
+  const selectedSchoolYear = selectedEvent ? schoolYearOf(selectedEvent.event_date) : schoolYears[0];
+  const yearDatasets = shownDatasets.filter((d) => schoolYearOf(d.event_date) === selectedSchoolYear);
+
+  function chooseSchoolYear(year) {
+    const pick = defaultDataset(shownDatasets.filter((d) => schoolYearOf(d.event_date) === Number(year)));
+    setSelectedEventId(pick ? String(pick.event_id) : '');
+  }
+
   // Choosing a student from another year group can hide the chosen set; move to
   // the newest one they sat rather than leave an option that isn't in the list.
   useEffect(() => {
     if (selectedEvent && !datasetFitsStudent(selectedEvent, selectedStudentYearGroup)) {
-      setSelectedEventId(shownDatasets[0] ? String(shownDatasets[0].event_id) : '');
+      const pick = defaultDataset(shownDatasets);
+      setSelectedEventId(pick ? String(pick.event_id) : '');
     }
   }, [selectedEvent, selectedStudentYearGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -207,8 +262,7 @@ function SubjectOverviewInner() {
     for (;;) {
       let pageQuery = supabase
         .from('results')
-        .select('score, max_score, student_id, week_start_date, result_type, subject_id, subjects(subject_name, display_name)')
-        .gt('max_score', 0)
+        .select('score, max_score, grade, student_id, week_start_date, result_type, subject_id, subjects(subject_name, display_name)')
         // Every result type counts: term exams (term_exam_import) and weekly tests
         // (short_test) are both results a mentor needs to see. A mark belongs to the
         // dataset if it carries its id, or carries none and sits on its date (the
@@ -235,43 +289,69 @@ function SubjectOverviewInner() {
       return;
     }
 
+    // Charted by percentage wherever the student has a scored mark in the set.
+    // A set holding grades alone (every exam before July 2026) is charted by
+    // grade points instead, rather than showing nothing.
+    const isMine = (row) => String(row.student_id) === String(selectedStudentId);
+    const pctOf = (row) => (row.max_score > 0 && row.score != null ? (row.score / row.max_score) * 100 : null);
+    const pointsOf = (row) => (row.grade && gradePoints[row.grade] !== undefined ? gradePoints[row.grade] : null);
+    const byGrade = !data.some((row) => isMine(row) && pctOf(row) !== null);
+    const valueOf = byGrade ? pointsOf : pctOf;
+
     const cohortBySubject = new Map();
     const studentBySubject = new Map();
+    const add = (map, label, value, grade) => {
+      const e = map.get(label) || { sum: 0, count: 0, grades: [] };
+      e.sum += value; e.count += 1;
+      if (grade) e.grades.push(grade);
+      map.set(label, e);
+    };
 
     for (const row of data) {
-      if (!row.max_score || row.max_score <= 0) continue;
-      const pct = (row.score / row.max_score) * 100;
+      const value = valueOf(row);
+      if (value === null) continue;
       const label = row.subjects?.display_name || row.subjects?.subject_name || 'Unknown';
-
-      if (!cohortBySubject.has(label)) cohortBySubject.set(label, { sum: pct, count: 1 });
-      else { const e = cohortBySubject.get(label); e.sum += pct; e.count += 1; }
-
-      if (String(row.student_id) === String(selectedStudentId)) {
-        if (!studentBySubject.has(label)) studentBySubject.set(label, { sum: pct, count: 1 });
-        else { const e = studentBySubject.get(label); e.sum += pct; e.count += 1; }
-      }
+      add(cohortBySubject, label, value);
+      if (isMine(row)) add(studentBySubject, label, value, row.grade);
     }
 
+    const round1 = (n) => Math.round(n * 10) / 10;
     const summary = Array.from(studentBySubject.entries())
       .map(([subject, s]) => {
         const cohort = cohortBySubject.get(subject);
         return {
           subject,
-          student_percentage: Math.round((s.sum / s.count) * 10) / 10,
-          cohort_avg_percentage: cohort ? Math.round((cohort.sum / cohort.count) * 10) / 10 : null,
+          student_value: round1(s.sum / s.count),
+          student_grade: s.grades.join('/'),
+          cohort_value: cohort ? round1(cohort.sum / cohort.count) : null,
         };
       })
       .sort((a, b) => a.subject.localeCompare(b.subject));
 
+    setMeasure(byGrade ? 'grade' : 'percent');
     setChartData(summary);
     setLoading(false);
-  }, [profile, isStaff, isStudent, selectedStudentId, selectedEventId, selectedEvent]);
+  }, [profile, isStaff, isStudent, selectedStudentId, selectedEventId, selectedEvent, gradePoints]);
 
   useEffect(() => {
     if (!authLoading) fetchData();
   }, [authLoading, fetchData]);
 
   if (authLoading) return <p>Loading...</p>;
+
+  // In grade mode the axis is labelled in the student's own scale when their
+  // grades are all on one; a mix of IGCSE and WAEC keeps plain points.
+  const chartGrades = chartData.flatMap((d) => (d.student_grade ? d.student_grade.split('/') : []));
+  const allWaec = chartGrades.length > 0 && chartGrades.every(isWaecGrade);
+  const allIgcse = chartGrades.length > 0 && chartGrades.every((g) => !isWaecGrade(g));
+  const gradeScale = allWaec ? WAEC_BY_POINTS : allIgcse ? IGCSE_BY_POINTS : null;
+  const maxPoints = chartGrades.some(isWaecGrade) ? 10 : 8;
+  const pointsLabel = (v) => {
+    if (v === null || v === undefined) return 'No cohort data';
+    const nearest = gradeScale?.[Math.round(v)];
+    return nearest ? `${nearest} (${v} pts)` : `${v} pts`;
+  };
+  const byGrade = measure === 'grade';
 
   const selectedStudentName = isStudent
     ? 'My'
@@ -280,7 +360,7 @@ function SubjectOverviewInner() {
   return (
     <div style={{ padding: '1rem', maxWidth: '100%' }}>
       <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
-        {selectedStudentName ? `${selectedStudentName} Results` : 'Review Results'} — % vs Cohort Average
+        {selectedStudentName ? `${selectedStudentName} Results` : 'Review Results'} — {byGrade && chartData.length > 0 ? 'Grades' : '%'} vs Cohort Average
       </h1>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-end' }}>
@@ -329,6 +409,18 @@ function SubjectOverviewInner() {
           </>
         )}
         <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>School year</label>
+          <select
+            value={selectedSchoolYear ?? ''}
+            onChange={(e) => chooseSchoolYear(e.target.value)}
+            style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px' }}
+          >
+            {schoolYears.map((y) => (
+              <option key={y} value={y}>{schoolYearLabel(y)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Dataset</label>
           <select
             value={selectedEventId}
@@ -336,7 +428,7 @@ function SubjectOverviewInner() {
             style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '220px' }}
           >
             <option value="">Select a dataset...</option>
-            {shownDatasets.map((d) => (
+            {yearDatasets.map((d) => (
               <option key={d.event_id} value={d.event_id}>
                 {datasetLabel(d, selectedStudentYearGroup)} — {formatUKDate(d.event_date)}
               </option>
@@ -348,7 +440,8 @@ function SubjectOverviewInner() {
             setSelectedYearGroup(ownGroup?.yearGroup || '');
             setSelectedMentorGroupId(ownGroup?.yearGroup ? ownGroup.groupId : '');
             setSelectedStudentId(isStudent ? String(profile.student_id) : '');
-            setSelectedEventId(datasets[0] ? String(datasets[0].event_id) : '');
+            const first = defaultDataset(datasets);
+            setSelectedEventId(first ? String(first.event_id) : '');
           }}
           style={{ padding: '0.4rem 0.75rem', border: '1px solid #A6192E', color: '#A6192E', background: 'white', borderRadius: '4px', fontSize: '0.85rem' }}
         >
@@ -362,21 +455,38 @@ function SubjectOverviewInner() {
       {error && <p style={{ color: '#A6192E' }}>{error}</p>}
       {!loading && !error && selectedStudentId && selectedEventId && chartData.length === 0 && <p>No results found for this student in the selected dataset.</p>}
 
+      {!loading && !error && chartData.length > 0 && byGrade && (
+        <p style={{ fontSize: '0.85rem', color: '#555' }}>
+          This dataset has grades but no scores, so grades are compared instead of percentages
+          (A* = 8 down to G = 1; WAEC A1+ = 10 down to F9 = 1). The line is the average grade of everyone who sat it.
+        </p>
+      )}
       {!loading && !error && chartData.length > 0 && (
         <div style={{ width: '100%', height: 450 }}>
           <ResponsiveContainer>
             <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="subject" angle={-35} textAnchor="end" interval={0} height={80} tick={{ fontSize: 12 }} />
-              <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-              <Tooltip formatter={(value) => (value === null ? 'No cohort data' : `${value}%`)} />
+              {byGrade ? (
+                <YAxis domain={[0, maxPoints + 0.5]} ticks={Array.from({ length: maxPoints }, (_, i) => i + 1)} tickFormatter={(v) => gradeScale?.[v] || v} />
+              ) : (
+                <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+              )}
+              <Tooltip
+                formatter={(value, name, item) => {
+                  if (!byGrade) return value === null ? 'No cohort data' : `${value}%`;
+                  if (item?.dataKey === 'student_value') return item.payload.student_grade || pointsLabel(value);
+                  return pointsLabel(value);
+                }}
+              />
               <Legend verticalAlign="top" />
-              <Bar dataKey="student_percentage" name={isStudent ? 'My %' : `${selectedStudentName} %`} radius={[4, 4, 0, 0]}>
+              <Bar dataKey="student_value" name={byGrade ? (isStudent ? 'My grade' : `${selectedStudentName} grade`) : (isStudent ? 'My %' : `${selectedStudentName} %`)} radius={[4, 4, 0, 0]}>
                 {chartData.map((entry) => (
                   <Cell key={entry.subject} fill={subjectColor(entry.subject)} />
                 ))}
+                {byGrade && <LabelList dataKey="student_grade" position="top" fill="#1a1a1a" style={{ fontSize: 12, fontWeight: 600 }} />}
               </Bar>
-              <Line dataKey="cohort_avg_percentage" name="Cohort Average %" stroke="#1a1a1a" strokeWidth={3} dot={{ r: 4 }} type="monotone" connectNulls />
+              <Line dataKey="cohort_value" name={byGrade ? 'Cohort average grade' : 'Cohort Average %'} stroke="#1a1a1a" strokeWidth={3} dot={{ r: 4 }} type="monotone" connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
