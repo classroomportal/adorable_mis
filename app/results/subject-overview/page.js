@@ -10,11 +10,6 @@ import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 
-// The result_type values charted here. Only one is in use, so there's no picker for
-// it on the page (a lone, always-ticked checkbox just confused people) — add one back
-// if a second type ever needs choosing between.
-const RESULT_TYPES = ['term_exam_import'];
-
 // Maths -> blue shades, English -> green shades, Science (and its sciences) -> yellow
 // shades. Everything else gets a fixed, distinct colour assigned deterministically by
 // subject name (a stable hash into a palette), so colours stay consistent across
@@ -192,8 +187,10 @@ function SubjectOverviewInner() {
         .from('results')
         .select('score, max_score, student_id, week_start_date, result_type, subject_id, subjects(subject_name, display_name)')
         .gt('max_score', 0)
-        .eq('week_start_date', eventDate)
-        .in('result_type', RESULT_TYPES);
+        // Every result type counts: the dataset's date already picks out the exam or
+        // assessment week, and term exams (term_exam_import) and weekly tests
+        // (short_test) are both results a mentor needs to see.
+        .eq('week_start_date', eventDate);
       pageQuery = pageQuery.range(from, from + PAGE_SIZE - 1);
 
       const { data: page, error: pageError } = await pageQuery;
