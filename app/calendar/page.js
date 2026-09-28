@@ -5,18 +5,9 @@ import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
+import { CALENDAR_CATEGORY_LABELS } from '../../lib/calendarExport';
 
-const CATEGORY_LABELS = {
-  term_boundary: 'Term boundary',
-  relp: 'ReLP (test)',
-  exam: 'Exam',
-  teacher_assessment: 'Teacher Assessment',
-  consult_day: 'Consult day',
-  awareness_day: 'Awareness day',
-  holiday: 'Holiday',
-  other: 'Other',
-  report_period: 'Report period',
-};
+const CATEGORY_LABELS = CALENDAR_CATEGORY_LABELS;
 
 const ALL_YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
 
@@ -310,6 +301,17 @@ function CalendarInner() {
   );
 }
 
+// Parents have their own read-only view with "add to my calendar"; send them
+// there rather than showing the staff page's "no access" message.
+function ParentRedirect({ children }) {
+  const { profile } = useAuth();
+  useEffect(() => {
+    if (profile?.role === 'parent') window.location.replace('/parent-portal/calendar');
+  }, [profile]);
+  if (profile?.role === 'parent') return <p>Opening the school calendar…</p>;
+  return children;
+}
+
 export default function CalendarPage() {
-  return <RequireAuth><RequireResource resourceKey="/calendar"><CalendarInner /></RequireResource></RequireAuth>;
+  return <RequireAuth><ParentRedirect><RequireResource resourceKey="/calendar"><CalendarInner /></RequireResource></ParentRedirect></RequireAuth>;
 }
