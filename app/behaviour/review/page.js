@@ -7,11 +7,13 @@ import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import EventCommentEditor from '../../components/EventCommentEditor';
 
-// What the school office checks before parents see it (migration 238):
-//   - a -5 event's text (it can't be saved without an explanation, and stays
-//     hidden until someone here confirms it follows school protocol, names no
-//     other student, and reads clearly);
-//   - any picture staff added to an event (migration 209).
+// What gets checked here before parents see it (migrations 238-239):
+//   - any event with a picture (migration 209): SMT and admin;
+//   - a -5 event without a picture: the school office and admin. Its text
+//     can't be saved without an explanation, and stays hidden until someone
+//     here confirms it follows school protocol, names no other student, and
+//     reads clearly.
+// Each reviewer only sees their own cards.
 // The text and the picture are decided separately on one card: send the text
 // with the picture, send it without, or edit the text first and then send.
 // An event with a picture can be sent whatever its points; a -1 to -4 event
@@ -34,7 +36,11 @@ function fullName(p) {
 
 function ReviewInner() {
   const { profile, staffRoles } = useAuth();
-  const canReview = profile?.role === 'admin' || (staffRoles || []).includes('school_office');
+  const roles = staffRoles || [];
+  const isAdmin = profile?.role === 'admin'; // as is_admin() decides it
+  const reviewsPictures = isAdmin || roles.includes('smt');
+  const reviewsText = isAdmin || roles.includes('school_office');
+  const canReview = reviewsPictures || reviewsText;
 
   const [students, setStudents] = useState([]);
   // Cards: { key, events: [...], photo: { photo_id, status, image_jpeg_base64, uploader } | null }
@@ -93,7 +99,8 @@ function ReviewInner() {
       .map(({ photo, ...ev }) => ({ key: `event-${ev.event_id}`, photo: photo || null, events: [ev] }));
 
     setStudents(s || []);
-    setItems([...photoItems, ...seriousItems]);
+    // A card with a picture is SMT's; one without is the office's.
+    setItems([...photoItems, ...seriousItems].filter((it) => (it.photo ? reviewsPictures : reviewsText)));
     setHistory(h || []);
     setLoading(false);
   }
@@ -282,7 +289,7 @@ function ReviewInner() {
   }
 
   if (!canReview) {
-    return <p>This page is for school office staff and admin only.</p>;
+    return <p>This page is for SMT, school office staff and admin only.</p>;
   }
 
   const waiting = items.filter((it) => !it.events.length || !it.events.every((e) => e.protocol_reviewed_at) || it.photo?.status === 'pending');
@@ -292,6 +299,9 @@ function ReviewInner() {
     <div>
       <h1>Behaviour Review</h1>
       <p style={{ color: '#555' }}>
+        {reviewsPictures && reviewsText && 'SMT review every event with a picture; the school office reviews -5 events without one. '}
+        {reviewsPictures && !reviewsText && 'Events with a picture are reviewed by SMT. '}
+        {reviewsText && !reviewsPictures && 'You review -5 events without a picture. SMT review any event with a picture. '}
         Check each event before parents see it. The text and the picture are
         separate. You can send the text with the picture, send the text without
         it, or use Edit to correct the text first and then send it. Before
