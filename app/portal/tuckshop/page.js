@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
-import { closingWarning, longDate, momentLabel } from '../../../lib/tuckshopSchedule';
+import { closingWarning, loadSpecialSessions, longDate, momentLabel } from '../../../lib/tuckshopSchedule';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -22,7 +22,7 @@ function sameBasket(a, b) {
 
 // One tuckshop day whose ordering window is open: the student's basket for
 // it, which they can place, change or cancel until closesAt.
-function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved }) {
+function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved, sessionName }) {
   const saved = {};
   const names = {};
   savedLines.forEach((l) => {
@@ -87,7 +87,12 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved 
 
   return (
     <div style={{ marginBottom: '1.25rem' }}>
-      <h3>My order for {day}</h3>
+      <h3>My order for {day}{sessionName ? ` — ${sessionName}` : ''}</h3>
+      {sessionName && (
+        <p style={{ color: '#555' }}>
+          This is a special pre-order session: only the items below are on sale.
+        </p>
+      )}
       <p style={{ color: '#555' }}>
         Ordering closes at <strong>{closes}</strong>. Until then you can change or cancel your order.
         You can order up to {MAX_PER_ITEM} of each item, and no more than {MAX_FOOD} snacks and
@@ -166,6 +171,8 @@ function TuckshopInner() {
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
   const [tuckshopHistory, setTuckshopHistory] = useState([]);
   const [tuckshopItems, setTuckshopItems] = useState([]);
+  const [specials, setSpecials] = useState([]);
+  const [specialItems, setSpecialItems] = useState([]);
   const [closedUntil, setClosedUntil] = useState(null);
   const [windows, setWindows] = useState(null);
   const [myOrders, setMyOrders] = useState([]);
@@ -188,6 +195,21 @@ function TuckshopInner() {
       .eq('active', true)
       .order('name');
     setTuckshopItems(items || []);
+    // Special pre-order sessions (migration 241) sell only their own list,
+    // which may include items switched off for normal ordering.
+    const special = await loadSpecialSessions(supabase);
+    setSpecials(special);
+    const specialIds = [...new Set(special.flatMap((sp) => sp.itemIds))];
+    if (specialIds.length > 0) {
+      const { data: si } = await supabase
+        .from('tuckshop_items')
+        .select('id, name, price, is_food')
+        .in('id', specialIds)
+        .order('name');
+      setSpecialItems(si || []);
+    } else {
+      setSpecialItems([]);
+    }
     // Manual closure (holidays etc.) on top of the weekly schedule.
     const { data: settings } = await supabase
       .from('system_settings')
@@ -222,11 +244,22 @@ function TuckshopInner() {
   }
 
   const now = Date.now();
-  const openWindows = closedUntil ? [] : (windows || []).filter(
-    (w) => now >= new Date(w.opens_at).getTime() && now < new Date(w.closes_at).getTime(),
+  const specialFor = (d) => specials.find((sp) => sp.for_date === d);
+  // The manual closure stops the weekly rota, not a special session.
+  const openWindows = (windows || []).filter(
+    (w) => (!closedUntil || specialFor(w.for_date))
+      && now >= new Date(w.opens_at).getTime() && now < new Date(w.closes_at).getTime(),
   );
+  const itemsFor = (d) => {
+    const sp = specialFor(d);
+    if (!sp) return tuckshopItems;
+    const ids = new Set(sp.itemIds);
+    return specialItems.filter((i) => ids.has(i.id));
+  };
   const openDates = new Set(openWindows.map((w) => w.for_date));
-  const nextWindow = (windows || []).find((w) => new Date(w.opens_at).getTime() > now);
+  const nextWindow = (windows || []).find(
+    (w) => (!closedUntil || specialFor(w.for_date)) && new Date(w.opens_at).getTime() > now,
+  );
   const warnings = openWindows.map((w) => closingWarning(w.for_date, w.closes_at)).filter(Boolean);
   const pastOrders = myOrders.filter((o) => !(openDates.has(o.for_date) && o.status === 'pending'));
 
@@ -253,9 +286,13 @@ function TuckshopInner() {
           </span>
         </p>
 
-        {closedUntil ? (
+        {closedUntil && openWindows.length === 0 ? (
           <p className="badge badge-negative" style={{ display: 'inline-block' }}>
             Tuckshop ordering is closed at the moment. It reopens on {longDate(closedUntil)}.
+            {nextWindow && (
+              <> A special pre-order session for <strong>{longDate(nextWindow.for_date)}</strong> opens at{' '}
+                <strong>{momentLabel(nextWindow.opens_at)}</strong>.</>
+            )}
           </p>
         ) : windows === null ? (
           <p>Loading…</p>
@@ -274,7 +311,8 @@ function TuckshopInner() {
             studentId={studentId}
             forDate={w.for_date}
             closesAt={w.closes_at}
-            items={tuckshopItems}
+            items={itemsFor(w.for_date)}
+            sessionName={specialFor(w.for_date)?.name}
             savedLines={myOrders
               .filter((o) => o.for_date === w.for_date && o.status === 'pending')
               .flatMap((o) => o.tuckshop_preorder_items || [])}

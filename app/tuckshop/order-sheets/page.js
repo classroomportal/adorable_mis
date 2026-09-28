@@ -5,7 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { generateOrderSheetsPdf } from '../../../lib/generateOrderSheetsPdf';
-import { isLocked as lockedBySchedule, loadSchedule, momentLabel, windowFor } from '../../../lib/tuckshopSchedule';
+import { isLocked as lockedBySchedule, loadSchedule, loadSpecialSessions, momentLabel, windowFor } from '../../../lib/tuckshopSchedule';
 
 // Printable tuckshop order sheets: one page per restaurant listing each
 // student's order, with the total of each item, plus a whole-school
@@ -72,11 +72,13 @@ function OrderSheetsInner() {
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [schedule, setSchedule] = useState([]);
+  const [specials, setSpecials] = useState([]);
 
-  const isLocked = (d) => lockedBySchedule(d, schedule);
+  const isLocked = (d) => lockedBySchedule(d, schedule, specials);
+  const specialName = (d) => specials.find((s) => s.for_date === d)?.name;
   // e.g. "11pm on Thursday 1 October"
   const closesLabel = (d) => {
-    const w = windowFor(d, schedule);
+    const w = windowFor(d, schedule, specials);
     return w ? momentLabel(w.closesAt) : 'the day before';
   };
 
@@ -86,6 +88,8 @@ function OrderSheetsInner() {
   async function loadDates() {
     const sched = await loadSchedule(supabase);
     setSchedule(sched);
+    const special = await loadSpecialSessions(supabase);
+    setSpecials(special);
     const { data, error: err } = await supabase
       .from('tuckshop_preorders')
       .select('for_date')
@@ -102,7 +106,7 @@ function OrderSheetsInner() {
     // locked (the one the shop is about to serve); otherwise the next one.
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
     const upcoming = list.filter((d) => d >= today).sort();
-    setForDate(upcoming.find((d) => lockedBySchedule(d, sched)) || upcoming[0] || list[0] || '');
+    setForDate(upcoming.find((d) => lockedBySchedule(d, sched, special)) || upcoming[0] || list[0] || '');
     if (list.length === 0) setLoading(false);
   }
 
@@ -183,7 +187,7 @@ function OrderSheetsInner() {
             Orders for<br />
             <select value={forDate} onChange={(e) => setForDate(e.target.value)}>
               {dates.map((d) => (
-                <option key={d} value={d}>{longDate(d)}{isLocked(d) ? '' : ' (still open)'}</option>
+                <option key={d} value={d}>{longDate(d)}{specialName(d) ? ` — ${specialName(d)}` : ''}{isLocked(d) ? '' : ' (still open)'}</option>
               ))}
             </select>
           </label>
