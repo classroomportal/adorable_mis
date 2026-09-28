@@ -8,6 +8,8 @@ function InboxInner() {
   const { session } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!session?.user) return;
@@ -19,11 +21,20 @@ function InboxInner() {
       .then(({ data }) => { setItems(data || []); setLoading(false); });
   }, [session]);
 
+  // A message is only marked read when it is opened here, and senders see
+  // that on /comms/history as "Read". The list used to show every message in
+  // full, so people read them without clicking and nothing was recorded; now
+  // only the subject shows until the message is opened.
   async function openMessage(item) {
-    if (!item.read_at) {
-      await supabase.rpc('mark_message_read', { p_message_id: item.message_id });
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, read_at: new Date().toISOString() } : i)));
+    setOpenId((prev) => (prev === item.id ? null : item.id));
+    if (item.read_at) return;
+    const { error: rpcError } = await supabase.rpc('mark_message_read', { p_message_id: item.message_id });
+    if (rpcError) {
+      setError(`Couldn't mark this message as read: ${rpcError.message}`);
+      return;
     }
+    setError('');
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, read_at: new Date().toISOString() } : i)));
   }
 
   if (loading) return <p>Loading...</p>;
@@ -33,6 +44,8 @@ function InboxInner() {
   return (
     <div>
       <h1>Inbox {unreadCount > 0 && `(${unreadCount} unread)`}</h1>
+      {error && <p style={{ color: '#b91c1c' }}>{error}</p>}
+      {items.length > 0 && <p style={{ color: '#666' }}>Click a message to open it.</p>}
       {items.map((item) => (
         <div
           key={item.id}
@@ -41,7 +54,9 @@ function InboxInner() {
           style={{ cursor: 'pointer', fontWeight: item.read_at ? 400 : 700 }}
         >
           <p>{item.messages?.subject}</p>
-          <p style={{ fontWeight: 400, whiteSpace: 'pre-line' }}>{item.messages?.body}</p>
+          {openId === item.id && (
+            <p style={{ fontWeight: 400, whiteSpace: 'pre-line' }}>{item.messages?.body}</p>
+          )}
           <p style={{ fontWeight: 400, color: '#666', fontSize: '0.85rem' }}>
             {item.messages?.sent_at && new Date(item.messages.sent_at).toLocaleString()}
             {!item.read_at && ' — unread'}
