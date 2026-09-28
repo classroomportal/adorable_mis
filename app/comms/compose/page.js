@@ -42,10 +42,11 @@ function ComposeInner() {
     supabase.from('roles').select('role_name').order('role_name').then(({ data }) => setRoleOptions((data || []).map((r) => r.role_name)));
     supabase.from('boarding_houses').select('name').order('name').then(({ data }) => setHouseOptions((data || []).map((h) => h.name)));
     supabase.from('mentor_groups').select('mentor_group_id, group_name').order('group_name').then(({ data }) => setMentorGroupOptions(data || []));
-    supabase.from('students').select('form_class').not('form_class', 'is', null).then(({ data }) => {
+    // Leavers aren't messaged (migration 237), so their old forms and years aren't offered.
+    supabase.from('students').select('form_class').eq('status', 'active').not('form_class', 'is', null).then(({ data }) => {
       setFormClassOptions([...new Set((data || []).map((s) => s.form_class))].sort());
     });
-    supabase.from('students').select('year_group').not('year_group', 'is', null).then(({ data }) => {
+    supabase.from('students').select('year_group').eq('status', 'active').not('year_group', 'is', null).then(({ data }) => {
       setYearGroupOptions([...new Set((data || []).map((s) => s.year_group))].sort((a, b) => a - b));
     });
   }, []);

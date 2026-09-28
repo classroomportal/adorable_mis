@@ -8,7 +8,10 @@ import { useAuth } from '../../../lib/AuthContext';
 // Everything here goes through parent_welcome_candidates() and
 // send_parent_welcome_batch() (migration 172). The database works out each
 // parent's date-of-birth password and records every send, so this page never
-// handles a password and can't email the same parent twice.
+// handles a password and can't email the same parent twice by accident.
+// Sending it again is a separate, deliberate step: resend_parent_welcome_batch()
+// (migration 237), only for parents who were sent it and have never signed
+// in, since the letter resets the password it states.
 //
 // "Sent" here means queued: since migration 177 every email goes through
 // email_outbox, which a pg_cron job sends a few at a time (Gmail refuses a
@@ -40,6 +43,12 @@ const SHOW_OPTIONS = [
 const INLINE_LABEL = {
   display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '0.4rem', flex: '0 0 auto', fontSize: '0.95rem', whiteSpace: 'nowrap',
 };
+
+// A parent who has signed in has chosen their own password; resending would
+// reset it, so only parents who have never signed in can be sent it again.
+function canResend(c) {
+  return c.status === 'sent' && !c.last_sign_in_at;
+}
 
 function formatSentAt(ts) {
   if (!ts) return '';
@@ -140,6 +149,7 @@ function WelcomeEmailsInner() {
   const totalSignedIn = candidates.filter((c) => c.last_sign_in_at).length;
 
   const chosen = inYears.filter((c) => c.status === 'ready' && selected.has(c.parent_id));
+  const chosenResend = inYears.filter((c) => canResend(c) && selected.has(c.parent_id));
 
   function toggleYear(y) {
     const next = new Set(years);
@@ -162,17 +172,34 @@ function WelcomeEmailsInner() {
     });
   }
 
-  function selectAllReady(on) {
-    setSelected(on ? new Set(inYears.filter((c) => c.status === 'ready').map((c) => c.parent_id)) : new Set());
+  function selectAll(on) {
+    const pick = show === 'sent' ? canResend : (c) => c.status === 'ready';
+    setSelected(on ? new Set(inYears.filter(pick).map((c) => c.parent_id)) : new Set());
   }
 
-  async function handleSend() {
+  // Moving in or out of "Already sent" switches between first sends and
+  // resends, so the ticks start again: nothing ticked for a resend (it's
+  // chosen deliberately), everyone sendable otherwise, as toggleYear does.
+  function changeShow(value) {
+    if ((value === 'sent') !== (show === 'sent')) {
+      setSelected(new Set(value === 'sent' ? [] : inYears.filter((c) => c.status === 'ready').map((c) => c.parent_id)));
+      setResults(null);
+    }
+    setShow(value);
+  }
+
+  async function handleSend(resend) {
+    const list = resend ? chosenResend : chosen;
     const yearList = [...years].sort((a, b) => a - b).map((y) => `Y${y}`).join(', ');
-    if (!window.confirm(`Email the welcome letter to ${chosen.length} parent${chosen.length === 1 ? '' : 's'} (${yearList})? Each parent is only ever sent it once.`)) return;
+    const n = `${list.length} parent${list.length === 1 ? '' : 's'}`;
+    const question = resend
+      ? `Email the welcome letter again to ${n} (${yearList})? They have never signed in; their password is reset to the date-of-birth password in the letter.`
+      : `Email the welcome letter to ${n} (${yearList})? Each parent is only sent it once from here; use "Already sent" to send it again.`;
+    if (!window.confirm(question)) return;
     setSending(true);
     setResults(null);
-    const { data, error } = await supabase.rpc('send_parent_welcome_batch', {
-      p_parent_ids: chosen.map((c) => c.parent_id),
+    const { data, error } = await supabase.rpc(resend ? 'resend_parent_welcome_batch' : 'send_parent_welcome_batch', {
+      p_parent_ids: list.map((c) => c.parent_id),
     });
     setSending(false);
     if (error) {
@@ -206,7 +233,9 @@ function WelcomeEmailsInner() {
   if (!isAdmin) return <p>Only admin can send welcome emails.</p>;
 
   const paused = emailSetting?.paused ?? true; // unknown counts as paused: never offer Send on a guess
-  const sendDisabled = sending || paused || chosen.length === 0;
+  const resending = show === 'sent';
+  const sendList = resending ? chosenResend : chosen;
+  const sendDisabled = sending || paused || sendList.length === 0;
   const sentCount = results?.rows?.filter((r) => r.outcome === 'Sent').length ?? 0;
   const notSent = results?.rows?.filter((r) => r.outcome !== 'Sent') ?? [];
 
@@ -254,7 +283,9 @@ function WelcomeEmailsInner() {
         <p style={{ marginTop: 0 }}>
           Choose year groups to send the welcome letter to parents of those students. Each parent&apos;s first password is their oldest
           current child&apos;s date of birth (DDMMYYYY), and they must choose their own the first time they sign in. A parent is only
-          ever sent the letter once, and parents who have already signed in are never sent it.
+          sent the letter once from <em>Not sent yet</em>, and parents who have already signed in are never sent it. To send it
+          again to a parent who hasn&apos;t signed in, choose <em>Show: Already sent</em>; their password is reset to the
+          date-of-birth password the letter gives.
         </p>
         {!loading && !loadError && (
           <p>
@@ -279,7 +310,7 @@ function WelcomeEmailsInner() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', alignItems: 'center', marginTop: '0.75rem' }}>
                 <label style={INLINE_LABEL}>
                   Show
-                  <select value={show} onChange={(e) => setShow(e.target.value)}>
+                  <select value={show} onChange={(e) => changeShow(e.target.value)}>
                     {SHOW_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </label>
@@ -294,10 +325,10 @@ function WelcomeEmailsInner() {
 
       {years.size > 0 && !loading && (
         <div className="card">
-          {show === 'ready' && counts.ready > 0 && (
+          {((show === 'ready' && counts.ready > 0) || (resending && inYears.some(canResend))) && (
             <div style={{ marginBottom: '0.5rem' }}>
-              <button type="button" className="secondary" onClick={() => selectAllReady(true)} disabled={sending} style={{ marginRight: '0.5rem' }}>Select all</button>
-              <button type="button" className="secondary" onClick={() => selectAllReady(false)} disabled={sending}>Select none</button>
+              <button type="button" className="secondary" onClick={() => selectAll(true)} disabled={sending} style={{ marginRight: '0.5rem' }}>Select all</button>
+              <button type="button" className="secondary" onClick={() => selectAll(false)} disabled={sending}>Select none</button>
             </div>
           )}
 
@@ -313,7 +344,7 @@ function WelcomeEmailsInner() {
                   {shown.map((c) => (
                     <tr key={c.parent_id}>
                       <td>
-                        {c.status === 'ready' && (
+                        {(resending ? canResend(c) : c.status === 'ready') && (
                           <input type="checkbox" checked={selected.has(c.parent_id)} onChange={() => toggleParent(c.parent_id)} disabled={sending} />
                         )}
                       </td>
@@ -323,6 +354,7 @@ function WelcomeEmailsInner() {
                       <td>
                         {STATUS_LABELS[c.status] || c.status}
                         {c.status === 'sent' && c.sent_at ? ` (${formatSentAt(c.sent_at)})` : ''}
+                        {c.resend_count > 0 ? ` · sent again ${c.resend_count === 1 ? 'once' : `${c.resend_count} times`}, last ${formatSentAt(c.last_sent_at)}` : ''}
                         {c.last_sign_in_at && c.status !== 'signed_in' ? ' · signed in' : ''}
                         {c.last_sign_in_at ? ` (last ${formatSentAt(c.last_sign_in_at)})` : ''}
                       </td>
@@ -336,11 +368,11 @@ function WelcomeEmailsInner() {
           <div style={{ marginTop: '0.75rem' }}>
             <button
               type="button"
-              onClick={handleSend}
+              onClick={() => handleSend(resending)}
               disabled={sendDisabled}
               style={sendDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
             >
-              {sending ? 'Sending…' : `Send to ${chosen.length} parent${chosen.length === 1 ? '' : 's'}`}
+              {sending ? 'Sending…' : `${resending ? 'Send again to' : 'Send to'} ${sendList.length} parent${sendList.length === 1 ? '' : 's'}`}
             </button>
           </div>
         </div>
