@@ -26,11 +26,13 @@ import {
 
 // Which of these events have a picture this viewer may see. Row-level
 // security (migration 209) only returns approved pictures on the viewer's own
-// visible events, so this asks for ids only — images load when tapped.
+// visible events, so this asks for ids only — images load when tapped. The
+// approved filter is repeated here for staff who are also parents: RLS lets
+// them read every picture, but this page must show what a parent would see.
 async function loadVisiblePhotoIds(events) {
   const ids = [...new Set((events || []).map((e) => e.photo_id).filter(Boolean))];
   if (ids.length === 0) return new Set();
-  const { data } = await supabase.from('behaviour_photos').select('photo_id').in('photo_id', ids);
+  const { data } = await supabase.from('behaviour_photos').select('photo_id').in('photo_id', ids).eq('status', 'approved');
   return new Set((data || []).map((p) => p.photo_id));
 }
 
@@ -117,7 +119,11 @@ export function ParentPortalInner() {
       const { data: enrolled } = await supabase.from('student_class').select('classes(subject_id)').eq('student_id', selectedId);
       setTargets(tg || []);
       setEnrolledSubjectIds(new Set((enrolled || []).map((l) => l.classes?.subject_id).filter(Boolean)));
-      const { data: b } = await supabase.from('behaviour_events').select('*, classes(subjects(subject_name, display_name))').eq('student_id', selectedId).is('voided_at', null).order('event_date', { ascending: false });
+      // visible_to_parents is enforced by RLS for parent logins, but a member
+      // of staff who is also a parent reads through the staff policy, which
+      // returns incidents hidden from parents too. Filter here as well so
+      // "My Children" shows them exactly what any other parent sees.
+      const { data: b } = await supabase.from('behaviour_events').select('*, classes(subjects(subject_name, display_name))').eq('student_id', selectedId).eq('visible_to_parents', true).is('voided_at', null).order('event_date', { ascending: false });
       setBehaviour(b || []);
       setPhotoIds(await loadVisiblePhotoIds(b));
       const { data: gs } = await supabase.from('grade_scale').select('*');
