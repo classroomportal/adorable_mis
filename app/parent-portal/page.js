@@ -340,6 +340,14 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                   </button>
                 )}
 
+                {/* The school calendar is the same for everyone, so this one
+                    stays a link when staff are viewing as a parent. */}
+                <a href="/parent-portal/calendar" className="dashboard-tile" style={{ textDecoration: 'none' }}>
+                  <span className="dashboard-tile-label">School Calendar</span>
+                  <span className="dashboard-tile-icon">📅</span>
+                  <span className="dashboard-tile-sub">Term dates and events</span>
+                </a>
+
                 {/* These open pages for whoever is signed in, so when staff
                     are viewing as a parent they'd show the staff member's own
                     inbox and tuckshop — show the tiles but don't link them. */}
