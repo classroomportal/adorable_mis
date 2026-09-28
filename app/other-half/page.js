@@ -150,13 +150,20 @@ function OtherHalfHomeInner() {
         )}
       </div>
 
-      {(hasAccess('/other-half/activities') || hasAccess('/other-half/choices')) && (
-        <p>
-          {hasAccess('/other-half/activities') && <a href="/other-half/activities">Activity Programme →</a>}
-          {hasAccess('/other-half/activities') && hasAccess('/other-half/choices') && ' · '}
-          {hasAccess('/other-half/choices') && <a href="/other-half/choices">Student Choices →</a>}
-        </p>
-      )}
+      {(() => {
+        const links = [
+          ['/other-half/absentees', 'Absentees'],
+          ['/other-half/activities', 'Activity Programme'],
+          ['/other-half/choices', 'Student Choices'],
+        ].filter(([href]) => hasAccess(href));
+        return links.length > 0 && (
+          <p>
+            {links.map(([href, label], i) => (
+              <span key={href}>{i > 0 && ' · '}<a href={href}>{label} →</a></span>
+            ))}
+          </p>
+        );
+      })()}
     </div>
   );
 }

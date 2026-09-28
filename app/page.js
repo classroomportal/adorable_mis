@@ -256,6 +256,7 @@ const TABS = [
       { href: '/other-half', label: 'My Other Half', desc: "Your Other Half activities and registers." },
       { href: '/other-half/activities', label: 'Activities', desc: "Set up each term's Other Half programme." },
       { href: '/other-half/choices', label: 'Student Choices', desc: "See and adjust students' activity choices." },
+      { href: '/other-half/absentees', label: 'Absentees', desc: "Everyone missing from the Other Half on a given day." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
