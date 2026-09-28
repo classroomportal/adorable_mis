@@ -38,6 +38,7 @@ const blank = () => {
     id: null, name: '', for_date: today,
     opens_date: today, opens_time: '19:00', closes_date: today, closes_time: '22:00',
     itemIds: new Set(),
+    max_per_item: 2, max_food: 2, max_other: '',
   };
 };
 
@@ -47,6 +48,9 @@ function problem(f) {
   if (lagosMoment(f.opens_date, f.opens_time) >= lagosMoment(f.closes_date, f.closes_time)) return 'Ordering must open before it closes.';
   if (f.for_date < f.opens_date) return 'The delivery date can’t be before ordering opens.';
   if (f.itemIds.size === 0) return 'Pick at least one item to sell.';
+  if (!(Number(f.max_per_item) >= 1)) return 'Each item needs a limit of at least 1.';
+  if (f.max_food === '' || Number(f.max_food) < 0) return 'Set the snacks and drinks limit (0 for none).';
+  if (f.max_other !== '' && Number(f.max_other) < 0) return 'The other items limit can’t be negative.';
   return null;
 }
 
@@ -122,6 +126,7 @@ export default function SpecialSessions() {
       id: s.id, name: s.name, for_date: s.for_date,
       opens_date: o.date, opens_time: o.time, closes_date: c.date, closes_time: c.time,
       itemIds: new Set(s.itemIds),
+      max_per_item: s.max_per_item, max_food: s.max_food, max_other: s.max_other ?? '',
     });
     setStatus(null);
   }
@@ -145,6 +150,9 @@ export default function SpecialSessions() {
       for_date: form.for_date,
       opens_at: lagosMoment(form.opens_date, form.opens_time).toISOString(),
       closes_at: lagosMoment(form.closes_date, form.closes_time).toISOString(),
+      max_per_item: Number(form.max_per_item),
+      max_food: Number(form.max_food),
+      max_other: form.max_other === '' ? null : Number(form.max_other),
     };
     let id = form.id;
     if (id) {
@@ -205,7 +213,7 @@ export default function SpecialSessions() {
         <div className="table-scroll">
           <table style={{ minWidth: 0 }}>
             <thead>
-              <tr><th>Session</th><th>Ordering</th><th>Items on sale</th><th>Orders</th><th /></tr>
+              <tr><th>Session</th><th>Ordering</th><th>Items on sale</th><th>Limits per student</th><th>Orders</th><th /></tr>
             </thead>
             <tbody>
               {sessions.map((s) => {
@@ -225,6 +233,11 @@ export default function SpecialSessions() {
                       <br />Closes {momentLabel(s.closes_at)}
                     </td>
                     <td>{s.itemIds.map((id) => itemName[id] || `#${id}`).join(', ')}</td>
+                    <td>
+                      {s.max_per_item} of each item
+                      <br />{s.max_food} snack{s.max_food === 1 ? '' : 's'}/drink{s.max_food === 1 ? '' : 's'} in total
+                      <br />{s.max_other == null ? 'Other items: no limit' : `${s.max_other} other item${s.max_other === 1 ? '' : 's'} in total`}
+                    </td>
                     <td>{orderCounts[s.for_date] || 0}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <button className="secondary" onClick={() => edit(s)}>Edit</button>{' '}
@@ -276,9 +289,28 @@ export default function SpecialSessions() {
           <h4>Items on sale</h4>
           <p style={{ color: '#555', fontSize: '0.9rem', marginTop: 0 }}>
             Only these can be ordered for this session. Items switched off for normal ordering can be
-            chosen too. The usual limits still apply: 2 of each item and 2 snacks and drinks in total.
+            chosen too.
           </p>
           <ItemPicker items={items} selected={form.itemIds} onToggle={toggle} />
+          <h4>Limits per student</h4>
+          <p style={{ color: '#555', fontSize: '0.9rem', marginTop: 0 }}>
+            Snacks and drinks are the items marked as food on Items &amp; Prices; everything else
+            counts as an other item. Leave the other items limit blank for no limit.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '0.75rem' }}>
+            <label>
+              Most of any one item<br />
+              <input type="number" min="1" value={form.max_per_item} onChange={(e) => setForm({ ...form, max_per_item: e.target.value })} style={{ width: '6rem' }} required />
+            </label>
+            <label>
+              Snacks and drinks in total<br />
+              <input type="number" min="0" value={form.max_food} onChange={(e) => setForm({ ...form, max_food: e.target.value })} style={{ width: '6rem' }} required />
+            </label>
+            <label>
+              Other items in total<br />
+              <input type="number" min="0" value={form.max_other} onChange={(e) => setForm({ ...form, max_other: e.target.value })} placeholder="no limit" style={{ width: '6rem' }} />
+            </label>
+          </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save session'}</button>
             <button type="button" className="secondary" onClick={() => setForm(null)} disabled={saving}>Cancel</button>

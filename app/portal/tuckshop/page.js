@@ -11,9 +11,13 @@ function naira(n) {
 
 // Limits per tuckshop day, enforced in save_tuckshop_order() (migrations
 // 186-187): at most 2 of any one item, and at most 2 snacks and drinks
-// (tuckshop_items.is_food) in total.
-const MAX_PER_ITEM = 2;
-const MAX_FOOD = 2;
+// (tuckshop_items.is_food) in total. A special session sets its own,
+// including a limit on everything else (migration 242).
+const NORMAL_LIMITS = { perItem: 2, food: 2, other: null };
+
+function plural(n, one, many) {
+  return `${n} ${n === 1 ? one : many}`;
+}
 
 function sameBasket(a, b) {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
@@ -22,7 +26,7 @@ function sameBasket(a, b) {
 
 // One tuckshop day whose ordering window is open: the student's basket for
 // it, which they can place, change or cancel until closesAt.
-function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved, sessionName }) {
+function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved, sessionName, limits = NORMAL_LIMITS }) {
   const saved = {};
   const names = {};
   savedLines.forEach((l) => {
@@ -47,9 +51,9 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved,
   const hasOrder = Object.keys(saved).length > 0;
   const dirty = !sameBasket(basket, saved);
   const foodIds = new Set(items.filter((i) => i.is_food).map((i) => i.id));
-  function foodInBasket(exceptId) {
+  function inBasket(exceptId, food) {
     return Object.entries(basket)
-      .filter(([id]) => Number(id) !== exceptId && foodIds.has(Number(id)))
+      .filter(([id]) => Number(id) !== exceptId && foodIds.has(Number(id)) === food)
       .reduce((n, [, q]) => n + q, 0);
   }
   const total = items.reduce((s, i) => s + (basket[i.id] || 0) * Number(i.price), 0);
@@ -100,8 +104,9 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved,
       </p>
       <p style={{ color: '#555' }}>
         Ordering closes at <strong>{closes}</strong>. Until then you can change or cancel your order.
-        You can order up to {MAX_PER_ITEM} of each item, and no more than {MAX_FOOD} snacks and
-        drinks in total.
+        You can order up to {limits.perItem} of each item, and no more than{' '}
+        {plural(limits.food, 'snack or drink', 'snacks and drinks')} in total
+        {limits.other != null && <>, and no more than {plural(limits.other, 'other item', 'other items')}</>}.
       </p>
       {noLongerSold.length > 0 && (
         <p className="badge badge-negative" style={{ display: 'inline-block' }}>
@@ -114,8 +119,9 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved,
           <thead><tr><th>Item</th><th style={{ width: '6rem' }}>Qty</th></tr></thead>
           <tbody>
             {items.map((item) => {
-              let left = MAX_PER_ITEM;
-              if (item.is_food) left = Math.min(left, Math.max(0, MAX_FOOD - foodInBasket(item.id)));
+              let left = limits.perItem;
+              if (item.is_food) left = Math.min(left, Math.max(0, limits.food - inBasket(item.id, true)));
+              else if (limits.other != null) left = Math.min(left, Math.max(0, limits.other - inBasket(item.id, false)));
               return (
                 <tr key={item.id}>
                   <td>
@@ -124,7 +130,7 @@ function OrderEditor({ studentId, forDate, closesAt, items, savedLines, onSaved,
                   </td>
                   <td>
                     {left === 0 ? (
-                      <span style={{ color: '#555' }}>Food limit reached</span>
+                      <span style={{ color: '#555' }}>Limit reached</span>
                     ) : (
                       <select value={basket[item.id] || 0} onChange={(e) => setQty(item.id, e.target.value)}>
                         {Array.from({ length: left + 1 }, (_, n) => <option key={n} value={n}>{n}</option>)}
@@ -327,6 +333,9 @@ function TuckshopInner() {
                 closesAt={w.closes_at}
                 items={itemsFor(w.for_date)}
                 sessionName={specialFor(w.for_date)?.name}
+                limits={specialFor(w.for_date)
+                  ? { perItem: specialFor(w.for_date).max_per_item, food: specialFor(w.for_date).max_food, other: specialFor(w.for_date).max_other }
+                  : NORMAL_LIMITS}
                 savedLines={myOrders
                   .filter((o) => o.for_date === w.for_date && o.status === 'pending')
                   .flatMap((o) => o.tuckshop_preorder_items || [])}
