@@ -69,6 +69,7 @@ function WelcomeEmailsInner() {
   const [switchError, setSwitchError] = useState(null);
   const [years, setYears] = useState(new Set());
   const [show, setShow] = useState('ready');
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(new Set());
   const [sending, setSending] = useState(false);
   const [results, setResults] = useState(null);
@@ -125,31 +126,42 @@ function WelcomeEmailsInner() {
     [candidates, years],
   );
 
+  // Searching finds a parent by email, name or child's name across every
+  // year group, ticked or not, so one parent can be looked up (and sent the
+  // letter, or sent it again) without choosing their child's year first.
+  const query = search.trim().toLowerCase();
+  const pool = useMemo(
+    () => (query
+      ? candidates.filter((c) => [c.email, c.parent_name, c.children].some((v) => (v || '').toLowerCase().includes(query)))
+      : inYears),
+    [candidates, inYears, query],
+  );
+
   const counts = useMemo(() => {
     const out = { ready: 0, sent: 0, blocked: 0, signedIn: 0 };
-    inYears.forEach((c) => {
+    pool.forEach((c) => {
       if (c.last_sign_in_at) out.signedIn += 1;
       if (c.status === 'ready') out.ready += 1;
       else if (c.status === 'sent') out.sent += 1;
       else out.blocked += 1;
     });
     return out;
-  }, [inYears]);
+  }, [pool]);
 
   // "Signed in" isn't one of the statuses (a parent sent the letter stays
   // "sent" after signing in), so it filters on last_sign_in_at instead, most
   // recent first.
   const shown = show === 'signed_in'
-    ? inYears.filter((c) => c.last_sign_in_at).sort((a, b) => b.last_sign_in_at.localeCompare(a.last_sign_in_at))
-    : inYears.filter((c) => {
+    ? pool.filter((c) => c.last_sign_in_at).sort((a, b) => b.last_sign_in_at.localeCompare(a.last_sign_in_at))
+    : pool.filter((c) => {
     if (show === 'all') return true;
     if (show === 'blocked') return c.status !== 'ready' && c.status !== 'sent';
     return c.status === show;
   });
   const totalSignedIn = candidates.filter((c) => c.last_sign_in_at).length;
 
-  const chosen = inYears.filter((c) => c.status === 'ready' && selected.has(c.parent_id));
-  const chosenResend = inYears.filter((c) => canResend(c) && selected.has(c.parent_id));
+  const chosen = pool.filter((c) => c.status === 'ready' && selected.has(c.parent_id));
+  const chosenResend = pool.filter((c) => canResend(c) && selected.has(c.parent_id));
 
   function toggleYear(y) {
     const next = new Set(years);
@@ -174,7 +186,7 @@ function WelcomeEmailsInner() {
 
   function selectAll(on) {
     const pick = show === 'sent' ? canResend : (c) => c.status === 'ready';
-    setSelected(on ? new Set(inYears.filter(pick).map((c) => c.parent_id)) : new Set());
+    setSelected(on ? new Set(pool.filter(pick).map((c) => c.parent_id)) : new Set());
   }
 
   // Moving in or out of "Already sent" switches between first sends and
@@ -182,7 +194,7 @@ function WelcomeEmailsInner() {
   // chosen deliberately), everyone sendable otherwise, as toggleYear does.
   function changeShow(value) {
     if ((value === 'sent') !== (show === 'sent')) {
-      setSelected(new Set(value === 'sent' ? [] : inYears.filter((c) => c.status === 'ready').map((c) => c.parent_id)));
+      setSelected(new Set(value === 'sent' ? [] : pool.filter((c) => c.status === 'ready').map((c) => c.parent_id)));
       setResults(null);
     }
     setShow(value);
@@ -190,7 +202,7 @@ function WelcomeEmailsInner() {
 
   async function handleSend(resend) {
     const list = resend ? chosenResend : chosen;
-    const yearList = [...years].sort((a, b) => a - b).map((y) => `Y${y}`).join(', ');
+    const yearList = query ? `matching "${search.trim()}"` : [...years].sort((a, b) => a - b).map((y) => `Y${y}`).join(', ');
     const n = `${list.length} parent${list.length === 1 ? '' : 's'}`;
     const question = resend
       ? `Email the welcome letter again to ${n} (${yearList})? They have never signed in; their password is reset to the date-of-birth password in the letter.`
@@ -306,7 +318,18 @@ function WelcomeEmailsInner() {
               ))}
             </div>
 
-            {years.size > 0 && (
+            <div style={{ marginTop: '0.75rem' }}>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setResults(null); }}
+                placeholder="Search by parent email, parent name or child's name"
+                style={{ width: '100%', maxWidth: '28rem' }}
+                disabled={sending}
+              />
+            </div>
+
+            {(years.size > 0 || query) && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', alignItems: 'center', marginTop: '0.75rem' }}>
                 <label style={INLINE_LABEL}>
                   Show
@@ -323,9 +346,9 @@ function WelcomeEmailsInner() {
         )}
       </div>
 
-      {years.size > 0 && !loading && (
+      {(years.size > 0 || query) && !loading && (
         <div className="card">
-          {((show === 'ready' && counts.ready > 0) || (resending && inYears.some(canResend))) && (
+          {((show === 'ready' && counts.ready > 0) || (resending && pool.some(canResend))) && (
             <div style={{ marginBottom: '0.5rem' }}>
               <button type="button" className="secondary" onClick={() => selectAll(true)} disabled={sending} style={{ marginRight: '0.5rem' }}>Select all</button>
               <button type="button" className="secondary" onClick={() => selectAll(false)} disabled={sending}>Select none</button>
@@ -333,7 +356,11 @@ function WelcomeEmailsInner() {
           )}
 
           {shown.length === 0 ? (
-            <p>No parents to show for this filter.</p>
+            <p>
+              No parents to show for this filter.
+              {query && pool.length > 0 ? ` ${pool.length} match${pool.length === 1 ? 'es' : ''} "${search.trim()}" under another filter; choose Show: Everyone.` : ''}
+              {query && pool.length === 0 ? ` No parent of a current student matches "${search.trim()}".` : ''}
+            </p>
           ) : (
             <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid #ddd' }}>
               <table style={{ width: '100%' }}>
