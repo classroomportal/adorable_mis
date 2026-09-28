@@ -3,20 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
-import { OH_DAYS, OH_DAY_NAMES, formatYearGroups, loadOtherHalfSlots, loadCurrentOtherHalfTermId } from '../../../lib/otherHalf';
-
-// Supabase caps an unranged select at 1000 rows; a term's choices can pass
-// that (≈280 students × 5 days), so page through.
-async function fetchAll(buildQuery) {
-  const pageSize = 1000;
-  let all = [];
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
-    if (error) throw error;
-    all = all.concat(data || []);
-    if (!data || data.length < pageSize) return all;
-  }
-}
+import { OH_DAYS, OH_DAY_NAMES, formatYearGroups, loadOtherHalfSlots, loadCurrentOtherHalfTermId, fetchAll } from '../../../lib/otherHalf';
 
 function ChoicesInner() {
   const [terms, setTerms] = useState([]);
