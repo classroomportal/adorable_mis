@@ -25,6 +25,13 @@ function EnterResultsInner() {
     profile?.role === 'admin' ||
     (staffRoles || []).includes('assessment_manager') ||
     (staffRoles || []).includes('assessment_user');
+  // Who may delete a saved score (migration 236, can_delete_result()): the
+  // class teacher, a Head of Department for their department's subjects,
+  // and assessment managers/admins for any. This only decides which
+  // Delete buttons show; the database policy is the real check.
+  const isAssessmentManager =
+    profile?.role === 'admin' || (staffRoles || []).includes('assessment_manager');
+  const [hodDepartments, setHodDepartments] = useState([]);
 
   const [classes, setClasses] = useState([]);
   const [classId, setClassId] = useState('');
@@ -45,16 +52,40 @@ function EnterResultsInner() {
 
   const selectedClass = classes.find((c) => String(c.class_id) === String(classId));
 
-  // Load the selectable classes (own classes, or every class for admins and
-  // assessment staff) + the list of selectable result sets, once.
+  // Load the selectable classes (own classes, plus a Head of Department's
+  // department classes, or every class for admins and assessment staff) + the
+  // list of selectable result sets, once.
   useEffect(() => {
     if (!staffId && !canEnterAnyClass) return;
-    let classQuery = supabase
-      .from('classes')
-      .select('class_id, class_code, subject_id, year_group, staff_id, subjects(subject_name), staff(first_name, last_name)')
-      .order('class_code');
-    if (!canEnterAnyClass) classQuery = classQuery.eq('staff_id', staffId);
-    classQuery.then(({ data }) => setClasses(data || []));
+    (async () => {
+      let depts = [];
+      if (staffId) {
+        const { data: hod } = await supabase
+          .from('staff_roles')
+          .select('scope_value')
+          .eq('staff_id', staffId)
+          .eq('role_name', 'head_of_department')
+          .eq('scope_type', 'department');
+        depts = (hod || []).map((r) => r.scope_value).filter(Boolean);
+      }
+      setHodDepartments(depts);
+
+      const cols = 'class_id, class_code, subject_id, year_group, staff_id, staff(first_name, last_name)';
+      if (canEnterAnyClass) {
+        const { data } = await supabase.from('classes').select(`${cols}, subjects(subject_name, department_name)`).order('class_code');
+        setClasses(data || []);
+        return;
+      }
+      const [{ data: own }, { data: dept }] = await Promise.all([
+        supabase.from('classes').select(`${cols}, subjects(subject_name, department_name)`).eq('staff_id', staffId).order('class_code'),
+        depts.length
+          ? supabase.from('classes').select(`${cols}, subjects!inner(subject_name, department_name)`).in('subjects.department_name', depts).order('class_code')
+          : Promise.resolve({ data: [] }),
+      ]);
+      const byId = new Map();
+      for (const c of [...(own || []), ...(dept || [])]) byId.set(c.class_id, c);
+      setClasses(Array.from(byId.values()).sort((a, b) => a.class_code.localeCompare(b.class_code)));
+    })();
 
     supabase
       .from('calendar_events')
@@ -184,6 +215,19 @@ function EnterResultsInner() {
     }
   }
 
+  // A Head of Department can open a colleague's class in their department to
+  // delete a score, but can only enter scores for classes they teach.
+  const canWriteSelected = canEnterAnyClass || (!!staffId && selectedClass?.staff_id === staffId);
+
+  function canDelete(row) {
+    if (!row?.resultId) return false;
+    return (
+      isAssessmentManager ||
+      (!!staffId && selectedClass?.staff_id === staffId) ||
+      hodDepartments.includes(selectedClass?.subjects?.department_name)
+    );
+  }
+
   // Removes a saved score entered by mistake. Clearing the box and saving
   // doesn't do this (Save all only sends rows with a score), so it's a
   // separate, confirmed action. The deleted row is kept in grade_history.
@@ -204,7 +248,7 @@ function EnterResultsInner() {
     } else if (!data || data.length === 0) {
       // RLS hides rows you can't delete rather than raising, so nothing
       // coming back means it wasn't theirs to delete.
-      setStatus("That score couldn't be deleted — you can only delete results for classes you are the teacher of record for.");
+      setStatus("That score couldn't be deleted — you can only delete scores for classes you teach (Heads of Department: any in their department).");
     } else {
       setStatus(`Deleted the score for ${student.first_name} ${student.last_name}.`);
       loadRosterAndExisting();
@@ -224,6 +268,7 @@ function EnterResultsInner() {
   // A result set for some students only offers the classes they're in.
   const shownClasses = scopeClassIds ? classes.filter((c) => scopeClassIds.has(c.class_id)) : classes;
   const ownClasses = shownClasses.filter((c) => staffId && c.staff_id === staffId);
+  const deptClasses = canEnterAnyClass ? [] : shownClasses.filter((c) => !(staffId && c.staff_id === staffId));
   const otherClasses = shownClasses.filter((c) => !(staffId && c.staff_id === staffId));
   const classOption = (c, showTeacher) => (
     <option key={c.class_id} value={c.class_id}>
@@ -254,6 +299,15 @@ function EnterResultsInner() {
                 )}
                 <optgroup label={ownClasses.length > 0 ? 'Other classes' : 'All classes'}>
                   {otherClasses.map((c) => classOption(c, true))}
+                </optgroup>
+              </>
+            ) : deptClasses.length > 0 ? (
+              <>
+                {ownClasses.length > 0 && (
+                  <optgroup label="My classes">{ownClasses.map((c) => classOption(c, false))}</optgroup>
+                )}
+                <optgroup label="Department classes (view and delete only)">
+                  {deptClasses.map((c) => classOption(c, true))}
                 </optgroup>
               </>
             ) : (
@@ -303,12 +357,13 @@ function EnterResultsInner() {
                         step="0.01"
                         value={rows[s.student_id]?.score ?? ''}
                         onChange={(e) => handleScoreChange(s.student_id, s.year_group, e.target.value)}
+                        disabled={!canWriteSelected}
                         style={{ width: '5rem' }}
                       />
                     </td>
                     <td>{rows[s.student_id]?.grade || '—'}</td>
                     <td>
-                      {rows[s.student_id]?.resultId && (
+                      {canDelete(rows[s.student_id]) && (
                         <button type="button" className="secondary" onClick={() => handleDelete(s)}>
                           Delete
                         </button>
@@ -320,9 +375,13 @@ function EnterResultsInner() {
             </table>
           </div>
 
-          <button type="button" onClick={handleSaveAll} style={{ marginTop: '1rem' }}>
-            Save all
-          </button>
+          {canWriteSelected ? (
+            <button type="button" onClick={handleSaveAll} style={{ marginTop: '1rem' }}>
+              Save all
+            </button>
+          ) : (
+            <p style={{ color: '#666' }}>This is a colleague's class in your department: you can delete a mistaken score here, but only its teacher can enter scores.</p>
+          )}
           {status && <p>{status}</p>}
         </>
       )}
