@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { groupBySchoolYear, schoolYearGroupLabel } from '../../../lib/academicYear';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
@@ -188,8 +189,12 @@ function TopTenInner() {
           <label>
             Result set
             <select value={eventId} onChange={(e) => setEventId(e.target.value)}>
-              {sets.map((s) => (
-                <option key={s.event_id} value={s.event_id}>{s.event_name} ({formatUKDate(s.event_date)})</option>
+              {groupBySchoolYear(sets).map((g) => (
+                <optgroup key={g.year} label={schoolYearGroupLabel(g)}>
+                  {g.sets.map((s) => (
+                    <option key={s.event_id} value={s.event_id}>{s.event_name} ({formatUKDate(s.event_date)})</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </label>
