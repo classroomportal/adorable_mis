@@ -116,7 +116,7 @@ function DetentionInner() {
     <div>
       <div className="no-print">
         <h1>Friday Detention List</h1>
-        <p>Students flagged by a single event of {Math.abs(rules.detention_single_event_points)}+ negative points, or {Math.abs(rules.detention_weekly_total_points)}+ negative points Saturday through Friday. The thresholds are set on <a href="/admin/lookups">Lookups</a>.</p>
+        <p>Students flagged by a single event of {rules.detention_single_event_points} points or worse, or a Saturday-to-Friday total of {rules.detention_weekly_total_points} or worse. The thresholds are set on <a href="/admin/lookups">Lookups</a>.</p>
         <div className="card" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
           <button className="secondary" onClick={() => setWeekOffset((w) => w - 1)}>← Previous week</button>
           <strong>{formatUKDate(fmt(start), { weekday: true })} to {formatUKDate(fmt(end), { weekday: true })}</strong>
