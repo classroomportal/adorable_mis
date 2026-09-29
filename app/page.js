@@ -202,6 +202,18 @@ const TABS = [
     ].filter((it) => hasAccess(it.href)),
   },
   {
+    key: 'admissions', label: 'Admissions', icon: '📥', accent: 'family',
+    description: 'Applications, entrance tests, interviews, offers and letters.',
+    items: ({ hasAccess }) => [
+      { href: '/admissions', label: 'Applicants', desc: "Every application for an entry year, and where it has got to." },
+      { href: '/admissions/new', label: 'New Application', resource: '/admissions', desc: "Record a new application and the family's contacts." },
+      { href: '/admissions/sessions', label: 'Test Days', desc: "Fix test dates, book applicants on, and enter English, Maths and CAT4." },
+      { href: '/admissions/papers', label: 'Test Papers', desc: "The English and Maths paper for each year group, and its maximum mark." },
+      { href: '/admissions/letters', label: 'Standard Letters', desc: "The school's letters for test dates, interviews, offers and outcomes." },
+      { href: '/admissions/schools', label: 'Previous Schools', desc: "Schools applicants come from; merge duplicates." },
+    ].filter((it) => hasAccess(it.resource || it.href)),
+  },
+  {
     key: 'clinic', label: 'Clinic', icon: '🩺', accent: 'clinic',
     description: 'Sick bay log, height & weight rounds and immunisations.',
     items: ({ hasAccess }) => [
@@ -283,6 +295,7 @@ const TABS = [
       { href: '/bursar/fees-table', label: 'All Students', desc: "Charged, paid and owed for every student." },
       { href: '/bursar/debtors', label: 'Debtors List', desc: "Students who owe fees, with parent contacts." },
       { href: '/bursar/audit', label: 'Audit', desc: "Recent fee charges, with undo." },
+      { href: '/bursar/admission-forms', label: 'Admission Payments', desc: "Admission form fees and deposits from applicants' families." },
       { href: '/smt/fees-dashboard', label: 'SMT Dashboard', desc: "Fee collection totals, and publishing fees to parents." },
     ].filter((it) => hasAccess(it.href)),
   },
