@@ -288,6 +288,7 @@ const TABS = [
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
     description: 'Charges, payments, discounts and the debtors list.',
     items: ({ hasAccess }) => [
+      { href: '/bursar/fee-approvals', label: 'Fee Approvals', desc: "New fee prices, approved by the principal and the college secretary together." },
       { href: '/bursar/charge-checklist', label: 'Charge Checklist', desc: "Charge a fee to a group of students." },
       { href: '/bursar/fee-items', label: 'Fee Items', desc: "Fee items and their prices." },
       { href: '/bursar/discounts', label: 'Discounts', desc: "Give students fee discounts." },

@@ -153,10 +153,10 @@ function BehaviourCategories() {
   );
 }
 
-// Admission form price and deposit for each entry year (migrations 256 and
-// 258). Saved through set_admission_fee_amounts(), which checks the caller;
-// the bursar can also change them on Admission Payments. Every change is
-// logged in Change History under Fees.
+// Admission form price and deposit for each entry year (migrations 256,
+// 258, 259). A change is only proposed here, through propose_admission_fees();
+// it takes effect once the principal and the college secretary have both
+// approved it at /bursar/fee-approvals. Everything is logged under Fees.
 function AdmissionFees() {
   const [years, setYears] = useState([]);
   const [drafts, setDrafts] = useState({});
@@ -168,7 +168,7 @@ function AdmissionFees() {
       .neq('status', 'closed').order('start_date');
     setYears(data || []);
     setDrafts(Object.fromEntries((data || []).map((y) => [y.academic_year_id, {
-      form_fee: y.admission_form_fee ?? '', deposit: y.admission_deposit ?? '',
+      form_fee: y.admission_form_fee ?? '', deposit: y.admission_deposit ?? '', reason: '',
     }])));
   }
   useEffect(() => { load(); }, []);
@@ -185,11 +185,11 @@ function AdmissionFees() {
     const formFee = amount(d.form_fee);
     const deposit = amount(d.deposit);
     if (Number.isNaN(formFee) || Number.isNaN(deposit)) { setStatus('Amounts must be numbers, 0 or more.'); return; }
-    const { error } = await supabase.rpc('set_admission_fee_amounts', {
-      p_academic_year_id: y.academic_year_id, p_form_fee: formFee, p_deposit: deposit,
+    const { error } = await supabase.rpc('propose_admission_fees', {
+      p_academic_year_id: y.academic_year_id, p_form_fee: formFee, p_deposit: deposit, p_reason: d.reason,
     });
     if (error) setStatus(`Error: ${error.message}`);
-    else { setStatus(`Saved for ${y.label}.`); load(); }
+    else { setStatus(`Sent for approval for ${y.label}. The amounts change once the principal and the college secretary have both approved.`); load(); }
   }
 
   return (
@@ -200,10 +200,14 @@ function AdmissionFees() {
         Leave the form price blank until it is decided; the bursar can&apos;t record form payments until it is set.
         These amounts also appear in the standard letters as {'{{form_fee}}'} and {'{{deposit}}'}.
       </p>
+      <p style={{ marginTop: 0 }}>
+        <strong>Fees are set and approved by the principal and the college secretary together.</strong>{' '}
+        A change entered here is only a proposal until both have approved it at <a href="/bursar/fee-approvals">Fee Approvals</a>.
+      </p>
       {status && <p style={{ color: status.startsWith('Error') || status.startsWith('Amounts') ? 'red' : 'green' }}>{status}</p>}
       <div className="table-scroll">
         <table>
-          <thead><tr><th>Entry year</th><th>Admission form (₦)</th><th>Deposit (₦)</th><th></th></tr></thead>
+          <thead><tr><th>Entry year</th><th>Admission form (₦)</th><th>Deposit (₦)</th><th>Reason</th><th></th></tr></thead>
           <tbody>
             {years.map((y) => {
               const d = drafts[y.academic_year_id] || { form_fee: '', deposit: '' };
@@ -213,11 +217,12 @@ function AdmissionFees() {
                   <td>{y.label}{y.status === 'current' ? ' (this year)' : ''}</td>
                   <td><input inputMode="decimal" value={d.form_fee} onChange={set('form_fee')} placeholder="Not set" style={{ width: '9rem' }} /></td>
                   <td><input inputMode="decimal" value={d.deposit} onChange={set('deposit')} placeholder="Not set" style={{ width: '9rem' }} /></td>
-                  <td><button onClick={() => save(y)}>Save</button></td>
+                  <td><input value={d.reason} onChange={set('reason')} placeholder="Why" style={{ width: '12rem' }} /></td>
+                  <td><button onClick={() => save(y)}>Propose</button></td>
                 </tr>
               );
             })}
-            {years.length === 0 && <tr><td colSpan={4} style={{ color: '#999' }}>No academic years.</td></tr>}
+            {years.length === 0 && <tr><td colSpan={5} style={{ color: '#999' }}>No academic years.</td></tr>}
           </tbody>
         </table>
       </div>
