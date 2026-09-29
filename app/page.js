@@ -6,6 +6,7 @@ import { schoolDateOffset } from '../lib/schoolTime';
 import { canHandOut } from '../lib/tuckshopHandout';
 import SplashScreen from './components/SplashScreen';
 import { ParentPortalInner } from './parent-portal/page';
+import { findParentIdByEmail } from '../lib/parentByEmail';
 
 // Every chip is the same fixed-size box, whatever the length of its label, and
 // carries a one-line description that pops out on hover or keyboard focus.
@@ -80,8 +81,10 @@ function DashboardStats({ isDemoAccount, hasAccess }) {
 
 // The everyday destinations — timetable, calendar, inbox — as big tiles above
 // the stats rather than a module card of their own, since nearly every member
-// of staff uses them. My Children only appears for staff who are also parents
-// (their login email matches a parent record, as on /parent-portal).
+// of staff uses them. My Children only appears for staff who are also parents:
+// their login is linked to a parent record (profiles.parent_id), or failing
+// that their sign-in email matches one. profiles.email is empty for most
+// logins, so it can't be relied on; the sign-in email comes from the session.
 function QuickLinks({ hasAccess }) {
   const { session, profile } = useAuth();
   const [unread, setUnread] = useState(null);
@@ -98,14 +101,9 @@ function QuickLinks({ hasAccess }) {
   }, [session]);
 
   useEffect(() => {
-    if (!profile?.email) return;
-    supabase
-      .from('parents')
-      .select('parent_id')
-      .eq('email', profile.email)
-      .maybeSingle()
-      .then(({ data }) => setIsParent(!!data));
-  }, [profile]);
+    if (profile?.parent_id) { setIsParent(true); return; }
+    findParentIdByEmail(profile?.email || session?.user?.email).then((id) => setIsParent(!!id));
+  }, [profile, session]);
 
   const links = [
     { href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
