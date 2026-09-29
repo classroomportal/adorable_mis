@@ -22,6 +22,7 @@ const AREAS = {
   access: 'Roles & logins',
   parent_links: 'Parent links',
   email: 'Email replies',
+  admissions: 'Admissions',
 };
 const ACTIONS = { INSERT: 'Added', UPDATE: 'Changed', DELETE: 'Removed' };
 const HIDDEN_FIELDS = new Set(['updated_at', 'updated_by', 'created_at', 'is_demo']);
