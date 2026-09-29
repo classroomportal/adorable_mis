@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { formatUKDate } from '../../../lib/formatDate';
 import { schoolToday } from '../../../lib/schoolTime';
+import { academicYearOf, loadCurrentAcademicYearLabel } from '../../../lib/academicYear';
 import { CALENDAR_CATEGORY_LABELS, downloadIcs, googleCalendarUrl } from '../../../lib/calendarExport';
 
 // Read-only Academic Calendar for parents. The staff page (/calendar) is
@@ -22,6 +23,7 @@ function ParentCalendarInner() {
   const [terms, setTerms] = useState([]);
   const [events, setEvents] = useState(null);
   const [showPast, setShowPast] = useState(false);
+  const [currentYear, setCurrentYear] = useState(null);
   const today = schoolToday();
 
   useEffect(() => {
@@ -29,10 +31,15 @@ function ParentCalendarInner() {
       .then(({ data }) => setTerms(data || []));
     supabase.from('calendar_events').select('event_id, event_date, event_name, category, year_group_note').order('event_date')
       .then(({ data }) => setEvents((data || []).filter((e) => !STAFF_ONLY_CATEGORIES.has(e.category))));
+    loadCurrentAcademicYearLabel().then(setCurrentYear);
   }, []);
 
   const upcoming = (events || []).filter((e) => e.event_date >= today);
-  const shown = showPast ? events || [] : upcoming;
+  // "Show past events" means earlier this academic year, not the historic
+  // exam result sets that go back to 2017 (migrations 246/252).
+  const shown = showPast
+    ? (events || []).filter((e) => e.event_date >= today || academicYearOf(e.event_date) === currentYear)
+    : upcoming;
   const currentTerms = terms.filter((t) => t.end_date >= today);
 
   return (
@@ -78,7 +85,7 @@ function ParentCalendarInner() {
           </button>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
             <input type="checkbox" checked={showPast} onChange={(e) => setShowPast(e.target.checked)} />
-            Show past events
+            Show earlier events this school year
           </label>
         </div>
 
