@@ -1,19 +1,21 @@
 # Admissions and moving up a year (2027/28): design
 
-Status: design only, 29 September 2026. Nothing here has been built yet. The
-open questions at the end need answers before the schema is written.
+Status: design only, 29 September 2026. Nothing here has been built yet.
+Revised the same day with the principal's answers on how admissions works and
+when the switch happens. The remaining open questions are at the end.
 
 This covers three things that all have to be ready before September 2027:
 
-1. **Admissions.** Applications, entrance tests (English and Maths), the oral
-   interview (interests and reading age), the school the child is coming from,
-   and the decision.
+1. **Admissions.** The paid admission form, a fixed test date, entrance tests
+   (English and Maths, a different paper for each year group, plus CAT4), the
+   posted result, the oral interview (interests and reading age), the school
+   the child is coming from, the offer, and the school's standard letters.
 2. **Moving up.** For each current student, decide what happens next year:
    move up, repeat, change year, or leave (including which Year 11s go on to
    Year 12).
 3. **Next year's timetable.** Import the 2027/28 Nova-T timetable *before* the
-   summer, map students into it, and then switch the whole school over in one
-   step.
+   summer and map students into it. The whole school then switches over
+   automatically, in one step, at the start of the new year's first term.
 
 ## What exists today (checked against the live database, 29 Sept 2026)
 
@@ -111,6 +113,22 @@ The existing pages are reused in "plan" mode rather than rewritten:
 
 ## Decision 3: admissions
 
+### How the school runs it (confirmed by the principal, 29 Sept 2026)
+
+- **Entry is possible into any year, 7 to 12.**
+- **Every student boards.** There are no day students, so no boarding/day field.
+- **The family pays for the admission form.** Only after that is a test date
+  fixed.
+- **The tests:** English and Maths, **a different paper for each year group**,
+  plus **CAT4**.
+- **The pass mark is a 50% average** of English and Maths.
+- **After the test,** the result is posted on the system. The applicant is then
+  invited to the oral interview, rejected, or put on the waiting list.
+- **At the oral interview,** interests are collected and reading age is
+  measured. Reading age uses an **older paper-based test, not NGRT**.
+- **Admissions staff make offers** by letter, using the school's **standard
+  letters**.
+
 ### Tables
 
 ```
@@ -124,15 +142,17 @@ applicants
   first_name, middle_name, last_name, preferred_name, dob, gender, nationality
   entry_academic_year_id  → academic_years   -- '2027/28'
   entry_year_group        int check 7..12
-  boarding                text               -- 'boarder' | 'day'
   previous_school_id      → previous_schools
   previous_school_year    text               -- 'Year 6', 'Primary 6', 'JSS1' …
   sibling_student_id      → students (nullable), family_id → families (nullable)
   heard_about_us          text
+  form_fee_paid_on date, form_fee_amount numeric, form_fee_receipt text,
+  form_fee_recorded_by (stamp_actor)
+  session_id              → admission_sessions   -- the test date fixed for them
   status                  text               -- see pipeline below
   application_date        date
-  decision, decision_notes, decided_by (stamp_actor), decided_at
-  offer_sent_at, accepted_at, withdrawn_reason
+  decision_notes, decided_by (stamp_actor), decided_at
+  accepted_at, withdrawn_reason
   student_id              → students         -- set when enrolled
   created_by, created_at, updated_at
 
@@ -140,30 +160,50 @@ applicant_contacts
   applicant_id, name, relationship, email, phone, is_primary,
   parent_id → parents (nullable)   -- when the family is already at the school
 
+admission_papers          -- one English and one Maths paper per year group per entry year
+  paper_id pk, academic_year_id, year_group int, subject text ('english' | 'maths'),
+  paper_name text, max_score numeric
+  unique (academic_year_id, year_group, subject)
+
 admission_sessions        -- a test day
   session_id pk, academic_year_id, session_date, venue, notes
 
-admission_assessments     -- one row per applicant per component
-  applicant_id, component text    -- 'english' | 'maths' | 'reading_age' | 'interview'
-  session_id (nullable), assessed_on date, assessed_by (stamp_actor)
-  score numeric, max_score numeric           -- English, Maths
-  reading_age_months int                     -- reading age, stored in months
-  notes
-  unique (applicant_id, component)
+admission_test_scores     -- English and Maths
+  applicant_id, paper_id → admission_papers, score numeric,
+  entered_by (stamp_actor), entered_at
+  unique (applicant_id, paper_id)
 
-applicant_interviews
+admission_cat4            -- same shape as cat4_results, so it copies across at enrolment
+  applicant_id pk, test_date, level, verbal_sas, quantitative_sas,
+  non_verbal_sas, spatial_sas, mean_sas, profile, entered_by (stamp_actor)
+
+applicant_interviews      -- the oral interview
   applicant_id pk, interviewed_on, interviewer_staff_id
+  reading_age_months int     -- from the paper-based reading test
+  reading_test_name text     -- defaults to the school's test
   interests text[]           -- chosen from a fixed list + free text
   interests_other text
   languages_spoken text, strengths text, concerns text
-  recommendation text        -- 'strong' | 'accept' | 'borderline' | 'decline'
+  recommendation text        -- 'offer' | 'waitlist' | 'reject'
   comments text
 ```
 
+**Each paper's `max_score` is recorded**, so every score becomes a percentage,
+and papers with different totals in different years still compare. The
+**test average** is the mean of the English and Maths percentages. It is
+calculated rather than stored, and it is marked as passing at **50% or
+above**. The pass mark is held in one setting in case it ever changes. It only
+*suggests* the next step: admissions staff still choose invite, waiting list
+or reject, so someone at 48% with a strong CAT4 can still be invited.
+
+**CAT4 is copied to `cat4_results` at enrolment.** A new student then arrives
+with their CAT4 profile already on `/students/[id]`, in the same place as
+everyone else's.
+
 **Reading age is stored in months**, and the page shows it as "11 y 4 m". The
-page also shows the child's age on the test day and the gap between the two,
-since that gap is what the number is for. The chronological age comes from
-`dob` and `assessed_on`, so it isn't stored.
+page also shows the child's age on the interview day and the gap between the
+two, since that gap is what the number is for. Reading age is recorded with
+the interview because that is when it is measured.
 
 **Interests use a fixed list** (sport, music, drama, art, debating, STEM
 clubs, and so on) plus free text, because a list can be counted and searched.
@@ -181,27 +221,71 @@ student record afterwards.
 ### Pipeline
 
 ```
-enquiry → applied → test_booked → tested → interviewed → offered → accepted → enrolled
-                                         ↘ waitlisted
-            any stage → declined (by school) | withdrawn (by family)
+enquiry → form_paid → test_booked → tested ─┬→ invited_to_interview → interviewed ─┬→ offered → accepted → enrolled
+                                            ├→ waitlisted ─────────────────────────┤
+                                            └→ rejected                            ├→ waitlisted
+                                                                                   └→ rejected
+            any stage → withdrawn (by the family)
 ```
 
-The status moves forward when the right data is saved (for example, recording
-English and Maths results moves an applicant to `tested`). It can also be set
-by hand, and every change is logged. `offered` and `declined` need a decision
-by SMT or an admissions lead, not by whoever typed in the scores.
+- **`test_booked` needs the form fee recorded.** No test date can be fixed
+  for an unpaid form.
+- **`tested`** is reached once English, Maths and CAT4 are all entered.
+- **Posting the result** means choosing `invited_to_interview`, `waitlisted`
+  or `rejected`. The page shows the average against the pass mark. Posting
+  produces the matching standard letter.
+- **After the interview,** the applicant is `offered`, `waitlisted` or
+  `rejected`, again with a letter. Someone on the waiting list can later be
+  invited or offered.
+
+Every status change is logged, with who made it.
+
+### Standard letters
+
+```
+admission_letter_templates
+  letter_kind pk  -- 'test_date', 'invite_to_interview', 'waitlist_after_test',
+                  -- 'reject_after_test', 'offer', 'waitlist_after_interview',
+                  -- 'reject_after_interview'
+  subject text, body text   -- with merge fields
+  updated_by (stamp_actor), updated_at
+
+applicant_letters          -- what was actually sent, kept as sent
+  letter_id pk, applicant_id, letter_kind, subject, body (merged text),
+  sent_by (stamp_actor), sent_at, emailed_to text, email_outbox_id
+```
+
+- **The templates are the school's own standard letters.** They are typed in
+  once and edited at `/admissions/letters`.
+- **Merge fields** include `{{child_first_name}}`, `{{child_full_name}}`,
+  `{{parent_name}}`, `{{entry_year}}`, `{{year_group}}`, `{{test_date}}`,
+  `{{test_venue}}`, `{{interview_date}}` and `{{today}}`.
+- **Sending a letter** does all of the following:
+  - creates a PDF on school letterhead (`jspdf` is already used for
+    transcripts), for printing or attaching;
+  - emails it to the primary contact through `queue_workspace_email()`, with
+    `'reply_to', email_reply_to('admissions')` and a new
+    `email_reply_routes` row for admissions;
+  - saves the merged text in `applicant_letters`, so there is a permanent copy
+    of exactly what the family was told, even if the template changes later.
+- **Status and letter go together.** Posting a result or making an offer does
+  both in one step, so an applicant can't be marked `offered` without the
+  offer letter being produced.
 
 ### Pages (new Admissions tile)
 
 - `/admissions`: the pipeline by entry year and year group, with counts at
   each stage and a filter.
-- `/admissions/new` and `/admissions/[id]`: the application, contacts, test
-  scores, reading age, interview, decision and history.
-- `/admissions/sessions`: test days. Book candidates, print the list, and
-  enter everyone's scores in one grid after the tests.
+- `/admissions/new` and `/admissions/[id]`: the application, contacts, form
+  fee, test scores and average, CAT4, interview and reading age, decision,
+  letters sent, and history.
+- `/admissions/sessions`: test days. Fix dates, book paid applicants onto
+  them, print the list, and enter English, Maths and CAT4 for everyone in one
+  grid after the tests.
+- `/admissions/papers`: the English and Maths paper (and its maximum score)
+  for each year group.
+- `/admissions/letters`: the standard letter templates.
 - `/admissions/schools`: previous schools, with merging of duplicates.
-- Later: offer letters by email through `queue_workspace_email()`, with
-  `email_reply_to('admissions_offer')` and its own `email_reply_routes` row.
 
 ### Enrolment: from applicant to student
 
@@ -212,9 +296,10 @@ that the caller holds `admissions` or `admin`, and it only works on an
 1. creates the `students` row with `year_group = entry_year_group`,
    `admission_date` = the start of the entry year, a UPN from
    `generate_next_upn()`, and `previous_school_id`;
-2. links each contact to an existing `parents` row (by `parent_id` if already
+2. copies CAT4 into `cat4_results`;
+3. links each contact to an existing `parents` row (by `parent_id` if already
    set, never by guessing from email) or creates one, and adds `student_parent`;
-3. sets `applicants.student_id` and `status = 'enrolled'`.
+4. sets `applicants.student_id` and `status = 'enrolled'`.
 
 The recommended status for the new student is **`incoming`**: they are
 admitted for next year but not here yet. That gives the bursar a real student
@@ -228,6 +313,9 @@ incoming students too. Each one needs an explicit decision about which
 statuses it lists. That audit is part of building this, not optional. The
 student login should be created but kept locked (as for leavers, migration
 251) until the student becomes `active`.
+
+A student admitted **during the year**, into the current year, is enrolled
+straight as `active`, with an admission date of their first day.
 
 ## Decision 4: next year's plan for each current student ("progression")
 
@@ -249,10 +337,12 @@ values filled in:
 | Y11 | **undecided** | each student: continue to Y12 or leave |
 | Y12 | leave (graduates) | a student staying on |
 
-Y11 decisions will often depend on IGCSE results, which arrive in August,
-after the switch. So a decision can stay provisional, and after the switch a
-late change is just an ordinary edit (change the year group, or set a leaving
-date).
+Decisions are made during the Summer term and can be changed right up until
+the switch. Y11 decisions often depend on IGCSE results, which arrive in
+August, before the September switch. A Y11 can be marked *provisional* until
+then, and the readiness check lists any that are still provisional. A change
+after the switch is just an ordinary edit (change the year group, or set a
+leaving date).
 
 Swapping a student into a different year (the "change_year" outcome) is the
 same thing as moving up, with a year group chosen by hand. It then goes
@@ -303,17 +393,57 @@ stop a clean switch:
 - incoming students with no form class;
 - mentor groups that don't exist yet.
 
-The mapping page shows this list, and the switch refuses to run while
-anything on it is still open.
+The mapping page and `/admin/next-year` show this list. The automatic switch
+waits, and emails the list, while anything on it is still open (Decision 6).
 
-## Decision 6: the switchover
+## Decision 6: the switchover happens automatically at the start of term
 
-`switch_academic_year(p_to_year_id, p_dry_run boolean default true)` is admin
-only: it checks `is_admin()` first. It runs in **one transaction**, so either
-everything happens or nothing does. It is run in the summer holiday (after 10
-July 2027, before the September term) and after the backup in
-`docs/BACKUP_POLICY.md`. With `p_dry_run` it reports what it would do and
-changes nothing.
+The principal's requirement: **the switch happens by itself at the start of
+the new year's first term.** Moving up is planned beforehand, in Decisions
+4–5, while the current year carries on unchanged.
+
+### When it runs
+
+`academic_years` gets `switch_at timestamptz`. By default it is **01:00 Lagos
+time on the start date of the new year's first term** (`terms.start_date`,
+using `school_today()` and `school_now()` because the database clock is UTC).
+An admin can move it at `/admin/next-year`, for example to the evening before
+boarders arrive. Until then, the old year's timetable stays live through the
+summer, which does no harm while school is closed.
+
+A `pg_cron` job, `academic-year-switch`, runs every 15 minutes. It does
+nothing unless a `planning` year has `switch_at <= now()` and hasn't been
+switched yet. When one has:
+
+- **If the readiness check (Decision 5) is clear,** it switches. Admin and SMT
+  get an email summary: numbers moved up, left, joined and allocated.
+- **If anything is still open, it does not switch.** It emails admin and SMT
+  the list and tries again on its next run, so fixing the last problem is
+  enough to set it going. A partial switch would put some students in the
+  wrong year's registers on the first morning, which is worse than a short
+  delay. Admins also have a **Switch now** button, with the same checks, for
+  an early or late switch.
+
+### Warnings beforehand
+
+So problems are found in the summer and not on the first day:
+
+- **Reminders at 21, 14, 7, 3 and 1 day(s) before `switch_at`.** Each one is
+  an email to admin and SMT with the readiness list and a **dry-run** summary:
+  what the switch would do if it ran now.
+- **`/admin/next-year`** shows the same information at any time: the
+  countdown, the readiness list and the dry run.
+
+Emails go through `queue_workspace_email()` with
+`email_reply_to('year_rollover')`, and a new row in `email_reply_routes`.
+
+### What the switch does
+
+`perform_academic_year_switch(p_to_year_id, p_dry_run)` does the work. It is
+`SECURITY DEFINER` with `revoke execute … from public, anon, authenticated`,
+so only cron (and the wrapper below) can call it. The admin-facing
+`switch_academic_year_now()` checks `is_admin()` and then calls it. It runs in
+**one transaction**, so either everything happens or nothing does.
 
 1. **Archive this year.** Copy `classes`, `timetable_slots`,
    `curriculum_blocks` and `student_class` into `archive_*` tables stamped with
@@ -324,8 +454,8 @@ changes nothing.
    filled on insert by trigger and backfilled, so the event still says which
    class it was.
 3. **Leavers** (`outcome = 'leave'`): set `leaving_date` = the end date of the
-   year and `status = 'left'`. The existing triggers remove their class links
-   and lock their logins.
+   old year and `status = 'left'`. The existing triggers remove their class
+   links and lock their logins.
 4. **Replace the live timetable.** Delete the live `student_class`,
    `timetable_slots`, `classes` and `curriculum_blocks`, then insert the plan
    rows with new IDs, carrying a map from plan ID to new ID.
@@ -334,16 +464,21 @@ changes nothing.
    Remove mentor groups that are now empty.
 6. **Incoming → active.** This unlocks their logins and makes them visible to
    their parents.
-7. **Change the year:** mark 2026/27 `closed` and 2027/28 `current`, then
-   clear the plan tables.
+7. **Change the year:** mark 2026/27 `closed` and 2027/28 `current`, and
+   create a new `planning` row for 2028/29 so that year's admissions can
+   start. Then clear the plan tables.
 
-Everything is written with `formwork.change_note` set, and to a new
+Everything is written with `formwork.change_note = 'Automatic year switch'`
+(or the admin's name if they pressed Switch now), and to a new
 `change_history` area, `year_rollover`.
 
-Test it first on a Supabase branch (a copy of the database). Run the dry run
-there, then the real run, and then check registers, `registers_not_done`,
-timetables and block allocation as a teacher and as a Head of Department
-would use them.
+### Before it is trusted
+
+- **Test it on a Supabase branch** (a copy of the database) first:
+  - run the dry run there, then the real run;
+  - then check registers, `registers_not_done`, timetables and block
+    allocation the way a teacher and a Head of Department would use them.
+- **Take the backup** in `docs/BACKUP_POLICY.md` the day before `switch_at`.
 
 ## Security, permissions and logging (following CLAUDE.md)
 
@@ -353,16 +488,22 @@ would use them.
   join the school. Reading and writing is limited to `has_resource_access('/admissions')`
   (admissions, SMT, admin by default), not "any staff". Interview notes and
   decisions can be limited further if the school wants.
-- `decided_by`, `assessed_by` and `created_by` are stamped by `stamp_actor()`,
-  never taken from the page.
-- New `change_history` areas: `admissions` (status and decision changes on
-  `applicants`, and `admission_assessments` changes after they are first
-  entered) and `year_rollover`.
+- `decided_by`, `entered_by`, `sent_by`, `form_fee_recorded_by` and
+  `created_by` are stamped by `stamp_actor()`, never taken from the page.
+- **Admissions staff can post results and make offers themselves.** The
+  status change and its letter happen in one `SECURITY DEFINER` function,
+  `post_admission_decision(applicant_id, new_status, notes)`, which checks
+  `has_resource_access('/admissions')`. The browser can't set `status` on
+  `applicants` directly, so it can't skip the letter or the log.
+- New `change_history` areas: `admissions` (status changes on `applicants`,
+  and test score, CAT4 and interview changes after they are first entered)
+  and `year_rollover`.
 - Plan tables: written by `can_allocate_classes()` (admin, HoD, pastoral, as
   for block allocation today) and readable by all staff. The switch itself is
   admin only.
 - New resource keys: `/admissions`, `/admissions/sessions`,
-  `/admissions/schools`, `/admin/next-year/progression`,
+  `/admissions/papers`, `/admissions/letters`, `/admissions/schools`,
+  `/admin/next-year`, `/admin/next-year/progression`,
   `/admin/next-year/mapping`.
 - No `app/api` routes are needed. Everything is RLS plus
   `SECURITY DEFINER` functions that check the caller first.
@@ -374,37 +515,44 @@ work, so admissions comes first.
 
 | Phase | What | Needed by |
 |---|---|---|
-| 1 | `academic_years`; admissions tables and pages; previous schools; test sessions and the score grid; interview; decisions | before the first test day |
-| 2 | `incoming` status: audit the student queries, `enrol_applicant()`, locked logins | before the first offers are accepted |
+| 1 | `academic_years`; applicants, form fee, previous schools; papers per year group; test days and the English/Maths/CAT4 grid; posting results with standard letters; interview and reading age; offers | before the first test day |
+| 2 | `incoming` status: audit the student queries, `enrol_applicant()` (including the CAT4 copy), locked logins | before the first offers are accepted |
 | 3 | `student_progressions` and its page | Summer term 2027 |
 | 4 | Plan tables; plan mode on the Nova-T import, block allocation, UPN/Class import and timetable views; mapping; readiness check | when Nova-T 2027/28 is ready (June/July 2027) |
-| 5 | Archive tables, behaviour class snapshot, `switch_academic_year()`, tested on a branch | before the summer switch |
+| 5 | Archive tables, behaviour class snapshot, the switch function, the `academic-year-switch` cron job and reminder emails, `/admin/next-year`; tested on a branch | end of Summer term 2027 |
+
+## Answered (29 Sept 2026)
+
+- **Entry:** into any year, 7–12. There is in-year entry too, which enrols
+  straight as `active`.
+- **Day students:** none; everyone boards.
+- **Tests:** a different English and Maths paper for each year group, plus
+  CAT4. The pass mark is a 50% average of English and Maths.
+- **Process:** paid form → test date → result posted → interview, reject or
+  waiting list.
+- **Reading age:** an older paper-based test, not NGRT.
+- **Offers:** made by admissions staff, by letter, from standard letters.
+- **Switch:** automatic at the start of term, with moving up planned before.
 
 ## Open questions
 
-1. **Entry points.** Which year groups take new students: Y7 only, Y7 and Y10,
-   or also Y12 (external sixth-form applicants)? Is there in-year admission
-   (joining mid-year), which enrols straight into `active` rather than
-   `incoming`?
-2. **Tests.** Are English and Maths the same paper for every entry year, or one
-   per year group? Score only, or also a grade or band? Is there a pass mark
-   that should flag borderline candidates automatically?
-3. **Reading age.** Which test is used (for example NGRT, which the school
-   already records for current students in `ngrt_results`, or Salford or
-   Suffolk)? If it's NGRT, the applicant's result could carry straight into
-   `ngrt_results` at enrolment.
-4. **Who decides?** Can the admissions staff make offers, or only SMT / the
-   principal?
-5. **Incoming students before September.** Is the `incoming` status right
+1. **Incoming students before September.** Is the `incoming` status right
    (invoiceable, placeable in next year's classes, invisible to registers and
    the parent portal)? Or should accepted applicants stay out of `students`
    until the switch, which means fees are handled outside Formwork until then?
-6. **Retention.** How long are unsuccessful applicants kept? The Nigeria Data
+2. **The standard letters.** Please send the current wording of each one
+   (test date, invitation to interview, waiting list, rejection, offer).
+   They'll be loaded as the starting templates. Is there anything the family
+   must return with the offer (acceptance form, deposit)? That would decide
+   how `accepted` is recorded.
+3. **The admission form fee.** Is it recorded by admissions staff or by the
+   bursar, and is there a set amount per year?
+4. **Retention.** How long are unsuccessful applicants kept? The Nigeria Data
    Protection Act expects a limit. We suggest deleting or anonymising them
    12 months after the entry year starts.
-7. **Y9 options and Y12 choices.** Are they blocked in Nova-T (so a UPN/Class
+5. **Y9 options and Y12 choices.** Are they blocked in Nova-T (so a UPN/Class
    file comes out of it), or should Formwork collect the choices?
-8. **Anything else from the interview or application** (the request was cut off
-   after "School that they are coming from"): for example previous school
-   reports, sibling at the school, boarding preference, medical or SEN notes,
-   or fee sponsor.
+6. **Anything else from the application or interview:** for example previous
+   school reports, medical or SEN notes, or fee sponsor.
+7. **The exact switch time.** Is 01:00 on the first day of term right, or
+   should it be the evening boarders arrive?
