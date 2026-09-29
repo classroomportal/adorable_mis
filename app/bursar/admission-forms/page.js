@@ -16,7 +16,9 @@ import {
 // need. Payments are recorded through record_admission_form_fee() and
 // record_admission_deposit(), which check the caller is the bursar and move
 // the applicant on (enquiry -> form paid, accepted -> deposit paid). The
-// amounts for an entry year are set with set_admission_fee_amounts().
+// amounts for an entry year change only when the principal and the college
+// secretary have both approved (migration 259): this page proposes them
+// through propose_admission_fees(), approved at /bursar/fee-approvals.
 
 function AdmissionFormsInner() {
   const [years, setYears] = useState([]);
@@ -24,7 +26,7 @@ function AdmissionFormsInner() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [amounts, setAmounts] = useState({ form: '', deposit: '' });
+  const [amounts, setAmounts] = useState({ form: '', deposit: '', reason: '' });
   const [amountStatus, setAmountStatus] = useState(null);
   const [forms, setForms] = useState({}); // `${kind}-${applicant_id}` -> { date, receipt, amount }
   const [rowStatus, setRowStatus] = useState({});
@@ -38,6 +40,7 @@ function AdmissionFormsInner() {
     setAmounts({
       form: y?.admission_form_fee != null ? String(Number(y.admission_form_fee)) : '',
       deposit: y?.admission_deposit != null ? String(Number(y.admission_deposit)) : '',
+      reason: '',
     });
     if (!id) setLoading(false);
   }
@@ -64,6 +67,7 @@ function AdmissionFormsInner() {
     setAmounts({
       form: y?.admission_form_fee != null ? String(Number(y.admission_form_fee)) : '',
       deposit: y?.admission_deposit != null ? String(Number(y.admission_deposit)) : '',
+      reason: '',
     });
     setAmountStatus(null);
     setForms({});
@@ -75,22 +79,23 @@ function AdmissionFormsInner() {
 
   async function saveAmounts(ev) {
     ev.preventDefault();
-    const form = Number(amounts.form);
-    const deposit = Number(amounts.deposit);
-    if (amounts.form.trim() === '' || amounts.deposit.trim() === '' || !Number.isFinite(form) || !Number.isFinite(deposit)) {
-      setAmountStatus({ error: true, text: 'Give both amounts.' });
+    // Blank means "not set" (the form price may not be decided yet).
+    const form = amounts.form.trim() === '' ? null : Number(amounts.form);
+    const deposit = amounts.deposit.trim() === '' ? null : Number(amounts.deposit);
+    if ((form != null && !Number.isFinite(form)) || (deposit != null && !Number.isFinite(deposit))) {
+      setAmountStatus({ error: true, text: 'Amounts must be numbers.' });
       return;
     }
-    setAmountStatus({ text: 'Saving...' });
-    const { error } = await supabase.rpc('set_admission_fee_amounts', {
-      p_academic_year_id: yearId, p_form_fee: form, p_deposit: deposit,
+    setAmountStatus({ text: 'Sending...' });
+    const { error } = await supabase.rpc('propose_admission_fees', {
+      p_academic_year_id: yearId, p_form_fee: form, p_deposit: deposit, p_reason: amounts.reason,
     });
     if (error) {
-      setAmountStatus({ error: true, text: `Not saved: ${errorText(error)}` });
+      setAmountStatus({ error: true, text: `Not sent: ${errorText(error)}` });
       return;
     }
     await loadYears(yearId);
-    setAmountStatus({ text: 'Saved.' });
+    setAmountStatus({ text: 'Sent for approval. The amounts change once the principal and the college secretary have both approved.' });
   }
 
   function formFor(kind, id) {
@@ -215,7 +220,8 @@ function AdmissionFormsInner() {
             <p style={{ margin: '0.25rem 0 0', color: '#666', fontSize: '0.9em' }}>
               Currently: form fee {year.admission_form_fee != null ? formatMoney(year.admission_form_fee) : 'not set'},
               deposit {year.admission_deposit != null ? formatMoney(year.admission_deposit) : 'not set'}.
-              These also appear in the letters sent to families.
+              These also appear in the letters sent to families. A change takes effect only once the
+              principal and the college secretary have both approved it at <a href="/bursar/fee-approvals">Fee Approvals</a>.
             </p>
           </div>
           <label style={{ flex: '0 1 12rem' }}>
@@ -226,7 +232,11 @@ function AdmissionFormsInner() {
             Deposit (₦)
             <input type="number" min="0" step="0.01" value={amounts.deposit} onChange={(ev) => { setAmounts({ ...amounts, deposit: ev.target.value }); setAmountStatus(null); }} />
           </label>
-          <button type="submit">Save amounts</button>
+          <label style={{ flex: '1 1 14rem' }}>
+            Reason
+            <input value={amounts.reason} onChange={(ev) => setAmounts({ ...amounts, reason: ev.target.value })} placeholder="e.g. agreed at SMT, 30 Sept" />
+          </label>
+          <button type="submit">Propose for approval</button>
           {amountStatus && <span style={{ alignSelf: 'center', color: amountStatus.error ? '#a3232c' : undefined }}>{amountStatus.text}</span>}
         </form>
       )}
