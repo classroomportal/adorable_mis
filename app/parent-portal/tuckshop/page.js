@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
+import TuckshopPurchases from '../../components/TuckshopPurchases';
 
 function ParentTuckshopInner() {
   const { profile } = useAuth();
@@ -10,7 +11,6 @@ function ParentTuckshopInner() {
   const [children, setChildren] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
-  const [tuckshopHistory, setTuckshopHistory] = useState([]);
 
   // Same parent-resolution fallback as the main parent portal, so this page
   // works the same way whether logged in as a parent or as staff-who-is-also-a-parent.
@@ -49,13 +49,6 @@ function ParentTuckshopInner() {
       if (!selectedId) return;
       const { data: bal } = await supabase.rpc('get_tuckshop_balance', { p_student_id: selectedId });
       setTuckshopBalance(bal);
-      const { data: hist } = await supabase
-        .from('tuckshop_purchases')
-        .select('id, purchase_date, total_amount')
-        .eq('student_id', selectedId)
-        .order('purchase_date', { ascending: false })
-        .limit(10);
-      setTuckshopHistory(hist || []);
     }
     loadTuckshop();
   }, [selectedId]);
@@ -91,23 +84,7 @@ function ParentTuckshopInner() {
               {tuckshopBalance === null ? '…' : `₦${Number(tuckshopBalance).toLocaleString()}`}
             </span>
           </p>
-          {tuckshopHistory.length === 0 ? (
-            <p>No purchases yet.</p>
-          ) : (
-            <>
-              <h3>Recent purchases</h3>
-              <div className="table-scroll">
-                <table>
-                  <thead><tr><th>Date</th><th>Amount</th></tr></thead>
-                  <tbody>
-                    {tuckshopHistory.map((h) => (
-                      <tr key={h.id}><td>{h.purchase_date}</td><td>₦{Number(h.total_amount).toLocaleString()}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+          <TuckshopPurchases studentId={selectedId} />
         </div>
       )}
     </div>

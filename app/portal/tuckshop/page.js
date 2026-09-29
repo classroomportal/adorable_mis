@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
+import TuckshopPurchases from '../../components/TuckshopPurchases';
 import { closingWarning, loadSpecialSessions, longDate, momentLabel } from '../../../lib/tuckshopSchedule';
 
 function naira(n) {
@@ -180,7 +181,6 @@ function TuckshopInner() {
   const studentId = profile?.student_id;
 
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
-  const [tuckshopHistory, setTuckshopHistory] = useState([]);
   const [tuckshopItems, setTuckshopItems] = useState([]);
   const [specials, setSpecials] = useState([]);
   const [specialItems, setSpecialItems] = useState([]);
@@ -193,13 +193,6 @@ function TuckshopInner() {
     if (!studentId) return;
     const { data: bal } = await supabase.rpc('get_tuckshop_balance', { p_student_id: studentId });
     setTuckshopBalance(bal);
-    const { data: hist } = await supabase
-      .from('tuckshop_purchases')
-      .select('id, purchase_date, total_amount')
-      .eq('student_id', studentId)
-      .order('purchase_date', { ascending: false })
-      .limit(10);
-    setTuckshopHistory(hist || []);
     const { data: items } = await supabase
       .from('tuckshop_items')
       .select('id, name, price, is_food')
@@ -381,21 +374,7 @@ function TuckshopInner() {
           </>
         )}
 
-        {tuckshopHistory.length > 0 && (
-          <>
-            <h3 style={{ marginTop: '1rem' }}>Recent purchases</h3>
-            <div className="table-scroll">
-              <table style={{ minWidth: 0 }}>
-                <thead><tr><th>Date</th><th>Amount</th></tr></thead>
-                <tbody>
-                  {tuckshopHistory.map((h) => (
-                    <tr key={h.id}><td>{h.purchase_date}</td><td>{naira(h.total_amount)}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        <TuckshopPurchases studentId={studentId} />
       </div>
     </div>
   );
