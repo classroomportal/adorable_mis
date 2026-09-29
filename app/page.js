@@ -298,6 +298,7 @@ const TABS = [
       // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
       // Class Allocation, not this.
       { href: '/admin/import-classes', label: 'Import Nova-T', desc: "Upload the Nova-T timetable files." },
+      { href: '/admin/next-year', label: 'Next Year Setup', desc: "Next year's mentor groups, then its Nova-T timetable, planned without touching this year." },
       { href: '/admin/import-staff-commitments', label: 'Import Meetings', desc: "Upload staff meetings and non-working periods." },
       { href: '/admin/bell-times', label: 'Bell Times', desc: "Which periods run each day, and their times." },
       { href: '/admin/print-timetables', label: 'Print Timetables', desc: "Print student timetables for a year group." },
