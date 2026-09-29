@@ -4,10 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { LESSON_COLUMNS, lessonRoom, lessonTeacher } from '../../lib/lessons';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
-import TermTestScoresDownload from '../components/TermTestScoresDownload';
-import PublishedDocuments from '../components/PublishedDocuments';
-import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload';
-import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
+import ResultsOverview from '../components/ResultsOverview';
 import { visibleTargets } from '../../lib/gradeCompare';
 import { formatUKDate } from '../../lib/formatDate';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
@@ -416,12 +413,14 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
           {activeView === 'assessment' && (
             <div className="card">
               <h2>Results vs Target</h2>
-              <TermTestScoresDownload studentId={selectedId} />
-              <KeyStageTranscriptDownload studentId={selectedId} />
-              <PublishedDocuments studentId={selectedId} />
-              {shownTargets.length === 0 ? <p>No target grades set yet.</p> : (
-                <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} enrolledSubjectIds={enrolledSubjectIds} />
-              )}
+              <ResultsOverview
+                studentId={selectedId}
+                yearGroup={selectedChild?.year_group}
+                targets={targets}
+                results={results}
+                gradePoints={gradePoints}
+                enrolledSubjectIds={enrolledSubjectIds}
+              />
             </div>
           )}
 
