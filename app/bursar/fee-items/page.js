@@ -5,6 +5,9 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 
+const YEARS = [7, 8, 9, 10, 11, 12];
+const naira = (v) => `₦${Number(v).toLocaleString('en-GB')}`;
+
 function FeeItemsInner() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +24,9 @@ function FeeItemsInner() {
   // at /bursar/fee-approvals; the database refuses a direct change.
   const [proposing, setProposing] = useState(null); // { id, amount, reason }
   const [proposeStatus, setProposeStatus] = useState(null);
+  // Locked items (migration 260) have an approved price per year group.
+  const [yearPrices, setYearPrices] = useState({}); // id -> { yg: amount }
+  const [proposingYears, setProposingYears] = useState(null); // { id, prices: { yg: str }, reason }
 
   const [edits, setEdits] = useState({}); // id -> { default_amount, category, is_optional }
   const [savingId, setSavingId] = useState(null);
@@ -29,8 +35,14 @@ function FeeItemsInner() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('fee_items').select('id, name, display_name, category, is_optional, default_amount').order('name');
+    const [{ data }, { data: yp }] = await Promise.all([
+      supabase.from('fee_items').select('id, name, display_name, category, is_optional, default_amount, price_locked').order('name'),
+      supabase.from('fee_item_year_prices').select('fee_item_id, year_group, amount'),
+    ]);
     setItems(data ?? []);
+    const byItem = {};
+    (yp || []).forEach((r) => { (byItem[r.fee_item_id] ||= {})[r.year_group] = Number(r.amount); });
+    setYearPrices(byItem);
     setLoading(false);
   }
 
@@ -92,6 +104,25 @@ function FeeItemsInner() {
       setStatus(`Error: ${error.message}`);
     }
     setSavingId(null);
+  }
+
+  async function sendYearProposal(e) {
+    e.preventDefault();
+    const prices = {};
+    for (const yg of YEARS) {
+      const v = String(proposingYears.prices[yg] ?? '').trim();
+      if (v === '') continue;
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0) { setProposeStatus(`Year ${yg}: give an amount of 0 or more.`); return; }
+      prices[yg] = n;
+    }
+    const { error } = await supabase.rpc('propose_fee_item_year_prices', {
+      p_fee_item_id: proposingYears.id, p_prices: prices, p_reason: proposingYears.reason,
+    });
+    if (error) { setProposeStatus(error.message); return; }
+    setProposingYears(null);
+    setProposeStatus(null);
+    setStatus('Year prices sent for approval. They apply once the principal and the college secretary have both approved.');
   }
 
   async function sendProposal(e) {
@@ -170,7 +201,43 @@ function FeeItemsInner() {
                       />
                     </td>
                     <td>
-                      {proposing?.id === item.id ? (
+                      {item.price_locked ? (
+                        proposingYears?.id === item.id ? (
+                          <form onSubmit={sendYearProposal} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                            {YEARS.map((yg) => (
+                              <label key={yg} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', margin: 0 }}>
+                                Y{yg}
+                                <input type="number" min="0" value={proposingYears.prices[yg] ?? ''} placeholder="Not set" style={{ width: '8rem' }}
+                                  onChange={(e) => setProposingYears({ ...proposingYears, prices: { ...proposingYears.prices, [yg]: e.target.value } })} />
+                              </label>
+                            ))}
+                            <input value={proposingYears.reason} onChange={(e) => setProposingYears({ ...proposingYears, reason: e.target.value })} placeholder="Reason" style={{ width: '10rem' }} />
+                            <span>
+                              <button type="submit">Send</button>{' '}
+                              <button type="button" className="secondary" onClick={() => { setProposingYears(null); setProposeStatus(null); }}>Cancel</button>
+                            </span>
+                            {proposeStatus && <span style={{ color: '#a3232c', fontSize: '0.85em' }}>{proposeStatus}</span>}
+                          </form>
+                        ) : (
+                          <>
+                            <span className="badge" style={{ background: '#e6eefb', color: '#1d4a8f' }} title="Charged only at the approved price for the student's year group">Locked</span>
+                            <div style={{ fontSize: '0.85em', margin: '0.25rem 0' }}>
+                              {YEARS.map((yg) => {
+                                const v = yearPrices[item.id]?.[yg] ?? item.default_amount;
+                                return <div key={yg}>Y{yg}: {v != null ? naira(v) : <span style={{ color: '#999' }}>not approved</span>}</div>;
+                              })}
+                            </div>
+                            <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
+                              onClick={() => {
+                                const cur = {};
+                                YEARS.forEach((yg) => { const v = yearPrices[item.id]?.[yg]; cur[yg] = v != null ? String(v) : ''; });
+                                setProposingYears({ id: item.id, prices: cur, reason: '' }); setProposeStatus(null);
+                              }}>
+                              Propose year prices
+                            </button>
+                          </>
+                        )
+                      ) : proposing?.id === item.id ? (
                         <form onSubmit={sendProposal} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                           <input type="number" min="0" value={proposing.amount} onChange={(e) => setProposing({ ...proposing, amount: e.target.value })} placeholder="New price" style={{ width: '8rem' }} autoFocus />
                           <input value={proposing.reason} onChange={(e) => setProposing({ ...proposing, reason: e.target.value })} placeholder="Reason" style={{ width: '8rem' }} />

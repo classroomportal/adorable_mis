@@ -30,6 +30,12 @@ function describe(c) {
     if (c.old_values.deposit !== c.new_values.deposit) parts.push(`Deposit: ${money(c.old_values.deposit)} → ${money(c.new_values.deposit)}`);
     return { what: `Admission fees, ${c.year_label} entry`, change: parts.join('; ') };
   }
+  if (c.kind === 'fee_item_prices') {
+    const parts = [7, 8, 9, 10, 11, 12]
+      .filter((yg) => (c.old_values[yg] ?? null) !== (c.new_values[yg] ?? null))
+      .map((yg) => `Y${yg}: ${money(c.old_values[yg])} → ${money(c.new_values[yg])}`);
+    return { what: `${c.fee_item_name} (by year group)`, change: parts.join('; ') };
+  }
   return { what: c.fee_item_name, change: `${money(c.old_values.amount)} → ${money(c.new_values.amount)}` };
 }
 
@@ -136,6 +142,8 @@ function FeeApprovalsInner() {
         Fees — admission forms, deposits and term fees — are <strong>set and approved by the principal and the
         college secretary together</strong>. A new price is proposed here and takes effect only once both have
         approved it. Nobody can change a price any other way.
+        Tuition, activity, technology and medical fees have a price for each year group and can only be
+        charged at it; propose their year prices from <a href="/bursar/fee-items">Fee Items</a>.
       </p>
       {isApprover && (
         <p style={{ color: '#1d4a8f' }}>
