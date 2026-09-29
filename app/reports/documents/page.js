@@ -161,6 +161,67 @@ function UploadDocumentsInner() {
   const needsCheck = rows.filter((r) => r.how === 'surname' || r.how === 'ambiguous').length;
   const cleanTitle = title.trim();
 
+  // Storage sometimes answers with a gateway timeout (HTTP 504) after it has
+  // in fact saved the file, so an error isn't proof nothing happened. Each
+  // step is safe to repeat (the upload overwrites the same path, the row is
+  // found by path and updated), so a failed file is simply tried again.
+  async function withRetry(step) {
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt) await new Promise((res) => setTimeout(res, attempt * 3000));
+      const { data, error } = await step();
+      if (!error) return data;
+      lastError = error;
+    }
+    throw lastError;
+  }
+
+  async function publishOne(r, userId) {
+    const path = `${r.studentId}/${DOCUMENT_TYPE}-${slugify(cleanTitle)}.pdf`;
+    await withRetry(() => supabase.storage
+      .from('student-documents')
+      .upload(path, r.file, { upsert: true, contentType: 'application/pdf' }));
+    const payload = {
+      student_id: r.studentId,
+      document_type: DOCUMENT_TYPE,
+      title: cleanTitle,
+      storage_path: path,
+      generated_at: new Date().toISOString(),
+      generated_by: userId,
+    };
+    const existingRows = await withRetry(() => supabase
+      .from('student_documents').select('id')
+      .eq('student_id', r.studentId).eq('storage_path', path));
+    await withRetry(() => (existingRows?.[0]
+      ? supabase.from('student_documents').update(payload).eq('id', existingRows[0].id)
+      : supabase.from('student_documents').insert(payload)));
+  }
+
+  async function publishRows(targets) {
+    setRunning(true);
+    setStatus(null);
+    const keys = new Set(targets.map((r) => r.key));
+    setRows((prev) => prev.map((r) => (keys.has(r.key) ? { ...r, result: 'pending' } : r)));
+    const { data: { user } } = await supabase.auth.getUser();
+    let ok = 0;
+    for (const r of targets) {
+      let result = 'ok';
+      try {
+        await publishOne(r, user?.id || null);
+        ok += 1;
+      } catch (e) {
+        result = `Error: ${e.message || 'upload failed'}`;
+      }
+      setRows((prev) => prev.map((x) => (x.key === r.key ? { ...x, result } : x)));
+    }
+    setRunning(false);
+    const failed = targets.length - ok;
+    setStatus(failed
+      ? `Published ${ok} of ${targets.length}. ${failed} failed — use "Retry failed" to try ${failed === 1 ? 'it' : 'them'} again.`
+      : `Published ${ok} of ${targets.length}.`);
+    loadBatches();
+  }
+
   async function upload() {
     if (!cleanTitle) { setStatus('Give the document a title first — it is the name parents will see.'); return; }
     if (duplicates) { setStatus('Two files are matched to the same student. Fix that before uploading.'); return; }
@@ -174,47 +235,11 @@ function UploadDocumentsInner() {
     if (skipped) lines.push(`${skipped} file${skipped === 1 ? ' has' : 's have'} no student and will be skipped.`);
     if (existing) lines.push(`"${cleanTitle}" already exists for ${existing.count} student${existing.count === 1 ? '' : 's'}; their earlier copy will be replaced.`);
     if (!window.confirm(lines.join('\n\n'))) return;
-
-    setRunning(true);
-    setStatus(null);
-    setRows((prev) => prev.map((r) => ({ ...r, result: r.studentId ? 'pending' : 'skipped' })));
-    const { data: { user } } = await supabase.auth.getUser();
-    const slug = slugify(cleanTitle);
-    let ok = 0;
-    for (const r of ready) {
-      let result = 'ok';
-      try {
-        const path = `${r.studentId}/${DOCUMENT_TYPE}-${slug}.pdf`;
-        const { error: uploadError } = await supabase.storage
-          .from('student-documents')
-          .upload(path, r.file, { upsert: true, contentType: 'application/pdf' });
-        if (uploadError) throw uploadError;
-        const payload = {
-          student_id: r.studentId,
-          document_type: DOCUMENT_TYPE,
-          title: cleanTitle,
-          storage_path: path,
-          generated_at: new Date().toISOString(),
-          generated_by: user?.id || null,
-        };
-        const { data: existingRows, error: findError } = await supabase
-          .from('student_documents').select('id')
-          .eq('student_id', r.studentId).eq('storage_path', path);
-        if (findError) throw findError;
-        const { error: dbError } = existingRows?.[0]
-          ? await supabase.from('student_documents').update(payload).eq('id', existingRows[0].id)
-          : await supabase.from('student_documents').insert(payload);
-        if (dbError) throw dbError;
-        ok += 1;
-      } catch (e) {
-        result = `Error: ${e.message}`;
-      }
-      setRows((prev) => prev.map((x) => (x.key === r.key ? { ...x, result } : x)));
-    }
-    setRunning(false);
-    setStatus(`Published ${ok} of ${ready.length}.`);
-    loadBatches();
+    setRows((prev) => prev.map((r) => (r.studentId ? r : { ...r, result: 'skipped' })));
+    await publishRows(ready);
   }
+
+  const failedRows = rows.filter((r) => r.studentId && r.result && r.result.startsWith('Error'));
 
   async function removeBatch(batch) {
     if (!window.confirm(`Remove "${batch.title}" for all ${batch.count} student${batch.count === 1 ? '' : 's'}? Parents will no longer see it. This can't be undone.`)) return;
@@ -285,6 +310,11 @@ function UploadDocumentsInner() {
           <button onClick={upload} disabled={running || !ready.length || !cleanTitle || duplicates} style={{ width: 'fit-content' }}>
             {running ? 'Uploading...' : `Publish ${ready.length} document${ready.length === 1 ? '' : 's'}`}
           </button>
+          {failedRows.length > 0 && !running && (
+            <button type="button" onClick={() => publishRows(failedRows)} disabled={!cleanTitle} style={{ width: 'fit-content' }}>
+              Retry failed ({failedRows.length})
+            </button>
+          )}
           {rows.length > 0 && !running && (
             <button type="button" className="secondary" onClick={() => { setRows([]); setStatus(null); }} style={{ width: 'fit-content' }}>
               Clear list
