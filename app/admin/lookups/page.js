@@ -431,6 +431,7 @@ function AcademicYears() {
                 <td>{YEAR_STATUS[y.status] || y.status}</td>
                 <td>
                   {edits[y.academic_year_id] && <><button onClick={() => saveDates(y)}>Save</button>{' '}</>}
+                  {y.status === 'planning' && <><a href={`/admin/next-year?year=${y.academic_year_id}`}><button style={{ fontSize: '0.8rem' }}>Set up {y.label}</button></a>{' '}</>}
                   {y.status === 'planning' && <button className="secondary" style={{ fontSize: '0.8rem' }} onClick={() => remove(y)}>Remove</button>}
                 </td>
               </tr>

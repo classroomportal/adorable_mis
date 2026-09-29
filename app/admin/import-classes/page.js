@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import RequireAuth from "../../RequireAuth";
 import RequireResource from "../../RequireResource";
@@ -198,7 +198,26 @@ function lessonOverrides(slot, classDefault, staffByCode) {
 
 // --- Component -----------------------------------------------------------
 
+// Next year's timetable (migration 265): with ?plan=<academic_year_id> this
+// page reads and writes the plan_* tables for that year instead of the live
+// ones, so a Nova-T file for next year can be imported while this year's
+// timetable is still being taught. The parsing and matching are the same.
+const LIVE_TABLES = { classes: "classes", slots: "timetable_slots", blocks: "curriculum_blocks", enrol: "student_class" };
+const PLAN_TABLES = { classes: "plan_classes", slots: "plan_timetable_slots", blocks: "plan_curriculum_blocks", enrol: "plan_student_class" };
+
 function ImportClassesInner() {
+  // undefined while loading; null = the live timetable; otherwise the plan year.
+  const [plan, setPlan] = useState(undefined);
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("plan"));
+    if (!id) { setPlan(null); return; }
+    supabase.from("academic_years").select("academic_year_id, label, status, mentor_structure_confirmed_at")
+      .eq("academic_year_id", id).maybeSingle()
+      .then(({ data }) => setPlan(data ? { id: data.academic_year_id, label: data.label, status: data.status, confirmed: !!data.mentor_structure_confirmed_at } : { missing: true }));
+  }, []);
+  const T = plan ? PLAN_TABLES : LIVE_TABLES;
+  const scope = (q) => (plan ? q.eq("academic_year_id", plan.id) : q);
+  const yearCol = plan ? { academic_year_id: plan.id } : {};
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -277,13 +296,13 @@ function ImportClassesInner() {
         { data: bellRows, error: btErr },
         slotRows,
       ] = await Promise.all([
-        supabase.from("classes").select("class_id, class_code, staff_id, room, subject_id, year_group, block_id, block_group"),
+        scope(supabase.from(T.classes).select("class_id, class_code, staff_id, room, subject_id, year_group, block_id, block_group")),
         supabase.from("staff").select("staff_id, staff_code, first_name, last_name"),
         supabase.from("subjects").select("subject_id, subject_code, subject_name"),
-        supabase.from("curriculum_blocks").select("block_id, block_name, year_group, band, is_compound"),
+        scope(supabase.from(T.blocks).select("block_id, block_name, year_group, band, is_compound")),
         supabase.from("periods").select("period_number, period_name"),
         supabase.from("bell_times").select("day_of_week, period_number, start_time, end_time"),
-        fetchAllRows(() => supabase.from("timetable_slots").select("slot_id, class_id, day_of_week, period_number, staff_id, room").order("slot_id")),
+        fetchAllRows(() => scope(supabase.from(T.slots).select("slot_id, class_id, day_of_week, period_number, staff_id, room")).order("slot_id")),
       ]);
       if (cErr) throw cErr;
       if (sErr) throw sErr;
@@ -326,7 +345,7 @@ function ImportClassesInner() {
       // existing "91/Ar" class even though the code itself differs.
       const existingClassIds = existingClasses.map((c) => c.class_id);
       const enrolRows = await fetchAllRows(() =>
-        supabase.from("student_class").select("class_id, student_id, students(form_class)").in("class_id", existingClassIds)
+        supabase.from(T.enrol).select("class_id, student_id, students(form_class)").in("class_id", existingClassIds)
       );
       const studentIdsByClass = {};
       for (const r of enrolRows || []) (studentIdsByClass[r.class_id] ||= []).push(r.student_id);
@@ -529,8 +548,8 @@ function ImportClassesInner() {
       if (staleCandidates.length > 0) {
         const staleIds = staleCandidates.map((c) => c.class_id);
         const [scRows, tsRows] = await Promise.all([
-          fetchAllRows(() => supabase.from("student_class").select("class_id").in("class_id", staleIds)),
-          fetchAllRows(() => supabase.from("timetable_slots").select("class_id").in("class_id", staleIds)),
+          fetchAllRows(() => supabase.from(T.enrol).select("class_id").in("class_id", staleIds)),
+          fetchAllRows(() => supabase.from(T.slots).select("class_id").in("class_id", staleIds)),
         ]);
         const studentCounts = new Map();
         for (const r of scRows || []) studentCounts.set(r.class_id, (studentCounts.get(r.class_id) || 0) + 1);
@@ -562,7 +581,7 @@ function ImportClassesInner() {
       if (updates.length > 0) {
         const updateIds = updates.map((u) => u.class_id);
         const scRows = await fetchAllRows(() =>
-          supabase.from("student_class").select("class_id, student_id").in("class_id", updateIds)
+          supabase.from(T.enrol).select("class_id, student_id").in("class_id", updateIds)
         );
         const studentsByClass = new Map();
         for (const r of scRows || []) {
@@ -621,7 +640,7 @@ function ImportClassesInner() {
     try {
       for (const u of preview.updates) {
         const { error: upErr } = await supabase
-          .from("classes")
+          .from(T.classes)
           .update({
             staff_id: u.staff_id,
             room: u.room,
@@ -665,13 +684,13 @@ function ImportClassesInner() {
   // Make a class's lessons exactly the file's: used for a class just created
   // or just linked to an old one it replaces.
   async function replaceClassSlots(classId, slots, classDefault) {
-    const { error: delErr } = await supabase.from("timetable_slots").delete().eq("class_id", classId);
+    const { error: delErr } = await supabase.from(T.slots).delete().eq("class_id", classId);
     if (delErr) throw delErr;
     const staffByCode = new Map(staffList.map((s) => [s.staff_code, s.staff_id]));
     const withOwn = slots.map((t) => ({ ...t, ...lessonOverrides(t, classDefault, staffByCode) }));
     const { rows, missing } = slotRowsFor(classId, withOwn);
     if (rows.length > 0) {
-      const { error: insErr } = await supabase.from("timetable_slots").insert(rows);
+      const { error: insErr } = await supabase.from(T.slots).insert(rows);
       if (insErr) throw insErr;
     }
     return missing.length;
@@ -688,7 +707,7 @@ function ImportClassesInner() {
       try {
         for (const t of c.retag || []) {
           const { error: upErr } = await supabase
-            .from("timetable_slots")
+            .from(T.slots)
             .update({ staff_id: t.staff_id, room: t.room })
             .eq("slot_id", t.slot_id);
           if (upErr) throw upErr;
@@ -696,14 +715,14 @@ function ImportClassesInner() {
         }
         if (c.remove.length > 0) {
           const { error: delErr } = await supabase
-            .from("timetable_slots")
+            .from(T.slots)
             .delete()
             .in("slot_id", c.remove.map((t) => t.slot_id));
           if (delErr) throw delErr;
         }
         const { rows, missing } = slotRowsFor(c.class_id, c.add);
         if (rows.length > 0) {
-          const { error: insErr } = await supabase.from("timetable_slots").insert(rows);
+          const { error: insErr } = await supabase.from(T.slots).insert(rows);
           if (insErr) throw insErr;
         }
         classes++;
@@ -768,8 +787,9 @@ function ImportClassesInner() {
         const key = `${c.year_group}|${name}|${band || ""}`;
         if (blockKeyToId.has(key)) continue;
         const { data: inserted, error: blockErr } = await supabase
-          .from("curriculum_blocks")
+          .from(T.blocks)
           .insert({
+            ...yearCol,
             block_name: name,
             year_group: c.year_group,
             band,
@@ -793,7 +813,7 @@ function ImportClassesInner() {
         if (f.replaces_class_id) {
           const oldId = Number(f.replaces_class_id);
           const { error: upErr } = await supabase
-            .from("classes")
+            .from(T.classes)
             .update({
               class_code: c.class_code,
               subject_id: f.subject_id ? Number(f.subject_id) : c.subject_id || undefined,
@@ -806,7 +826,7 @@ function ImportClassesInner() {
             continue;
           }
           if (slots.length > 0) {
-            const { data: cls } = await supabase.from("classes").select("staff_id, room").eq("class_id", oldId).single();
+            const { data: cls } = await supabase.from(T.classes).select("staff_id, room").eq("class_id", oldId).single();
             unplaced += await replaceClassSlots(oldId, slots, cls || {});
           }
           replacedIds.push(oldId);
@@ -830,8 +850,9 @@ function ImportClassesInner() {
           room: (f.room ?? c.room) || null,
         };
         const { data: inserted, error: insErr } = await supabase
-          .from("classes")
+          .from(T.classes)
           .insert({
+            ...yearCol,
             class_code: c.class_code,
             subject_id: f.subject_id ? Number(f.subject_id) : c.subject_id || null,
             staff_id: classDefault.staff_id,
@@ -851,7 +872,7 @@ function ImportClassesInner() {
           if (slots.length > 0) unplaced += await replaceClassSlots(inserted.class_id, slots, classDefault);
           if (group && group.studentIds.length > 0 && (f.enrol_group ?? true)) {
             const { error: scErr } = await supabase
-              .from("student_class")
+              .from(T.enrol)
               .upsert(
                 group.studentIds.map((student_id) => ({ student_id, class_id: inserted.class_id })),
                 { onConflict: "student_id,class_id", ignoreDuplicates: true }
@@ -895,19 +916,19 @@ function ImportClassesInner() {
       // Order matters: slots and student links first, then the class
       // itself, so no foreign key is left dangling.
       const { error: slotsErr } = await supabase
-        .from("timetable_slots")
+        .from(T.slots)
         .delete()
         .in("class_id", selectedIds);
       if (slotsErr) throw slotsErr;
 
       const { error: scErr } = await supabase
-        .from("student_class")
+        .from(T.enrol)
         .delete()
         .in("class_id", selectedIds);
       if (scErr) throw scErr;
 
       const { error: classErr } = await supabase
-        .from("classes")
+        .from(T.classes)
         .delete()
         .in("class_id", selectedIds);
       if (classErr) throw classErr;
@@ -926,9 +947,28 @@ function ImportClassesInner() {
 
   const slotLabel = (t) => `${t.day_of_week} ${periodNames[t.period_number] || `period ${t.period_number}`}`;
 
+  if (plan === undefined) return <p>Loading...</p>;
+  if (plan && (plan.missing || plan.status !== "planning")) {
+    return <p>That academic year isn&apos;t being planned. Go back to <a href="/admin/next-year">Next Year Setup</a>.</p>;
+  }
+  if (plan && !plan.confirmed) {
+    return (
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "1rem" }}>
+        <h1>Import {plan.label} Nova-T timetable</h1>
+        <p>First set up and confirm {plan.label}&apos;s mentor structure at <a href={`/admin/next-year?year=${plan.id}`}>Next Year Setup</a>. The timetable import unlocks after that.</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "1rem" }}>
-      <h1>Import Class / Teacher / Room Changes</h1>
+      {plan && (
+        <div className="card" style={{ borderLeft: "4px solid #1d4a8f", background: "#e6eefb" }}>
+          <strong>Next year&apos;s timetable: {plan.label}.</strong> This import goes into {plan.label}&apos;s plan only.
+          This year&apos;s live timetable, registers and class lists are not touched. <a href={`/admin/next-year?year=${plan.id}`}>Back to Next Year Setup</a>
+        </div>
+      )}
+      <h1>{plan ? `Import ${plan.label} Nova-T timetable` : "Import Class / Teacher / Room Changes"}</h1>
       <p style={{ color: "#555" }}>
         Upload Nova-T's <code>TBTRA.DAT</code> – <code>TBTRF.DAT</code> files
         (select all of them at once). Nothing is saved until you apply it. The
