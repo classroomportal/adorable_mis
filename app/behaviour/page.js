@@ -10,6 +10,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
 import { resizePhotoToBase64 } from '../../lib/photo';
 import BehaviourPhoto from '../components/BehaviourPhoto';
+import { useBehaviourRules } from '../../lib/behaviourRules';
 
 // boarding_room_number is text, so a plain sort puts "10" before "2". Sort the
 // numeric ones by value and leave anything non-numeric (e.g. "3A") after them.
@@ -255,7 +256,8 @@ function BehaviourPageInner() {
   function selectAll() { setSelected(new Set(roster.map((s) => s.student_id))); }
   function selectNone() { setSelected(new Set()); }
 
-  const isSerious = form.type === 'negative' && Number(form.points) <= -5 && form.points !== '';
+  const { serious_event_points: seriousPoints } = useBehaviourRules();
+  const isSerious = form.type === 'negative' && Number(form.points) <= seriousPoints && form.points !== '';
 
   // Shrink on the device before upload: 800px on the long side is plenty to
   // see on a phone without being high definition. Measured on real iPad
@@ -294,7 +296,7 @@ function BehaviourPageInner() {
     }
 
     if (isSerious && !form.description.trim()) {
-      setStatus('This is a serious event (-5 points) — an explanation of what happened is required before it can be saved.');
+      setStatus(`This is a serious event (${seriousPoints} points or worse) — an explanation of what happened is required before it can be saved.`);
       return;
     }
 
@@ -528,7 +530,7 @@ function BehaviourPageInner() {
 
         {isSerious && (
           <div className="bl-serious">
-            <strong>Serious event (-5 points) — an explanation is required.</strong>{' '}
+            <strong>Serious event ({seriousPoints} points or worse) — an explanation is required.</strong>{' '}
             Explain what happened in your own words, following school protocol. Don&apos;t name any other
             student. A school office reviewer checks this before parents see it.
           </div>

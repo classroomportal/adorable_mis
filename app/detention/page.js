@@ -6,6 +6,7 @@ import RequireResource from '../RequireResource';
 import { schoolToday } from '../../lib/schoolTime';
 import { formatUKDate } from '../../lib/formatDate';
 import EventCommentEditor from '../components/EventCommentEditor';
+import { useBehaviourRules } from '../../lib/behaviourRules';
 
 const STATUS_OPTIONS = ['scheduled', 'attended', 'missed', 'cancelled'];
 const STATUS_LABELS = { scheduled: 'Scheduled', attended: 'Attended', missed: 'Missed', cancelled: 'Cancelled' };
@@ -31,6 +32,7 @@ function DetentionInner() {
   const [error, setError] = useState(null);
   const [eventsError, setEventsError] = useState(null);
   const [openComments, setOpenComments] = useState({}); // event_id -> comment shown
+  const rules = useBehaviourRules();
 
   const baseSat = saturdayOf(new Date(`${schoolToday()}T00:00:00Z`));
   const start = addDays(baseSat, weekOffset * 7);
@@ -114,7 +116,7 @@ function DetentionInner() {
     <div>
       <div className="no-print">
         <h1>Friday Detention List</h1>
-        <p>Students flagged by a serious single event or 10+ negative points, Saturday through Friday.</p>
+        <p>Students flagged by a single event of {rules.detention_single_event_points} points or worse, or a Saturday-to-Friday total of {rules.detention_weekly_total_points} or worse. The thresholds are set on <a href="/admin/lookups">Lookups</a>.</p>
         <div className="card" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
           <button className="secondary" onClick={() => setWeekOffset((w) => w - 1)}>← Previous week</button>
           <strong>{formatUKDate(fmt(start), { weekday: true })} to {formatUKDate(fmt(end), { weekday: true })}</strong>
@@ -169,7 +171,7 @@ function DetentionInner() {
                           </span>
                           <span style={{ whiteSpace: 'nowrap' }}>{e.category || 'Negative event'}</span>
                           <strong style={{ whiteSpace: 'nowrap' }}>{e.points} pts</strong>
-                          {e.serious && <span className="badge" style={{ background: 'var(--yellow-200)', color: 'var(--ink)' }}>Serious — detention on its own</span>}
+                          {e.serious && <span className="badge" style={{ background: 'var(--yellow-200)', color: 'var(--ink)' }}>Detention on its own</span>}
                           {e.staff && <span style={{ color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>{e.staff.first_name} {e.staff.last_name}</span>}
                           {(e.description || e.photo_id) && (
                             <button
