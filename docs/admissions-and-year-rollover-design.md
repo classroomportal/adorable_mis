@@ -413,16 +413,58 @@ subject_choices
 
 ## Decision 5: mapping students into next year's classes
 
-This is the step after the Nova-T plan import. It works at **class level** and
-then **student level**, so most of it is automatic and the work left is only
-the real choices.
+This is the step after the Nova-T plan import. It works at **block level**,
+then **class level**, then **student level**, so most of it is automatic and
+the work left is only the real choices.
 
-**Class mapping, automatic.** For each current class, work out the code it
-becomes: replace the year at the front with the year the class's students
-move into. `7a/Ma1` becomes `8a/Ma1`, `10_1/Ma` becomes `11_1/Ma`, and
-`8GIR/Pe` becomes `9GIR/Pe`. If a plan class with that code exists, it is
-proposed as the mapping. This matches what already happens: Y7→8, Y8→9 and
-Y10→11 are mostly "same set, one year up".
+**Step 1: mark which of this year's blocks are promotable** (the principal's
+requirement, 29 Sept 2026). Each current Nova-T block is marked in one of two
+ways:
+
+- **Promotable:** its groups carry on into a block next year. Everyone in
+  `7a/Ma1` in "Maths sets" goes into the matching class in next year's Y8
+  "Maths sets".
+- **Not promotable:** the block ends this year. Its students are placed next
+  year from their subject choices (Decision 4b) or by hand.
+
+```
+plan_block_mappings
+  from_block_id     → curriculum_blocks        -- this year's block
+  promotable        boolean
+  to_plan_block_id  → plan_curriculum_blocks   -- next year's block (null until chosen)
+  set_by (stamp_actor), set_at
+  unique (from_block_id)
+```
+
+The flag can be set **before** next year's timetable arrives from Nova-T, so
+the plan is ready. The target block is chosen **after** the plan import, and is
+suggested automatically: the block with the same name one year up (Y7
+"Maths sets" → Y8 "Maths sets"). A block can also be pointed at a
+differently named one when Nova-T renames it. Suggested starting values, all
+of which can be changed:
+
+| This year | Suggested | Why |
+|---|---|---|
+| Y7, Y8 (all blocks) | promotable | same structure next year |
+| Y9 "Class", sets | promotable where a Y10 block of the same name exists | Maths, Mentor and Prep carry on |
+| Y10 Option, MFL, Pathway, Vocational, sets | promotable | two-year IGCSE courses continue into Y11 |
+| Y11 Option, MFL, Pathway, Vocational | not promotable | students drop one subject going into Y12 |
+| Y12 | not promotable | final year |
+| Other Half sets, Sports | not promotable | OH is chosen each term in Formwork, not carried over |
+
+Only students whose progression is `move_up` are carried by a promotable
+block. Anyone repeating a year or changing year is placed by hand, because
+"one year up" doesn't apply to them.
+
+**Step 2: class mapping, automatic, within promotable blocks only.** For
+each class in a promotable block, work out the code it becomes: replace the
+year at the front with the year the class's students move into. `7a/Ma1`
+becomes `8a/Ma1`, `10_1/Ma` becomes `11_1/Ma`, and `8GIR/Pe` becomes
+`9GIR/Pe`. If that code exists **in the target plan block**, it is proposed as
+the mapping. If it doesn't, the page asks someone to choose the class by
+hand, from that block only. This matches what already happens: Y7→8, Y8→9 and
+Y10→11 are mostly "same set, one year up". Classes in blocks that aren't
+promotable are never auto-mapped, even if a code happens to match.
 
 ```
 plan_class_mappings
@@ -430,13 +472,18 @@ plan_class_mappings
   source text ('auto' | 'manual'), confirmed boolean
 ```
 
-`/admin/next-year/mapping` lists, for each year group, the proposed mappings,
-the classes with no match (on either side), and the students each one
-carries. Staff confirm or correct them, then **Apply**, which fills
-`plan_student_class` for every student whose outcome is `move_up` or
-`repeat`. Students leaving are skipped.
+**Step 3: apply.** `/admin/next-year/mapping` shows, for each year group:
 
-**What can't be mapped by code, and is done by hand:**
+- the blocks and their promotable flag;
+- the proposed class mappings;
+- the classes with no match (on either side);
+- the students each class carries.
+
+Staff confirm or correct them, then **Apply**, which fills
+`plan_student_class` for every `move_up` student in a promotable block.
+Students leaving are skipped.
+
+**What isn't carried by a promotable block, and how it is placed:**
 
 - **Y9 → Y10 options** (Option, MFL, Pathway, Vocational) and **Y11 → Y12**
   (Choice 1/2, Pathway). These come from the students' subject choices
@@ -450,6 +497,8 @@ carries. Staff confirm or correct them, then **Apply**, which fills
 **Readiness check.** `next_year_readiness()` returns everything that would
 stop a clean switch:
 - students with no progression decision;
+- this year's blocks for year groups moving up that haven't been marked
+  promotable or not, and promotable blocks with no target block;
 - Y9 and Y11 students with no subject choices;
 - students with no class in a block of their new year group;
 - plan classes with no teacher or no lessons;
@@ -615,6 +664,8 @@ work, so admissions comes first.
 - **Retention:** keep indefinitely for now; anonymising is built in, for later.
 - **Options:** Y9 choose options for Y10. Going into Y12, students drop one
   subject.
+- **Blocks:** this year's Nova-T blocks can be marked as promotable into the
+  new year.
 - **Switch:** automatic, on the evening the boarders arrive, with moving up
   planned before.
 
