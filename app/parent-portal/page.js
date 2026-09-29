@@ -91,9 +91,12 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
       if (!parentId) return;
       const { data } = await supabase
         .from('student_parent')
-        .select('students(student_id, first_name, last_name, year_group, form_class, photo_base64)')
+        .select('students(student_id, first_name, last_name, year_group, form_class, photo_base64, status)')
         .eq('parent_id', parentId);
-      const list = (data || []).map((row) => row.students).filter(Boolean);
+      // Parents see only children still at the school (migration 255 does
+      // this in RLS); the status filter covers staff who are also parents,
+      // and staff viewing as a parent, whose staff access reads leavers too.
+      const list = (data || []).map((row) => row.students).filter((s) => s && s.status === 'active');
       setChildren(list);
       if (list.length === 1) setSelectedId(list[0].student_id);
     }

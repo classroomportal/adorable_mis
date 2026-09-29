@@ -65,6 +65,8 @@ function StudentDetail() {
   // Parents and the student_parent links are writable by admin and the
   // school office under their RLS policies, so only they get the Edit button.
   const canEditParents = isAdmin || (staffRoles || []).includes('school_office');
+  // Word copies of transcripts are for the office to tidy up before sending.
+  const canDownloadWordTranscripts = isAdmin || ['school_office', 'smt', 'assessment_manager'].some((r) => (staffRoles || []).includes(r));
   const [editingParents, setEditingParents] = useState(false);
   // Portal login state per linked parent (parent_login_status, migration 159)
   // and the outcome of the last Create login click, keyed by parent_id.
@@ -739,7 +741,7 @@ function StudentDetail() {
       {activeView === 'documents' && (
         <Section title="Reports &amp; Documents">
           <TermTestScoresDownload studentId={student.student_id} />
-          <KeyStageTranscriptDownload studentId={student.student_id} />
+          <KeyStageTranscriptDownload studentId={student.student_id} allowWord={canDownloadWordTranscripts} />
           <PublishedDocuments studentId={student.student_id} />
         </Section>
       )}
