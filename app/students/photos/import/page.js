@@ -12,6 +12,9 @@ function ImportInner() {
   const [status, setStatus] = useState(null);
   const [errors, setErrors] = useState([]);
   const [preview, setPreview] = useState([]);
+  // On by default: an export from the old system can hold an older photo
+  // than one already taken in Formwork (e.g. for students who left this term).
+  const [keepExisting, setKeepExisting] = useState(true);
 
   async function handleFile(e) {
     const file = e.target.files[0];
@@ -34,14 +37,22 @@ function ImportInner() {
 
   async function handleImport() {
     setStatus('Matching students by UPN...');
-    const { data: students } = await supabase.from('students').select('student_id, upn, first_name, last_name');
+    // Current and left students alike, so leavers' photos can be imported.
+    // Only the ids of students with a photo are fetched, not the photos.
+    const [{ data: students }, { data: withPhoto }] = await Promise.all([
+      supabase.from('students').select('student_id, upn, first_name, last_name').range(0, 9999),
+      supabase.from('students').select('student_id').not('photo_base64', 'is', null).neq('photo_base64', '').range(0, 9999),
+    ]);
     const byUpn = Object.fromEntries((students || []).map((s) => [s.upn, s]));
+    const hasPhoto = new Set((withPhoto || []).map((s) => s.student_id));
 
     const problems = [];
     const matched = [];
+    let kept = 0;
     rows.forEach((r) => {
       const s = byUpn[r.upn];
       if (!s) problems.push(`No student found with UPN ${r.upn}`);
+      else if (keepExisting && hasPhoto.has(s.student_id)) kept += 1;
       else matched.push({ student_id: s.student_id, photo_base64: r.photo });
     });
 
@@ -61,7 +72,7 @@ function ImportInner() {
     }
 
     setErrors(problems);
-    setStatus(`Saved ${done} of ${matched.length} photos.${problems.length ? ' Some rows had issues — see below.' : ''}`);
+    setStatus(`Saved ${done} of ${matched.length} photos.${kept ? ` Kept the existing photo for ${kept} student${kept === 1 ? '' : 's'}.` : ''}${problems.length ? ' Some rows had issues — see below.' : ''}`);
   }
 
   if (!isAdmin) {
@@ -74,7 +85,7 @@ function ImportInner() {
 
       <div className="card">
         <p>Expects the SIMS photo export XML (one <code>&lt;Record&gt;</code> per student, with <code>UPN</code> and a base64-encoded <code>Photo</code>).</p>
-        <p>Run migration <code>029_student_photos.sql</code> first — it adds the photo column to the students table.</p>
+        <p>Photos are matched by UPN to current students and students who have left.</p>
         <input type="file" accept=".xml" onChange={handleFile} />
       </div>
 
@@ -89,7 +100,11 @@ function ImportInner() {
               </div>
             ))}
           </div>
-          <button style={{ marginTop: '1rem' }} onClick={handleImport}>Import all {rows.length} photos</button>
+          <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem', fontWeight: 400 }}>
+            <input type="checkbox" checked={keepExisting} onChange={(e) => setKeepExisting(e.target.checked)} style={{ width: 'auto' }} />
+            Keep photos students already have (only fill in missing ones)
+          </label>
+          <button style={{ marginTop: '0.75rem' }} onClick={handleImport}>Import {rows.length} photos</button>
         </div>
       )}
 
