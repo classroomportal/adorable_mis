@@ -1,10 +1,10 @@
 # Admissions and moving up a year (2027/28): design
 
 Status: design only, 29 September 2026. Nothing here has been built yet.
-Revised the same day with the principal's answers on how admissions works and
-when the switch happens. The remaining open questions are at the end.
+Revised the same day, twice, with the principal's answers on admissions, fees,
+options, retention and when the switch happens. Open questions are at the end.
 
-This covers three things that all have to be ready before September 2027:
+This covers four things that all have to be ready before September 2027:
 
 1. **Admissions.** The paid admission form, a fixed test date, entrance tests
    (English and Maths, a different paper for each year group, plus CAT4), the
@@ -13,7 +13,9 @@ This covers three things that all have to be ready before September 2027:
 2. **Moving up.** For each current student, decide what happens next year:
    move up, repeat, change year, or leave (including which Year 11s go on to
    Year 12).
-3. **Next year's timetable.** Import the 2027/28 Nova-T timetable *before* the
+3. **Subject choices.** Y9 choose options, and students going into Y12 drop
+   one subject. Formwork collects both, and the results go to Nova-T.
+4. **Next year's timetable.** Import the 2027/28 Nova-T timetable *before* the
    summer and map students into it. The whole school then switches over
    automatically, in one step, at the start of the new year's first term.
 
@@ -147,7 +149,7 @@ applicants
   sibling_student_id      → students (nullable), family_id → families (nullable)
   heard_about_us          text
   form_fee_paid_on date, form_fee_amount numeric, form_fee_receipt text,
-  form_fee_recorded_by (stamp_actor)
+  form_fee_recorded_by (stamp_actor)   -- recorded by the bursar
   session_id              → admission_sessions   -- the test date fixed for them
   status                  text               -- see pipeline below
   application_date        date
@@ -228,6 +230,13 @@ enquiry → form_paid → test_booked → tested ─┬→ invited_to_interview 
             any stage → withdrawn (by the family)
 ```
 
+- **The bursar records the form fee** at `/bursar/admission-forms`, using
+  `record_admission_form_fee(applicant_id, paid_on, receipt)`. The function
+  checks the caller is the bursar (or admin). The amount is the fixed fee for
+  that entry year, `academic_years.admission_form_fee`, so it isn't typed in
+  each time. The bursar's page shows only names, entry year and group,
+  contacts and payment, never test scores or interview notes. Recording the
+  payment moves the applicant from `enquiry` to `form_paid`.
 - **`test_booked` needs the form fee recorded.** No test date can be fixed
   for an unpaid form.
 - **`tested`** is reached once English, Maths and CAT4 are all entered.
@@ -348,6 +357,60 @@ Swapping a student into a different year (the "change_year" outcome) is the
 same thing as moving up, with a year group chosen by hand. It then goes
 through the same mapping as everyone else.
 
+## Decision 4b: choosing next year's subjects (Y9 options, Y11 → Y12 drop)
+
+The principal confirmed that Y9 students **choose options** for Year 10, and
+that students going into Year 12 **drop one subject**. *Our reading of that:*
+they keep their Year 11 subjects except one, which they pick. Please correct
+this if Y12 works differently.
+
+Formwork collects the choices. They then have to go to Nova-T, because the
+timetabler builds next year's option blocks *from* the choices. So this
+happens in the **Spring term**, before the Nova-T timetable is built.
+
+```
+subject_choice_rounds
+  round_id pk, academic_year_id (the year being chosen FOR)
+  from_year_group int           -- 9 or 11
+  kind text                     -- 'choose' (Y9) | 'drop_one' (Y11)
+  opens_at, closes_at timestamptz
+  number_to_choose int          -- 'choose' only
+  number_of_reserves int        -- 'choose' only
+  instructions text
+
+subject_choice_offer            -- 'choose' rounds: the subjects on offer
+  round_id, subject_id, capacity int (nullable), notes
+
+subject_choices
+  round_id, student_id, subject_id,
+  preference int                -- 1..n, then reserves after number_to_choose
+  is_drop boolean               -- 'drop_one' rounds: the subject dropped
+  chosen_by (stamp_actor), chosen_at
+  unique (round_id, student_id, subject_id)
+```
+
+- **Y9 options.** Students choose in the student portal while the round is
+  open, like Other Half choices (`choose_other_half_activity()`). A function,
+  `submit_subject_choices()`, checks the window, the student's year group and
+  the number of subjects. Mentors, HoDs and admin can enter or change choices
+  for a student. After the window closes, only admin and the assessment
+  manager can change them.
+- **Y11 → Y12, drop one.** Each student sees their current examined subjects,
+  worked out from their Year 11 classes (`student_class` → `classes.subject_id`,
+  leaving out Mentor, Prep, Sports and Other Half), and picks one to drop.
+  The rest carry on. This only applies to students whose progression
+  (Decision 4) is `move_up` into Year 12.
+- **`/admin/next-year/choices`** shows who hasn't chosen, the numbers for each
+  subject (against capacity), and the popular combinations. That last view is
+  what the timetabler needs to build the blocks. It **exports a CSV for
+  Nova-T**: UPN, name and chosen subjects (their Nova-T `subject_code`).
+- **After the Nova-T plan import,** the choices place students automatically
+  (Decision 5). A Y10 student who chose Geography goes into the plan class
+  for Geography in whichever option block holds it. If Geography runs in more
+  than one block, or the student ended up with a reserve, they're left for a
+  person to place. For Y12, each subject kept follows the student into the Y12
+  plan class for that subject, and the dropped one is left out.
+
 ## Decision 5: mapping students into next year's classes
 
 This is the step after the Nova-T plan import. It works at **class level** and
@@ -376,9 +439,9 @@ carries. Staff confirm or correct them, then **Apply**, which fills
 **What can't be mapped by code, and is done by hand:**
 
 - **Y9 → Y10 options** (Option, MFL, Pathway, Vocational) and **Y11 → Y12**
-  (Choice 1/2, Pathway). These are new choices, not continuations. Use block
-  allocation in plan mode, or import a UPN/Class file from Nova-T if options
-  are blocked there.
+  (Choice 1/2, Pathway). These come from the students' subject choices
+  (Decision 4b). Anyone the choices can't place is left for a person, in
+  block allocation in plan mode.
 - **Incoming students.** Their compound "Class" group comes from their form
   class. Sets are placed by hand, and entrance test scores are shown next to
   each name to help with Maths and English setting.
@@ -387,6 +450,7 @@ carries. Staff confirm or correct them, then **Apply**, which fills
 **Readiness check.** `next_year_readiness()` returns everything that would
 stop a clean switch:
 - students with no progression decision;
+- Y9 and Y11 students with no subject choices;
 - students with no class in a block of their new year group;
 - plan classes with no teacher or no lessons;
 - accepted applicants who haven't been enrolled;
@@ -404,11 +468,13 @@ the new year's first term.** Moving up is planned beforehand, in Decisions
 
 ### When it runs
 
-`academic_years` gets `switch_at timestamptz`. By default it is **01:00 Lagos
-time on the start date of the new year's first term** (`terms.start_date`,
-using `school_today()` and `school_now()` because the database clock is UTC).
-An admin can move it at `/admin/next-year`, for example to the evening before
-boarders arrive. Until then, the old year's timetable stays live through the
+`academic_years` gets `switch_at timestamptz`. By default it is **18:00 Lagos
+time on the evening before the new year's first term starts**, the evening
+the boarders arrive (`terms.start_date` minus one day, using `school_today()`
+and `school_now()` because the database clock is UTC). That way houseparents
+see the new year groups and mentor groups when the students arrive, and
+teachers have next year's registers on the first morning. An admin can move it
+at `/admin/next-year` if the arrival day is different. Until then, the old year's timetable stays live through the
 summer, which does no harm while school is closed.
 
 A `pg_cron` job, `academic-year-switch`, runs every 15 minutes. It does
@@ -487,7 +553,16 @@ Everything is written with `formwork.change_note = 'Automatic year switch'`
 - **Applicant data is children's personal data**, from families who may never
   join the school. Reading and writing is limited to `has_resource_access('/admissions')`
   (admissions, SMT, admin by default), not "any staff". Interview notes and
-  decisions can be limited further if the school wants.
+  decisions can be limited further if the school wants. The bursar's form-fee
+  page goes through a function that returns only the fields it needs.
+- **Retention: kept indefinitely for now** (the principal's decision,
+  29 Sept 2026). Nothing is deleted automatically. The Nigeria Data Protection
+  Act 2023 expects personal data to be kept no longer than needed, so
+  unsuccessful applicants' records are built to be anonymised in one step
+  (`anonymise_applicant()`): the name, contacts, date of birth and notes are
+  removed, and the entry year, year group, previous school and scores are
+  kept for statistics. That way a retention period can be added later
+  without redesigning anything.
 - `decided_by`, `entered_by`, `sent_by`, `form_fee_recorded_by` and
   `created_by` are stamped by `stamp_actor()`, never taken from the page.
 - **Admissions staff can post results and make offers themselves.** The
@@ -503,7 +578,8 @@ Everything is written with `formwork.change_note = 'Automatic year switch'`
   admin only.
 - New resource keys: `/admissions`, `/admissions/sessions`,
   `/admissions/papers`, `/admissions/letters`, `/admissions/schools`,
-  `/admin/next-year`, `/admin/next-year/progression`,
+  `/bursar/admission-forms`, `/admin/next-year`,
+  `/admin/next-year/progression`, `/admin/next-year/choices`,
   `/admin/next-year/mapping`.
 - No `app/api` routes are needed. Everything is RLS plus
   `SECURITY DEFINER` functions that check the caller first.
@@ -517,7 +593,8 @@ work, so admissions comes first.
 |---|---|---|
 | 1 | `academic_years`; applicants, form fee, previous schools; papers per year group; test days and the English/Maths/CAT4 grid; posting results with standard letters; interview and reading age; offers | before the first test day |
 | 2 | `incoming` status: audit the student queries, `enrol_applicant()` (including the CAT4 copy), locked logins | before the first offers are accepted |
-| 3 | `student_progressions` and its page | Summer term 2027 |
+| 3 | Subject choice rounds: Y9 options and Y11 drop-one, in the student portal; `/admin/next-year/choices`; export for Nova-T | Spring term 2027, before the timetabler blocks options |
+| 3b | `student_progressions` and its page | Summer term 2027 |
 | 4 | Plan tables; plan mode on the Nova-T import, block allocation, UPN/Class import and timetable views; mapping; readiness check | when Nova-T 2027/28 is ready (June/July 2027) |
 | 5 | Archive tables, behaviour class snapshot, the switch function, the `academic-year-switch` cron job and reminder emails, `/admin/next-year`; tested on a branch | end of Summer term 2027 |
 
@@ -530,29 +607,24 @@ work, so admissions comes first.
   CAT4. The pass mark is a 50% average of English and Maths.
 - **Process:** paid form → test date → result posted → interview, reject or
   waiting list.
+- **Form fee:** recorded by the bursar. A fixed amount.
 - **Reading age:** an older paper-based test, not NGRT.
-- **Offers:** made by admissions staff, by letter, from standard letters.
-- **Switch:** automatic at the start of term, with moving up planned before.
+- **Offers:** made by admissions staff, by letter, from standard letters. The
+  principal will upload the letters.
+- **Incoming status:** yes. Accepted applicants become `incoming` students.
+- **Retention:** keep indefinitely for now; anonymising is built in, for later.
+- **Options:** Y9 choose options for Y10. Going into Y12, students drop one
+  subject.
+- **Switch:** automatic, on the evening the boarders arrive, with moving up
+  planned before.
 
 ## Open questions
 
-1. **Incoming students before September.** Is the `incoming` status right
-   (invoiceable, placeable in next year's classes, invisible to registers and
-   the parent portal)? Or should accepted applicants stay out of `students`
-   until the switch, which means fees are handled outside Formwork until then?
-2. **The standard letters.** Please send the current wording of each one
-   (test date, invitation to interview, waiting list, rejection, offer).
-   They'll be loaded as the starting templates. Is there anything the family
-   must return with the offer (acceptance form, deposit)? That would decide
-   how `accepted` is recorded.
-3. **The admission form fee.** Is it recorded by admissions staff or by the
-   bursar, and is there a set amount per year?
-4. **Retention.** How long are unsuccessful applicants kept? The Nigeria Data
-   Protection Act expects a limit. We suggest deleting or anonymising them
-   12 months after the entry year starts.
-5. **Y9 options and Y12 choices.** Are they blocked in Nova-T (so a UPN/Class
-   file comes out of it), or should Formwork collect the choices?
-6. **Anything else from the application or interview:** for example previous
+1. **The standard letters:** waiting for the principal to upload them. Is
+   there anything the family must return with the offer (acceptance form,
+   deposit)? That decides what marks an applicant `accepted`.
+2. **Y12 "drop one subject":** is our reading right (keep Year 11's subjects
+   except one)? And how many options do Y9 choose, with how many reserves?
+3. **Anything else from the application or interview:** for example previous
    school reports, medical or SEN notes, or fee sponsor.
-7. **The exact switch time.** Is 01:00 on the first day of term right, or
-   should it be the evening boarders arrive?
+4. **The form fee amount** for 2027/28 entry.
