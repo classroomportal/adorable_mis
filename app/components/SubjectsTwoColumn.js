@@ -8,7 +8,9 @@
 import { classifyGrade, STYLE, visibleTargets } from '../../lib/gradeCompare';
 
 function SubjectRow({ t, results, gradePoints }) {
-  const latest = results.find((r) => r.subject_id === t.subject_id);
+  // Newest result that has a grade: some result rows (e.g. imported exam
+  // percentages) carry only a score, and would otherwise show as "—".
+  const latest = results.find((r) => r.subject_id === t.subject_id && r.grade);
   const latestGrade = latest?.grade ?? '—';
   const cls = classifyGrade(t.target_grade, latestGrade, gradePoints);
   return (
@@ -20,10 +22,10 @@ function SubjectRow({ t, results, gradePoints }) {
   );
 }
 
-function SubjectTable({ items, results, gradePoints }) {
+function SubjectTable({ items, results, gradePoints, gradeHeading }) {
   return (
     <table>
-      <thead><tr><th>Subject</th><th>Target</th><th>Grade</th></tr></thead>
+      <thead><tr><th>Subject</th><th>Target</th><th>{gradeHeading}</th></tr></thead>
       <tbody>
         {items.map((t) => (
           <SubjectRow key={t.subject_id} t={t} results={results} gradePoints={gradePoints} />
@@ -33,7 +35,7 @@ function SubjectTable({ items, results, gradePoints }) {
   );
 }
 
-export default function SubjectsTwoColumn({ targets, results, gradePoints, enrolledSubjectIds }) {
+export default function SubjectsTwoColumn({ targets, results, gradePoints, enrolledSubjectIds, gradeHeading = 'Grade' }) {
   const shown = visibleTargets(targets, results, enrolledSubjectIds);
   const mid = Math.ceil(shown.length / 2);
   const left = shown.slice(0, mid);
@@ -41,9 +43,9 @@ export default function SubjectsTwoColumn({ targets, results, gradePoints, enrol
 
   return (
     <div className="subjects-two-col">
-      <div className="table-scroll"><SubjectTable items={left} results={results} gradePoints={gradePoints} /></div>
+      <div className="table-scroll"><SubjectTable items={left} results={results} gradePoints={gradePoints} gradeHeading={gradeHeading} /></div>
       {right.length > 0 && (
-        <div className="table-scroll"><SubjectTable items={right} results={results} gradePoints={gradePoints} /></div>
+        <div className="table-scroll"><SubjectTable items={right} results={results} gradePoints={gradePoints} gradeHeading={gradeHeading} /></div>
       )}
     </div>
   );

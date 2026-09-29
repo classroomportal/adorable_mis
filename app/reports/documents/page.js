@@ -70,7 +70,10 @@ const HOW_LABEL = {
 
 function UploadDocumentsInner() {
   const [students, setStudents] = useState([]);
+  const [who, setWho] = useState('current'); // current | left | all
   const [yearGroup, setYearGroup] = useState('');
+  const [yearLeft, setYearLeft] = useState('');
+  const [withParent, setWithParent] = useState(null); // Set of student_ids, null while unknown
   const [title, setTitle] = useState('');
   const [rows, setRows] = useState([]); // [{ key, file, studentId, how, result }]
   const [running, setRunning] = useState(false);
@@ -81,10 +84,10 @@ function UploadDocumentsInner() {
   useEffect(() => {
     supabase
       .from('students')
-      .select('student_id, first_name, last_name, preferred_name, legal_first_name, middle_name, upn, year_group')
-      .eq('status', 'active')
+      .select('student_id, first_name, last_name, preferred_name, legal_first_name, middle_name, upn, year_group, status, leaving_date')
       .order('last_name')
       .order('first_name')
+      .range(0, 9999)
       .then(({ data }) => setStudents(data || []));
     loadBatches();
   }, []);
@@ -106,13 +109,25 @@ function UploadDocumentsInner() {
     setBatches([...byTitle.values()]);
   }
 
+  const byWho = useMemo(
+    () => students.filter((s) => (who === 'all' ? true : who === 'left' ? s.status !== 'active' : s.status === 'active')),
+    [students, who]
+  );
+  const yearsLeft = useMemo(
+    () => [...new Set(byWho.filter((s) => s.status !== 'active' && s.leaving_date).map((s) => s.leaving_date.slice(0, 4)))].sort().reverse(),
+    [byWho]
+  );
+  const afterYearLeft = useMemo(() => {
+    if (!yearLeft || who === 'current') return byWho;
+    return byWho.filter((s) => s.status !== 'active' && (yearLeft === 'none' ? !s.leaving_date : s.leaving_date?.startsWith(yearLeft)));
+  }, [byWho, yearLeft, who]);
   const yearGroups = useMemo(
-    () => [...new Set(students.map((s) => s.year_group))].sort((a, b) => a - b),
-    [students]
+    () => [...new Set(afterYearLeft.map((s) => s.year_group))].sort((a, b) => a - b),
+    [afterYearLeft]
   );
   const pool = useMemo(
-    () => (yearGroup ? students.filter((s) => s.year_group === Number(yearGroup)) : students),
-    [students, yearGroup]
+    () => (yearGroup ? afterYearLeft.filter((s) => s.year_group === Number(yearGroup)) : afterYearLeft),
+    [afterYearLeft, yearGroup]
   );
   const byId = useMemo(() => new Map(students.map((s) => [s.student_id, s])), [students]);
 
@@ -157,6 +172,22 @@ function UploadDocumentsInner() {
     return perStudent;
   }, [rows]);
   const duplicates = [...counts.values()].some((n) => n > 1);
+
+  // Which matched students have a parent who can sign in to see the document.
+  const matchedKey = [...counts.keys()].sort((a, b) => a - b).join(',');
+  useEffect(() => {
+    const ids = matchedKey ? matchedKey.split(',').map(Number) : [];
+    setWithParent(null);
+    if (!ids.length) return;
+    let stale = false;
+    supabase.rpc('students_with_parent_login', { p_student_ids: ids })
+      .then(({ data, error }) => {
+        if (stale || error) return;
+        setWithParent(new Set((data || []).map((x) => (typeof x === 'object' ? Object.values(x)[0] : x))));
+      });
+    return () => { stale = true; };
+  }, [matchedKey]);
+  const noParent = withParent ? [...counts.keys()].filter((id) => !withParent.has(id)) : [];
   const ready = rows.filter((r) => r.studentId);
   const needsCheck = rows.filter((r) => r.how === 'surname' || r.how === 'ambiguous').length;
   const cleanTitle = title.trim();
@@ -257,7 +288,9 @@ function UploadDocumentsInner() {
     loadBatches();
   }
 
-  const studentLabel = (s) => `${s.last_name}, ${s.preferred_name || s.first_name} (Year ${s.year_group})`;
+  const studentLabel = (s) => `${s.last_name}, ${s.preferred_name || s.first_name} (${s.status === 'active'
+    ? `Year ${s.year_group}`
+    : `left${s.leaving_date ? ` ${s.leaving_date.slice(0, 4)}` : ''}, Year ${s.year_group}`})`;
 
   return (
     <div>
@@ -280,13 +313,36 @@ function UploadDocumentsInner() {
           />
         </label>
 
-        <label>
-          Match against
-          <select value={yearGroup} onChange={(e) => setYearGroup(e.target.value)}>
-            <option value="">All active students</option>
-            {yearGroups.map((y) => <option key={y} value={y}>Year {y}</option>)}
-          </select>
-        </label>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <label style={{ flex: '1 1 180px' }}>
+            Students
+            <select value={who} onChange={(e) => { setWho(e.target.value); setYearLeft(''); setYearGroup(''); }}>
+              <option value="current">Current students</option>
+              <option value="left">Students who have left</option>
+              <option value="all">Current and left</option>
+            </select>
+          </label>
+          {who !== 'current' && (
+            <label style={{ flex: '1 1 150px' }}>
+              Year left
+              <select value={yearLeft} onChange={(e) => { setYearLeft(e.target.value); setYearGroup(''); }}>
+                <option value="">Any year</option>
+                {yearsLeft.map((y) => <option key={y} value={y}>{y}</option>)}
+                <option value="none">No leaving date</option>
+              </select>
+            </label>
+          )}
+          <label style={{ flex: '1 1 150px' }}>
+            {who === 'current' ? 'Year group' : 'Year group (last year group for leavers)'}
+            <select value={yearGroup} onChange={(e) => setYearGroup(e.target.value)}>
+              <option value="">All year groups</option>
+              {yearGroups.map((y) => <option key={y} value={y}>Year {y}</option>)}
+            </select>
+          </label>
+        </div>
+        <p style={{ color: '#666', fontSize: '0.9rem', margin: 0 }}>
+          Matching against {pool.length} student{pool.length === 1 ? '' : 's'}.
+        </p>
 
         <label>
           PDF files
@@ -321,6 +377,12 @@ function UploadDocumentsInner() {
             </button>
           )}
         </div>
+        {noParent.length > 0 && (
+          <p style={{ color: '#8a6d00', margin: 0 }}>
+            {noParent.length} matched student{noParent.length === 1 ? ' has' : 's have'} no parent with a Formwork login, so
+            no parent will see {noParent.length === 1 ? 'that document' : 'those documents'} until one is linked. They are marked below.
+          </p>
+        )}
         {duplicates && <p style={{ color: 'red', margin: 0 }}>Two or more files are matched to the same student — highlighted below.</p>}
         {status && <p style={{ margin: 0 }}>{status}</p>}
       </div>
@@ -351,6 +413,9 @@ function UploadDocumentsInner() {
                       {r.result === 'skipped' && <span style={{ color: '#666' }}>Skipped</span>}
                       {r.result && r.result.startsWith('Error') && <span style={{ color: 'red' }}>{r.result}</span>}
                       {!r.result && (dup ? <span style={{ color: 'red' }}>Same student as another file</span> : how.text)}
+                      {!r.result && r.studentId && withParent && !withParent.has(r.studentId) && (
+                        <div style={{ color: '#8a6d00', fontSize: '0.8rem' }}>No parent login — parents won&apos;t see it yet</div>
+                      )}
                     </td>
                     <td>
                       <button type="button" className="secondary" onClick={() => removeRow(r.key)} disabled={running} style={{ fontSize: '0.8rem' }}>

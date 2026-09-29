@@ -4,10 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { LESSON_COLUMNS, lessonRoom, lessonTeacher } from '../../lib/lessons';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
-import TermTestScoresDownload from '../components/TermTestScoresDownload';
-import PublishedDocuments from '../components/PublishedDocuments';
-import KeyStageTranscriptDownload from '../components/KeyStageTranscriptDownload';
-import SubjectsTwoColumn from '../components/SubjectsTwoColumn';
+import ResultsOverview from '../components/ResultsOverview';
 import { visibleTargets } from '../../lib/gradeCompare';
 import { formatTimeRange } from '../../lib/formatTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
@@ -51,6 +48,7 @@ function PortalInner() {
   const [otherHalf, setOtherHalf] = useState([]); // chosen OH activities (other_half_timetable)
   const [timetableLoading, setTimetableLoading] = useState(true);
   const [studentName, setStudentName] = useState('');
+  const [yearGroup, setYearGroup] = useState(null);
   const [enrolledSubjectIds, setEnrolledSubjectIds] = useState(null); // null = enrolment not loaded yet
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
   // Warning in the last hours before a tuckshop ordering window closes.
@@ -129,8 +127,9 @@ function PortalInner() {
   useEffect(() => {
     async function loadStudentName() {
       if (!studentId) { setStudentName(''); return; }
-      const { data } = await supabase.from('students').select('first_name, last_name').eq('student_id', studentId).single();
+      const { data } = await supabase.from('students').select('first_name, last_name, year_group').eq('student_id', studentId).single();
       setStudentName(data ? `${data.first_name} ${data.last_name}` : '');
+      setYearGroup(data?.year_group ?? null);
     }
     loadStudentName();
   }, [studentId]);
@@ -308,12 +307,15 @@ function PortalInner() {
       {activeView === 'assessment' && (
       <div className="card">
         <h2>Results vs Target</h2>
-        <TermTestScoresDownload studentId={studentId} />
-        <KeyStageTranscriptDownload studentId={studentId} />
-        <PublishedDocuments studentId={studentId} />
-        {visibleTargets(targets, results, enrolledSubjectIds).length === 0 ? <p>No target grades set yet.</p> : (
-          <SubjectsTwoColumn targets={targets} results={results} gradePoints={gradePoints} enrolledSubjectIds={enrolledSubjectIds} />
-        )}
+        <ResultsOverview
+          studentId={studentId}
+          yearGroup={yearGroup}
+          targets={targets}
+          results={results}
+          gradePoints={gradePoints}
+          enrolledSubjectIds={enrolledSubjectIds}
+          forStudent
+        />
         <p style={{ marginTop: '0.75rem' }}>
           <a href="/results/subject-overview">View my subject overview (max &amp; average %) →</a>
         </p>

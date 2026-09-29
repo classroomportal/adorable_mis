@@ -4,7 +4,10 @@ import { supabase } from '../../lib/supabaseClient';
 import { schoolToday } from '../../lib/schoolTime';
 import { generateTermTestScores } from '../../lib/generateTermTestScores';
 
-export default function TermTestScoresDownload({ studentId }) {
+// label (optional) replaces the button text, e.g. where a heading already
+// says these are downloads; compact sizes the term list to its content and
+// matches the other download buttons.
+export default function TermTestScoresDownload({ studentId, label = '📄 Download Report', compact = false }) {
   const [terms, setTerms] = useState([]);
   const [termId, setTermId] = useState('');
   const [busy, setBusy] = useState(false);
@@ -44,14 +47,14 @@ export default function TermTestScoresDownload({ studentId }) {
 
   return (
     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', margin: '0.5rem 0' }}>
-      <select value={termId} onChange={(e) => setTermId(Number(e.target.value))}>
+      <select value={termId} onChange={(e) => setTermId(Number(e.target.value))} style={compact ? { width: 'auto' } : undefined} aria-label="Term">
         {terms.map((t) => (
           <option key={t.term_id} value={t.term_id}>{t.term_name}</option>
         ))}
         <option value="">All terms</option>
       </select>
-      <button onClick={handleDownload} disabled={busy || !studentId}>
-        {busy ? 'Generating...' : '📄 Download Report'}
+      <button className={compact ? 'secondary' : undefined} onClick={handleDownload} disabled={busy || !studentId}>
+        {busy ? 'Generating...' : label}
       </button>
     </div>
   );
