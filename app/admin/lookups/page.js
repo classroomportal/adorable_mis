@@ -370,6 +370,81 @@ function CertificateLevels() {
   );
 }
 
+// Academic years (migrations 256, 264). Holders of Lookups can add the next
+// year, correct dates and remove a planning year nothing uses yet, all
+// through functions that check the caller. Which year is current changes
+// only at the year switch, not here.
+const YEAR_STATUS = { current: 'This year', planning: 'Next year (planning)', closed: 'Closed' };
+
+function AcademicYears() {
+  const [years, setYears] = useState([]);
+  const [edits, setEdits] = useState({});
+  const [status, setStatus] = useState(null);
+
+  async function load() {
+    const { data } = await supabase.from('academic_years').select('academic_year_id, label, start_date, end_date, status').order('start_date');
+    setYears(data || []);
+    setEdits({});
+  }
+  useEffect(() => { load(); }, []);
+
+  async function run(fn, args, ok) {
+    const { data, error } = await supabase.rpc(fn, args);
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus(typeof ok === 'function' ? ok(data) : ok); load(); }
+  }
+
+  function saveDates(y) {
+    const e = edits[y.academic_year_id] || {};
+    run('set_academic_year_dates', {
+      p_academic_year_id: y.academic_year_id,
+      p_start: e.start_date ?? y.start_date, p_end: e.end_date ?? y.end_date,
+    }, `Dates saved for ${y.label}.`);
+  }
+
+  function remove(y) {
+    if (!window.confirm(`Remove ${y.label}? This only works while nothing has been set up for it.`)) return;
+    run('delete_academic_year', { p_academic_year_id: y.academic_year_id }, `${y.label} removed.`);
+  }
+
+  return (
+    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+      <h2>Academic years</h2>
+      <p style={{ marginTop: 0 }}>
+        Admissions, admission fees and term dates are filed under these years. Add terms for a year on the
+        <a href="/calendar"> Calendar</a> page: a term belongs to the year its start date falls in. The current year
+        changes only when the school moves up at the start of the new year.
+      </p>
+      {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
+      <table>
+        <thead><tr><th>Year</th><th>Starts</th><th>Ends</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {years.map((y) => {
+            const e = edits[y.academic_year_id] || {};
+            const closed = y.status === 'closed';
+            const set = (k) => (ev) => setEdits({ ...edits, [y.academic_year_id]: { ...e, [k]: ev.target.value } });
+            return (
+              <tr key={y.academic_year_id}>
+                <td><strong>{y.label}</strong></td>
+                <td><input type="date" value={e.start_date ?? y.start_date} onChange={set('start_date')} disabled={closed} /></td>
+                <td><input type="date" value={e.end_date ?? y.end_date} onChange={set('end_date')} disabled={closed} /></td>
+                <td>{YEAR_STATUS[y.status] || y.status}</td>
+                <td>
+                  {edits[y.academic_year_id] && <><button onClick={() => saveDates(y)}>Save</button>{' '}</>}
+                  {y.status === 'planning' && <button className="secondary" style={{ fontSize: '0.8rem' }} onClick={() => remove(y)}>Remove</button>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div style={{ marginTop: '0.75rem' }}>
+        <button onClick={() => run('add_next_academic_year', {}, (label) => `${label} added.`)}>Add the next academic year</button>
+      </div>
+    </div>
+  );
+}
+
 function LookupsInner() {
   return (
     <div>
@@ -380,6 +455,7 @@ function LookupsInner() {
       <BehaviourCategories />
       <DetentionRules />
       <CertificateLevels />
+      <AcademicYears />
       <AdmissionFees />
     </div>
   );
