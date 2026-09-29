@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { academicYearOf } from '../../../lib/academicYear';
+import { schoolToday } from '../../../lib/schoolTime';
 import {
   ComposedChart, Bar, Cell, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -167,6 +169,20 @@ function SubjectOverviewInner() {
   const selectedStudentYearGroup = isStudent ? ownStudent?.year_group : matchedStudent?.year_group;
   const selectedEvent = datasets.find((d) => String(d.event_id) === String(selectedEventId));
   const shownDatasets = datasets.filter((d) => datasetFitsStudent(d, selectedStudentYearGroup));
+
+  // The list reads in date order, first date at the top and last at the
+  // bottom, within each school year. This school year comes first so its
+  // sets aren't buried under the historic exams (back to 2017).
+  // shownDatasets itself stays newest-first: the defaults pick [0].
+  const currentSchoolYear = academicYearOf(schoolToday());
+  const datasetGroups = [];
+  for (const d of [...shownDatasets].reverse()) {
+    const year = academicYearOf(d.event_date);
+    let g = datasetGroups.find((x) => x.year === year);
+    if (!g) { g = { year, sets: [] }; datasetGroups.push(g); }
+    g.sets.push(d);
+  }
+  datasetGroups.sort((a, b) => (a.year === currentSchoolYear ? -1 : b.year === currentSchoolYear ? 1 : b.year.localeCompare(a.year)));
 
   // Choosing a student from another year group can hide the chosen set; move to
   // the newest one they sat rather than leave an option that isn't in the list.
@@ -336,10 +352,14 @@ function SubjectOverviewInner() {
             style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '220px' }}
           >
             <option value="">Select a dataset...</option>
-            {shownDatasets.map((d) => (
-              <option key={d.event_id} value={d.event_id}>
-                {datasetLabel(d, selectedStudentYearGroup)} — {formatUKDate(d.event_date)}
-              </option>
+            {datasetGroups.map((g) => (
+              <optgroup key={g.year} label={g.year === currentSchoolYear ? `This school year (${g.year})` : g.year}>
+                {g.sets.map((d) => (
+                  <option key={d.event_id} value={d.event_id}>
+                    {datasetLabel(d, selectedStudentYearGroup)} — {formatUKDate(d.event_date)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
