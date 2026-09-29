@@ -16,6 +16,8 @@ import { PreviousSchoolPicker, SiblingPicker, schoolLabel } from '../../componen
 // <input type="datetime-local"> works in the device's zone; the school is on
 // Lagos time (UTC+1, no DST), so convert explicitly rather than trusting it.
 // (The same approach as app/other-half/activities/page.js.)
+
+const INTERVIEW_STAGES = new Set(['invited_to_interview', 'interviewed', 'waitlisted', 'offered', 'accepted', 'deposit_paid', 'enrolled']);
 function toLagosLocalInput(ts) {
   if (!ts) return '';
   const d = new Date(new Date(ts).getTime() + 60 * 60 * 1000);
@@ -716,8 +718,10 @@ function ApplicantInner() {
         )}
       </Section>
 
-      {/* Interview */}
-      {interviewDraft && (
+      {/* Interview. Only once the child has been invited (or an interview is
+          already on record): an interview saved earlier would make a later
+          post-test decision send the "after the interview" letter. */}
+      {interviewDraft && (interview || INTERVIEW_STAGES.has(a.status)) && (
         <Section title="Interview">
           {a.interview_at && <p style={{ marginTop: 0 }}>Interview arranged for <strong>{formatDateTime(a.interview_at)}</strong>.</p>}
           {!interview && a.status === 'invited_to_interview' && (

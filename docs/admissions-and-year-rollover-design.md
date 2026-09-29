@@ -1,6 +1,9 @@
 # Admissions and moving up a year (2027/28): design
 
-Status: design only, 29 September 2026. Nothing here has been built yet.
+Status, 29 September 2026: **phase 1 (admissions, up to the deposit) is
+built** — migrations 256–257 and the `/admissions` pages. Phases 2–5
+(enrolment and `incoming`, subject choices, progression, next year's
+timetable, the switch) are still design only.
 Revised the same day, twice, with the principal's answers on admissions, fees,
 options, retention and when the switch happens. Open questions are at the end.
 
