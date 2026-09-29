@@ -30,9 +30,10 @@ function ParentTuckshopInner() {
       if (!parentId) return;
       const { data } = await supabase
         .from('student_parent')
-        .select('students(student_id, first_name, last_name, year_group, form_class)')
+        .select('students(student_id, first_name, last_name, year_group, form_class, status)')
         .eq('parent_id', parentId);
-      const list = (data || []).map((row) => row.students).filter(Boolean);
+      // Only children still at the school, as on the main parent portal.
+      const list = (data || []).map((row) => row.students).filter((s) => s && s.status === 'active');
       setChildren(list);
       if (list.length > 0) setSelectedId(list[0].student_id);
     }

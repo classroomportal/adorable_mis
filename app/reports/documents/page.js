@@ -187,7 +187,11 @@ function UploadDocumentsInner() {
       });
     return () => { stale = true; };
   }, [matchedKey]);
-  const noParent = withParent ? [...counts.keys()].filter((id) => !withParent.has(id)) : [];
+  // Parents never see a student who has left (migration 255), so leavers
+  // are counted apart from current students who simply lack a parent login.
+  const isLeaver = (id) => byId.get(id)?.status !== 'active';
+  const leaversMatched = [...counts.keys()].filter(isLeaver);
+  const noParent = withParent ? [...counts.keys()].filter((id) => !isLeaver(id) && !withParent.has(id)) : [];
   const ready = rows.filter((r) => r.studentId);
   const needsCheck = rows.filter((r) => r.how === 'surname' || r.how === 'ambiguous').length;
   const cleanTitle = title.trim();
@@ -377,6 +381,12 @@ function UploadDocumentsInner() {
             </button>
           )}
         </div>
+        {leaversMatched.length > 0 && (
+          <p style={{ color: '#8a6d00', margin: 0 }}>
+            {leaversMatched.length} matched student{leaversMatched.length === 1 ? ' has' : 's have'} left. Parents don&apos;t see
+            students who have left, so {leaversMatched.length === 1 ? 'that document is' : 'those documents are'} kept for staff only.
+          </p>
+        )}
         {noParent.length > 0 && (
           <p style={{ color: '#8a6d00', margin: 0 }}>
             {noParent.length} matched student{noParent.length === 1 ? ' has' : 's have'} no parent with a Formwork login, so
@@ -413,7 +423,10 @@ function UploadDocumentsInner() {
                       {r.result === 'skipped' && <span style={{ color: '#666' }}>Skipped</span>}
                       {r.result && r.result.startsWith('Error') && <span style={{ color: 'red' }}>{r.result}</span>}
                       {!r.result && (dup ? <span style={{ color: 'red' }}>Same student as another file</span> : how.text)}
-                      {!r.result && r.studentId && withParent && !withParent.has(r.studentId) && (
+                      {!r.result && r.studentId && isLeaver(r.studentId) && (
+                        <div style={{ color: '#8a6d00', fontSize: '0.8rem' }}>Left — parents won&apos;t see it (staff only)</div>
+                      )}
+                      {!r.result && r.studentId && !isLeaver(r.studentId) && withParent && !withParent.has(r.studentId) && (
                         <div style={{ color: '#8a6d00', fontSize: '0.8rem' }}>No parent login — parents won&apos;t see it yet</div>
                       )}
                     </td>
