@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { groupBySchoolYear, schoolYearGroupLabel } from '../../../lib/academicYear';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
@@ -203,10 +204,14 @@ function ClassProgressInner() {
           Result set
           <select value={resultSetFilter} onChange={(e) => setResultSetFilter(e.target.value)}>
             <option value="">Most recent result</option>
-            {resultSets.map((e) => (
-              <option key={e.event_id} value={e.event_id}>
-                {e.event_name} — {formatUKDate(e.event_date)}
-              </option>
+            {groupBySchoolYear(resultSets).map((g) => (
+              <optgroup key={g.year} label={schoolYearGroupLabel(g)}>
+                {g.sets.map((e) => (
+                  <option key={e.event_id} value={e.event_id}>
+                    {e.event_name} — {formatUKDate(e.event_date)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
