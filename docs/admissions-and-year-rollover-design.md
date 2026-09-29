@@ -223,7 +223,7 @@ student record afterwards.
 ### Pipeline
 
 ```
-enquiry → form_paid → test_booked → tested ─┬→ invited_to_interview → interviewed ─┬→ offered → accepted → enrolled
+enquiry → form_paid → test_booked → tested ─┬→ invited_to_interview → interviewed ─┬→ offered → accepted → deposit_paid → enrolled
                                             ├→ waitlisted ─────────────────────────┤
                                             └→ rejected                            ├→ waitlisted
                                                                                    └→ rejected
@@ -243,6 +243,16 @@ enquiry → form_paid → test_booked → tested ─┬→ invited_to_interview 
 - **Posting the result** means choosing `invited_to_interview`, `waitlisted`
   or `rejected`. The page shows the average against the pass mark. Posting
   produces the matching standard letter.
+- **Accepting an offer and paying the deposit** (the principal, 29 Sept
+  2026): a family who accepts pays a deposit, and the place is only final
+  once it's paid, before the start of term. `accepted` is recorded by
+  admissions when the family says yes. The **bursar** then records the
+  deposit (`record_admission_deposit(applicant_id, paid_on, amount,
+  receipt)`, bursar or admin only), which moves the applicant to
+  `deposit_paid`. The amount defaults to `academic_years.admission_deposit`.
+  Only `deposit_paid` applicants can be enrolled. The readiness check before
+  the switch lists anyone accepted but not yet paid, so they can be chased or
+  withdrawn.
 - **After the interview,** the applicant is `offered`, `waitlisted` or
   `rejected`, again with a letter. Someone on the waiting list can later be
   invited or offered.
@@ -299,8 +309,8 @@ applicant_letters          -- what was actually sent, kept as sent
 ### Enrolment: from applicant to student
 
 `enrol_applicant(applicant_id)` is a `SECURITY DEFINER` function. It checks
-that the caller holds `admissions` or `admin`, and it only works on an
-`accepted` applicant. It:
+that the caller holds `admissions` or `admin`, and it only works on a
+`deposit_paid` applicant. It:
 
 1. creates the `students` row with `year_group = entry_year_group`,
    `admission_date` = the start of the entry year, a UPN from
@@ -502,7 +512,8 @@ stop a clean switch:
 - Y9 and Y11 students with no subject choices;
 - students with no class in a block of their new year group;
 - plan classes with no teacher or no lessons;
-- accepted applicants who haven't been enrolled;
+- accepted applicants who haven't paid the deposit, and paid ones who
+  haven't been enrolled;
 - incoming students with no form class;
 - mentor groups that don't exist yet.
 
@@ -662,8 +673,10 @@ work, so admissions comes first.
   principal will upload the letters.
 - **Incoming status:** yes. Accepted applicants become `incoming` students.
 - **Retention:** keep indefinitely for now; anonymising is built in, for later.
-- **Options:** Y9 choose options for Y10. Going into Y12, students drop one
-  subject.
+- **Options:** Y9 choose options for Y10. Going into Y12, students keep
+  their Year 11 subjects except the one they drop.
+- **Deposit:** a family that accepts pays a deposit, recorded by the bursar,
+  before the place is final.
 - **Blocks:** this year's Nova-T blocks can be marked as promotable into the
   new year.
 - **Switch:** automatic, on the evening the boarders arrive, with moving up
@@ -671,11 +684,9 @@ work, so admissions comes first.
 
 ## Open questions
 
-1. **The standard letters:** waiting for the principal to upload them. Is
-   there anything the family must return with the offer (acceptance form,
-   deposit)? That decides what marks an applicant `accepted`.
-2. **Y12 "drop one subject":** is our reading right (keep Year 11's subjects
-   except one)? And how many options do Y9 choose, with how many reserves?
+1. **The standard letters:** waiting for the principal to upload them.
+2. **How many options do Y9 choose**, with how many reserves? (The Y12
+   "drop one subject" reading is confirmed.)
 3. **Anything else from the application or interview:** for example previous
    school reports, medical or SEN notes, or fee sponsor.
-4. **The form fee amount** for 2027/28 entry.
+4. **The form fee and deposit amounts** for 2027/28 entry.
