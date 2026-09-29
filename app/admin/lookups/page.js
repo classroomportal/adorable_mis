@@ -230,6 +230,142 @@ function AdmissionFees() {
   );
 }
 
+// Detention and behaviour-alert rules (migration 262). Read by the database
+// triggers that create detentions and send alerts; saved through
+// set_behaviour_rules(), which checks the caller. Changes are logged in
+// Change History under Behaviour.
+function DetentionRules() {
+  const [d, setD] = useState(null);
+  const [status, setStatus] = useState(null);
+
+  async function load() {
+    const [{ data: r }, { data: ss }] = await Promise.all([
+      supabase.from('behaviour_rules').select('*').maybeSingle(),
+      supabase.from('system_settings').select('detention_room, detention_time').maybeSingle(),
+    ]);
+    setD({
+      single: Math.abs(r?.detention_single_event_points ?? -5),
+      weekly: Math.abs(r?.detention_weekly_total_points ?? -10),
+      alert: Math.abs(r?.alert_weekly_total_points ?? -8),
+      room: ss?.detention_room ?? '',
+      time: ss?.detention_time ?? '',
+    });
+  }
+  useEffect(() => { load(); }, []);
+
+  async function save(e) {
+    e.preventDefault();
+    const nums = [d.single, d.weekly, d.alert].map((v) => -Math.abs(parseInt(v, 10)));
+    if (nums.some((n) => !Number.isFinite(n) || n === 0)) { setStatus('Error: give each threshold as a number of points, e.g. 5.'); return; }
+    const { error } = await supabase.rpc('set_behaviour_rules', {
+      p_detention_single_event_points: nums[0], p_detention_weekly_total_points: nums[1],
+      p_alert_weekly_total_points: nums[2], p_detention_room: d.room, p_detention_time: d.time,
+    });
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus('Saved. New behaviour events follow these rules from now on.'); load(); }
+  }
+
+  if (!d) return null;
+  const field = (k) => ({ value: d[k], onChange: (e) => { setD({ ...d, [k]: e.target.value }); setStatus(null); } });
+  return (
+    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+      <h2>Detentions</h2>
+      <p style={{ marginTop: 0 }}>
+        A student gets a Friday detention when one negative event is worth this many points or more, or when their
+        negative points from Saturday to Friday add up to this much. Points are entered as positive numbers (5 means −5).
+      </p>
+      {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
+      <form onSubmit={save} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label>Detention for one event of (points)<input type="number" min="1" {...field('single')} style={{ width: '7rem' }} /></label>
+        <label>Detention for a weekly total of (points)<input type="number" min="1" {...field('weekly')} style={{ width: '7rem' }} /></label>
+        <label>Email alert to SMT at a weekly total of (points)<input type="number" min="1" {...field('alert')} style={{ width: '7rem' }} /></label>
+        <label>Detention room<input {...field('room')} placeholder="CG4" style={{ width: '8rem' }} /></label>
+        <label>Detention time<input {...field('time')} placeholder="after lesson 7" style={{ width: '10rem' }} /></label>
+        <button type="submit">Save</button>
+      </form>
+      <p style={{ fontSize: '0.85em', color: '#666' }}>
+        A single event at the detention level also sends the SMT email alert. Detentions already given are not changed.
+        Separately, any event of 5 points or more always needs an explanation and is reviewed before parents see it.
+      </p>
+    </div>
+  );
+}
+
+// Certificate levels (migration 262): the cumulative behaviour points that
+// earn each certificate on /certificates.
+function CertificateLevels() {
+  const [levels, setLevels] = useState([]);
+  const [edits, setEdits] = useState({});
+  const [newLevel, setNewLevel] = useState({ name: '', points: '' });
+  const [status, setStatus] = useState(null);
+
+  async function load() {
+    const { data } = await supabase.from('certificate_levels').select('*').order('points');
+    setLevels(data || []);
+    setEdits({});
+  }
+  useEffect(() => { load(); }, []);
+
+  async function run(promise, ok) {
+    const { error } = await promise;
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus(ok); load(); }
+  }
+
+  function saveRow(l) {
+    const e = edits[l.level_id] || {};
+    const points = parseInt(e.points ?? l.points, 10);
+    const name = (e.name ?? l.name).trim();
+    if (!name || !(points > 0)) { setStatus('Error: give a name and a number of points above 0.'); return; }
+    run(supabase.from('certificate_levels').update({ name, points }).eq('level_id', l.level_id), 'Saved.');
+  }
+
+  function add(ev) {
+    ev.preventDefault();
+    const points = parseInt(newLevel.points, 10);
+    if (!newLevel.name.trim() || !(points > 0)) { setStatus('Error: give a name and a number of points above 0.'); return; }
+    run(supabase.from('certificate_levels').insert({ name: newLevel.name.trim(), points }), 'Level added.');
+    setNewLevel({ name: '', points: '' });
+  }
+
+  function remove(l) {
+    if (!window.confirm(`Remove the ${l.name} certificate level? Certificates already given stay on record.`)) return;
+    run(supabase.from('certificate_levels').delete().eq('level_id', l.level_id), 'Removed.');
+  }
+
+  return (
+    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+      <h2>Certificates</h2>
+      <p style={{ marginTop: 0 }}>The cumulative behaviour points (positive and negative combined) that earn each certificate.</p>
+      {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
+      <table>
+        <thead><tr><th>Certificate</th><th>Points</th><th></th></tr></thead>
+        <tbody>
+          {levels.map((l) => {
+            const e = edits[l.level_id] || {};
+            const set = (k) => (ev) => setEdits({ ...edits, [l.level_id]: { ...e, [k]: ev.target.value } });
+            return (
+              <tr key={l.level_id}>
+                <td><input value={e.name ?? l.name} onChange={set('name')} style={{ width: '9rem' }} /></td>
+                <td><input type="number" min="1" value={e.points ?? l.points} onChange={set('points')} style={{ width: '7rem' }} /></td>
+                <td>
+                  {edits[l.level_id] && <><button onClick={() => saveRow(l)}>Save</button>{' '}</>}
+                  <button className="secondary" onClick={() => remove(l)} style={{ fontSize: '0.8rem' }}>Remove</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <form onSubmit={add} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+        <input value={newLevel.name} onChange={(e) => setNewLevel({ ...newLevel, name: e.target.value })} placeholder="New level, e.g. Platinum" />
+        <input type="number" min="1" value={newLevel.points} onChange={(e) => setNewLevel({ ...newLevel, points: e.target.value })} placeholder="Points" style={{ width: '7rem' }} />
+        <button type="submit">Add</button>
+      </form>
+    </div>
+  );
+}
+
 function LookupsInner() {
   return (
     <div>
@@ -238,6 +374,8 @@ function LookupsInner() {
       <LookupList title="Boarding houses" table="boarding_houses" idField="house_id" />
       <LookupList title="Sports houses" table="sports_houses" idField="house_id" />
       <BehaviourCategories />
+      <DetentionRules />
+      <CertificateLevels />
       <AdmissionFees />
     </div>
   );
