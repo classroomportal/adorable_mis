@@ -5,13 +5,14 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { generateOrderSheetsPdf } from '../../../lib/generateOrderSheetsPdf';
-import { isLocked as lockedBySchedule, loadSchedule, loadSpecialSessions, momentLabel, windowFor } from '../../../lib/tuckshopSchedule';
+import { closedByClosure, isLocked as lockedBySchedule, loadClosure, loadSchedule, loadSpecialSessions, longDate as shortDate, momentLabel, windowFor } from '../../../lib/tuckshopSchedule';
 
 // Printable tuckshop order sheets: one page per restaurant listing each
 // student's order, with the total of each item, plus a whole-school
 // summary for the stock room. Orders lock when that day's ordering window
-// closes (tuckshop_order_schedule, migration 187) — the sheet is live, so printing before
-// then shows a warning that it can still change.
+// closes (tuckshop_order_schedule, migration 187), or earlier if staff have
+// closed ordering at /tuckshop/ordering — the sheet is live, so printing
+// before then shows a warning that it can still change.
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
@@ -73,11 +74,16 @@ function OrderSheetsInner() {
   const [downloading, setDownloading] = useState(false);
   const [schedule, setSchedule] = useState([]);
   const [specials, setSpecials] = useState([]);
+  const [closure, setClosure] = useState(null);
 
-  const isLocked = (d) => lockedBySchedule(d, schedule, specials);
+  const isLocked = (d) => lockedBySchedule(d, schedule, specials, closure);
   const specialName = (d) => specials.find((s) => s.for_date === d)?.name;
   // e.g. "11pm on Thursday 1 October"
   const closesLabel = (d) => {
+    // e.g. "by staff (ordering closed until Wednesday 30 September)"
+    if (closedByClosure(d, schedule, specials, closure)) {
+      return `by staff (ordering closed until ${shortDate(closure.toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' }))})`;
+    }
     const w = windowFor(d, schedule, specials);
     return w ? momentLabel(w.closesAt) : 'the day before';
   };
@@ -90,6 +96,8 @@ function OrderSheetsInner() {
     setSchedule(sched);
     const special = await loadSpecialSessions(supabase);
     setSpecials(special);
+    const closed = await loadClosure(supabase);
+    setClosure(closed);
     const { data, error: err } = await supabase
       .from('tuckshop_preorders')
       .select('for_date')
@@ -106,7 +114,7 @@ function OrderSheetsInner() {
     // locked (the one the shop is about to serve); otherwise the next one.
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
     const upcoming = list.filter((d) => d >= today).sort();
-    setForDate(upcoming.find((d) => lockedBySchedule(d, sched, special)) || upcoming[0] || list[0] || '');
+    setForDate(upcoming.find((d) => lockedBySchedule(d, sched, special, closed)) || upcoming[0] || list[0] || '');
     if (list.length === 0) setLoading(false);
   }
 
