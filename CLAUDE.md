@@ -6,6 +6,8 @@ School MIS for Adorable British College (Next.js 14 App Router + Supabase). Live
 
 **A large part of this schema was built directly against the live Supabase instance and was never committed to `sql/` or `migrations/`.** Those two folders are an incomplete, roughly-chronological history — they are not a reliable source of truth for what currently exists. `sql/CURRENT_SCHEMA.md` is a full introspected dump of the live database (tables, columns, RLS policies, triggers, views, functions, extensions, cron jobs), generated 16 September 2026 via the Supabase MCP connector. Check it before assuming a table/view/function doesn't exist, or guessing at its shape — several real incidents this session came directly from not doing that (see that file's intro for specifics: a PII-leaking view, an undocumented trigger that emailed real staff, etc.). Regenerate it (don't hand-edit) when the schema has drifted meaningfully.
 
+`docs/SYSTEM_RULES.md` is a plain-English description of what the system does and the rules it enforces (who can do what, windows, limits, known gaps), written for school leaders. Keep it in step when a migration changes a rule it describes.
+
 `sql/schema.sql` is the *original* bootstrap schema from early in the project — kept for history, not current.
 
 ## Getting live database access in a fresh session
