@@ -135,11 +135,54 @@ function QuickLinks({ hasAccess }) {
 // allowedHrefs, when given, greys out any item not in the set instead of hiding it —
 // used by the training account so it can see the full shape of what a real SMT
 // member has access to, without being able to actually open the unverified parts.
-function ModuleCard({ icon, label, accent, description, items, allowedHrefs }) {
+// Next year's admissions at a glance, beside the Admissions icon: every
+// application for the entry year being recruited for (withdrawn ones left
+// out), and how many families have accepted a place (accepted, deposit paid
+// or enrolled). Only fetched for people who can see applicants (RLS agrees).
+function AdmissionsCounts() {
+  const [counts, setCounts] = useState(null);
+  useEffect(() => {
+    (async () => {
+      const { data: years } = await supabase.from('academic_years').select('academic_year_id, label, status').order('start_date');
+      const year = (years || []).find((y) => y.status === 'planning') || (years || []).find((y) => y.status === 'current');
+      if (!year) return;
+      const base = () => supabase.from('applicants').select('applicant_id', { count: 'exact', head: true })
+        .eq('entry_academic_year_id', year.academic_year_id);
+      const [{ count: applied }, { count: accepted }] = await Promise.all([
+        base().neq('status', 'withdrawn'),
+        base().in('status', ['accepted', 'deposit_paid', 'enrolled']),
+      ]);
+      setCounts({ label: year.label, applied: applied ?? 0, accepted: accepted ?? 0 });
+    })();
+  }, []);
+  if (!counts) return null;
+  const box = { textAlign: 'center', minWidth: '4.5rem' };
+  return (
+    <a href="/admissions" style={{ display: 'flex', gap: '1rem', textDecoration: 'none', color: 'inherit' }} title={`Admissions for ${counts.label}`}>
+      <div style={box}>
+        <div className="stat-card-value">{counts.applied}</div>
+        <div className="stat-card-label">Applications {counts.label}</div>
+      </div>
+      <div style={box}>
+        <div className="stat-card-value">{counts.accepted}</div>
+        <div className="stat-card-label">Accepted</div>
+      </div>
+    </a>
+  );
+}
+
+function ModuleCard({ icon, label, accent, description, items, allowedHrefs, extra }) {
   if (!items || items.length === 0) return null;
   return (
     <div className={`module-card accent-${accent}`}>
-      <div className="module-card-icon">{icon}</div>
+      {extra ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+          <div className="module-card-icon">{icon}</div>
+          {extra}
+        </div>
+      ) : (
+        <div className="module-card-icon">{icon}</div>
+      )}
       <div className="module-card-title">{label}</div>
       {description && <div className="module-card-desc">{description}</div>}
       <div className="module-card-chips">
@@ -474,6 +517,7 @@ export default function Home() {
             accent={t.accent}
             description={t.description}
             items={t.items({ hasAccess, staffRoles })}
+            extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts /> : null}
           />
         ))}
       </div>
