@@ -18,6 +18,11 @@ function ChargeChecklistInner() {
   const [amountMode, setAmountMode] = useState('flat'); // 'flat' | 'per_year'
   const [flatAmount, setFlatAmount] = useState('');
   const [yearAmounts, setYearAmounts] = useState({}); // year_group -> amount string
+  // Locked items (tuition, activity, technology, medical; migration 260) are
+  // charged only at the price approved by the principal and the college
+  // secretary for the student's year group. The database refuses anything
+  // else; the page just fills the approved price in and doesn't let it be typed.
+  const [yearPrices, setYearPrices] = useState({}); // fee_item_id -> { year_group: amount }
 
   const [students, setStudents] = useState([]);
   const [chargedIds, setChargedIds] = useState(new Set());
@@ -30,7 +35,11 @@ function ChargeChecklistInner() {
 
   useEffect(() => {
     (async () => {
-      const { data: items } = await supabase.from('fee_items').select('id, name, default_amount').or('category.is.null,category.neq.Tuckshop').order('name');
+      const { data: yp } = await supabase.from('fee_item_year_prices').select('fee_item_id, year_group, amount');
+      const byItem = {};
+      (yp || []).forEach((r) => { (byItem[r.fee_item_id] ||= {})[r.year_group] = Number(r.amount); });
+      setYearPrices(byItem);
+      const { data: items } = await supabase.from('fee_items').select('id, name, default_amount, price_locked').or('category.is.null,category.neq.Tuckshop').order('name');
       setFeeItems(items ?? []);
       const { data: t } = await supabase.from('fee_terms').select('id, name, is_current').order('id', { ascending: false });
       setTerms(t ?? []);
@@ -78,7 +87,15 @@ function ChargeChecklistInner() {
 
   useEffect(() => { refreshChargedStatus(); setSelected(new Set()); }, [feeItemId, termId]); // eslint-disable-line
 
+  const currentItem = feeItems.find((f) => String(f.id) === String(feeItemId));
+  const locked = !!currentItem?.price_locked;
+
   function amountFor(student) {
+    if (locked) {
+      const yp = yearPrices[currentItem.id]?.[student.year_group];
+      if (yp != null) return yp;
+      return currentItem.default_amount != null ? Number(currentItem.default_amount) : null;
+    }
     if (amountMode === 'per_year') {
       const v = yearAmounts[student.year_group];
       return v ? Number(v) : null;
@@ -130,7 +147,7 @@ function ChargeChecklistInner() {
     const { data: userData } = await supabase.auth.getUser();
     const createdBy = userData?.user?.id;
 
-    let ok = 0, fail = 0;
+    let ok = 0, fail = 0, lastError = null;
     for (const studentId of selected) {
       const student = students.find((s) => s.student_id === studentId);
       const amount = amountFor(student);
@@ -144,10 +161,10 @@ function ChargeChecklistInner() {
         p_target_value: String(studentId),
         p_created_by: createdBy,
       });
-      if (error) fail++; else ok++;
+      if (error) { fail++; lastError = error.message; } else ok++;
     }
 
-    setStatus(`Charged ${ok} student${ok === 1 ? '' : 's'}.${fail > 0 ? ` ${fail} failed.` : ''}`);
+    setStatus(`Charged ${ok} student${ok === 1 ? '' : 's'}.${fail > 0 ? ` ${fail} failed${lastError ? `: ${lastError}` : '.'}` : ''}`);
     setSelected(new Set());
     await refreshChargedStatus();
     setSubmitting(false);
@@ -180,6 +197,17 @@ function ChargeChecklistInner() {
           <input value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: '100%' }} />
         </label>
 
+        {locked ? (
+          <div style={{ background: '#e6eefb', padding: '0.6rem 0.8rem', borderRadius: 6 }}>
+            <strong>Charged at the approved price.</strong> This fee is set and approved by the principal and the
+            college secretary, per year group:{' '}
+            {[7, 8, 9, 10, 11, 12].map((yg) => {
+              const v = yearPrices[currentItem.id]?.[yg] ?? (currentItem.default_amount != null ? Number(currentItem.default_amount) : null);
+              return <span key={yg} style={{ marginRight: '0.8rem' }}>Y{yg}: {v != null ? naira(v) : 'not approved'}</span>;
+            })}
+            <br /><small>To change it, propose a new price at <a href="/bursar/fee-approvals">Fee Approvals</a>. Students in a year with no approved price can&apos;t be charged yet.</small>
+          </div>
+        ) : (<>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <label>
             <input type="radio" checked={amountMode === 'flat'} onChange={() => setAmountMode('flat')} /> Same amount for everyone ticked
@@ -218,6 +246,7 @@ function ChargeChecklistInner() {
             </table>
           </div>
         )}
+        </>)}
       </div>
 
       {feeItemId && termId && (
