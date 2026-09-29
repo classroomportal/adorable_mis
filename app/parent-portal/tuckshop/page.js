@@ -4,9 +4,10 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
 import TuckshopPurchases from '../../components/TuckshopPurchases';
+import { findParentIdByEmail } from '../../../lib/parentByEmail';
 
 function ParentTuckshopInner() {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const [resolvedParentId, setResolvedParentId] = useState(profile?.parent_id || null);
   const [children, setChildren] = useState([]);
   const [selectedId, setSelectedId] = useState('');
@@ -17,16 +18,10 @@ function ParentTuckshopInner() {
   useEffect(() => {
     async function resolveParent() {
       if (profile?.parent_id) { setResolvedParentId(profile.parent_id); return; }
-      if (!profile?.email) return;
-      const { data } = await supabase
-        .from('parents')
-        .select('parent_id')
-        .eq('email', profile.email)
-        .maybeSingle();
-      setResolvedParentId(data?.parent_id || null);
+      setResolvedParentId(await findParentIdByEmail(profile?.email || session?.user?.email));
     }
     resolveParent();
-  }, [profile]);
+  }, [profile, session]);
 
   const parentId = resolvedParentId;
 

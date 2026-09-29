@@ -7,6 +7,7 @@ import { useAuth } from '../../lib/AuthContext';
 import ResultsOverview from '../components/ResultsOverview';
 import { visibleTargets } from '../../lib/gradeCompare';
 import { formatUKDate } from '../../lib/formatDate';
+import { findParentIdByEmail } from '../../lib/parentByEmail';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 import { schoolToday, schoolWeekdayShort } from '../../lib/schoolTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
@@ -41,7 +42,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 // children" must also be applied here in the query, not left to RLS — see
 // the behaviour and picture filters.
 export function ParentPortalInner({ viewAsParentId = null } = {}) {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const viewingAs = !!viewAsParentId;
   const [resolvedParentId, setResolvedParentId] = useState(viewAsParentId || profile?.parent_id || null);
   const [children, setChildren] = useState([]);
@@ -68,23 +69,18 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
   const [attendanceSummary, setAttendanceSummary] = useState([]); // today / week / year, counted in the DB
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
 
-  // A parent login already has profile.parent_id set. A staff member who is
-  // also a parent doesn't — fall back to matching their login email against
-  // the parents table so the same "My Children" view works for both.
+  // A parent login already has profile.parent_id set, and so do many staff
+  // who are also parents. For those that don't, fall back to matching their
+  // sign-in email against the parents table so the same "My Children" view
+  // works for both.
   useEffect(() => {
     async function resolveParent() {
       if (viewAsParentId) { setResolvedParentId(viewAsParentId); return; }
       if (profile?.parent_id) { setResolvedParentId(profile.parent_id); return; }
-      if (!profile?.email) return;
-      const { data } = await supabase
-        .from('parents')
-        .select('parent_id')
-        .eq('email', profile.email)
-        .maybeSingle();
-      setResolvedParentId(data?.parent_id || null);
+      setResolvedParentId(await findParentIdByEmail(profile?.email || session?.user?.email));
     }
     resolveParent();
-  }, [profile, viewAsParentId]);
+  }, [profile, session, viewAsParentId]);
 
   const parentId = resolvedParentId;
 
