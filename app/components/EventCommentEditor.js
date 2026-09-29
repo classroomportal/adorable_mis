@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
 import BehaviourPhoto from './BehaviourPhoto';
+import { useBehaviourRules } from '../../lib/behaviourRules';
 
 // Who may edit a behaviour event: the member of staff who logged it,
 // pastoral/houseparents/SMT/admin, or the school office (who fix serious
@@ -56,14 +57,15 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
     if (editing) loadCategories().then(setCategories);
   }, [editing]);
 
+  const { serious_event_points: seriousPoints } = useBehaviourRules();
   const options = categories.filter((c) => c.type === event.type);
   const chosen = options.find((c) => c.name === category);
   const points = chosen ? chosen.default_points : event.points;
-  const serious = event.type === 'negative' && points <= -5;
+  const serious = event.type === 'negative' && points <= seriousPoints;
 
   async function save() {
     if (serious && !draft.trim()) {
-      setError('A serious event (-5 points) needs an explanation of what happened.');
+      setError(`A serious event (${seriousPoints} points or worse) needs an explanation of what happened.`);
       return;
     }
     setSaving(true);
@@ -105,7 +107,7 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={serious ? 'Explanation (required for -5 events)' : 'Comment'}
+          placeholder={serious ? `Explanation (required for ${seriousPoints} events)` : 'Comment'}
           rows={Math.min(12, Math.max(4, Math.ceil(draft.length / 80)))}
           style={{ width: '100%', font: 'inherit', padding: '0.5rem', borderRadius: 8, border: '1px solid var(--slate-200)' }}
           autoFocus

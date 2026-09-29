@@ -247,6 +247,7 @@ function DetentionRules() {
       single: Math.abs(r?.detention_single_event_points ?? -5),
       weekly: Math.abs(r?.detention_weekly_total_points ?? -10),
       alert: Math.abs(r?.alert_weekly_total_points ?? -8),
+      serious: Math.abs(r?.serious_event_points ?? -5),
       room: ss?.detention_room ?? '',
       time: ss?.detention_time ?? '',
     });
@@ -255,11 +256,12 @@ function DetentionRules() {
 
   async function save(e) {
     e.preventDefault();
-    const nums = [d.single, d.weekly, d.alert].map((v) => -Math.abs(parseInt(v, 10)));
+    const nums = [d.single, d.weekly, d.alert, d.serious].map((v) => -Math.abs(parseInt(v, 10)));
     if (nums.some((n) => !Number.isFinite(n) || n === 0)) { setStatus('Error: give each threshold as a number of points, e.g. 5.'); return; }
     const { error } = await supabase.rpc('set_behaviour_rules', {
       p_detention_single_event_points: nums[0], p_detention_weekly_total_points: nums[1],
       p_alert_weekly_total_points: nums[2], p_detention_room: d.room, p_detention_time: d.time,
+      p_serious_event_points: nums[3],
     });
     if (error) setStatus(`Error: ${error.message}`);
     else { setStatus('Saved. New behaviour events follow these rules from now on.'); load(); }
@@ -269,7 +271,7 @@ function DetentionRules() {
   const field = (k) => ({ value: d[k], onChange: (e) => { setD({ ...d, [k]: e.target.value }); setStatus(null); } });
   return (
     <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <h2>Detentions</h2>
+      <h2>Detentions and serious events</h2>
       <p style={{ marginTop: 0 }}>
         A student gets a Friday detention when one negative event is worth this many points or more, or when their
         negative points from Saturday to Friday add up to this much. Points are entered as positive numbers (5 means −5).
@@ -279,13 +281,15 @@ function DetentionRules() {
         <label>Detention for one event of (points)<input type="number" min="1" {...field('single')} style={{ width: '7rem' }} /></label>
         <label>Detention for a weekly total of (points)<input type="number" min="1" {...field('weekly')} style={{ width: '7rem' }} /></label>
         <label>Email alert to SMT at a weekly total of (points)<input type="number" min="1" {...field('alert')} style={{ width: '7rem' }} /></label>
+        <label>Serious event at (points): explanation required, reviewed before parents see it<input type="number" min="1" {...field('serious')} style={{ width: '7rem' }} /></label>
         <label>Detention room<input {...field('room')} placeholder="CG4" style={{ width: '8rem' }} /></label>
         <label>Detention time<input {...field('time')} placeholder="after lesson 7" style={{ width: '10rem' }} /></label>
         <button type="submit">Save</button>
       </form>
       <p style={{ fontSize: '0.85em', color: '#666' }}>
         A single event at the detention level also sends the SMT email alert. Detentions already given are not changed.
-        Separately, any event of 5 points or more always needs an explanation and is reviewed before parents see it.
+        A serious event must have a written explanation, and the school office (SMT when it has a picture) reviews it at
+        Behaviour Review before parents can see it.
       </p>
     </div>
   );

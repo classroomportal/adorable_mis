@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { loadBehaviourRules, useBehaviourRules } from '../../../lib/behaviourRules';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
@@ -50,9 +51,11 @@ function ReviewInner() {
   const [confirmed, setConfirmed] = useState({}); // item key -> boolean
   const [busyKey, setBusyKey] = useState(null);
   const [status, setStatus] = useState(null);
+  const { serious_event_points: seriousPoints } = useBehaviourRules();
 
   async function load() {
     setLoading(true);
+    const rules = await loadBehaviourRules();
     const [{ data: s }, { data: photos }, { data: serious }, { data: h }] = await Promise.all([
       supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active'),
       supabase
@@ -64,7 +67,7 @@ function ReviewInner() {
         .from('behaviour_events')
         .select(`${EVENT_FIELDS}, photo:behaviour_photos(photo_id, status, image_jpeg_base64)`)
         .eq('type', 'negative')
-        .lte('points', -5)
+        .lte('points', rules.serious_event_points)
         .eq('visible_to_parents', false)
         .is('voided_at', null)
         .order('event_date', { ascending: false }),
@@ -264,7 +267,7 @@ function ReviewInner() {
               disabled={busy}
               onClick={() => decide(
                 item, false, photoWaiting ? false : null,
-                first.points <= -5
+                first.points <= seriousPoints
                   ? 'Not sent. It stays under "Kept hidden" below until it\'s sent.'
                   : 'Not sent to parents.',
               )}
@@ -299,9 +302,9 @@ function ReviewInner() {
     <div>
       <h1>Behaviour Review</h1>
       <p style={{ color: '#555' }}>
-        {reviewsPictures && reviewsText && 'SMT review every event with a picture; the school office reviews -5 events without one. '}
+        {reviewsPictures && reviewsText && `SMT review every event with a picture; the school office reviews ${seriousPoints} events without one. `}
         {reviewsPictures && !reviewsText && 'Events with a picture are reviewed by SMT. '}
-        {reviewsText && !reviewsPictures && 'You review -5 events without a picture. SMT review any event with a picture. '}
+        {reviewsText && !reviewsPictures && `You review ${seriousPoints} events without a picture. SMT review any event with a picture. `}
         Check each event before parents see it. The text and the picture are
         separate. You can send the text with the picture, send the text without
         it, or use Edit to correct the text first and then send it. Before
@@ -321,7 +324,7 @@ function ReviewInner() {
             <>
               <h2 style={{ marginTop: '1.5rem' }}>Kept hidden ({keptHidden.length})</h2>
               <p style={{ color: '#555', marginTop: 0 }}>
-                -5 events reviewed but not yet sent to parents. Correct the text, then send it.
+                {seriousPoints} events reviewed but not yet sent to parents. Correct the text, then send it.
               </p>
               {keptHidden.map(renderItem)}
             </>
