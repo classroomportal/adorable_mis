@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { formatUKDate } from '../../lib/formatDate';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 
@@ -13,7 +14,10 @@ function StudentsList() {
   const [yearFilter, setYearFilter] = useState('');
   const [formFilter, setFormFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'left' | ''(all) — defaults to current students
-  const [yearFormPairs, setYearFormPairs] = useState([]); // [{year_group, form_class}]
+  // Calendar year of the leaving date ('2024'), 'none' for a leaver with no
+  // leaving date, '' for any. Only offered when leavers are in the list.
+  const [leftYearFilter, setLeftYearFilter] = useState('');
+  const [yearFormPairs, setYearFormPairs] = useState([]); // [{year_group, form_class, status, leaving_date}]
   const [houseScope, setHouseScope] = useState(null);
   // Assume locked until my_house_access() says otherwise, so a slow RPC never
   // flashes the whole school at a house-only houseparent.
@@ -34,7 +38,7 @@ function StudentsList() {
   // populate the filter dropdowns — not the full student list or photos.
   useEffect(() => {
     async function loadFilterOptions() {
-      const { data } = await supabase.from('students').select('year_group, form_class');
+      const { data } = await supabase.from('students').select('year_group, form_class, status, leaving_date');
       setYearFormPairs(data || []);
       // house NULL means unscoped (admin, SMT, etc.) — see everyone, same as
       // today. A house means the viewer is a Houseparent, and that house is
@@ -61,6 +65,9 @@ function StudentsList() {
       .filter((s) => !yearFilter || String(s.year_group) === yearFilter)
       .map((s) => s.form_class)
   )].filter(Boolean).sort();
+  const leavers = yearFormPairs.filter((s) => s.status !== 'active');
+  const leftYears = [...new Set(leavers.filter((s) => s.leaving_date).map((s) => s.leaving_date.slice(0, 4)))].sort().reverse();
+  const someLeftUndated = leavers.some((s) => !s.leaving_date);
 
   // Flipping the house switch re-runs the query straight away, rather than
   // leaving a stale list on screen until the viewer presses Load students.
@@ -78,11 +85,22 @@ function StudentsList() {
     if (formFilter) query = query.eq('form_class', formFilter);
     if (search.trim()) query = query.or(`first_name.ilike.%${search.trim()}%,last_name.ilike.%${search.trim()}%`);
 
-    // student_summary has no boarding_house column, so a Houseparent's scope
-    // is applied by first resolving matching student_ids from students directly.
-    if (activeHouseScope) {
-      const { data: houseStudents } = await supabase.from('students').select('student_id').eq('boarding_house', activeHouseScope);
-      const ids = (houseStudents || []).map((s) => s.student_id);
+    // student_summary has no boarding_house or leaving_date column, so a
+    // Houseparent's scope and the year-left filter are applied by first
+    // resolving matching student_ids from students directly.
+    if (activeHouseScope || (statusFilter !== 'active' && leftYearFilter)) {
+      let idQuery = supabase.from('students').select('student_id');
+      if (activeHouseScope) idQuery = idQuery.eq('boarding_house', activeHouseScope);
+      if (statusFilter !== 'active' && leftYearFilter === 'none') {
+        idQuery = idQuery.neq('status', 'active').is('leaving_date', null);
+      } else if (statusFilter !== 'active' && leftYearFilter) {
+        // Leavers only: a current student can have a leaving date later this year.
+        idQuery = idQuery.neq('status', 'active')
+          .gte('leaving_date', `${leftYearFilter}-01-01`).lte('leaving_date', `${leftYearFilter}-12-31`);
+      }
+      const { data: scoped, error: scopeErr } = await idQuery;
+      if (scopeErr) { setError(scopeErr.message); setLoading(false); return; }
+      const ids = (scoped || []).map((s) => s.student_id);
       query = query.in('student_id', ids.length ? ids : [-1]);
     }
 
@@ -91,13 +109,18 @@ function StudentsList() {
 
     // Only fetch photos for the students actually matching the filter,
     // not the whole school — this is what was making the page slow.
+    // Leaving dates come along in the same query.
     const ids = (data || []).map((s) => s.student_id);
-    let photoMap = {};
+    let extraMap = {};
     if (ids.length > 0) {
-      const { data: photos } = await supabase.from('students').select('student_id, photo_base64').in('student_id', ids);
-      photoMap = Object.fromEntries((photos || []).filter((p) => p.photo_base64).map((p) => [p.student_id, p.photo_base64]));
+      const { data: extra } = await supabase.from('students').select('student_id, photo_base64, leaving_date').in('student_id', ids);
+      extraMap = Object.fromEntries((extra || []).map((p) => [p.student_id, p]));
     }
-    setStudents((data || []).map((s) => ({ ...s, photo_base64: photoMap[s.student_id] })));
+    setStudents((data || []).map((s) => ({
+      ...s,
+      photo_base64: extraMap[s.student_id]?.photo_base64 || undefined,
+      leaving_date: extraMap[s.student_id]?.leaving_date || null,
+    })));
     setHasLoaded(true);
     setLoading(false);
   }
@@ -148,12 +171,22 @@ function StudentsList() {
         </label>
         <label>
           Status
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); if (e.target.value === 'active') setLeftYearFilter(''); }}>
             <option value="active">Current</option>
             <option value="left">Left</option>
             <option value="">All</option>
           </select>
         </label>
+        {statusFilter !== 'active' && (
+          <label>
+            Year left
+            <select value={leftYearFilter} onChange={(e) => setLeftYearFilter(e.target.value)}>
+              <option value="">Any</option>
+              {leftYears.map((y) => <option key={y} value={y}>{y}</option>)}
+              {someLeftUndated && <option value="none">No leaving date</option>}
+            </select>
+          </label>
+        )}
         <button type="submit" disabled={loading}>{loading ? 'Loading...' : 'Load students'}</button>
       </form>
 
@@ -183,7 +216,7 @@ function StudentsList() {
                   <div className="pupil-tile-body">
                     <div className="pupil-tile-name">{s.first_name} {s.last_name}</div>
                     <div className="pupil-tile-sub">
-                      {[s.year_group && `Year ${s.year_group}`, s.form_class, s.status !== 'active' && 'Left'].filter(Boolean).join(' · ')}
+                      {[s.year_group && `Year ${s.year_group}`, s.form_class, s.status !== 'active' && (s.leaving_date ? `Left ${formatUKDate(s.leaving_date)}` : 'Left')].filter(Boolean).join(' · ')}
                     </div>
                     <div className="pupil-tile-stats">
                       <span title="Net behaviour points">📋 {s.net_behaviour_points ?? 0}</span>
@@ -220,7 +253,7 @@ function StudentsList() {
               <td>{s.first_name} {s.last_name}</td>
               <td>{s.year_group}</td>
               <td>{s.form_class}</td>
-              {students.some((x) => x.status !== 'active') && <td>{s.status === 'active' ? 'Current' : 'Left'}</td>}
+              {students.some((x) => x.status !== 'active') && <td>{s.status === 'active' ? 'Current' : (s.leaving_date ? `Left ${formatUKDate(s.leaving_date)}` : 'Left')}</td>}
               <td>{s.net_behaviour_points}</td>
               <td>{s.latest_week_avg_pct ?? '—'}</td>
               <td>{s.primary_contact_name ?? '—'}</td>
