@@ -4,36 +4,42 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 
-const MILESTONES = [
-  { value: 500, label: 'Gold' },
-  { value: 200, label: 'Silver' },
-  { value: 100, label: 'Bronze' },
-]; // check highest first
+// Levels come from certificate_levels (migration 262), edited at
+// /admin/lookups. A certificate once given is matched by its level's name,
+// so changing a level's points later doesn't make it look ungiven.
 
 function CertificatesInner() {
   const [pending, setPending] = useState([]);
   const [awarded, setAwarded] = useState([]);
   const [loading, setLoading] = useState(true);
   const [printing, setPrinting] = useState(null); // { name, milestone }
+  const [levels, setLevels] = useState([]); // highest first
 
   async function load() {
     setLoading(true);
     const { data: events } = await supabase.from('behaviour_events').select('student_id, points, type').is('voided_at', null);
     const { data: students } = await supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active');
     const { data: already } = await supabase.from('certificates_awarded').select('*');
+    const { data: lv } = await supabase.from('certificate_levels').select('name, points').order('points', { ascending: false });
+    const milestones = (lv || []).map((l) => ({ value: l.points, label: l.name }));
+    setLevels(milestones);
 
     const totals = {};
     (events || []).forEach((e) => {
       if (!e.points) return;
       totals[e.student_id] = (totals[e.student_id] || 0) + e.points;
     });
-    const awardedSet = new Set((already || []).map((a) => `${a.student_id}-${a.milestone}`));
+    // Given certificates are keyed by level name (older rows, before names
+    // were recorded, by their points).
+    const awardedSet = new Set((already || []).flatMap((a) => [
+      a.level_name ? `${a.student_id}-name-${a.level_name}` : `${a.student_id}-points-${a.milestone}`,
+    ].filter(Boolean)));
     const studentMap = Object.fromEntries((students || []).map((s) => [s.student_id, s]));
 
     const pend = [];
     Object.entries(totals).forEach(([sid, total]) => {
-      for (const m of MILESTONES) {
-        if (total >= m.value && !awardedSet.has(`${sid}-${m.value}`)) {
+      for (const m of milestones) {
+        if (total >= m.value && !awardedSet.has(`${sid}-name-${m.label}`) && !awardedSet.has(`${sid}-points-${m.value}`)) {
           pend.push({ student_id: Number(sid), student: studentMap[sid], milestone: m.value, tier: m.label, total });
           break; // only the highest uncollected milestone per student
         }
@@ -52,7 +58,7 @@ function CertificatesInner() {
   useEffect(() => { load(); }, []);
 
   async function markAwarded(row) {
-    const { error } = await supabase.from('certificates_awarded').insert({ student_id: row.student_id, milestone: row.milestone });
+    const { error } = await supabase.from('certificates_awarded').insert({ student_id: row.student_id, milestone: row.milestone, level_name: row.tier });
     if (!error) load();
   }
 
@@ -65,7 +71,10 @@ function CertificatesInner() {
     <div>
       <div className="no-print">
         <h1>Certificates</h1>
-        <p>Awarded at 100 (Bronze), 200 (Silver) and 500 (Gold) cumulative behaviour points — positive and negative combined.</p>
+        <p>
+          Awarded at {[...levels].reverse().map((l) => `${l.value} (${l.label})`).join(', ') || '…'} cumulative behaviour
+          points — positive and negative combined. The levels are set on <a href="/admin/lookups">Lookups</a>.
+        </p>
 
         <div className="card">
           <h2>Ready to award ({pending.length})</h2>
@@ -98,7 +107,7 @@ function CertificatesInner() {
                 {awarded.map((a) => (
                   <tr key={`${a.student_id}-${a.milestone}`}>
                     <td>{a.student?.first_name} {a.student?.last_name}</td>
-                    <td>{a.milestone}</td>
+                    <td>{a.level_name ? `${a.level_name} (${a.milestone})` : a.milestone}</td>
                     <td>{a.awarded_date}</td>
                   </tr>
                 ))}
