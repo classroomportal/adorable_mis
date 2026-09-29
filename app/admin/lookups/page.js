@@ -153,14 +153,87 @@ function BehaviourCategories() {
   );
 }
 
+// Admission form price and deposit for each entry year (migrations 256 and
+// 258). Saved through set_admission_fee_amounts(), which checks the caller;
+// the bursar can also change them on Admission Payments. Every change is
+// logged in Change History under Fees.
+function AdmissionFees() {
+  const [years, setYears] = useState([]);
+  const [drafts, setDrafts] = useState({});
+  const [status, setStatus] = useState(null);
+
+  async function load() {
+    const { data } = await supabase.from('academic_years')
+      .select('academic_year_id, label, status, admission_form_fee, admission_deposit')
+      .neq('status', 'closed').order('start_date');
+    setYears(data || []);
+    setDrafts(Object.fromEntries((data || []).map((y) => [y.academic_year_id, {
+      form_fee: y.admission_form_fee ?? '', deposit: y.admission_deposit ?? '',
+    }])));
+  }
+  useEffect(() => { load(); }, []);
+
+  function amount(v) {
+    const t = String(v).replace(/[,₦\s]/g, '');
+    if (t === '') return null;
+    const n = Number(t);
+    return Number.isFinite(n) && n >= 0 ? n : NaN;
+  }
+
+  async function save(y) {
+    const d = drafts[y.academic_year_id];
+    const formFee = amount(d.form_fee);
+    const deposit = amount(d.deposit);
+    if (Number.isNaN(formFee) || Number.isNaN(deposit)) { setStatus('Amounts must be numbers, 0 or more.'); return; }
+    const { error } = await supabase.rpc('set_admission_fee_amounts', {
+      p_academic_year_id: y.academic_year_id, p_form_fee: formFee, p_deposit: deposit,
+    });
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus(`Saved for ${y.label}.`); load(); }
+  }
+
+  return (
+    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+      <h2>Admission fees</h2>
+      <p style={{ marginTop: 0 }}>
+        What a family pays for the admission form, and the deposit paid after accepting an offer, for each entry year.
+        Leave the form price blank until it is decided; the bursar can&apos;t record form payments until it is set.
+        These amounts also appear in the standard letters as {'{{form_fee}}'} and {'{{deposit}}'}.
+      </p>
+      {status && <p style={{ color: status.startsWith('Error') || status.startsWith('Amounts') ? 'red' : 'green' }}>{status}</p>}
+      <div className="table-scroll">
+        <table>
+          <thead><tr><th>Entry year</th><th>Admission form (₦)</th><th>Deposit (₦)</th><th></th></tr></thead>
+          <tbody>
+            {years.map((y) => {
+              const d = drafts[y.academic_year_id] || { form_fee: '', deposit: '' };
+              const set = (k) => (e) => setDrafts({ ...drafts, [y.academic_year_id]: { ...d, [k]: e.target.value } });
+              return (
+                <tr key={y.academic_year_id}>
+                  <td>{y.label}{y.status === 'current' ? ' (this year)' : ''}</td>
+                  <td><input inputMode="decimal" value={d.form_fee} onChange={set('form_fee')} placeholder="Not set" style={{ width: '9rem' }} /></td>
+                  <td><input inputMode="decimal" value={d.deposit} onChange={set('deposit')} placeholder="Not set" style={{ width: '9rem' }} /></td>
+                  <td><button onClick={() => save(y)}>Save</button></td>
+                </tr>
+              );
+            })}
+            {years.length === 0 && <tr><td colSpan={4} style={{ color: '#999' }}>No academic years.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function LookupsInner() {
   return (
     <div>
       <h1>Lookups</h1>
-      <p>Manage the fixed lists used for student core data and behaviour groups. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
+      <p>Manage the fixed lists used for student core data and behaviour groups, and the admission fees. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
       <LookupList title="Boarding houses" table="boarding_houses" idField="house_id" />
       <LookupList title="Sports houses" table="sports_houses" idField="house_id" />
       <BehaviourCategories />
+      <AdmissionFees />
     </div>
   );
 }
