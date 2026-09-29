@@ -223,6 +223,7 @@ const TABS = [
       { href: '/reports/check', label: 'Check Reports', desc: "Read, AI-check and approve submitted comments." },
       { href: '/reports/periods', label: 'Report Periods', desc: "Set up report periods and who checks them." },
       { href: '/reports/generate', label: 'Generate Reports', desc: "Produce the finished student reports." },
+      { href: '/reports/documents', label: 'Upload Documents', desc: "Publish PDFs from outside Formwork to students' parents." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
