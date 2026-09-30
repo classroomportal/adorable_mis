@@ -145,6 +145,10 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 
 **View as Parent:** admin, SMT and the school office can see a parent's portal, using only their own access (234).
 
+**Who added a student** (286): every student added through Formwork records who added them and when, and nobody can change that afterwards. Students added before 30 Sept 2026 have no record, except the two Chibuezes (Victory NNAMOKO, 30 Sept, from Supabase's request logs).
+
+**Names are tidied when saved** (286): spaces at the start or end of a name are removed, and double spaces inside a name become one, for students, applicants, parents and staff.
+
 **Student groups** (284, `/groups` under Administration; design in `docs/student-groups-design.md`)
 - A group is a list of students for an activity, a club, the prefects, marks or messages. Only **SMT, pastoral, the school office and admins** can create a group, change it, archive it, or add and remove students and the staff who run it. Teachers can open `/groups` and look groups up but not change them.
 - All staff can see every group and who is in it. Students and parents see nothing about groups yet, whatever "Who can see it" says; the portals will only ever show groups marked for them.
@@ -588,6 +592,7 @@ How the list behaves:
   - **parent links;**
   - **email:** reply-to settings.
   - **groups:** student groups, who is in them and who runs them (284).
+  - **students:** every student added, changed or deleted, with old and new values (286). The photo is left out of the log, though the log says it changed.
 - Changes made directly in the database show as "Principal (direct)".
 
 **Grade History** covers grades (see [§9](#9-assessment-results-and-reports)).

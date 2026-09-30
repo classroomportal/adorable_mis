@@ -24,6 +24,7 @@ const AREAS = {
   email: 'Email replies',
   admissions: 'Admissions',
   groups: 'Student groups',
+  students: 'Student records',
 };
 const ACTIONS = { INSERT: 'Added', UPDATE: 'Changed', DELETE: 'Removed' };
 const HIDDEN_FIELDS = new Set(['updated_at', 'updated_by', 'created_at', 'is_demo']);
