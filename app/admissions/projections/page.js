@@ -6,10 +6,11 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { YEAR_GROUPS, errorText } from '../../../lib/admissions';
 
-// Next year's places, year group by year group, boys and girls: the places
-// the school allows (admission_places, migration 266), less today's active
-// students moving up a year (Year 12 leave), less the entry year's
-// newcomers. "Confirmed" newcomers are families who have accepted a place
+// Next year's intake, year group by year group, boys and girls: the new
+// places the school will fill (admission_places, migration 266: new intake
+// only, not the whole year group), less the entry year's newcomers. Today's
+// active students moving up a year (Year 12 leave) are shown beside them
+// for next year's roll, but don't use up new places. "Confirmed" newcomers are families who have accepted a place
 // (accepted, deposit paid or enrolled); offers still awaiting a reply and
 // applicants still in the process (enquiry to interview, or on the waiting
 // list) are only predicted, at the share of each set on the page. Places
@@ -188,16 +189,16 @@ function ProjectionsInner() {
   const rows = YEAR_GROUPS.map((y) => {
     const allowed = places[y] || null;
     const movingUp = y === YEAR_GROUPS[0] ? empty() : now[y - 1];
-    const forNew = allowed && sub(allowed, movingUp);
-    const free = allowed && sub(allowed, movingUp, confirmed[y]);
+    const free = allowed && sub(allowed, confirmed[y]);
     const predictedFree = allowed && sub(free, scale(offered[y], offerPct), scale(inProcess[y], processPct));
-    return { y, allowed, movingUp, forNew, confirmed: confirmed[y], free, offered: offered[y], inProcess: inProcess[y], predictedFree };
+    const roll = add(movingUp, confirmed[y]);
+    return { y, allowed, movingUp, confirmed: confirmed[y], free, offered: offered[y], inProcess: inProcess[y], predictedFree, roll };
   });
   const setRows = rows.filter((r) => r.allowed);
   const sumCount = (k) => add(...rows.map((r) => r[k]));
   const sumPlaces = (k) => (setRows.length ? add(...setRows.map((r) => r[k])) : null);
   const totals = {
-    allowed: sumPlaces('allowed'), movingUp: sumCount('movingUp'), forNew: sumPlaces('forNew'),
+    allowed: sumPlaces('allowed'), movingUp: sumCount('movingUp'), roll: sumCount('roll'),
     confirmed: sumCount('confirmed'), free: sumPlaces('free'), offered: sumCount('offered'),
     inProcess: sumCount('inProcess'), predictedFree: sumPlaces('predictedFree'),
   };
@@ -230,13 +231,13 @@ function ProjectionsInner() {
           </div>
         ) : <Places c={r.allowed} strong={strong} />}
       </td>
-      <td><Count c={r.movingUp} /></td>
-      <td><Places c={r.forNew} /></td>
       <td><Count c={r.confirmed} /></td>
       <td><Places c={r.free} strong /></td>
       <td><Count c={r.offered} /></td>
       <td><Count c={r.inProcess} /></td>
       <td><Places c={r.predictedFree} strong /></td>
+      <td><Count c={r.movingUp} /></td>
+      <td><Count c={r.roll} /></td>
     </>
   );
 
@@ -244,16 +245,16 @@ function ProjectionsInner() {
     <div>
       <h1 style={{ margin: 0 }}>Next Year's Numbers</h1>
       <p style={{ color: '#666', marginTop: '0.4rem' }}>
-        {years.next.label}: the places allowed for boys and girls, less today's students moving up a year and the new admissions coming in. <a href="/admissions">Applicants</a>
+        {years.next.label}: the new places for boys and girls in each year, and how many are still free once new admissions are counted. Students moving up are shown for next year's roll; they don't use up new places. <a href="/admissions">Applicants</a>
       </p>
 
       <div className="stat-card-row">
         {[
-          ['Places allowed', totals.allowed, `${years.next.label}, every year group`],
-          ['Moving up', totals.movingUp, `Today's Years ${YEAR_GROUPS[0]}–${lastYear - 1}`],
-          [`Year ${lastYear} leaving`, leaving, `End of ${years.current.label}`],
+          ['New places allowed', totals.allowed, `${years.next.label} intake, every year group`],
           ['New, confirmed', totals.confirmed, 'Accepted, deposit paid or enrolled'],
-          ['Places still free', totals.free, 'After moving up and confirmed new'],
+          ['Places still free', totals.free, 'New places less confirmed new'],
+          [`Year ${lastYear} leaving`, leaving, `End of ${years.current.label}`],
+          [`Roll ${years.next.label}`, totals.roll, 'Moving up + confirmed new'],
         ].map(([label, c, note]) => (
           <div key={label} className="stat-card accent-family" title={note}>
             <div>
@@ -283,7 +284,7 @@ function ProjectionsInner() {
                   <button type="button" className="secondary" onClick={() => { setEditing(null); setMessage(null); }} disabled={saving}>Cancel</button>
                 </>
               ) : (
-                <button type="button" onClick={startEditing}>Set places allowed</button>
+                <button type="button" onClick={startEditing}>Set new places</button>
               )}
             </div>
           )}
@@ -300,14 +301,14 @@ function ProjectionsInner() {
           <thead>
             <tr>
               <th>{years.next.label}</th>
-              <th title="Boys and girls the school will take in this year group">Places allowed</th>
-              <th title="Today's students in the year below">Moving up</th>
-              <th title="Places allowed less those moving up">Places for new</th>
+              <th title="New boys and girls the school will take into this year group">New places allowed</th>
               <th title="Accepted, deposit paid or enrolled">New: confirmed</th>
-              <th title="Places for new less confirmed new">Places still free</th>
+              <th title="New places less confirmed new">Places still free</th>
               <th title="Offered a place, no reply yet">New: offered</th>
               <th title="Enquiry, form paid, test booked, tested, invited to interview, interviewed or on the waiting list">New: in process</th>
               <th title={`Places still free less ${offerPct}% of offers and ${processPct}% of those in process`}>Predicted free</th>
+              <th title="Today's students in the year below">Moving up</th>
+              <th title="Moving up + confirmed new">Roll next year</th>
             </tr>
           </thead>
           <tbody>
@@ -323,17 +324,17 @@ function ProjectionsInner() {
             ))}
             <tr>
               <td><strong>Leaving</strong><div style={{ fontSize: '0.8em', color: '#666' }}>Year {lastYear} now</div></td>
-              <td colSpan={8}><Count c={leaving} /></td>
+              <td colSpan={9}><Count c={leaving} /></td>
             </tr>
           </tbody>
         </table></div>
         <p style={{ color: '#666', fontSize: '0.85em', marginBottom: 0 }}>
-          B = boys, G = girls. A red figure means more students than places.
-          {unknownGender > 0 && ` “?” is a student or applicant with no gender recorded (${unknownGender} in all); they aren't taken off either the boys' or the girls' places until it is filled in on their record.`}
+          B = boys, G = girls. A red figure means more new students than new places.
+          {unknownGender > 0 && ` “?” is a student or applicant with no gender recorded (${unknownGender} in all); they aren't taken off either the boys' or the girls' new places until it is filled in on their record.`}
         </p>
         <p style={{ color: '#666', fontSize: '0.85em', marginBottom: 0 }}>
           Assumes every current student below Year {lastYear} stays and moves up one year; anyone known to be leaving early isn't taken off.
-          {!canEditPlaces && ' Places allowed are set by SMT.'}
+          {!canEditPlaces && ' New places are set by SMT.'}
         </p>
       </div>
     </div>
