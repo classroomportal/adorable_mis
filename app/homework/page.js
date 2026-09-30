@@ -14,13 +14,15 @@ import HomeworkForm, { btnSmall, schemeLabel, classLabel } from '../components/H
 
 // Homework (migration 278, docs/homework-design.md): set homework for a class,
 // with a deadline and a grading system, and record a grade for each student.
-// Homework grades are outside reporting: nothing in reports, transcripts or
-// result sets reads them.
+// Homework grades inform the end-of-term written report only, through
+// homework_report_summary() (migration 291); transcripts and result sets
+// never read them.
 //
 // Which classes appear is decided by can_set_homework() in the database: the
 // class teacher, the teacher of any single lesson of the class, the Head of
 // Department and admins, and only for classes homework is switched on for
-// (homework_classes, the pilot). RLS enforces the same rule on every save.
+// (homework_classes: every Year 10 and 11 group except Mentor and Prep since
+// migration 295). RLS enforces the same rule on every save.
 
 function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
   const [students, setStudents] = useState([]);
@@ -239,7 +241,7 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
         {status && <span>{status}</span>}
       </div>
       <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
-        Homework grades aren&apos;t part of reports. Every change is recorded in the grade history.
+        The term&apos;s homework grades help with the Homework judgement when you write reports. Every change is recorded in the grade history.
       </p>
     </div>
   );
@@ -259,16 +261,21 @@ function HomeworkInner() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: pilot }, { data: sch }] = await Promise.all([
-        supabase.from('homework_classes')
-          .select(`classes(class_id, class_code, subject_id, year_group, staff_id, subjects(subject_name, display_name), timetable_slots(${LESSON_COLUMNS}))`),
+      // The switched-on classes this person can set homework for, by the
+      // same check the database applies on every save (migration 295: one
+      // call rather than one per class, now every Year 10–11 group is on).
+      const [{ data: ids }, { data: sch }] = await Promise.all([
+        supabase.rpc('my_homework_class_ids'),
         supabase.from('homework_schemes').select('*, homework_scheme_values(value, sort_order)').order('sort_order'),
       ]);
       setSchemes(sch || []);
-      const all = (pilot || []).map((p) => p.classes).filter(Boolean);
-      // The same check the database applies on every save.
-      const allowed = await Promise.all(all.map((c) => supabase.rpc('can_set_homework', { p_class_id: c.class_id })));
-      const mine = all.filter((c, i) => allowed[i].data === true).sort((a, b) => a.class_code.localeCompare(b.class_code));
+      const classIds = (ids || []).map((r) => (typeof r === 'object' ? r.my_homework_class_ids : r));
+      const { data: rows } = classIds.length
+        ? await supabase.from('classes')
+          .select(`class_id, class_code, subject_id, year_group, staff_id, subjects(subject_name, display_name), timetable_slots(${LESSON_COLUMNS})`)
+          .in('class_id', classIds)
+        : { data: [] };
+      const mine = (rows || []).sort((a, b) => a.class_code.localeCompare(b.class_code));
       setClasses(mine);
       // ?class=…&homework=… (from the register's "Mark book" links).
       const params = new URLSearchParams(window.location.search);
@@ -348,7 +355,7 @@ function HomeworkInner() {
       </p>
 
       {classes === null ? <p>Loading…</p> : classes.length === 0 ? (
-        <div className="card"><p>Homework isn&apos;t switched on for any of your classes yet.</p></div>
+        <div className="card"><p>Homework isn&apos;t switched on for any of your classes yet. It is on for Year 10 and 11 teaching groups.</p></div>
       ) : (
         <div className="card" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <strong style={{ marginRight: '0.25rem' }}>Class</strong>
