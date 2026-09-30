@@ -244,35 +244,35 @@ function StudentsList() {
               aria-controls="student-suggestions"
             />
             {showSuggestions && suggestions.length > 0 && (
+              // The same blue name buttons as Record a Payment's student picker.
               <ul
                 id="student-suggestions"
                 role="listbox"
                 style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
-                  margin: '0.25rem 0 0', padding: 0, listStyle: 'none',
-                  background: '#fff', border: '1px solid #d5dce8', borderRadius: '8px',
-                  boxShadow: '0 6px 18px rgba(20, 35, 70, 0.12)', overflow: 'hidden',
-                  minWidth: '16rem',
+                  position: 'absolute', top: '100%', left: 0, zIndex: 20,
+                  margin: '0.25rem 0 0', padding: '0.4rem', listStyle: 'none',
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.3rem',
+                  background: '#fff', border: '1px solid var(--slate-200)', borderRadius: '10px',
+                  boxShadow: '0 6px 18px rgba(20, 35, 70, 0.12)',
+                  width: 'max-content', maxWidth: 'calc(100vw - 2rem)',
                 }}
               >
                 {suggestions.map((s, i) => (
-                  <li
-                    key={s.student_id}
-                    role="option"
-                    aria-selected={i === highlighted}
-                    // mousedown, not click: the input's blur would close the list first.
-                    onMouseDown={(e) => { e.preventDefault(); openStudent(s); }}
-                    onMouseEnter={() => setHighlighted(i)}
-                    style={{
-                      padding: '0.5rem 0.75rem', cursor: 'pointer', fontWeight: 400,
-                      background: i === highlighted ? '#eef3f8' : 'transparent',
-                      borderTop: i === 0 ? 'none' : '1px solid #eef1f6',
-                    }}
-                  >
-                    {s.first_name} {s.last_name}
-                    <span style={{ color: '#8492a6' }}>
-                      {' '}· {s.form_class || 'No form'} · Year {s.year_group}{s.status !== 'active' ? ' · Left' : ''}
-                    </span>
+                  <li key={s.student_id} role="option" aria-selected={i === highlighted} style={{ maxWidth: '100%' }}>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      // mousedown, not click: the input's blur would close the list first.
+                      onMouseDown={(e) => { e.preventDefault(); openStudent(s); }}
+                      onMouseEnter={() => setHighlighted(i)}
+                      style={{
+                        textAlign: 'left', whiteSpace: 'nowrap', maxWidth: '100%',
+                        overflow: 'hidden', textOverflow: 'ellipsis',
+                        background: i === highlighted ? 'var(--brand-900)' : undefined,
+                      }}
+                    >
+                      {s.first_name} {s.last_name} · {s.form_class || 'No form'} · Year {s.year_group}{s.status !== 'active' ? ' · Left' : ''}
+                    </button>
                   </li>
                 ))}
               </ul>
