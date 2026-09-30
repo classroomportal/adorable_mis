@@ -1,0 +1,210 @@
+<!-- Snapshot of the living doc "Formwork — Product Requirements (PRD)": https://claude.ai/code/artifact/d7ffd5d9-797b-4db0-b4b9-01f122498f7b
+     The living doc is the master; edit it there, not here. This file is re-exported
+     whenever the doc is updated (see .claude/skills/update-docs/SKILL.md). -->
+
+# Formwork — Product Requirements (PRD)
+
+Sep 30, 2026 · @Chris TERRY
+
+## Summary
+
+Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 27 known issues, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
+
+**Where the data came from.** Adorable British College has about 260 students in Years 7–12, many of them boarders. Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
+
+- **Not exported from SIMS:** its history of changes, and records of students changing class or subject choice. Formwork's history of changes starts from the import.
+- **Never in SIMS:** medical details. SIMS wasn't designed for them, so the clinic's records start in Formwork.
+- **Held elsewhere:** tuckshop records, on a separate system.
+- **Fees:** the bursar calculated fees on a spreadsheet and imported them into SIMS to send out. Payments were traced by the bursar and the office, not through SIMS.
+
+**Where it stands (30 Sept 2026).** Formwork is live at misform.work for staff, students and parents. It covers:
+
+- students, parents and portals
+- the timetable and registers
+- The Other Half
+- behaviour and detentions
+- assessment and reports
+- the tuckshop and fees
+- the clinic, HR and messaging
+- the first stage of admissions
+
+Its rules live in the database, and every sensitive change is logged. What it does today is set out in the [Formwork — Functional Specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714).
+
+**What this PRD asks for:**
+
+1. Fix what is broken or weaker than it looks.
+2. Finish admissions, so an accepted applicant becomes a student without retyping.
+3. Build the year rollover, so September 2027 starts on the right classes, forms and timetable automatically.
+
+## Goals and non-goals
+
+The goal of this phase is one continuous student record, from enquiry to leaving, that the school can trust without checking it by hand.
+
+**Goals**
+
+1. **Trust.** Every rule a page shows is also enforced by the database, and every known issue is either fixed or deliberately kept.
+2. **Admissions to enrolment.** An accepted applicant becomes an incoming student, with an admission number, parents and a login, in one step.
+3. **Year rollover.** Next year's forms, classes, timetable and student places are planned in Formwork and switched over automatically the evening before Term 1.
+4. **Less admin.** Staff stop re-keying data that Formwork already holds, such as class lists for Nova-T and applicants into students.
+
+**Non-goals for this phase**
+
+- Replacing Nova-T as the timetabling tool. Formwork keeps importing from it.
+- Online fee payment or a payment gateway. Payments stay recorded by the bursar.
+- Parent-initiated actions beyond reading: no parent appeals, tuckshop orders or form submissions.
+- A native phone app. The web app stays phone-first.
+- Bringing back the demo or training account.
+
+## Users and what they need
+
+Most staff use Formwork from a phone between lessons, so each task must take a few taps and never depend on remembering a rule.
+
+| User | Roughly how many | What they need most | Pain today |
+| --- | --- | --- | --- |
+| Principal and SMT | 4–6 | One view of the school; approve fees; review behaviour before parents see it; plan next year | Rollover and enrolment are still manual |
+| Teachers and mentors | about 50 | Registers, scores and behaviour in seconds; write reports | Gradebook import is broken |
+| Pastoral and boarding | about 10 | Know where a child is and how they are doing; detentions and appeals | Holidays still raise "register not done" alerts |
+| Assessment staff | 2–3 | Clean results, targets and transcripts | Subject settings don't save for them |
+| Bursar and college secretary | 2 | Correct charges, payments and approved prices | Tuckshop top-ups leave invoices showing unpaid |
+| School office | 2–3 | Student and parent records, logins, releasing serious behaviour | Can't open the behaviour review page |
+| Admissions | 1–2 | Track applicants, send letters, and see how many places are left next year | No step to turn an applicant into a student |
+| Tuckshop staff | 2–3 | Hand out orders quickly and correctly | Works well today |
+| Nurse | 1 | Private medical records and sick-bay log | Works well today |
+| Students | about 260 | Timetable, grades, tuckshop, Other Half choices | Works well today |
+| Parents | about 1,000 logins | See their child's progress, behaviour, fees and documents | Only what is released or published |
+
+## What is live today
+
+13 of 15 areas are complete for daily use; admissions and year setup are part-built. Full detail is in the [functional specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714).
+
+| Area | State | What it does | Open issues |
+| --- | --- | --- | --- |
+| Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out | 1 |
+| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required | 1 |
+| Timetable and imports | Live | Nova-T import with preview; lesson-level teacher and room | 0 |
+| Registers | Live | Any staff marks any register; 15-minute not-done alerts | 1 |
+| The Other Half | Live | Choices only in Evening Prep; capacity and year checks | 5 |
+| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review | 5 |
+| Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017 | 3 |
+| Reports and transcripts | Live | Draft→checked comments with AI help; KS3 and KS4/5 transcripts | 2 |
+| Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists | 3 |
+| Fees | Live | Invoices, batches, discounts; two-person price approval; locked prices | 1 |
+| Clinic, pastoral, HR | Live | Nurse-only medical records; HR records | 0 |
+| Messages and email | Live | One queue; Reply-To per kind; parent pause switch | 0 |
+| Calendar and administration | Live | SMT calendar; editable rules on Lookups; backups | 1 |
+| Admissions | Part-built | Applicants, tests, interviews, letters, form fee and deposit; Next Year's Numbers from places allowed per year group, boys and girls | 2 + enrolment missing |
+| Next year setup | Part-built | Academic years, mentor structure, next year's Nova-T plan | 2 + most steps missing |
+
+## Requirements
+
+30 requirements in three priorities: P0 fixes what is broken or risky now, P1 completes admissions and the year rollover before next September, P2 tightens the rest. Priorities are proposed; the principal decides.
+
+### P0 — fix now
+
+| ID | Requirement | Done when | Status |
+| --- | --- | --- | --- |
+| P0-1 | Gradebook import and the quick-add form on /results save again | A gradebook CSV and a quick-add result both save, with a valid result type | Not started |
+| P0-2 | The school office can open /behaviour/review | Office staff release a −5 event without a picture from the page | Done |
+| P0-3 | Parent visibility of a behaviour event can only change through the review | A direct request to change visibility is refused by the database | Done |
+| P0-4 | The live Nova-T import refuses next year's file | Importing a planning-year file outside plan mode is blocked, with a message pointing to Next Year Setup | Not started |
+| P0-5 | Assessment managers can save subject settings, or the fields they can't save are read-only | No save on /admin/subject-settings silently does nothing | Not started |
+| P0-6 | An admission form fee is approved for 2026/27 and 2027/28 | The bursar records a form payment and the applicant moves to Form paid | Not started |
+| P0-7 | A tuckshop top-up records a matching pre-paid payment | After a top-up the parent's invoice doesn't show as unpaid | Not started |
+
+### P1 — before September 2027
+
+**Admissions to enrolment**
+
+| ID | Requirement | Done when | Status |
+| --- | --- | --- | --- |
+| P1-1 | Enrol an accepted or deposit-paid applicant in one step | Creates an incoming student with admission number, admission date, UPN, previous school, CAT4 copied, gender, parents created or linked with their relationship to this child, and a locked login | Not started |
+| P1-2 | Incoming students stay out of this year's lists, registers, charges and messages until the switch | Every student list and count filters by status; an audit of about 20 queries is done | Not started |
+| P1-3 | The deposit recorded is checked against the year's deposit | A different amount needs a written reason | Not started |
+| P1-4 | In-year joiners go straight to active | An applicant for the current year is enrolled as active | Not started |
+
+**Year rollover**
+
+| ID | Requirement | Done when | Status |
+| --- | --- | --- | --- |
+| P1-5 | The mentor structure lock is enforced by the database | Plan groups can't change after confirmation until reopened | Not started |
+| P1-6 | Each student's progression is recorded: move up, leave, repeat | Y7–10 default to move up, Y11 undecided, Y12 leave; SMT confirm each year group | Not started |
+| P1-7 | Subject choices for Y9 options and Y11→Y12 are collected in Formwork | Students or staff enter choices; a CSV goes to Nova-T | Not started |
+| P1-8 | Students are placed into next year's planned classes | Block allocation and the class import work in plan mode | Not started |
+| P1-9 | This year's classes map to next year's where they carry on | A mapping page links promotable blocks and classes | Not started |
+| P1-10 | A readiness check lists what is missing before the switch | Shows unplaced students, classes without teachers, missing mentors | Not started |
+| P1-11 | The year switch runs automatically the evening before Term 1 | At 18:00 Lagos the new year becomes current, leavers leave, incoming become active, the timetable is replaced, and this year is archived; SMT get reminders 21, 14, 7, 3 and 1 days before | Not started |
+
+**Everyday fixes**
+
+| ID | Requirement | Done when | Status |
+| --- | --- | --- | --- |
+| P1-12 | Registers Not Done and alerts skip school holidays inside a term | No alerts on a holiday in the calendar | Not started |
+| P1-13 | The weekly behaviour alert is sent once per student per week | A second negative event in the same week sends no repeat email | Not started |
+| P1-14 | First passwords are always changed, enforced by the database | Every new login is flagged, and a flagged login can't read data until changed | Not started |
+| P1-15 | A passed leaving date makes the student a leaver without anyone saving the record | A daily job applies it and locks the login | Not started |
+| P1-16 | Decimal scores always get a grade | 89.5 takes the lower band, as transcripts already do | Not started |
+
+### P2 — tighten later
+
+| ID | Requirement | Done when | Status |
+| --- | --- | --- | --- |
+| P2-1 | Other Half: retired activities leave timetables; activities with past registers can't be deleted; year or capacity changes flag affected choices; printed timetables show OH | All four behave as described | Not started |
+| P2-2 | Someone holds the other\_half coordinator role | Role assigned on /staff/roles | Not started |
+| P2-3 | HR can't give themselves SMT, bursar or approver roles | Those grants need an admin | Not started |
+| P2-4 | Report checkers are limited to their scope; the unused Publish switch is removed | A checker sees only their year or department | Not started |
+| P2-5 | Certificate totals count every event | Totals match a direct count for students with many events | Not started |
+| P2-6 | tuckshop\_owner can do what its pages offer, or the pages are hidden | Page access and data rules agree | Not started |
+| P2-7 | Old applicants' personal data is removed after a retention period; interests reach the OH coordinator | A retention rule is agreed and applied | Not started |
+
+## Roadmap
+
+Four phases in order, with two gates: nothing in admissions or rollover starts until the P0 fixes are done, and the switch runs only when the readiness check is clear. No dates are set yet except the switch, which follows the Term 1 2027/28 start date.
+
+&#91;embedded content: Roadmap · 4 phases, 2 gates\]
+
+Enrolment (phase 2) must be finished before the switch, because the switch turns incoming students into active ones.
+
+## Success measures
+
+This phase has worked when September 2027 opens on the right classes with nobody re-keying data, and no known issue is left undecided.
+
+| Phase | Measure | Target |
+| --- | --- | --- |
+| Fix | Known issues fixed or marked "keep" | 27 of 27 |
+| Fix | Rules shown on a page that the database doesn't enforce, for a change to data | 0 |
+| Admissions | Accepted applicants enrolled without retyping their details | 100% |
+| Admissions | Letters sent from Formwork rather than written by hand | All seven kinds |
+| Rollover | Students in the right forms and classes on the first day of Term 1 | 100%, with no manual moves after the switch |
+| Rollover | Hours of staff time spent on the switch | Under 2, mostly checking |
+| Every day | Registers taken within 15 minutes of the start | Tracked weekly from register alerts; rising |
+| Every day | Parent logins used at least once per term | Tracked per term; rising |
+
+## Risks, dependencies and open questions
+
+The biggest risk is the year switch: it changes every class and form at once, so it needs a readiness check, a rehearsal and a way back.
+
+**Risks**
+
+| Risk | Effect | Mitigation |
+| --- | --- | --- |
+| Year switch runs on incomplete plans | Students start Term 1 in the wrong classes | Readiness check (P1-10) must be clear; SMT can delay the switch; this year is archived first |
+| Next year's Nova-T file imported on the live page | This year's timetable is overwritten | P0-4 blocks it; nightly backup allows recovery |
+| Incoming students leak into this year's lists | Wrong registers, charges or messages | P1-2 audit before any enrolment |
+| A permission change removes someone's normal action | Staff blocked mid-task (as with invoices, 27 Sept, for 40 minutes) | Test each affected role's everyday action, not just the blocked one |
+| One developer, working from a phone | Slow fixes; knowledge in one head | Functional spec, system rules and database schema kept in step with every change |
+
+**Dependencies**
+
+- Nova-T exports for next year's timetable, and the subject codes that match them.
+- Term 1 2027/28 start date in the calendar, which sets the switch time.
+- The principal's letter wording for the seven admission letters.
+- The principal and the college secretary to approve fee prices.
+
+**Open questions**
+
+- [ ] How many Y9 option choices does each student make?
+- [ ] What is the admission form fee?
+- [ ] Are extra application fields needed: school reports, medical or SEN notes, a fee sponsor?
+- [ ] How long are unsuccessful and withdrawn applicants kept?
+- [ ] Who will hold the other\_half coordinator role?
+- [ ] Should parents ever act in the portal (appeals, forms), or stay read-only?
