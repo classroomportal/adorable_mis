@@ -8,6 +8,7 @@ import { formatUKDate } from '../../lib/formatDate';
 import { schoolToday } from '../../lib/schoolTime';
 import { OUTCOMES, loadAttachments, removeAttachment, gradeFromBoundaries } from '../../lib/homework';
 import { AttachmentList } from '../components/HomeworkAttachments';
+import HomeworkMarkSheet from '../components/HomeworkMarkSheet';
 import { Instructions } from '../components/HomeworkChip';
 import HomeworkForm, { btnSmall, schemeLabel, classLabel } from '../components/HomeworkForm';
 
@@ -368,10 +369,18 @@ function HomeworkInner() {
         />
       )}
 
+      {cls && mode.kind === 'sheet' && (
+        <HomeworkMarkSheet
+          cls={cls} schemes={schemes}
+          onBack={() => setMode({ kind: 'list' })}
+          onOpenMarkBook={(hw) => setMode({ kind: 'marks', homework: hw, fromSheet: true })}
+        />
+      )}
+
       {cls && mode.kind === 'marks' && (
         <MarkBook
           hw={mode.homework} cls={cls} scheme={schemeFor(mode.homework)}
-          onBack={() => setMode({ kind: 'list' })} onChanged={loadHomework}
+          onBack={() => setMode({ kind: mode.fromSheet ? 'sheet' : 'list' })} onChanged={loadHomework}
         />
       )}
 
@@ -379,7 +388,10 @@ function HomeworkInner() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <h2 style={{ margin: 0 }}>{classLabel(cls)}</h2>
-            <button type="button" onClick={() => setMode({ kind: 'form' })}>Set homework</button>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button type="button" className="secondary" onClick={() => setMode({ kind: 'sheet' })}>Mark sheet</button>
+              <button type="button" onClick={() => setMode({ kind: 'form' })}>Set homework</button>
+            </div>
           </div>
           {status && <p>{status}</p>}
           {homework.length === 0 ? <p>No homework set for this class yet.</p> : (
