@@ -6,7 +6,7 @@ import RequireResource from '../RequireResource';
 import { LESSON_COLUMNS } from '../../lib/lessons';
 import { formatUKDate } from '../../lib/formatDate';
 import { schoolToday } from '../../lib/schoolTime';
-import { OUTCOMES, loadAttachments, removeAttachment } from '../../lib/homework';
+import { OUTCOMES, loadAttachments, removeAttachment, gradeFromBoundaries } from '../../lib/homework';
 import { AttachmentList } from '../components/HomeworkAttachments';
 import { Instructions } from '../components/HomeworkChip';
 import HomeworkForm, { btnSmall, schemeLabel, classLabel } from '../components/HomeworkForm';
@@ -30,6 +30,7 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
   const [status, setStatus] = useState(null);
   const [rowErrors, setRowErrors] = useState({});
   const [doneAt, setDoneAt] = useState({}); // student_id -> when they ticked it done
+  const [boundaries, setBoundaries] = useState([]); // the subject's grade boundaries for this year group
 
   const values = scheme?.homework_scheme_values?.slice().sort((a, b) => a.sort_order - b.sort_order).map((v) => v.value) || [];
   const max = scheme?.kind === 'mark' ? Number(hw.out_of ?? scheme.fixed_max) : null;
@@ -42,6 +43,13 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
       // Students' own "done" ticks (migration 288), shown as a guide.
       supabase.from('homework_done').select('student_id, done_at').eq('homework_id', hw.homework_id),
     ]);
+    // A mark is turned into a grade from these by the database (migration 289);
+    // the page uses them only to show the grade while typing.
+    if (scheme?.kind === 'mark' && hw.subject_id && hw.year_group) {
+      const { data: b } = await supabase.from('subject_grade_boundaries')
+        .select('grade, min_score').eq('subject_id', hw.subject_id).eq('year_group', hw.year_group);
+      setBoundaries(b || []);
+    }
     setDoneAt(Object.fromEntries((ticks || []).map((t) => [t.student_id, t.done_at])));
     const byId = new Map();
     (enrol || []).map((e) => e.students).filter((s) => s && s.status === 'active').forEach((s) => byId.set(s.student_id, s));
@@ -53,12 +61,15 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
     setStudents([...byId.values()].sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name)));
     const s = {};
     (marks || []).forEach((m) => {
-      s[m.student_id] = { grade: m.grade || '', score: m.score == null ? '' : String(Number(m.score)), comment: m.comment || '' };
+      // For a marked homework the stored grade is the one worked out from the
+      // mark; only "Not handed in" / "Excused" belong in the drop-down.
+      const grade = scheme?.kind === 'mark' && m.score != null ? '' : (m.grade || '');
+      s[m.student_id] = { grade, score: m.score == null ? '' : String(Number(m.score)), comment: m.comment || '' };
     });
     setSaved(s);
     setRows(s);
     setRowErrors({});
-  }, [cls.class_id, hw.homework_id]);
+  }, [cls.class_id, hw.homework_id, hw.subject_id, hw.year_group, scheme?.kind]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -191,6 +202,11 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
                         onChange={(e) => setRow(s.student_id, { score: e.target.value })}
                         style={{ width: '6rem' }} aria-label={`Mark for ${s.first_name} ${s.last_name}`}
                       />
+                    )}
+                    {scheme?.kind === 'mark' && !r.grade && r.score !== '' && max > 0 && (
+                      <span className="hw-mark-grade" title="Worked out from the subject's grade boundaries">
+                        {gradeFromBoundaries((Number(r.score) / max) * 100, boundaries) || '—'}
+                      </span>
                     )}
                     <select
                       value={r.grade} disabled={withdrawn}
