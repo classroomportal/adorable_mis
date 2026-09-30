@@ -80,7 +80,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | Area | State | What it does | Open issues |
 | --- | --- | --- | --- |
 | Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out; a parent's welcome letter can be resent to reset a forgotten password | 1 |
-| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type | 1 |
+| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type; who added each student and every change to a student record are logged; names are tidied of stray spaces | 1 |
 | Timetable and imports | Live | Nova-T import with preview; lesson-level teacher and room | 0 |
 | Registers | Live | Any staff marks any register; 15-minute not-done alerts | 1 |
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks | 5 |

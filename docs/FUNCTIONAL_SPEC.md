@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 285). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 286). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -125,6 +125,8 @@ Every member of staff can read the whole student record; what each role can chan
 - **FR-2.6** A student's form must be a real mentor group, and their mentor group follows it. \[DB\]
 - **FR-2.7** Photos are stored on the student record, shrunk to 400 px in the browser. Admins can bulk-import them. \[Page\]
 - **FR-2.8** The Students list loads nothing until asked, since the whole school with photos is slow. Typing a name searches straight away, and after two letters up to eight matching students appear under the search box as blue buttons (name, form, year); choosing one opens that student. The list follows the Status, Year and Form filters and a houseparent's house. \[Page\]
+- **FR-2.9** Every student added records who added them and when, taken from the signed-in person whatever the page sends, and it can't be changed afterwards. Students added before 30 September 2026 have no record, except the two added through the app that day (Victory NNAMOKO, from Supabase's request logs). \[DB\]
+- **FR-2.10** Names are tidied on every save, for students, applicants, parents and staff: spaces at the start or end are removed and double spaces become single. Tidying a stored name never counts as a name change for someone only allowed to edit other fields. \[DB\]
 
 **Parents**
 
@@ -640,7 +642,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade and homework grade entered, changed or deleted, with old and new grade. Homework grades are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
@@ -656,6 +658,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 - **FR-16.6** Changes to grade boundaries, subject aliases and key stages. \[DB\]
 - **FR-16.7** Who looked at or downloaded a record: Formwork logs changes, not viewing. \[DB\]
 - **FR-16.8** Anything before the September 2026 import from SIMS, including class and subject-choice changes. \[Data\]
+- **FR-16.9** Who added a student, and changes to student records, before 30 September 2026 (logged from migration 286). \[Data\]
 
 ## 20. FR-17 Homework
 
