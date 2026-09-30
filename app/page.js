@@ -7,6 +7,8 @@ import { canHandOut } from '../lib/tuckshopHandout';
 import SplashScreen from './components/SplashScreen';
 import { ParentPortalInner } from './parent-portal/page';
 import { findParentIdByEmail } from '../lib/parentByEmail';
+import { useTileOrder, sortTiles } from '../lib/tileOrder';
+import StudentHome from './components/StudentHome';
 
 // Every chip is the same fixed-size box, whatever the length of its label, and
 // carries a one-line description that pops out on hover or keyboard focus.
@@ -60,18 +62,6 @@ function DashboardStats({ isDemoAccount, hasAccess }) {
 
   return (
     <div className="stat-card-row">
-      {/* Logging behaviour is the thing most staff come here to do, so it
-          gets a big tile of its own rather than only a chip on the Students
-          card. */}
-      {hasAccess('/behaviour') && (
-        <a className="stat-card quick-link accent-students" href="/behaviour">
-          <div className="stat-card-icon">✍️</div>
-          <div>
-            <div className="quick-link-label">Log behaviour</div>
-            <div className="stat-card-label">Positive or negative, one student or a group</div>
-          </div>
-        </a>
-      )}
       <StatCard label="Active students" value={stats?.students} icon="🎓" accent="myinfo" href="/students" />
       <StatCard label="Staff" value={stats?.staff} icon="🧑‍🏫" accent="school" href="/staff/roles" />
       <StatCard label="Behaviour alerts (7 days)" value={stats?.alerts} icon="⚠️" accent="students" href="/behaviour/alerts" />
@@ -105,15 +95,20 @@ function QuickLinks({ hasAccess }) {
     findParentIdByEmail(profile?.email || session?.user?.email).then((id) => setIsParent(!!id));
   }, [profile, session]);
 
-  const links = [
-    { href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
-    { href: '/calendar', label: 'Calendar', icon: '📅', accent: 'school', sub: 'Term dates and school events' },
+  // Order set school-wide at /admin/tile-order (migration 280). Logging
+  // behaviour is the thing most staff come here to do, so it has a big tile
+  // of its own rather than only a chip on the Students card.
+  const order = useTileOrder('staff');
+  const links = sortTiles([
+    { key: 'log_behaviour', href: '/behaviour', label: 'Log behaviour', icon: '✍️', accent: 'students', sub: 'Positive or negative, one student or a group' },
+    { key: 'timetable', href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
+    { key: 'calendar', href: '/calendar', label: 'Calendar', icon: '📅', accent: 'school', sub: 'Term dates and school events' },
     {
-      href: '/inbox', label: 'Inbox', icon: '✉️', accent: 'family',
+      key: 'inbox', href: '/inbox', label: 'Inbox', icon: '✉️', accent: 'family',
       sub: unread == null ? 'Your messages' : unread === 0 ? 'No unread messages' : `${unread} unread`,
     },
-    isParent && { href: '/parent-portal', label: 'My Children', icon: '👪', accent: 'students', sub: "Your children's grades and behaviour" },
-  ].filter((l) => l && hasAccess(l.href));
+    isParent && { key: 'my_children', href: '/parent-portal', label: 'My Children', icon: '👪', accent: 'students', sub: "Your children's grades and behaviour" },
+  ].filter((l) => l && hasAccess(l.href)), order);
   if (links.length === 0) return null;
 
   return (
@@ -386,6 +381,7 @@ const TABS = [
       { href: '/admin/backup', label: 'Run a Backup', desc: "Take a full backup of the database." },
       { href: '/admin/change-history', label: 'Change History', desc: "Changes to registers, fees, behaviour, roles and parent links, and who made them." },
       { href: '/admin/email-replies', label: 'Email Replies', desc: "Who gets the reply when someone answers a Formwork email." },
+      { href: '/admin/tile-order', label: 'Arrange Tiles', desc: "The order of the big tiles on students' and staff dashboards, for everyone." },
       // /admin/import-timetable (SIMS student-class upload) is no longer used:
       // allocations are kept in Formwork, and that upload only ever added
       // students to classes, never took them out. Hidden, not deleted.
@@ -420,29 +416,7 @@ export default function Home() {
   }
 
   if (profile?.role === 'student') {
-    return (
-      <div>
-        <h1>Welcome{profile.student_id ? '' : ' — account not linked yet'}</h1>
-        <div className="module-card-grid">
-          <ModuleCard
-            icon="📚" label="My Info" accent="myinfo"
-            description="Your grades, behaviour record and account."
-            items={[
-              { href: '/portal', label: 'My Grades', desc: "Your grades, targets and behaviour record." },
-              { href: '/portal/tuckshop', label: 'Tuckshop', desc: "Order from the tuckshop." },
-              { href: '/change-password', label: 'Change Password', desc: "Choose a new password." },
-            ]}
-          />
-          <ModuleCard
-            icon="🎭" label="The Other Half" accent="students"
-            description="Choose your activities for each Other Half slot."
-            items={[
-              { href: '/portal/other-half', label: 'Choose Activities', desc: "Pick one activity for each Other Half day." },
-            ]}
-          />
-        </div>
-      </div>
-    );
+    return <StudentHome />;
   }
 
   if (profile?.role === 'parent') {

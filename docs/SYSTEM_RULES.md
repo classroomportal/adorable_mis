@@ -63,6 +63,12 @@ Where a rule has changed several times, only the current version is given. Migra
 
 ---
 
+**Dashboard tile order** (280)
+- The order of the big tiles on students' home page and portal, and at the top of the staff dashboard, is set once for everyone at `/admin/tile-order` (Arrange Tiles). Only admins have that page for now.
+- The order doesn't change which tiles someone sees. That is still decided by page access (and, for Homework, the pilot). A new tile that hasn't been placed yet goes after the others.
+
+---
+
 ## 2. Logins and sign-in
 
 **Staff and students**
@@ -466,6 +472,7 @@ How the list behaves:
 **Homework** (278, 279; pilot from 30 Sept 2026, `/homework`)
 - **Pilot:** homework can only be set for classes an admin has switched on. At the moment that is 10_1/Ma and 11_1/Ma. Only admins have the `/homework` page until roles are granted it.
 - **Who can set, edit and mark it:** the class teacher, the teacher of any single lesson of the class, the Head of Department for the subject, and admins.
+- **Where it's set:** from the class register (`/attendance`), where a Homework panel appears for classes the teacher can set homework for, or from `/homework`, which also has the mark books.
 - **Setting it:** each piece of homework has a title, instructions (plain text), a deadline (a date, and optionally the lesson it's due in, which must be one of the class's lessons that day) and a grading system: Mark out of …, Percentage, A*–U, 9–1, WAEC, Effort 1–4, Complete / Incomplete or Not graded. Any grading system also accepts "Not handed in" and "Excused".
 - **Grades:** a grade must fit the grading system (a mark between 0 and the maximum, or one of the list's grades). A grade can only be recorded for a student in the class. Once any grade is recorded, the grading system can't be changed and the homework can't be deleted, only withdrawn.
 - **Who sees grades:** the class's teachers, the Head of Department, SMT and admins. Other staff (mentors, pastoral, assessment managers) can see what homework was set but not the grades.
