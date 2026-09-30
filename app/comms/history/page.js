@@ -12,8 +12,12 @@ const AUDIENCES = [
   { key: 'other', label: 'Other addresses' },
 ];
 
+// Who a student-group message went to (migration 277).
+const AUDIENCE_LABELS = { students: 'students', parents: 'parents', both: 'students and parents' };
+
 // One audience's emails, grouped by kind (e.g. all "Detention" emails),
 // newest group first. Rows arrive newest first from email_log().
+
 function groupEmails(emails, audience, filter) {
   const f = filter.trim().toLowerCase();
   const groups = {};
@@ -43,7 +47,7 @@ function ComposeInner() {
     if (!allowed) return;
     supabase
       .from('messages')
-      .select('id, subject, body, sent_by, target_type, target_value, recipient_count, email_sent, sent_at')
+      .select('id, subject, body, sent_by, target_type, target_value, audience, recipient_count, email_sent, sent_at')
       .order('sent_at', { ascending: false })
       .then(async ({ data }) => {
         setMessages(data || []);
@@ -96,7 +100,7 @@ function ComposeInner() {
         return (
           <div className="card" key={m.id}>
             <p><strong>{m.subject}</strong> — {m.recipient_count} recipient(s), {m.email_sent ? 'emailed + in-app' : 'in-app only'}</p>
-            <p style={{ color: '#666', fontSize: '0.85rem' }}>{new Date(m.sent_at).toLocaleString()} — {m.target_type}{m.target_value ? `: ${m.target_value}` : ''}</p>
+            <p style={{ color: '#666', fontSize: '0.85rem' }}>{new Date(m.sent_at).toLocaleString()} — {m.target_type}{m.target_value ? `: ${m.target_value}` : ''}{m.audience ? ` (${AUDIENCE_LABELS[m.audience] || m.audience})` : ''}</p>
             <p>{m.body}</p>
             <button onClick={() => toggleExpand(m.id)}>
               {expanded === m.id ? 'Hide read receipts' : 'Show read receipts'}

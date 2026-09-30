@@ -512,7 +512,9 @@ How the list behaves:
 
 **Sending messages**
 - Only SMT, pastoral and the school office (and admins) can send messages (091).
-- **Only messages to one person are emailed.** Group messages go to the Formwork inbox only.
+- A message to one person is emailed to them as well as going to their Formwork inbox.
+- A message to a group of students (all students, year groups, forms, boarding houses, mentor groups, teaching classes, Other Half activities or sports houses; several at once) can go to the students, their parents, or both (277). **Parents in a group message are emailed too**, unless parent emails are paused. Students and staff in a group message get it in their inbox only.
+- Parents without a Formwork login (never sent their welcome letter) can't be reached by a message. "Check recipient count" says how many there are.
 - Group messages reach active students, and the parents of active students, only.
 - Everyone sees only their own inbox.
 - `/comms/history` lists sent messages and automatic emails, with their delivery status but never the email body, because welcome emails contain passwords.
