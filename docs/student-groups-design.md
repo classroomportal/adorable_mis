@@ -1,12 +1,13 @@
 # Student groups: design
 
-Status, 30 September 2026: **stages 1 and 2 built.** Stage 1 (migration
-284): groups, members, the staff who run them, `/groups` under Administration,
-the Groups tile on a student's profile, and "Student group" as a message
-target. Stage 2 (migration 285): groups built from a rule at `/groups/build`,
-with every setting chosen each time (the principal: "system build parameters
-must be editable"). Stages 3–4 (mark sheets, portal views) are not built yet.
-All the principal's decisions are under "Decided".
+Status, 30 September 2026: **stages 1–3 built.** Stage 1 (migration 284):
+groups, members, the staff who run them, `/groups` under Administration, the
+Groups tile on a student's profile, and "Student group" as a message target.
+Stage 2 (migration 285): groups built from a rule at `/groups/build`, with
+every setting chosen each time (the principal: "system build parameters must
+be editable"). Stage 3 (migration 287): mark sheets for a group, outside
+reporting. Stage 4 (portal views) is not built yet. All the principal's
+decisions are under "Decided".
 
 What was asked for (the principal, 30 Sept 2026): "we need to create groups of
 students sometimes for particular activities, sometimes for recording particular
@@ -176,7 +177,10 @@ teacher (who can look them up); other roles can be given it at
    settings): negative behaviour and below target. Every setting is chosen
    each time; the form only starts from this term, this school year, −6
    points and 3 subjects.
-3. **Phase 3:** mark sheets and `group_marks`, with Grade History.
+3. **Phase 3 (built, migration 287):** `student_group_mark_sheets` and
+   `student_group_marks` on the group's page, with Grade History. "Absent" is
+   allowed as well as "Not handed in" and "Excused", since group marks are
+   often a test on the day.
 4. **Phase 4:** the student and parent portal views.
 
 Each phase is one migration and its pages, with grants to `authenticated` only,
