@@ -1694,3 +1694,24 @@ button.hw-card:hover { background: var(--slate-50); }
 .tile-order-note { font-weight: 400; font-size: 0.78rem; color: var(--ink-soft); }
 .tile-order-buttons { display: flex; gap: 0.3rem; }
 .tile-order-buttons button { padding: 0.25rem 0.6rem; }
+
+/* Homework files and links (migration 281). */
+.hw-attachments { margin-top: 0.75rem; }
+.hw-attachments-head { font-size: 0.75rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 0.3rem; }
+.hw-attachments ul, .hw-attach-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.3rem; }
+button.hw-attachment {
+  display: inline-flex; align-items: center; gap: 0.45rem; width: auto;
+  background: white; color: var(--brand-800); border: 1px solid var(--slate-200);
+  border-radius: 8px; padding: 0.35rem 0.6rem; font-size: 0.9rem; text-align: left;
+}
+button.hw-attachment:hover { background: var(--brand-050); }
+.hw-attachment-title { font-weight: 600; overflow-wrap: anywhere; }
+.hw-attachment-meta { font-size: 0.78rem; color: var(--ink-soft); white-space: nowrap; }
+.hw-attach-editor { border: 1px dashed var(--slate-200); border-radius: 10px; padding: 0.6rem; }
+.hw-attach-list { margin-bottom: 0.5rem; }
+.hw-attach-list li { display: flex; align-items: center; gap: 0.5rem; }
+.hw-attach-list button { padding: 0.2rem 0.5rem; font-size: 0.8rem; }
+.hw-file-button {
+  display: inline-block; cursor: pointer; background: white; color: var(--brand-700);
+  border: 1px solid var(--brand-700); border-radius: 8px; padding: 0.4rem 0.7rem; flex: 0 0 auto; width: auto;
+}

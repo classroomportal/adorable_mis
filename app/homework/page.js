@@ -6,7 +6,8 @@ import RequireResource from '../RequireResource';
 import { LESSON_COLUMNS } from '../../lib/lessons';
 import { formatUKDate } from '../../lib/formatDate';
 import { schoolToday } from '../../lib/schoolTime';
-import { OUTCOMES } from '../../lib/homework';
+import { OUTCOMES, loadAttachments, removeAttachment } from '../../lib/homework';
+import { AttachmentList } from '../components/HomeworkAttachments';
 import { Instructions } from '../components/HomeworkChip';
 import HomeworkForm, { btnSmall, schemeLabel, classLabel } from '../components/HomeworkForm';
 
@@ -291,6 +292,12 @@ function HomeworkInner() {
 
   async function remove(hw) {
     if (!window.confirm(`Delete "${hw.title}"? This can't be undone.`)) return;
+    // Files first: once the homework (and so its attachment rows) is gone,
+    // nobody could see or remove them.
+    for (const att of await loadAttachments(hw.homework_id)) {
+      const e = await removeAttachment(att);
+      if (e) { setStatus(`Error removing ${att.title}: ${e.message}`); return; }
+    }
     const { error } = await supabase.from('homework').delete().eq('homework_id', hw.homework_id);
     setStatus(error ? `Error: ${error.message}` : `"${hw.title}" deleted.`);
     loadHomework();
@@ -324,7 +331,7 @@ function HomeworkInner() {
           key={mode.homework?.homework_id || 'new'}
           cls={cls} schemes={schemes} existing={mode.homework} markCount={mode.homework ? marksOf(mode.homework) : 0}
           onCancel={() => setMode({ kind: 'list' })}
-          onSaved={() => { setStatus(mode.homework ? 'Homework updated.' : 'Homework set.'); setMode({ kind: 'list' }); loadHomework(); }}
+          onSaved={(msg) => { setStatus(msg || (mode.homework ? 'Homework updated.' : 'Homework set.')); setMode({ kind: 'list' }); loadHomework(); }}
         />
       )}
 
@@ -361,12 +368,11 @@ function HomeworkInner() {
                       </td>
                       <td>
                         <strong>{hw.title}</strong>{withdrawn && <span className="badge badge-negative" style={{ marginLeft: '0.4rem' }}>withdrawn</span>}
-                        {hw.instructions && (
-                          <details style={{ fontSize: '0.85rem' }}>
-                            <summary>Instructions</summary>
-                            <Instructions text={hw.instructions} />
-                          </details>
-                        )}
+                        <details style={{ fontSize: '0.85rem' }}>
+                          <summary>Instructions and resources</summary>
+                          {hw.instructions ? <Instructions text={hw.instructions} /> : <p style={{ margin: '0.3rem 0' }}>No instructions.</p>}
+                          <AttachmentList homeworkId={hw.homework_id} />
+                        </details>
                       </td>
                       <td>{schemeLabel(schemeFor(hw), hw.out_of)}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
