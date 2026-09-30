@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { schoolToday } from '../../../lib/schoolTime';
+import { STUDENT_GENDERS } from '../../../lib/studentFields';
 
 function NewStudentInner() {
   const router = useRouter();
@@ -36,6 +37,10 @@ function NewStudentInner() {
       setStatus('First and last name are required.');
       return;
     }
+    if (!form.gender) {
+      setStatus('Gender is required.');
+      return;
+    }
     if (!form.dob) {
       setStatus('Date of birth is required.');
       return;
@@ -52,7 +57,7 @@ function NewStudentInner() {
         first_name: form.first_name,
         last_name: form.last_name,
         middle_name: form.middle_name || null,
-        gender: form.gender || null,
+        gender: form.gender,
         year_group: form.year_group ? Number(form.year_group) : null,
         form_class: form.form_class || null,
         dob: form.dob,
@@ -93,7 +98,10 @@ function NewStudentInner() {
         </label>
         <label>
           Gender
-          <input value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} />
+          <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} required>
+            <option value="">Choose...</option>
+            {STUDENT_GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+          </select>
         </label>
         <label>
           Date of birth
