@@ -142,9 +142,10 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
               {homework.map((h) => (
                 <th key={h.homework_id} className="hw-sheet-hw">
                   <button type="button" className="hw-sheet-link" onClick={() => onOpenMarkBook(h)} title={`Open the mark book for ${h.title}`}>
-                    {h.title}
+                    {/* Titles are at most 10 characters (migration 290); older ones are cut. */}
+                    {h.title.length > 10 ? `${h.title.slice(0, 10)}…` : h.title}
                   </button>
-                  <div className="hw-sheet-due">{formatUKDate(h.due_on).replace(/ \d{4}$/, '')}{h.marks_released ? '' : ' · not released'}</div>
+                  <div className="hw-sheet-due">{formatUKDate(h.due_on).replace(/ \d{4}$/, '')}</div>
                 </th>
               ))}
               <th>Average</th>

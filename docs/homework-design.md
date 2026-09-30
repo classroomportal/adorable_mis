@@ -173,7 +173,7 @@ verbs their policies allow), the `a_backup_mode_guard` trigger, and
 | `homework_id` bigserial PK | |
 | `class_id` → `classes` | `on delete set null` |
 | `subject_id`, `class_code`, `year_group`, `academic_year_id` | **copied from the class by trigger** on insert. The request can't choose them. |
-| `title` text | required, up to 200 characters |
+| `title` text | required, up to 200 characters; at most 10 from migration 290 (enforced on insert and on a title change, so it fits the mark sheet) |
 | `instructions` text | up to 5,000 characters. Stored and shown as **plain text**, with web links made clickable and nothing else rendered. |
 | `set_on` date | defaults to today |
 | `due_on` date | the deadline, which must be on or after `set_on` |

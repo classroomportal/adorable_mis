@@ -67,6 +67,12 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
   async function save() {
     setError(null);
     if (!title.trim()) { setError('Give the homework a title.'); return; }
+    // Migration 290: at most 10 characters (a title saved before then may be
+    // longer, and can stay as long as it isn't changed).
+    if (title.trim().length > 10 && (!existing || title.trim() !== existing.title)) {
+      setError('The title can be at most 10 characters. Put the detail in the instructions.');
+      return;
+    }
     if (!dueOn) { setError('Choose a deadline.'); return; }
     if (!existing && dueOn < schoolToday()) { setError('The deadline is in the past.'); return; }
     if (!schemeId) { setError('Choose how it will be graded.'); return; }
@@ -120,8 +126,11 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
       {!embedded && <h2 style={{ marginTop: 0 }}>{existing ? 'Edit homework' : 'Set homework'} · {classLabel(cls)}</h2>}
       <div style={{ display: 'grid', gap: '0.75rem', maxWidth: '44rem' }}>
         <label>
-          Title
-          <input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Simultaneous equations, exercise 4B" />
+          Title (up to 10 characters, so it fits the mark sheet)
+          <input value={title} maxLength={10} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Ex 4B" />
+          <span style={{ fontSize: '0.8rem', color: title.trim().length > 10 ? '#a3232c' : 'var(--ink-soft)' }}>
+            {title.trim().length}/10{title.trim().length > 10 ? ' · an older title: shorten it to save a change to it' : ' · put the detail in the instructions'}
+          </span>
         </label>
         <label>
           Instructions
