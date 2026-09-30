@@ -17,7 +17,17 @@ function ParentsInner() {
       const { data: p } = await supabase.from('parents').select('parent_id, first_name, last_name, email, phone, relationship_type').order('last_name');
       const { data: profiles } = await supabase.from('profiles').select('parent_id').not('parent_id', 'is', null);
       const linked = new Set((profiles || []).map((pr) => pr.parent_id));
-      setParents((p || []).map((row) => ({ ...row, hasLogin: linked.has(row.parent_id) })));
+      // Relationship is recorded per child (student_parent.relationship,
+      // migration 272); show each different one this parent has, falling back
+      // to the parent's own value for links with none.
+      const { data: links } = await supabase.from('student_parent').select('parent_id, relationship');
+      const rels = {};
+      (links || []).forEach((l) => { if (l.relationship) (rels[l.parent_id] ||= new Set()).add(l.relationship); });
+      setParents((p || []).map((row) => ({
+        ...row,
+        relationship: rels[row.parent_id] ? [...rels[row.parent_id]].join(', ') : row.relationship_type,
+        hasLogin: linked.has(row.parent_id),
+      })));
       setLoading(false);
     }
     load();
@@ -59,7 +69,7 @@ function ParentsInner() {
                 <td>{p.first_name} {p.last_name}</td>
                 <td>{p.email ?? '—'}</td>
                 <td>{p.phone ?? '—'}</td>
-                <td>{p.relationship_type ?? '—'}</td>
+                <td>{p.relationship || '—'}</td>
                 <td>{p.hasLogin ? '✅' : p.email ? 'Not created yet' : '—'}</td>
                 {canViewAs && <td><a href={`/parents/view-as?parent=${p.parent_id}`}>View as parent</a></td>}
               </tr>

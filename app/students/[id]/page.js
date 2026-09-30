@@ -193,14 +193,14 @@ function StudentDetail() {
     if (!s) { setLoading(false); return; }
 
     // Brothers and sisters, leavers included, found through shared parents
-    // (student_siblings, migrations 267-268: student_parent itself isn't
-    // readable by every member of staff).
+    // (student_siblings, migrations 267-272: student_parent itself isn't
+    // readable by every member of staff; links marked Other don't count).
     const { data: sibs } = await supabase.rpc('student_siblings', { p_student_id: s.student_id });
     setSiblings(sibs || []);
 
     const { data: p } = await supabase
       .from('student_parent')
-      .select('parent_id, is_primary_contact, parents(first_name,last_name,phone,email,address,relationship_type)')
+      .select('parent_id, is_primary_contact, relationship, parents(first_name,last_name,phone,email,address,relationship_type)')
       .eq('student_id', id);
     setParents(p || []);
 
@@ -694,6 +694,7 @@ function StudentDetail() {
     { key: 'core', label: 'Core Data', icon: '🪪', sub: student.dob ? `Born ${formatUKDate(student.dob)}` : 'Personal details' },
     canSeeMedical && { key: 'medical', label: 'Medical', icon: '🩺', sub: 'Health record' },
     { key: 'parents', label: 'Parents / Guardians', icon: '👪', sub: parents.length === 0 ? 'None on record' : plural(parents.length, 'contact') },
+    { key: 'siblings', label: 'Siblings', icon: '🧒', sub: siblings.length === 0 ? 'None found' : `${plural(siblings.filter((sib) => sib.status === 'active').length, 'sibling')} at school${siblings.some((sib) => sib.status !== 'active') ? `, ${siblings.filter((sib) => sib.status !== 'active').length} left` : ''}` },
     { key: 'timetable', label: 'Timetable', icon: '🗓️', sub: `${student.first_name}'s week` },
     { key: 'blocks', label: 'Curriculum Blocks', icon: '🧩', sub: blocks.length === 0 ? 'None set up' : `${allocatedBlocks} of ${blocks.length} allocated` },
     { key: 'attendance', label: 'Attendance', icon: '📊', sub: attendancePct === null ? 'No data yet' : `${attendancePct}% this year` },
@@ -781,18 +782,6 @@ function StudentDetail() {
               <p><strong>DOB:</strong> {formatUKDate(student.dob)}</p>
               <p><strong>Year group:</strong> {student.year_group} &nbsp; <strong>Form:</strong> {student.form_class}</p>
               <p><strong>Status:</strong> {student.status}{student.leaving_date ? ` (leaving date: ${formatUKDate(student.leaving_date)})` : ''}</p>
-              <p>
-                <strong>Siblings:</strong>{' '}
-                {siblings.length === 0 ? 'None' : siblings.map((sib, i) => (
-                  <Fragment key={sib.student_id}>
-                    {i > 0 && ', '}
-                    <a href={`/students/${sib.student_id}`}>{sib.first_name} {sib.last_name}</a>
-                    {' '}({sib.status === 'active'
-                      ? [sib.year_group && `Year ${sib.year_group}`, sib.form_class].filter(Boolean).join(', ')
-                      : `left${sib.leaving_date ? ` ${formatUKDate(sib.leaving_date)}` : ''}`})
-                  </Fragment>
-                ))}
-              </p>
 
               {fullView && (
                 <>
@@ -981,6 +970,30 @@ function StudentDetail() {
         <MedicalRecordCard studentId={student.student_id} canEdit={canEditMedical} />
       )}
 
+      {activeView === 'siblings' && (
+        <Section title="Siblings">
+          {siblings.length === 0 ? (
+            <p>No brothers or sisters found. Siblings are found through the parents they share on record; links marked &quot;Other&quot; don&apos;t count.</p>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Name</th><th>Year</th><th>Form</th><th>Status</th></tr></thead>
+                <tbody>
+                  {siblings.map((sib) => (
+                    <tr key={sib.student_id} className="student-link" onClick={() => { window.location.href = `/students/${sib.student_id}`; }}>
+                      <td><a href={`/students/${sib.student_id}`} onClick={(e) => e.stopPropagation()}>{sib.first_name} {sib.last_name}</a></td>
+                      <td>{sib.status === 'active' ? sib.year_group : '—'}</td>
+                      <td>{sib.status === 'active' ? sib.form_class : '—'}</td>
+                      <td>{sib.status === 'active' ? 'At school' : `Left${sib.leaving_date ? ` ${formatUKDate(sib.leaving_date)}` : ''}`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Section>
+      )}
+
       {activeView === 'parents' && (
       <Section
         title="Parents / Guardians"
@@ -1003,7 +1016,7 @@ function StudentDetail() {
                 {parents.map((pp) => (
                   <tr key={pp.parent_id}>
                     <td>{pp.parents?.first_name} {pp.parents?.last_name}</td>
-                    <td>{pp.parents?.relationship_type}</td>
+                    <td>{pp.relationship || pp.parents?.relationship_type}</td>
                     <td>{pp.parents?.phone}</td>
                     <td>{pp.parents?.email}</td>
                     <td>{pp.is_primary_contact ? 'Yes' : ''}</td>
