@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 295). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 296). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -667,7 +667,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 
 **Which classes, and access**
 
-- **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. Every Year 10 and 11 class is switched on except mentor groups and Prep (supervised study, not a taught subject); a class created by a later timetable import has to be switched on again. \[DB\]
+- **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. Every Year 10 and 11 class is switched on except mentor groups and Prep (supervised study, not a taught subject); a new Year 10 or 11 class, from a later timetable import or next year's timetable, is switched on automatically unless it is a mentor group or Prep (migration 296). An admin can still switch a class off, and a re-import doesn't switch it back on. \[DB\]
 - **FR-17.2** /homework is granted to teachers, Heads of Department and SMT (and admins). The page lists only the switched-on classes the person can set homework for, in one call to the database; a Year 7–9 teacher sees that it isn't switched on for their classes yet. \[DB\]
 
 **Setting homework**
