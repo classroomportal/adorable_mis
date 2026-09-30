@@ -75,7 +75,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 
 ## What is live today
 
-13 of 16 areas are complete for daily use; homework is a pilot on two classes, and admissions and year setup are part-built. Full detail is in the [functional specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714).
+14 of 17 areas are complete for daily use; homework is a pilot on two classes, and admissions and year setup are part-built. Full detail is in the [functional specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714).
 
 | Area | State | What it does | Open issues |
 | --- | --- | --- | --- |
@@ -92,6 +92,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | Fees | Live | Invoices, batches, discounts; two-person price approval; locked prices | 1 |
 | Clinic, pastoral, HR | Live | Nurse-only medical records; HR records | 0 |
 | Messages and email | Live | One queue; Reply-To per kind; parent pause switch; messages to the students or parents of any group of students, with parents emailed | 0 |
+| Student groups | Live | Groups for activities, prefects and messages, made by SMT, pastoral and the office; lists built from behaviour or below-target rules with every setting chosen each time; group marks and portal views not built yet | 0 |
 | Calendar and administration | Live | SMT calendar, which parents can subscribe to on their phones; editable rules on Lookups; one school-wide order for students' tiles and every row of the staff dashboard; backups | 1 |
 | Admissions | Part-built | Applicants, tests, interviews, letters, form fee and deposit; Next Year's Numbers from places allowed per year group, boys and girls | 2 + enrolment missing |
 | Next year setup | Part-built | Academic years, mentor structure, next year's Nova-T plan | 2 + most steps missing |

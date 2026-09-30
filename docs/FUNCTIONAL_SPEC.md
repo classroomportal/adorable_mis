@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 283). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 285). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -19,7 +19,7 @@ This specification describes what Formwork does as built on 30 September 2026 (d
 - **\[DB\]** — enforced by the database. It holds however someone reaches the data, including an edited browser request.
 - **\[Page\]** — enforced only by the web page. It guides normal use but is not a security boundary.
 
-Where behaviour differs from what a page suggests, it is listed in section 22, Known issues. Nothing in that section has been fixed yet.
+Where behaviour differs from what a page suggests, it is listed in section 23, Known issues. Nothing in that section has been fixed yet.
 
 ## 2. System overview
 
@@ -38,7 +38,7 @@ Every screen reads and writes the database directly under the signed-in person's
 | Scheduled jobs | pg\_cron in the database | Email queue every 15 seconds, register alerts every 15 minutes, detention reminders on Thursdays. |
 | Server routes | 3 routes in the web app | Nightly backup, and two AI helpers for report comments. Each checks the caller first. |
 | AI | Anthropic Claude API | Drafts and checks report comments. Never reads or writes the database. |
-| Backups | Nightly dump to private storage, plus Supabase's own daily backups | See section 21. |
+| Backups | Nightly dump to private storage, plus Supabase's own daily backups | See section 22. |
 
 **Where the data came from.** Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
 
@@ -475,7 +475,7 @@ Every email goes through one queue from mis@abc.sch.ng with a Reply-To chosen by
 
 **Messages (/comms)**
 
-- **FR-12.1** SMT, pastoral, school office and admins can send messages to an individual, all staff, one or more staff roles, or a group of students: all students, or one or more year groups, forms, boarding houses, mentor groups, sports houses, teaching classes or Other Half activities. A student group message goes to the students, their parents, or both, chosen when sending. \[DB\]
+- **FR-12.1** SMT, pastoral, school office and admins can send messages to an individual, all staff, one or more staff roles, or a group of students: all students, or one or more year groups, forms, boarding houses, mentor groups, sports houses, teaching classes, Other Half activities or student groups. A student group message goes to the students, their parents, or both, chosen when sending. \[DB\]
 - **FR-12.2** A message to one person is emailed as well as put in their inbox. In a group message, parents are emailed too, unless parent emails are paused; students and staff get it in their inbox only. Group messages reach active students and their parents only, and parents with no login can't be reached. \[DB\]
 - **FR-12.3** Everyone sees only their own inbox, with read receipts. Automatic detention and behaviour notices are also readable by SMT, pastoral and school office. \[DB\]
 - **FR-12.4** /comms/history lists sent messages and automatic emails with recipients, subject and delivery status, never the body (welcome emails contain passwords). For SMT, pastoral, school office and admin. \[DB\]
@@ -530,6 +530,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /admin/grade-boundaries | Grade cut-offs per subject and year group | Assessment manager, admin (page); all staff (data) |
 | /admin/email-replies | Reply-To for each kind of email | SMT, admin |
 | /admin/tile-order | Order of students' big tiles and of every row of the staff dashboard, school-wide | Admin (all signed-in users read it) |
+| /groups | Student groups: make, build from a rule, change, archive, message | SMT, pastoral, school office, admin (teachers look up only) |
 | /admin/change-history | The permanent change log | SMT, admin |
 | /admin/register-alerts | Late or missed registers | HR, school office, admin |
 | /admin/backup | Freeze writes, run a backup, list recent backups | Admin |
@@ -639,7 +640,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade and homework grade entered, changed or deleted, with old and new grade. Homework grades are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
@@ -694,7 +695,34 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 
 **Not built yet:** students handing work in online (the principal's answer was "not yet"), and notifications: setting homework or releasing marks sends no email or inbox message.
 
-## 21. Non-functional requirements
+## 21. FR-18 Student groups
+
+SMT, pastoral staff and the school office make groups of students for activities, clubs, the prefects, interventions and messages, and can have the system build a group from a rule. Built 30 September 2026 (migrations 284–285); the design and the principal's decisions are in docs/student-groups-design.md.
+
+**Groups and members**
+
+- **FR-18.1** Only SMT, pastoral, the school office and admins can create a group, change its name, kind or visibility, archive it, or add and remove its students and the staff who run it. Teachers can open /groups and look groups up. \[DB\]
+- **FR-18.2** All staff can see every group and who is in it. Students and parents see nothing about groups yet. \[DB\]
+- **FR-18.3** Only current students can be added. A student who leaves stays listed, marked as left, and stops getting the group's messages. \[DB\]
+- **FR-18.4** A group is archived, never deleted. An archived group can't be messaged or have students added. \[DB\]
+- **FR-18.5** Students are added by name (the list of matching names as you type) or a whole year or form at once. Each group names the staff who run it; they can't change who is in it. \[Page\]
+- **FR-18.6** A group records who can see it: staff only, the students in it, or the students and their parents. The portals don't show groups yet (stage 4). \[Page\]
+- **FR-18.7** A student's profile has a Groups tile listing the groups they are in. \[Page\]
+
+**Groups built from a rule**
+
+- **FR-18.8** At /groups/build the person building chooses a rule and every setting each time (the principal: build settings must be editable). Negative behaviour: negative points between two chosen dates at or below a chosen threshold, withdrawn events not counted. Below target: latest grade below target in at least a chosen number of subjects, counting only results from a chosen date, compared by grade points and WAEC only against WAEC. Both can be narrowed by year, form and boarding house. \[DB\]
+- **FR-18.9** "Show students" lists who matches today, with the reason; the builder can untick students before saving. Only students the rule picks can be saved, and a group can't claim a rule it wasn't built from. \[DB\]
+- **FR-18.10** A built group records its rule, settings and date, is always staff-only, and never changes by itself; students can still be added or taken out by hand. "Build again" starts a new dated group from the same settings, which can be changed first. \[DB\]
+
+**Messages and history**
+
+- **FR-18.11** "Student group" is a message target: one or more groups, to the students, their parents or both, exactly like a year group (FR-12.1, FR-12.2). "Message this group" on a group's page opens the message with it chosen. \[DB\]
+- **FR-18.12** Every change to a group, its students or its staff is logged permanently in Change History under Student groups. \[DB\]
+
+**Not built yet:** mark sheets for a group, kept outside reporting (stage 3), and showing groups on the student and parent portals (stage 4).
+
+## 22. Non-functional requirements
 
 The database, not the browser, decides who someone is and what they may do; sensitive changes are logged permanently; the whole database is backed up nightly.
 
@@ -723,7 +751,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 - **NFR-9** Every page works on a phone; staff often use Formwork from phones. \[Page\]
 - **NFR-10** Sized for about 260 students, 60 staff and 1,000 parent logins. Email is sent at about 12 a minute. \[Design\]
 
-## 22. Known issues and open decisions
+## 23. Known issues and open decisions
 
 27 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; none is fixed yet. The first five stop something working today.
 
@@ -759,7 +787,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
-## 23. Glossary
+## 24. Glossary
 
 | Term | Meaning |
 | --- | --- |
