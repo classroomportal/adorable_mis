@@ -48,6 +48,12 @@ function ImportInner() {
       out[col] = val === '' ? null : val;
     }
     if (out.year_group) out.year_group = Number(out.year_group);
+    // Gender is stored as M or F (migration 270); 'Male', 'female', 'm' etc.
+    // are accepted and converted, anything else is left for the check below.
+    if (out.gender) {
+      const g = out.gender.charAt(0).toUpperCase();
+      if ((g === 'M' && /^m(ale)?$/i.test(out.gender)) || (g === 'F' && /^f(emale)?$/i.test(out.gender))) out.gender = g;
+    }
     if (!out.status) out.status = 'active';
     return out;
   }
@@ -64,6 +70,10 @@ function ImportInner() {
         problems.push(`Row ${i + 2}: missing required field (first_name, last_name, dob, or year_group)`);
         continue;
       }
+      if (row.gender != null && !['M', 'F'].includes(row.gender)) {
+        problems.push(`Row ${i + 2}: gender "${row.gender}" must be M, F, Male or Female`);
+        continue;
+      }
 
       if (row.upn) {
         const { data: existing } = await supabase
@@ -77,6 +87,8 @@ function ImportInner() {
           // cleared (NOT NULL, migration 194).
           const changes = { ...row };
           if (changes.admission_date == null) delete changes.admission_date;
+          // Nor can gender (required, migration 270).
+          if (changes.gender == null) delete changes.gender;
           const { error } = await supabase.from('students').update(changes).eq('student_id', existing.student_id);
           if (error) problems.push(`Row ${i + 2} (UPN ${row.upn}): ${error.message}`);
           else updated++;
@@ -84,6 +96,10 @@ function ImportInner() {
         }
       }
 
+      if (!row.gender) {
+        problems.push(`Row ${i + 2}: a new student needs a gender (M or F)`);
+        continue;
+      }
       const { error } = await supabase.from('students').insert([row]);
       if (error) problems.push(`Row ${i + 2}: ${error.message}`);
       else created++;
@@ -102,7 +118,7 @@ function ImportInner() {
       <h1>Import Students (CSV)</h1>
 
       <div className="card">
-        <p>Required columns: <code>first_name, last_name, dob, year_group</code></p>
+        <p>Required columns: <code>first_name, last_name, dob, year_group</code>, and <code>gender</code> (M, F, Male or Female) for a new student</p>
         <p>Optional columns (include any you have data for — leave others out or blank):</p>
         <p style={{ fontSize: '0.85rem', wordBreak: 'break-word' }}>{COLUMNS.filter(c => !['first_name','last_name','dob','year_group'].includes(c)).join(', ')}</p>
         <p><code>upn</code>: if a student with this UPN already exists, their record is <strong>updated</strong>. If not (or left blank), a <strong>new</strong> student is created.</p>

@@ -110,6 +110,11 @@ th {
   border-bottom: 2px solid var(--slate-200);
 }
 
+/* Next Year's Numbers (/admissions/projections): ten narrow number
+   columns, so headers wrap and padding is tighter to fit without scrolling. */
+table.projection-table th { white-space: normal; padding: 0.4rem 0.45rem; vertical-align: bottom; }
+table.projection-table td { padding: 0.4rem 0.45rem; }
+
 tbody tr:nth-child(odd) td {
   background: var(--brand-050);
 }

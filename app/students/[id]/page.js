@@ -7,6 +7,7 @@ import RequireAuth from '../../RequireAuth';
 import EventCommentEditor from '../../components/EventCommentEditor';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import { STUDENT_GENDERS, genderLabel } from '../../../lib/studentFields';
 import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
 import MedicalRecordCard from '../../components/MedicalRecordCard';
@@ -802,7 +803,7 @@ function StudentDetail() {
                   <p><strong>Student email:</strong> {student.student_email || '—'}</p>
                   <p><strong>Admission date:</strong> {formatUKDate(student.admission_date) || '—'}</p>
                   <p><strong>Admitted/letter date:</strong> {formatUKDate(student.admitted_letter_date) || '—'}</p>
-                  <p><strong>Gender:</strong> {student.gender || '—'}</p>
+                  <p><strong>Gender:</strong> {genderLabel(student.gender) || '—'}</p>
                   <p><strong>Nationality:</strong> {student.nationality || '—'}</p>
                   <p><strong>State of origin:</strong> {student.state_of_origin || '—'}</p>
                   <p><strong>LGA:</strong> {student.lga || '—'}</p>
@@ -870,7 +871,10 @@ function StudentDetail() {
               {editForm.admitted_letter_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.admitted_letter_date)}</span>}
             </label>
             <label>Gender
-              <input disabled={!canEditField('gender')} value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} />
+              <select disabled={!canEditField('gender')} value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} required>
+                {!editForm.gender && <option value="">Choose...</option>}
+                {STUDENT_GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+              </select>
             </label>
             <label>Nationality
               <input disabled={!canEditField('nationality')} value={editForm.nationality || ''} onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value })} />
