@@ -97,7 +97,7 @@ function PortalInner() {
   const [tuckshopWarning, setTuckshopWarning] = useState(null);
   const [view, openView] = useHashView();
 
-  // Homework (migration 276): only shown once one of the student's classes
+  // Homework (migration 278): only shown once one of the student's classes
   // has it switched on (homework_classes), so nothing changes for anyone else.
   const [homeworkOn, setHomeworkOn] = useState(false);
   const [weekStart, setWeekStart] = useState(defaultWeekStart());

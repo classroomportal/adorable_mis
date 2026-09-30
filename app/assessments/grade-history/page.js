@@ -20,7 +20,7 @@ const TABLES = {
   results: 'Assessment result',
   target_grades: 'Target grade',
   transcript_grades: 'Transcript grade',
-  // Outside reporting (migration 276), so left out unless asked for. RLS
+  // Outside reporting (migration 278), so left out unless asked for. RLS
   // only returns these rows to SMT and admins.
   homework_marks: 'Homework grade',
 };

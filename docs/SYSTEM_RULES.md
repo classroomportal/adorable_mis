@@ -78,8 +78,8 @@ Where a rule has changed several times, only the current version is given. Migra
 **Parents**
 - Welcome letters are sent by year group from `/parents/welcome-emails`, by admins only, up to 500 per send (172). Each parent gets one letter.
 - The letter sets the first password to the oldest current child's date of birth (`DDMMYYYY`) and forces a change at first sign-in (160).
-- Parents who have already signed in are skipped.
-- The letter can be resent, but only to parents who received it and have never signed in (237).
+- A first send skips parents who have already signed in.
+- The letter can be sent again to any parent with a login, including parents who have signed in and chosen their own password (237, 276). It resets their password to the date-of-birth one in the letter, and they must choose a new one at their next sign-in.
 - If a parent's email has changed and they have never signed in, their login moves to the new address before sending. The send stops if another login already uses that address (244).
 - The school office can create a single parent login from the student page (159). It gets a random password, is **not** forced to change it, and is emailed to the parent, or shown once on screen if parent email is paused.
 
@@ -428,7 +428,7 @@ How the list behaves:
 **Every grade change is logged permanently** in Grade History (215)
 - This covers every insert, change and delete of scores, target grades, transcript grades and homework grades, with the old and new grade and who did it.
 - Nobody can edit or delete the log, even from the database editor.
-- It is readable by SMT, assessment managers and admins at `/assessments/grade-history`. Homework grades in it are readable by SMT and admins only, not assessment managers, and are hidden unless "including homework" is chosen (276).
+- It is readable by SMT, assessment managers and admins at `/assessments/grade-history`. Homework grades in it are readable by SMT and admins only, not assessment managers, and are hidden unless "including homework" is chosen (278).
 
 **Result sets**
 - A result set is a calendar event with the "result set" box ticked. SMT and admins manage the calendar (205).
@@ -463,7 +463,7 @@ How the list behaves:
 - Only **checked** comments are printed on the written report.
 - The AI "draft a comment" and "check comments" buttons only use what the page sends. Only people with the relevant page can use them.
 
-**Homework** (276, 277; pilot from 30 Sept 2026, `/homework`)
+**Homework** (278, 279; pilot from 30 Sept 2026, `/homework`)
 - **Pilot:** homework can only be set for classes an admin has switched on. At the moment that is 10_1/Ma and 11_1/Ma. Only admins have the `/homework` page until roles are granted it.
 - **Who can set, edit and mark it:** the class teacher, the teacher of any single lesson of the class, the Head of Department for the subject, and admins.
 - **Setting it:** each piece of homework has a title, instructions (plain text), a deadline (a date, and optionally the lesson it's due in, which must be one of the class's lessons that day) and a grading system: Mark out of …, Percentage, A*–U, 9–1, WAEC, Effort 1–4, Complete / Incomplete or Not graded. Any grading system also accepts "Not handed in" and "Excused".
@@ -523,7 +523,9 @@ How the list behaves:
 
 **Sending messages**
 - Only SMT, pastoral and the school office (and admins) can send messages (091).
-- **Only messages to one person are emailed.** Group messages go to the Formwork inbox only.
+- A message to one person is emailed to them as well as going to their Formwork inbox.
+- A message to a group of students (all students, year groups, forms, boarding houses, mentor groups, teaching classes, Other Half activities or sports houses; several at once) can go to the students, their parents, or both (277). **Parents in a group message are emailed too**, unless parent emails are paused. Students and staff in a group message get it in their inbox only.
+- Parents without a Formwork login (never sent their welcome letter) can't be reached by a message. "Check recipient count" says how many there are.
 - Group messages reach active students, and the parents of active students, only.
 - Everyone sees only their own inbox.
 - `/comms/history` lists sent messages and automatic emails, with their delivery status but never the email body, because welcome emails contain passwords.

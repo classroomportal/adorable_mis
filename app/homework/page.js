@@ -9,7 +9,7 @@ import { schoolToday } from '../../lib/schoolTime';
 import { addDays, dayKey, OUTCOMES } from '../../lib/homework';
 import { Instructions } from '../components/HomeworkChip';
 
-// Homework (migration 276, docs/homework-design.md): set homework for a class,
+// Homework (migration 278, docs/homework-design.md): set homework for a class,
 // with a deadline and a grading system, and record a grade for each student.
 // Homework grades are outside reporting: nothing in reports, transcripts or
 // result sets reads them.

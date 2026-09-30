@@ -1,4 +1,7 @@
--- Migration 276: homework, piloted on the principal's two maths classes.
+-- Migration 278: homework, piloted on the principal's two maths classes.
+--
+-- Applied to the live database on 30 Sept 2026 under the name 276_homework;
+-- renumbered here because another 276 reached main first.
 --
 -- Why: the principal asked (30 Sept 2026) for teachers to set homework with a
 -- deadline and a grading system, for it to show on the student's weekly
@@ -53,7 +56,7 @@ create table if not exists public.homework_schemes (
 );
 
 comment on table public.homework_schemes is
-  'Grading systems a teacher can pick for a homework (migration 276). Retired with is_active = false, never deleted.';
+  'Grading systems a teacher can pick for a homework (migration 278). Retired with is_active = false, never deleted.';
 
 create table if not exists public.homework_scheme_values (
   scheme_id integer not null references public.homework_schemes(scheme_id),
@@ -63,7 +66,7 @@ create table if not exists public.homework_scheme_values (
 );
 
 comment on table public.homework_scheme_values is
-  'The allowed grades of a list-type homework scheme, best first (migration 276). "Not handed in" and "Excused" are allowed for every scheme and are not listed here.';
+  'The allowed grades of a list-type homework scheme, best first (migration 278). "Not handed in" and "Excused" are allowed for every scheme and are not listed here.';
 
 insert into public.homework_schemes (name, kind, fixed_max, sort_order) values
   ('Mark out of …', 'mark', null, 1),
@@ -123,7 +126,7 @@ create table if not exists public.homework_classes (
 );
 
 comment on table public.homework_classes is
-  'Classes homework is switched on for (migration 276, pilot). Homework can only be set for these. Admin-only to change.';
+  'Classes homework is switched on for (migration 278, pilot). Homework can only be set for these. Admin-only to change.';
 
 alter table public.homework_classes enable row level security;
 grant select, insert, delete on public.homework_classes to authenticated;
@@ -172,7 +175,7 @@ create table if not exists public.homework (
 );
 
 comment on table public.homework is
-  'Homework set for one class (migration 276). Not part of reporting: nothing in reports, transcripts or result sets reads it.';
+  'Homework set for one class (migration 278). Not part of reporting: nothing in reports, transcripts or result sets reads it.';
 
 create index if not exists homework_class_due_idx on public.homework (class_id, due_on);
 create index if not exists homework_due_idx on public.homework (due_on);
@@ -281,7 +284,7 @@ create table if not exists public.homework_marks (
 );
 
 comment on table public.homework_marks is
-  'Homework grades (migration 276), outside reporting. Every change is logged in grade_history (table_name homework_marks).';
+  'Homework grades (migration 278), outside reporting. Every change is logged in grade_history (table_name homework_marks).';
 
 create index if not exists homework_marks_student_idx on public.homework_marks (student_id);
 

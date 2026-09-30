@@ -1,6 +1,10 @@
--- Migration 277: let grade_history record homework grades.
+-- Migration 279: let grade_history record homework grades.
 --
--- Why: migration 276 put trg_log_grade_change on homework_marks, as CLAUDE.md
+-- Applied to the live database on 30 Sept 2026 under the name
+-- 277_grade_history_homework; renumbered here because another 277 reached
+-- main first.
+--
+-- Why: migration 278 put trg_log_grade_change on homework_marks, as CLAUDE.md
 -- requires for every grade table, but grade_history only accepts rows from the
 -- three reporting tables (grade_history_table_name_check, migration 215). The
 -- first homework mark saved would have failed. Found by testing the pilot

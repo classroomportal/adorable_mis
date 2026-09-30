@@ -1,6 +1,6 @@
 # Homework: design
 
-Status, 30 September 2026: **pilot built and live** (migrations 276–277) on
+Status, 30 September 2026: **pilot built and live** (migrations 278–279) on
 the principal's two maths classes, 10_1/Ma and 11_1/Ma (`homework_classes`).
 Built:
 - the tables, rules and grade log;
@@ -137,7 +137,7 @@ not deleted or have its values removed, so old grades stay readable.
   or user_has_staff_role(array['smt']))`. Admins pass through
   `user_has_staff_role()` as usual.
 
-## Tables (one migration, 276)
+## Tables (one migration, 278)
 
 All three tables get RLS, per-table grants to `authenticated` only (for the
 verbs their policies allow), the `a_backup_mode_guard` trigger, and
@@ -455,7 +455,7 @@ students find out. This design adds nothing to `queue_workspace_email()` or
 
 ## Order to build it in
 
-1. **Migration 276:** the tables, helpers, triggers, policies, grants, the
+1. **Migration 278:** the tables, helpers, triggers, policies, grants, the
    seed schemes, the `/homework` resource and its role permissions, and the
    `log_grade_change()` branch.
 2. **`/homework`:** set, list and edit homework, then the mark book and
