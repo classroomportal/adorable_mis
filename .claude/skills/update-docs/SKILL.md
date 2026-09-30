@@ -1,6 +1,6 @@
 ---
 name: update-docs
-description: Bring Formwork's living documents (the Functional Specification and the PRD) up to date with what has changed in the app. Use when the user says "update the docs", "update the spec", "update the PRD", "update both documents" or similar, or after a change that alters a rule the documents describe.
+description: Bring Formwork's living documents (the Functional Specification and the PRD artifacts) up to date with what has changed in the app. Use whenever the user asks, in any wording, to update the docs with changes, for example "update docs with changes", "update the docs", "update docs with today's changes", "update the artifacts", "update the spec", "update the PRD", "update both documents", "bring the docs up to date" or "/update-docs". Also use after a change that alters a rule the documents describe.
 ---
 
 # Update Formwork's living documents
