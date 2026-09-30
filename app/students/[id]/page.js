@@ -191,9 +191,9 @@ function StudentDetail() {
     setEditForm(s);
     if (!s) { setLoading(false); return; }
 
-    // Brothers and sisters still at the school, found through shared parents
-    // (student_siblings, migration 267: student_parent itself isn't readable
-    // by every member of staff).
+    // Brothers and sisters, leavers included, found through shared parents
+    // (student_siblings, migrations 267-268: student_parent itself isn't
+    // readable by every member of staff).
     const { data: sibs } = await supabase.rpc('student_siblings', { p_student_id: s.student_id });
     setSiblings(sibs || []);
 
@@ -781,12 +781,14 @@ function StudentDetail() {
               <p><strong>Year group:</strong> {student.year_group} &nbsp; <strong>Form:</strong> {student.form_class}</p>
               <p><strong>Status:</strong> {student.status}{student.leaving_date ? ` (leaving date: ${formatUKDate(student.leaving_date)})` : ''}</p>
               <p>
-                <strong>Siblings in school:</strong>{' '}
+                <strong>Siblings:</strong>{' '}
                 {siblings.length === 0 ? 'None' : siblings.map((sib, i) => (
                   <Fragment key={sib.student_id}>
                     {i > 0 && ', '}
                     <a href={`/students/${sib.student_id}`}>{sib.first_name} {sib.last_name}</a>
-                    {' '}({[sib.year_group && `Year ${sib.year_group}`, sib.form_class].filter(Boolean).join(', ')})
+                    {' '}({sib.status === 'active'
+                      ? [sib.year_group && `Year ${sib.year_group}`, sib.form_class].filter(Boolean).join(', ')
+                      : `left${sib.leaving_date ? ` ${formatUKDate(sib.leaving_date)}` : ''}`})
                   </Fragment>
                 ))}
               </p>
