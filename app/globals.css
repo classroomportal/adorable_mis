@@ -206,6 +206,12 @@ label {
 
 input, select { width: 100%; }
 
+/* Tick-boxes and radio buttons keep their natural size. Under the rule above
+   a checkbox inside an inline-flex label (e.g. the year groups on
+   /parents/welcome-emails) resolved its 100% against a shrink-to-fit label
+   and was drawn zero wide in Safari, so the boxes simply disappeared. */
+input[type="checkbox"], input[type="radio"] { width: auto; flex: 0 0 auto; padding: 0; }
+
 .badge {
   display: inline-block;
   padding: 0.15rem 0.55rem;
