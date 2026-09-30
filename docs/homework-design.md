@@ -283,13 +283,51 @@ homework is due that lesson. Clicking it opens the mark book.
   teacher, set date, deadline, how it's graded, and the student's grade and
   comment once released. Overdue homework without a mark is shown in amber;
   there is no penalty logic.
-- A **Homework** tile on the student home lists what's due in the next 7 days
-  and recently graded work, for students who don't think in timetable cells.
 - The print view of the timetable leaves homework out.
 
-### Parents: the same grid on `/parent-portal`
+### Students: the Homework tile, a by-day grid of deadlines
 
-The same data comes from `homework_for_week()`, one child at a time. This is
+The timetable answers "what's due in this lesson?". The Homework tile answers
+"what's due, and when?". It is a new tile on the student home, next to
+Timetable. It opens the `#homework` view on `/portal`, and it shows a badge
+with the number of pieces still due this week.
+
+- **One column per school day**, Mon–Fri, headed with the date ("Tue 6 Oct").
+  **Today's column is highlighted.** If any homework is due on a Saturday or
+  Sunday, a Weekend column is added; otherwise it isn't shown.
+- **The same week selector** as the timetable (this week, previous, next). The
+  two views share the chosen week, so switching between them keeps the student
+  in the same week.
+- **Each column lists the homework due that day as cards**, in lesson order.
+  A card shows:
+  - the subject
+  - the title
+  - the lesson it is due in ("L3"), or "end of day"
+  - a status: **Due**, **Overdue** (past the deadline with no mark, in
+    amber), **Not handed in**, **Excused** or **Graded** (with the grade,
+    once released)
+- **Tapping a card opens the same panel as the timetable chip**
+  (`HomeworkChip`), with the instructions, the teacher and the grade.
+- **Under the grid**, two short lists:
+  - **Overdue**, from earlier weeks: past the deadline, no mark yet, from the
+    last four weeks.
+  - **Recently graded**: marks released in the last two weeks.
+- **Empty days say "Nothing due"**, so a blank column isn't mistaken for a
+  loading error.
+- **On a phone**, the columns stack as one section per day, with today first
+  and the rest of the week after it.
+
+This view needs no extra data. It uses the same `homework_for_week()` call as
+the timetable, grouped by `due_on` instead of by lesson. The overdue and
+recently-graded lists come from a second call that covers the previous four
+weeks. That call returns the same columns and applies the same
+released-marks rule. The grouping lives in `lib/homework.js`
+(`groupHomeworkByDay()`), next to `placeHomeworkInCells()`.
+
+### Parents: the same timetable and by-day grid on `/parent-portal`
+
+Both views are shown for one child at a time, using the same data from
+`homework_for_week()`. This is
 recommended (open question 1) but can be switched off at launch without any
 schema change: the parent policy clauses are simply left out.
 
@@ -301,7 +339,8 @@ retire schemes.
 ### Shared code
 
 - `lib/homework.js`: `loadHomeworkForWeek()`, `placeHomeworkInCells(cellMap,
-  homework, lessons)` and `weekStart(date)`.
+  homework, lessons)`, `groupHomeworkByDay(homework, weekStart)` and
+  `weekStart(date)`.
 - `app/components/HomeworkChip.js`: the chip and its expanding panel, used by
   the portal, the parent portal and the staff timetable.
 
@@ -347,7 +386,7 @@ which the reply routes don't support yet.
 2. **`/homework`:** set, list and edit homework, then the mark book and
    Release.
 3. **Student timetable:** the week selector, chips and panel, then the
-   Homework tile.
+   Homework tile's by-day grid, with its overdue and recently graded lists.
 4. **Parent portal**, if agreed.
 5. **Staff timetable** marker, the Lookups card, and the Grade History filter.
 6. Update `docs/SYSTEM_RULES.md`, the Functional Specification and the PRD,
@@ -385,7 +424,7 @@ which the reply routes don't support yet.
    homework record as a hint while they write the report's homework grade?
    *Recommended: separate at launch, the hint later.*
 6. **Past years:** should students keep seeing last year's homework grades
-   after the year switch? *Recommended: yes, in the Homework tile only.*
+   after the year switch? *Recommended: yes, as a "Past years" list under the Homework grid.*
 7. **Online hand-in:** should students be able to upload their work (a new
    private storage bucket, like `student-documents`)? *Recommended: not in
    this build. It is the biggest addition in size and in safeguarding
