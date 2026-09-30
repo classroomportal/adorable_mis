@@ -514,7 +514,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 
 **Home dashboard**
 
-- **FR-13.5** Staff see a top row of big tiles (Log behaviour, My Timetable, Calendar, Inbox), a second row with counts of active students, staff and behaviour alerts and, for staff who are also parents, My Children, and module cards underneath. Each card shows only the pages the person's roles can open. Students see big tiles (Timetable, Homework for students in pilot classes, The Other Half, Assessment, Behaviour, Tuckshop, Messages); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
+- **FR-13.5** Staff see a top row of big tiles (Log behaviour, My Timetable, Calendar, Inbox), a second row with counts of active students, staff and behaviour alerts and, for staff who are also parents, My Children, and module cards underneath. Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions, Certificates and Behaviour Appeals are on Pastoral, Class Allocation on Timetable. Students see big tiles (Timetable, Homework for students in pilot classes, The Other Half, Assessment, Behaviour, Tuckshop, Messages); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
 - **FR-13.8** The order of the big tiles on students' home page and of every row of the staff dashboard (the top row, the second row and the module cards, which the bursar's home page also uses) is set once for the whole school at /admin/tile-order (admins). Tiles not yet placed go after the ordered ones. The order never changes which tiles someone sees; page access and the homework pilot still decide that. \[DB\]
 
 **Administration pages**
