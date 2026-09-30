@@ -250,7 +250,7 @@ const TABS = [
     items: ({ hasAccess }) => [
       { href: '/admissions', label: 'Applicants', desc: "Every application for an entry year, and where it has got to." },
       { href: '/admissions/new', label: 'New Application', resource: '/admissions', desc: "Record a new application and the family's contacts." },
-      { href: '/admissions/projections', label: "Next Year's Numbers", resource: '/admissions', desc: "Next year's roll by year group and gender: students moving up, Year 12 leaving, and new admissions confirmed and predicted." },
+      { href: '/admissions/projections', label: "Next Year's Numbers", resource: '/admissions', desc: "Places allowed for boys and girls in each year next year, less students moving up and new admissions confirmed and predicted." },
       { href: '/admissions/sessions', label: 'Test Days', desc: "Fix test dates, book applicants on, and enter English, Maths and CAT4." },
       { href: '/admissions/papers', label: 'Test Papers', desc: "The English and Maths paper for each year group, and its maximum mark." },
       { href: '/admissions/letters', label: 'Standard Letters', desc: "The school's letters for test dates, interviews, offers and outcomes." },
