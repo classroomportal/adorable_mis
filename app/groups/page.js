@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
-import { GROUP_KINDS, GROUP_VISIBILITY, kindLabel, canManageGroups } from '../../lib/studentGroups';
+import { GROUP_KINDS, GROUP_VISIBILITY, kindLabel, canManageGroups, describeRule } from '../../lib/studentGroups';
+import { formatUKDate } from '../../lib/formatDate';
 
 // Student groups (migration 284): a trip, a club, the prefects, an
 // intervention list. smt, pastoral and the school office make and change them;
@@ -31,7 +32,7 @@ function GroupsInner() {
   async function load() {
     const { data, error: err } = await supabase
       .from('student_groups')
-      .select('group_id, name, description, kind, visibility, archived_at, created_at, student_group_members(count), student_group_staff(staff_id, staff(first_name, last_name))')
+      .select('group_id, name, description, kind, visibility, archived_at, created_at, rule_type, rule_settings, built_on, student_group_members(count), student_group_staff(staff_id, staff(first_name, last_name))')
       .order('name');
     if (err) { setError(err.message); return; }
     setGroups(data || []);
@@ -88,7 +89,10 @@ function GroupsInner() {
           <button type="button" className="secondary" onClick={() => setCreating(false)}>Cancel</button>
         </form>
       ) : (
-        <p><button onClick={() => setCreating(true)}>+ New group</button></p>
+        <p style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <button onClick={() => setCreating(true)}>+ New group</button>
+          <a className="secondary" href="/groups/build">Build a group from a rule</a>
+        </p>
       ))}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', margin: '0.5rem 0 1rem' }}>
@@ -116,6 +120,7 @@ function GroupsInner() {
                 <tr key={g.group_id} className="student-link" onClick={() => { window.location.href = `/groups/${g.group_id}`; }}>
                   <td>
                     <a href={`/groups/${g.group_id}`} onClick={(e) => e.stopPropagation()}>{g.name}</a>
+                    {g.rule_type && <div style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>{describeRule(g.rule_type, g.rule_settings)} · built {formatUKDate(g.built_on)}</div>}
                     {g.description && <div style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>{g.description}</div>}
                   </td>
                   <td>{kindLabel(g.kind)}</td>

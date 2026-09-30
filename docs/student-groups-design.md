@@ -1,10 +1,12 @@
 # Student groups: design
 
-Status, 30 September 2026: **stage 1 built** (migration 284): groups, members,
-the staff who run them, `/groups` under Administration, the Groups tile on a
-student's profile, and "Student group" as a message target. Stages 2–4
-(rule-built groups, mark sheets, portal views) are not built yet. All the
-principal's decisions are under "Decided".
+Status, 30 September 2026: **stages 1 and 2 built.** Stage 1 (migration
+284): groups, members, the staff who run them, `/groups` under Administration,
+the Groups tile on a student's profile, and "Student group" as a message
+target. Stage 2 (migration 285): groups built from a rule at `/groups/build`,
+with every setting chosen each time (the principal: "system build parameters
+must be editable"). Stages 3–4 (mark sheets, portal views) are not built yet.
+All the principal's decisions are under "Decided".
 
 What was asked for (the principal, 30 Sept 2026): "we need to create groups of
 students sometimes for particular activities, sometimes for recording particular
@@ -169,8 +171,11 @@ teacher (who can look them up); other roles can be given it at
 1. **Phase 1 (built, migration 284):** groups, members, staff, `/groups`, the
    student profile card, messages to a group, change log. (Makes activities,
    prefects and messaging work.)
-2. **Phase 2:** rule-built groups (preview, save as dated snapshot, build
-   again), starting with negative behaviour and below target.
+2. **Phase 2 (built, migration 285):** rule-built groups at `/groups/build`
+   (preview, untick, save as a dated snapshot, build again with changed
+   settings): negative behaviour and below target. Every setting is chosen
+   each time; the form only starts from this term, this school year, −6
+   points and 3 subjects.
 3. **Phase 3:** mark sheets and `group_marks`, with Grade History.
 4. **Phase 4:** the student and parent portal views.
 
