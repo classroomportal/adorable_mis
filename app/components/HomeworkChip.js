@@ -2,6 +2,7 @@
 import { Fragment, useEffect, useRef } from 'react';
 import { formatUKDate } from '../../lib/formatDate';
 import { homeworkStatus, linkifyParts } from '../../lib/homework';
+import { AttachmentList } from './HomeworkAttachments';
 
 // The small "Homework" button shown on a timetable lesson or a Homework grid
 // card; tapping it opens HomeworkDetail below the grid.
@@ -55,6 +56,7 @@ export function HomeworkDetail({ hw, onClose }) {
         <span className={`hw-status hw-${status.key}`}>{status.label}</span>
       </p>
       {hw.instructions ? <Instructions text={hw.instructions} /> : <p style={{ color: 'var(--ink-soft)' }}>No further instructions.</p>}
+      <AttachmentList homeworkId={hw.homework_id} />
       <dl className="hw-facts">
         <dt>Due</dt>
         <dd>{formatUKDate(hw.due_on, { weekday: true })}{hw.due_period != null ? ` · lesson ${hw.due_period}` : ' · end of day'}</dd>

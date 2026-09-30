@@ -1,9 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatUKDate } from '../../lib/formatDate';
 import { schoolToday } from '../../lib/schoolTime';
-import { addDays, dayKey } from '../../lib/homework';
+import {
+  addDays, dayKey, loadAttachments, addHomeworkLink, addHomeworkFile, removeAttachment,
+} from '../../lib/homework';
+import { AttachmentEditor } from './HomeworkAttachments';
 
 // The set / edit homework form (migration 278), used on /homework and on the
 // class register (/attendance). The database decides who may save it
@@ -45,6 +48,12 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
   const [outOf, setOutOf] = useState(existing?.out_of != null ? String(Number(existing.out_of)) : '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // Files and links (migration 281), saved after the homework itself.
+  const [attachments, setAttachments] = useState({ existing: [], removeIds: [], newLinks: [], newFiles: [] });
+
+  useEffect(() => {
+    if (existing?.homework_id) loadAttachments(existing.homework_id).then((a) => setAttachments((v) => ({ ...v, existing: a })));
+  }, [existing?.homework_id]);
 
   const scheme = schemes.find((s) => String(s.scheme_id) === schemeId);
   const needsOutOf = scheme?.kind === 'mark' && scheme.fixed_max == null;
@@ -71,11 +80,38 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
       scheme_id: Number(schemeId),
       out_of: needsOutOf ? Number(outOf) : null,
     };
-    const { error: e } = existing
-      ? await supabase.from('homework').update(payload).eq('homework_id', existing.homework_id)
-      : await supabase.from('homework').insert({ ...payload, class_id: cls.class_id });
+    let homeworkId = existing?.homework_id;
+    if (existing) {
+      const { error: e } = await supabase.from('homework').update(payload).eq('homework_id', homeworkId);
+      if (e) { setSaving(false); setError(e.message); return; }
+    } else {
+      const { data, error: e } = await supabase.from('homework')
+        .insert({ ...payload, class_id: cls.class_id }).select('homework_id').single();
+      if (e) { setSaving(false); setError(e.message); return; }
+      homeworkId = data.homework_id;
+    }
+
+    // Then the files and links, one at a time so one failure names itself.
+    const problems = [];
+    for (const id of attachments.removeIds) {
+      const att = attachments.existing.find((a) => a.attachment_id === id);
+      const e = att && await removeAttachment(att);
+      if (e) problems.push(`Couldn't remove ${att.title}: ${e.message}`);
+    }
+    for (const l of attachments.newLinks) {
+      const e = await addHomeworkLink(homeworkId, l.title, l.url);
+      if (e) problems.push(`Couldn't add the link ${l.title || l.url}: ${e.message}`);
+    }
+    for (const f of attachments.newFiles) {
+      const e = await addHomeworkFile(homeworkId, f.file, f.title);
+      if (e) problems.push(`Couldn't upload ${f.file.name}: ${e.message}`);
+    }
     setSaving(false);
-    if (e) { setError(e.message); return; }
+    if (problems.length) {
+      // The homework is saved; say what didn't attach rather than lose it.
+      onSaved(`Homework saved, but: ${problems.join(' ')}`);
+      return;
+    }
     onSaved();
   }
 
@@ -128,6 +164,7 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
             </select>
           </label>
         </div>
+        <AttachmentEditor value={attachments} onChange={setAttachments} disabled={saving} />
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <label style={{ flex: '2 1 14rem' }}>
             Graded as
@@ -146,7 +183,7 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
         </div>
         {error && <p style={{ color: '#a3232c', margin: 0 }}>{error}</p>}
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : existing ? 'Save changes' : 'Set homework'}</button>
+          <button type="button" onClick={save} disabled={saving}>{saving ? (attachments.newFiles.length ? 'Uploading…' : 'Saving…') : existing ? 'Save changes' : 'Set homework'}</button>
           <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
         </div>
       </div>

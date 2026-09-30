@@ -95,7 +95,7 @@ export default function RegisterHomework({ classId }) {
           <HomeworkForm
             cls={cls} schemes={schemes} markCount={0} embedded
             onCancel={() => setFormOpen(false)}
-            onSaved={() => { setFormOpen(false); setStatus('Homework set. Students will see it on their timetable.'); loadHomework(); }}
+            onSaved={(msg) => { setFormOpen(false); setStatus(msg || 'Homework set. Students will see it on their timetable.'); loadHomework(); }}
           />
         </div>
       )}
