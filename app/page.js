@@ -44,42 +44,13 @@ function useIsStaffParent() {
   return isParent;
 }
 
-// Row 2: Log behaviour, and My Children for staff who are also parents (both
-// moved here from row 1 at the principal's request). The numbers that used to
-// sit here are on their module cards: active students on Students (292),
-// staff on Staff & Access and behaviour alerts on Pastoral (293). Order set
-// at /admin/tile-order.
+// Row 2: Log behaviour and Inbox (both moved here from row 1 at the
+// principal's request, migrations 292 and 294). The numbers that used to sit
+// here are on their module cards (292–293). Order set at /admin/tile-order.
 function DashboardStats({ hasAccess }) {
-  const order = useTileOrder('staff_stats');
-  const isParent = useIsStaffParent();
-  const tiles = sortTiles([
-    // Logging behaviour is the thing most staff come here to do, so it has
-    // a big tile of its own rather than only a chip on the Students card.
-    hasAccess('/behaviour') && { key: 'log_behaviour', href: '/behaviour', label: 'Log behaviour', icon: '✍️', accent: 'students', sub: 'Positive or negative, one student or a group' },
-    isParent && hasAccess('/parent-portal') && { key: 'my_children', label: 'My Children', icon: '👪', accent: 'students', href: '/parent-portal', sub: "Your children's grades and behaviour" },
-  ].filter(Boolean), order);
-  if (tiles.length === 0) return null;
-  return (
-    <div className="stat-card-row">
-      {tiles.map((c) => (
-        <a key={c.key} className={`stat-card quick-link accent-${c.accent}`} href={c.href}>
-          <div className="stat-card-icon">{c.icon}</div>
-          <div>
-            <div className="quick-link-label">{c.label}</div>
-            <div className="stat-card-label">{c.sub}</div>
-          </div>
-        </a>
-      ))}
-    </div>
-  );
-}
-
-// The everyday destinations — timetable, calendar, inbox — as big tiles above
-// the stats rather than a module card of their own, since nearly every member
-// of staff uses them.
-function QuickLinks({ hasAccess }) {
   const { session } = useAuth();
   const [unread, setUnread] = useState(null);
+  const order = useTileOrder('staff_stats');
 
   useEffect(() => {
     if (!session?.user) return;
@@ -91,27 +62,42 @@ function QuickLinks({ hasAccess }) {
       .then(({ count }) => setUnread(count ?? 0));
   }, [session]);
 
-  // Order set school-wide at /admin/tile-order (migration 280). Log
-  // behaviour is in row 2 (DashboardStats).
-  const order = useTileOrder('staff');
-  const links = sortTiles([
-    { key: 'timetable', href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
-    { key: 'calendar', href: '/calendar', label: 'Calendar', icon: '📅', accent: 'school', sub: 'Term dates and school events' },
+  const tiles = sortTiles([
+    // Logging behaviour is the thing most staff come here to do, so it has
+    // a big tile of its own rather than only a chip on the Students card.
+    { key: 'log_behaviour', href: '/behaviour', label: 'Log behaviour', icon: '✍️', accent: 'students', sub: 'Positive or negative, one student or a group' },
     {
       key: 'inbox', href: '/inbox', label: 'Inbox', icon: '✉️', accent: 'family',
       sub: unread == null ? 'Your messages' : unread === 0 ? 'No unread messages' : `${unread} unread`,
     },
   ].filter((l) => hasAccess(l.href)), order);
-  if (links.length === 0) return null;
+  return <TileRow tiles={tiles} />;
+}
 
+// Row 1: the everyday destinations, timetable and calendar, and My Children
+// for staff who are also parents (moved here from row 2 at the principal's
+// request, migration 294). Order set school-wide at /admin/tile-order.
+function QuickLinks({ hasAccess }) {
+  const order = useTileOrder('staff');
+  const isParent = useIsStaffParent();
+  const tiles = sortTiles([
+    { key: 'timetable', href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
+    { key: 'calendar', href: '/calendar', label: 'Calendar', icon: '📅', accent: 'school', sub: 'Term dates and school events' },
+    isParent && { key: 'my_children', href: '/parent-portal', label: 'My Children', icon: '👪', accent: 'students', sub: "Your children's grades and behaviour" },
+  ].filter((l) => l && hasAccess(l.href)), order);
+  return <TileRow tiles={tiles} className="quick-link-row" />;
+}
+
+function TileRow({ tiles, className = '' }) {
+  if (tiles.length === 0) return null;
   return (
-    <div className="stat-card-row quick-link-row">
-      {links.map((l) => (
-        <a key={l.href} className={`stat-card quick-link accent-${l.accent}`} href={l.href}>
-          <div className="stat-card-icon">{l.icon}</div>
+    <div className={`stat-card-row ${className}`.trim()}>
+      {tiles.map((c) => (
+        <a key={c.key} className={`stat-card quick-link accent-${c.accent}`} href={c.href}>
+          <div className="stat-card-icon">{c.icon}</div>
           <div>
-            <div className="quick-link-label">{l.label}</div>
-            <div className="stat-card-label">{l.sub}</div>
+            <div className="quick-link-label">{c.label}</div>
+            <div className="stat-card-label">{c.sub}</div>
           </div>
         </a>
       ))}
