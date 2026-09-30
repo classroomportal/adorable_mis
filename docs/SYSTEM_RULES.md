@@ -150,7 +150,11 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 - All staff can see every group and who is in it. Students and parents see nothing about groups yet, whatever "Who can see it" says; the portals will only ever show groups marked for them.
 - Only current students can be added. A student who leaves stays on the list, marked as left, and stops getting the group's messages.
 - A group is archived, never deleted. An archived group can't be messaged or have students added.
-- A group built from a rule (behaviour, progress; not built yet) can only ever be staff-only.
+- **Groups built by the system** (285, `/groups/build`): SMT, pastoral and the school office choose a rule and all its settings each time, see who matches today with the reason, untick anyone, and save the list. The rules are:
+  - **Negative behaviour:** negative points between two dates add up to a chosen threshold or worse (e.g. −6). Withdrawn events don't count.
+  - **Below target:** the latest grade in a subject, counting only results from a chosen date, is below target in at least a chosen number of subjects. Grades are compared by their points; WAEC grades only against WAEC targets.
+  - Both can be limited to chosen year groups, forms and boarding houses. Only current students are picked.
+- A built group records its rule, settings and date, is always staff-only, and never changes by itself. Students can still be added or taken out by hand. "Build again" starts a new dated group from the same settings, which can be changed first. Only students the rule picks can be saved into a built group.
 - Every change to a group, its students or its staff is logged in Change History under **groups**.
 - A student's profile has a Groups tile listing the groups they are in.
 

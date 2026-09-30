@@ -6,7 +6,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
-import { GROUP_KINDS, GROUP_VISIBILITY, kindLabel, visibilityLabel, canManageGroups } from '../../../lib/studentGroups';
+import { GROUP_KINDS, GROUP_VISIBILITY, kindLabel, visibilityLabel, canManageGroups, describeRule } from '../../../lib/studentGroups';
 
 // One student group (migration 284): its students and the staff who run it.
 // Only smt, pastoral, the school office and admin can change anything; the
@@ -169,9 +169,15 @@ function GroupInner() {
       <h1>{group.name}</h1>
       <p style={{ color: 'var(--ink-soft)' }}>
         {kindLabel(group.kind)} · {visibilityLabel(group.visibility)}
-        {group.built_on && ` · built from a rule on ${formatUKDate(group.built_on)}`}
+
         {archived && ` · archived ${formatUKDate(group.archived_at.slice(0, 10))}`}
       </p>
+      {group.rule_type && (
+        <p style={{ background: 'var(--brand-050)', border: '1px solid var(--slate-200)', borderRadius: '8px', padding: '0.5rem 0.75rem' }}>
+          <strong>Built by the system on {formatUKDate(group.built_on)}:</strong> {describeRule(group.rule_type, group.rule_settings)}.
+          {' '}The list doesn&apos;t change by itself; students can still be added or taken out by hand.
+        </p>
+      )}
       {group.description && <p>{group.description}</p>}
       {group.visibility !== 'staff' && (
         <p style={{ fontSize: '0.9rem', color: 'var(--ink-soft)' }}>
@@ -184,6 +190,7 @@ function GroupInner() {
       {canManage && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
           {!archived && current.length > 0 && <a className="secondary" href={`/comms/compose?group=${groupId}`}>Message this group</a>}
+          {group.rule_type && <a className="secondary" href={`/groups/build?from=${groupId}`}>Build again</a>}
           {!editing && (
             <button type="button" className="secondary" onClick={() => {
               setDraft({ name: group.name, description: group.description || '', kind: group.kind, visibility: group.visibility });
