@@ -236,17 +236,16 @@ const TABS = [
       // Shares the /results grant rather than having a resource of its own.
       { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
       { href: '/results/subject-overview', label: 'Review Results', desc: "A student's exam results in each subject against the cohort average." },
-      { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
-      { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
-      { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
+      // Detentions, Certificates and Behaviour Appeals live on the Pastoral
+      // card only (the principal, 30 Sept 2026: one place for each link).
     ].filter((it) => hasAccess(it.resource || it.href)),
   },
   {
     key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students',
     description: 'Behaviour, detentions, registers and mentor groups.',
-    // Class Allocation only goes to pastoral/head_of_department in
-    // role_permissions — only the pastoral role (plus admin) actually has
-    // student_class write access (migration 105), houseparent/smt don't.
+    // Class Allocation is on the Timetable card only (the principal, 30 Sept
+    // 2026: one place for each link); pastoral staff and HoDs with the page
+    // still see it there, because a card shows whatever links a person has.
     items: ({ hasAccess }) => [
       { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
       { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
@@ -256,7 +255,6 @@ const TABS = [
       { href: '/pastoral/birthdays', label: 'Birthdays', desc: "Staff and students with a birthday in the next 7 days." },
       { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
       { href: '/staff/mentor-groups', label: 'Mentor Groups', desc: "Assign staff to each mentor group." },
-      { href: '/admin/block-allocation', label: 'Class Allocation', desc: "Put students into classes, block by block." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
