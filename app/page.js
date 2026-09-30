@@ -41,9 +41,26 @@ function StatCard({ label, value, icon, accent, href }) {
   );
 }
 
+// Staff who are also parents: their login is linked to a parent record
+// (profiles.parent_id), or failing that their sign-in email matches one.
+// profiles.email is empty for most logins, so it can't be relied on; the
+// sign-in email comes from the session.
+function useIsStaffParent() {
+  const { session, profile } = useAuth();
+  const [isParent, setIsParent] = useState(false);
+  useEffect(() => {
+    if (profile?.parent_id) { setIsParent(true); return; }
+    findParentIdByEmail(profile?.email || session?.user?.email).then((id) => setIsParent(!!id));
+  }, [profile, session]);
+  return isParent;
+}
+
+// Row 2: the numbers, and My Children for staff who are also parents (moved
+// here from row 1 at the principal's request). Order set at /admin/tile-order.
 function DashboardStats({ isDemoAccount, hasAccess }) {
   const [stats, setStats] = useState(null);
   const order = useTileOrder('staff_stats');
+  const isParent = useIsStaffParent();
 
   useEffect(() => {
     async function load() {
@@ -67,21 +84,26 @@ function DashboardStats({ isDemoAccount, hasAccess }) {
         { key: 'students', label: 'Active students', value: stats?.students, icon: '🎓', accent: 'myinfo', href: '/students' },
         { key: 'staff', label: 'Staff', value: stats?.staff, icon: '🧑‍🏫', accent: 'school', href: '/staff/roles' },
         { key: 'alerts', label: 'Behaviour alerts (7 days)', value: stats?.alerts, icon: '⚠️', accent: 'students', href: '/behaviour/alerts' },
-      ], order).map(({ key, ...c }) => <StatCard key={key} {...c} />)}
+        isParent && hasAccess('/parent-portal') && { key: 'my_children', link: true, label: 'My Children', icon: '👪', accent: 'students', href: '/parent-portal', sub: "Your children's grades and behaviour" },
+      ].filter(Boolean), order).map(({ key, link, ...c }) => (link ? (
+        <a key={key} className={`stat-card quick-link accent-${c.accent}`} href={c.href}>
+          <div className="stat-card-icon">{c.icon}</div>
+          <div>
+            <div className="quick-link-label">{c.label}</div>
+            <div className="stat-card-label">{c.sub}</div>
+          </div>
+        </a>
+      ) : <StatCard key={key} {...c} />))}
     </div>
   );
 }
 
 // The everyday destinations — timetable, calendar, inbox — as big tiles above
 // the stats rather than a module card of their own, since nearly every member
-// of staff uses them. My Children only appears for staff who are also parents:
-// their login is linked to a parent record (profiles.parent_id), or failing
-// that their sign-in email matches one. profiles.email is empty for most
-// logins, so it can't be relied on; the sign-in email comes from the session.
+// of staff uses them.
 function QuickLinks({ hasAccess }) {
-  const { session, profile } = useAuth();
+  const { session } = useAuth();
   const [unread, setUnread] = useState(null);
-  const [isParent, setIsParent] = useState(false);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -92,11 +114,6 @@ function QuickLinks({ hasAccess }) {
       .is('read_at', null)
       .then(({ count }) => setUnread(count ?? 0));
   }, [session]);
-
-  useEffect(() => {
-    if (profile?.parent_id) { setIsParent(true); return; }
-    findParentIdByEmail(profile?.email || session?.user?.email).then((id) => setIsParent(!!id));
-  }, [profile, session]);
 
   // Order set school-wide at /admin/tile-order (migration 280). Logging
   // behaviour is the thing most staff come here to do, so it has a big tile
@@ -110,8 +127,7 @@ function QuickLinks({ hasAccess }) {
       key: 'inbox', href: '/inbox', label: 'Inbox', icon: '✉️', accent: 'family',
       sub: unread == null ? 'Your messages' : unread === 0 ? 'No unread messages' : `${unread} unread`,
     },
-    isParent && { key: 'my_children', href: '/parent-portal', label: 'My Children', icon: '👪', accent: 'students', sub: "Your children's grades and behaviour" },
-  ].filter((l) => l && hasAccess(l.href)), order);
+  ].filter((l) => hasAccess(l.href)), order);
   if (links.length === 0) return null;
 
   return (
