@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 290). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 291). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -360,7 +360,7 @@ Written reports are built only from checked comments; transcripts and score shee
 **Report periods and comments**
 
 - **FR-8.1** Admins, SMT and assessment managers create report periods, each with year groups, "comments due" and "checking due" dates and an optional "joined from" date for new-student checks. \[DB\]
-- **FR-8.2** A teacher writes one comment per student, per subject, per period, with Effort, Presentation and Homework judgements (Excellent, Good, Satisfactory, Needs Improvement). While writing they see the last 5 weeks of grades and the year's trend. \[DB / Page\]
+- **FR-8.2** A teacher writes one comment per student, per subject, per period, with Effort, Presentation and Homework judgements (Excellent, Good, Satisfactory, Needs Improvement). While writing they see the last 5 weeks of grades and the year's trend, and the term's homework marks, which suggest the Homework judgement (FR-17.12). \[DB / Page\]
 - **FR-8.3** Mentors, houseparents and SMT each write one pastoral comment per student per period, seeing the subject judgements and best and weakest subjects. \[DB\]
 - **FR-8.4** Comments move draft → submitted → checked. The author can edit only a draft. Checkers assigned to the period, SMT and admin can edit, approve, or send back with a note. \[DB\]
 - **FR-8.5** "Draft a comment" asks the AI for a 2–3 sentence subject comment or 3–4 sentence pastoral comment, using only the facts on the page. "Check comments" flags spelling, tone and contradictions with the student's data, up to 60 at a time. Only people with the relevant page can use them. \[DB + server check\]
@@ -663,7 +663,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 ## 20. FR-17 Homework
 
-Teachers set homework for a class with a deadline and a grading system, and record a grade for each student, outside reporting. It is a pilot from 30 September 2026, on 10\_1/Ma and 11\_1/Ma only (the principal's classes). The design and the principal's decisions are in docs/homework-design.md.
+Teachers set homework for a class with a deadline and a grading system, and record a grade for each student. The grades inform the end-of-term written report (FR-17.12) but never transcripts, result sets or target grades. It is a pilot from 30 September 2026, on 10\_1/Ma and 11\_1/Ma only (the principal's classes). The design and the principal's decisions are in docs/homework-design.md.
 
 **Pilot and access**
 
@@ -687,18 +687,19 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 
 | Who | What was set, with files | Grades |
 | --- | --- | --- |
-| Class's teachers, Head of Department, admin | Yes | Yes, and can record them |
+| Class's teachers, Head of Department, admin; a student's current subject teacher for that student's marks in the subject (FR-17.16) | Yes | Yes, and can record them |
 | SMT | Yes | Yes |
 | Other staff (mentors, pastoral, assessment managers) | Yes | No |
 | Students | Their own classes', this school year | Their own, once the teacher releases the marks |
-| Parents | No | No |
+| Parents | No | Only the Homework grade on a published written report |
 
 - **FR-17.10** Students see homework on their weekly timetable, on the lesson it is due in, with a week selector, and on a Homework page laid out by day, with overdue and recently graded lists. \[Page\]
 - **FR-17.11** Every homework grade entered, changed or deleted is logged permanently in Grade History, like any other grade. Only SMT and admins can read those entries, and /assessments/grade-history hides them unless "including homework" is chosen. \[DB\]
-- **FR-17.12** Homework grades are never used by reports, transcripts, result sets or target grades. The report's own Homework judgement is still typed by the teacher. \[DB\]
+- **FR-17.12** Homework feeds the end-of-term written report only (migration 291). For each student and subject, the database works out the average of the term's number-marked homework from any class, its grade from the subject's boundaries, and how many were marked and not handed in. Every mark for homework due that term counts, released or not; Not handed in is counted separately, not as zero. The report writer shows these figures and pre-fills the Homework judgement from the average (80%+ Excellent, 60–79 Good, 40–59 Satisfactory, under 40 Needs Improvement), which the teacher can change; the period's assigned checkers see them too. The printed report's Homework line shows the grade only (e.g. B), never the percentage; a subject with no homework marks shows the teacher's judgement. Transcripts, result sets and target grades never use homework. \[DB / Page\]
 - **FR-17.13** A student can tick their own homework as done, and untick it, until a grade is released. It is the student's own note, not a hand-in or a grade. They can tick only homework set for their class, and the time is recorded by the database. The class's teachers, the Head of Department, SMT and admins see how many students ticked each homework on the homework list and the register's Homework panel, and each student's tick in the mark book; classmates, other staff and parents don't. \[DB\]
 - **FR-17.14** On the student's Homework page and timetable, colour shows where each piece stands: red for overdue or not handed in, amber for due today, green for ticked done, purple for graded, blue for due later. A ticked card shrinks to just the subject. Ticked homework no longer counts as due this week or overdue. \[Page\]
 - **FR-17.15** Each class on /homework has a mark sheet: one row per student and one column per homework due between two dates (the current term by default), each column headed by the title and due date. It shows each student's average of their number-marked homework with its grade from the subject's boundaries, how many were marked and how many weren't handed in, and downloads as CSV. It shows only what the person may already see. \[Page\]
+- **FR-17.16** Marks follow the student. If a student changes class or teacher, whoever teaches them in that subject now can read all their homework marks in it for the current school year, from any class. The teacher who gave the marks, the Head of Department, SMT and admins still see them, and the student still sees their own released marks. (Migration 291.) \[DB\]
 
 **Not built yet:** students handing work in online (the principal's answer was "not yet"), and notifications: setting homework or releasing marks sends no email or inbox message.
 
