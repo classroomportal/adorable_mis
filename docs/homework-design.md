@@ -21,6 +21,7 @@ Since then (the principal, 30 Sept 2026):
 - students have big tiles on their home page, with Homework second;
 - the order of the big tiles is set school-wide at `/admin/tile-order` (migration 280);
 - teachers can attach files and `https://` links to homework (migration 281, private `homework-files` bucket, 20 MB per file). Student hand-in is still "not yet".
+- students tick homework done (migration 288, `homework_done`). A done card turns green and shrinks to the subject. Overdue is red, due today amber and graded purple. Teachers see the ticks in the mark book.
 
 Widening the pilot means adding classes to `homework_classes` and granting
 `/homework` to `teacher` and `head_of_department`.

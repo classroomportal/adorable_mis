@@ -16,7 +16,7 @@ export function HomeworkChip({ hw, selected, onSelect }) {
       aria-expanded={selected}
       title={hw.title}
     >
-      📘 Homework
+      {status.key === 'done' ? '✓ Homework' : '📘 Homework'}
     </button>
   );
 }
@@ -34,7 +34,7 @@ export function Instructions({ text }) {
   );
 }
 
-export function HomeworkDetail({ hw, onClose }) {
+export function HomeworkDetail({ hw, onClose, onToggleDone }) {
   const ref = useRef(null);
   // Chips and cards can be far from the panel (a small screen, or the lists
   // under the Homework grid), so bring it into view when it opens.
@@ -52,8 +52,15 @@ export function HomeworkDetail({ hw, onClose }) {
         </div>
         <button type="button" className="secondary" onClick={onClose}>Close</button>
       </div>
-      <p style={{ margin: '0 0 0.6rem' }}>
+      <p style={{ margin: '0 0 0.6rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <span className={`hw-status hw-${status.key}`}>{status.label}</span>
+        {/* The student's own tick (migration 288); gone once a grade is released. */}
+        {onToggleDone && !hw.marked && (
+          <label className="hw-tick hw-tick-large">
+            <input type="checkbox" checked={!!hw.done} onChange={(e) => onToggleDone(hw, e.target.checked)} />
+            I&apos;ve done this
+          </label>
+        )}
       </p>
       {hw.instructions ? <Instructions text={hw.instructions} /> : <p style={{ color: 'var(--ink-soft)' }}>No further instructions.</p>}
       <AttachmentList homeworkId={hw.homework_id} />

@@ -16,7 +16,7 @@ import { useTileOrder, sortTiles } from '../../lib/tileOrder';
 import { schoolToday } from '../../lib/schoolTime';
 import {
   addDays, weekStartOf, defaultWeekStart, shortDate, loadMyHomework,
-  placeHomeworkInCells, groupHomeworkByDay, homeworkStatus,
+  placeHomeworkInCells, groupHomeworkByDay, homeworkStatus, isOutstanding, setHomeworkDone,
 } from '../../lib/homework';
 
 
@@ -48,23 +48,45 @@ function WeekPicker({ weekStart, onChange }) {
 }
 
 // One homework as a card on the Homework grid or in its lists.
-function HomeworkCard({ hw, selected, onSelect, showDate }) {
-  const status = homeworkStatus(hw);
+// The student's "Done" tick (migration 288). Clicking it doesn't open the card.
+function DoneTick({ hw, onToggleDone }) {
+  if (!onToggleDone || hw.marked) return null;
   return (
-    <button
-      type="button"
-      className={`hw-card hw-${status.key}${selected ? ' hw-card-selected' : ''}`}
-      onClick={() => onSelect(selected ? null : hw.homework_id)}
+    <label className="hw-tick" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+      <input type="checkbox" checked={!!hw.done} onChange={(e) => onToggleDone(hw, e.target.checked)} />
+      Done
+    </label>
+  );
+}
+
+// One homework as a card on the Homework grid or in its lists. Once ticked
+// done (and not yet graded) it turns green and shrinks to just the subject.
+function HomeworkCard({ hw, selected, onSelect, showDate, onToggleDone }) {
+  const status = homeworkStatus(hw);
+  const compact = hw.done && !hw.marked;
+  const open = () => onSelect(selected ? null : hw.homework_id);
+  return (
+    <div
+      role="button" tabIndex={0}
+      className={`hw-card hw-${status.key}${compact ? ' hw-card-compact' : ''}${selected ? ' hw-card-selected' : ''}`}
+      onClick={open}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}
       aria-expanded={selected}
+      title={compact ? hw.title : undefined}
     >
-      <span className="hw-card-subject">{hw.subject_name}</span>
-      <span className="hw-card-title">{hw.title}</span>
-      <span className="hw-card-meta">
-        {showDate ? `${shortDate(hw.due_on)} · ` : ''}
-        {hw.due_period != null ? `Lesson ${hw.due_period}` : 'End of day'}
-      </span>
-      <span className={`hw-status hw-${status.key}`}>{status.label}</span>
-    </button>
+      <span className="hw-card-subject">{compact ? `✓ ${hw.subject_name}` : hw.subject_name}</span>
+      {!compact && (
+        <>
+          <span className="hw-card-title">{hw.title}</span>
+          <span className="hw-card-meta">
+            {showDate ? `${shortDate(hw.due_on)} · ` : ''}
+            {hw.due_period != null ? `Lesson ${hw.due_period}` : 'End of day'}
+          </span>
+          <span className={`hw-status hw-${status.key}`}>{status.label}</span>
+        </>
+      )}
+      <DoneTick hw={hw} onToggleDone={onToggleDone} />
+    </div>
   );
 }
 
@@ -106,6 +128,21 @@ function PortalInner() {
   const [recentHomework, setRecentHomework] = useState([]); // last four weeks up to the end of this week
   const [selectedHw, setSelectedHw] = useState(null);
   const tileOrder = useTileOrder('student');
+  const [hwError, setHwError] = useState(null);
+
+  // Tick or untick "Done". Shown at once, then saved; put back if the save fails.
+  async function toggleDone(hw, done) {
+    setHwError(null);
+    const apply = (value) => (list) => list.map((h) => (h.homework_id === hw.homework_id ? { ...h, done: value } : h));
+    setWeekHomework(apply(done));
+    setRecentHomework(apply(done));
+    const error = await setHomeworkDone(hw.homework_id, studentId, done);
+    if (error) {
+      setWeekHomework(apply(!done));
+      setRecentHomework(apply(!done));
+      setHwError(`That didn't save: ${error.message}`);
+    }
+  }
 
   async function load() {
     if (!studentId) return;
@@ -323,8 +360,8 @@ function PortalInner() {
   // Homework tile badge and lists.
   const today = schoolToday();
   const thisWeekEnd = addDays(weekStartOf(today), 6);
-  const dueThisWeek = recentHomework.filter((h) => !h.marked && h.due_on >= today && h.due_on <= thisWeekEnd).length;
-  const overdueEarlier = recentHomework.filter((h) => !h.marked && h.due_on < today && h.due_on < weekStart);
+  const dueThisWeek = recentHomework.filter((h) => isOutstanding(h) && h.due_on >= today && h.due_on <= thisWeekEnd).length;
+  const overdueEarlier = recentHomework.filter((h) => isOutstanding(h) && h.due_on < today && h.due_on < weekStart);
   const recentlyGraded = recentHomework.filter((h) => h.marked).sort((a, b) => b.due_on.localeCompare(a.due_on));
   const homeworkByDay = groupHomeworkByDay(weekHomework, weekStart);
   const weekendHomework = [...homeworkByDay[addDays(weekStart, 5)], ...homeworkByDay[addDays(weekStart, 6)]];
@@ -413,7 +450,7 @@ function PortalInner() {
             <div className="table-scroll">
               {renderTimetableGrid()}
             </div>
-            {homeworkOn && <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} />}
+            {homeworkOn && <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} onToggleDone={toggleDone} />}
           </>
         )}
       </div>
@@ -422,6 +459,7 @@ function PortalInner() {
       {activeView === 'homework' && (
       <div className="card">
         <h2 style={{ margin: 0 }}>My Homework</h2>
+        {hwError && <p style={{ color: '#a3232c', margin: '0.5rem 0 0' }}>{hwError}</p>}
         <WeekPicker weekStart={weekStart} onChange={(w) => { setWeekStart(w); setSelectedHw(null); }} />
         <div className={`hw-grid${gridDays.length > 5 ? ' hw-grid-6' : ''}`}>
           {gridDays.map((d) => (
@@ -430,19 +468,19 @@ function PortalInner() {
               {d.items.length === 0 ? (
                 <div className="hw-nothing">Nothing due</div>
               ) : d.items.map((hw) => (
-                <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate={d.weekend} />
+                <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate={d.weekend} onToggleDone={toggleDone} />
               ))}
             </div>
           ))}
         </div>
-        <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} />
+        <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} onToggleDone={toggleDone} />
 
         {overdueEarlier.length > 0 && (
           <>
             <h3>Overdue from earlier weeks</h3>
             <div className="hw-list">
               {overdueEarlier.map((hw) => (
-                <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate />
+                <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate onToggleDone={toggleDone} />
               ))}
             </div>
           </>
@@ -453,7 +491,7 @@ function PortalInner() {
         ) : (
           <div className="hw-list">
             {recentlyGraded.map((hw) => (
-              <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate />
+              <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate onToggleDone={toggleDone} />
             ))}
           </div>
         )}
