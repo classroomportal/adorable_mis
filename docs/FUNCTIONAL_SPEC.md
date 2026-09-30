@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 275). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 283). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -19,7 +19,7 @@ This specification describes what Formwork does as built on 30 September 2026 (d
 - **\[DB\]** — enforced by the database. It holds however someone reaches the data, including an edited browser request.
 - **\[Page\]** — enforced only by the web page. It guides normal use but is not a security boundary.
 
-Where behaviour differs from what a page suggests, it is listed in section 21, Known issues. Nothing in that section has been fixed yet.
+Where behaviour differs from what a page suggests, it is listed in section 22, Known issues. Nothing in that section has been fixed yet.
 
 ## 2. System overview
 
@@ -38,7 +38,7 @@ Every screen reads and writes the database directly under the signed-in person's
 | Scheduled jobs | pg\_cron in the database | Email queue every 15 seconds, register alerts every 15 minutes, detention reminders on Thursdays. |
 | Server routes | 3 routes in the web app | Nightly backup, and two AI helpers for report comments. Each checks the caller first. |
 | AI | Anthropic Claude API | Drafts and checks report comments. Never reads or writes the database. |
-| Backups | Nightly dump to private storage, plus Supabase's own daily backups | See section 20. |
+| Backups | Nightly dump to private storage, plus Supabase's own daily backups | See section 21. |
 
 **Where the data came from.** Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
 
@@ -95,8 +95,8 @@ Only Formwork creates logins; nobody can create their own account, by email or b
 
 - **FR-1.1** A staff login is created automatically when a staff record gets an email, and a student login when a student gets a school email. Each has a random 10-character password. \[DB\]
 - **FR-1.2** The welcome email with that password is sent only when an admin saves the record. Admins can send a password-reset link from the "never signed in" lists for staff and students. \[DB\]
-- **FR-1.3** Parent welcome letters are sent by year group from /parents/welcome-emails, by admins, up to 500 per send, once per parent. The letter sets the first password to the oldest current child's date of birth (DDMMYYYY) and forces a change at first sign-in. Parents who have signed in are skipped. \[DB\]
-- **FR-1.4** A letter can be resent only to parents who received it and have never signed in. If their email has changed, the login moves to the new address first; the send stops if another login already uses it. \[DB\]
+- **FR-1.3** Parent welcome letters are sent by year group from /parents/welcome-emails, by admins, up to 500 per send, once per parent. The letter sets the first password to the oldest current child's date of birth (DDMMYYYY) and forces a change at first sign-in. A first send skips parents who have already signed in. \[DB\]
+- **FR-1.4** A letter can be sent again to any parent with a login, including one who has signed in and chosen a password. It resets the password to the date-of-birth one and forces a change at the next sign-in; a parent with a login who was never sent the letter is then recorded as sent. "Show: Signed in" on the page has tick-boxes and "Send again", and the confirmation says how many signed-in parents will lose their chosen password. Still admin only, up to 500 per send, and blocked while parent emails are paused. If a parent who has never signed in has a new email, the login moves to the new address first; the send stops if another login already uses it. \[DB\]
 - **FR-1.5** The school office can create one parent's login from the student page. It gets a random password, emailed (or shown once if parent email is paused), and is not forced to change. \[DB\]
 - **FR-1.6** A student whose email changes before their first sign-in has their login moved to the new address. \[DB\]
 
@@ -124,6 +124,7 @@ Every member of staff can read the whole student record; what each role can chan
 - **FR-2.5** Marking a student as anything other than active removes them from all their classes, whoever makes the change. Attendance, behaviour and results history are kept. \[DB\]
 - **FR-2.6** A student's form must be a real mentor group, and their mentor group follows it. \[DB\]
 - **FR-2.7** Photos are stored on the student record, shrunk to 400 px in the browser. Admins can bulk-import them. \[Page\]
+- **FR-2.8** The Students list loads nothing until asked, since the whole school with photos is slow. Typing a name searches straight away, and after two letters up to eight matching students appear under the search box as blue buttons (name, form, year); choosing one opens that student. The list follows the Status, Year and Form filters and a houseparent's house. \[Page\]
 
 **Parents**
 
@@ -148,6 +149,7 @@ Every member of staff can read the whole student record; what each role can chan
 | Tuckshop | Order, see balance and purchases | See balance and purchases; cannot order |
 | Other Half | Choose activities during Evening Prep | See the chosen activity |
 | Published documents | Own | Each child's |
+| Homework (pilot classes) | Own classes' homework, files and links; own grade once released; this school year | No |
 | Inbox | Yes | Yes |
 
 - **FR-2.12** Each portal shows only the signed-in student's own data, or the parent's linked children's. \[DB\]
@@ -269,6 +271,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 - **FR-6.5** One picture can be attached per logging, shrunk in the browser and under about 150 KB. \[DB\]
 
 * **FR-6.5a** Staff can choose students for a group logging by class, house, room, restaurant or year. /behaviour/log searches and filters past events; /behaviour/alerts lists events of −3 or worse in the last 7 days (a houseparent sees their own house). \[Page\]
+* **FR-6.5b** Every list of events shows who logged each one: /behaviour/log, alerts, review, detentions, appeals and the Behaviour tab of a student's profile. \[Page\]
 
 **Editing and deleting**
 
@@ -472,10 +475,12 @@ Every email goes through one queue from mis@abc.sch.ng with a Reply-To chosen by
 
 **Messages (/comms)**
 
-- **FR-12.1** SMT, pastoral, school office and admins can send messages to an individual, all parents, all students, all staff, a year, form, house, mentor group or staff role. \[DB\]
-- **FR-12.2** Only messages to one person are emailed; group messages go to the Formwork inbox only. Group messages reach active students and their parents only. \[DB\]
+- **FR-12.1** SMT, pastoral, school office and admins can send messages to an individual, all staff, one or more staff roles, or a group of students: all students, or one or more year groups, forms, boarding houses, mentor groups, sports houses, teaching classes or Other Half activities. A student group message goes to the students, their parents, or both, chosen when sending. \[DB\]
+- **FR-12.2** A message to one person is emailed as well as put in their inbox. In a group message, parents are emailed too, unless parent emails are paused; students and staff get it in their inbox only. Group messages reach active students and their parents only, and parents with no login can't be reached. \[DB\]
 - **FR-12.3** Everyone sees only their own inbox, with read receipts. Automatic detention and behaviour notices are also readable by SMT, pastoral and school office. \[DB\]
 - **FR-12.4** /comms/history lists sent messages and automatic emails with recipients, subject and delivery status, never the body (welcome emails contain passwords). For SMT, pastoral, school office and admin. \[DB\]
+- **FR-12.8** "Check recipient count" gives the real number before sending, from the same list the send uses, and says how many parents in the group have no login and won't get it. \[DB\]
+- **FR-12.9** Message history shows who a student group message went to: students, parents or both. \[Page\]
 
 **Email**
 
@@ -507,7 +512,8 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 
 **Home dashboard**
 
-- **FR-13.5** Staff see quick links (My Timetable, Calendar, Inbox, and My Children if they are also a parent), a "Log behaviour" tile, counts of active students, staff and behaviour alerts, and module cards. Each card shows only the pages the person's roles can open. Students see My Info and Other Half cards; parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
+- **FR-13.5** Staff see a top row of big tiles (Log behaviour, My Timetable, Calendar, Inbox), a second row with counts of active students, staff and behaviour alerts and, for staff who are also parents, My Children, and module cards underneath. Each card shows only the pages the person's roles can open. Students see big tiles (Timetable, Homework for students in pilot classes, The Other Half, Assessment, Behaviour, Tuckshop, Messages); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
+- **FR-13.8** The order of the big tiles on students' home page and of every row of the staff dashboard (the top row, the second row and the module cards, which the bursar's home page also uses) is set once for the whole school at /admin/tile-order (admins). Tiles not yet placed go after the ordered ones. The order never changes which tiles someone sees; page access and the homework pilot still decide that. \[DB\]
 
 **Administration pages**
 
@@ -523,6 +529,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /admin/subject-settings | Subject display names, departments, key stages, aliases, target fallback | Assessment manager, admin |
 | /admin/grade-boundaries | Grade cut-offs per subject and year group | Assessment manager, admin (page); all staff (data) |
 | /admin/email-replies | Reply-To for each kind of email | SMT, admin |
+| /admin/tile-order | Order of students' big tiles and of every row of the staff dashboard, school-wide | Admin (all signed-in users read it) |
 | /admin/change-history | The permanent change log | SMT, admin |
 | /admin/register-alerts | Late or missed registers | HR, school office, admin |
 | /admin/backup | Freeze writes, run a backup, list recent backups | Admin |
@@ -633,7 +640,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
 | Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
-| Grade History | Every score, target and transcript grade entered, changed or deleted, with old and new grade | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
+| Grade History | Every score, target, transcript grade and homework grade entered, changed or deleted, with old and new grade. Homework grades are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
 | Admission letters | Every letter produced, as sent, who sent it and the email address | Each applicant's page | Admissions, SMT, admin | Yes |
@@ -649,7 +656,45 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 - **FR-16.7** Who looked at or downloaded a record: Formwork logs changes, not viewing. \[DB\]
 - **FR-16.8** Anything before the September 2026 import from SIMS, including class and subject-choice changes. \[Data\]
 
-## 20. Non-functional requirements
+## 20. FR-17 Homework
+
+Teachers set homework for a class with a deadline and a grading system, and record a grade for each student, outside reporting. It is a pilot from 30 September 2026, on 10\_1/Ma and 11\_1/Ma only (the principal's classes). The design and the principal's decisions are in docs/homework-design.md.
+
+**Pilot and access**
+
+- **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. \[DB\]
+- **FR-17.2** /homework has no roles granted yet, so during the pilot only admins see the page and the staff tile. \[DB\]
+
+**Setting homework**
+
+- **FR-17.3** Homework is set from the class register (/attendance, a Homework panel for classes the teacher can set it for) or from /homework. Each piece has a title, plain-text instructions, a deadline date, optionally the lesson it is due in (one of the class's lessons that day), and a grading system. \[Page\]
+- **FR-17.4** Setting, editing and marking are open to the class teacher, the teacher of any single lesson of the class, the Head of Department for the subject, and admins. \[DB\]
+- **FR-17.5** The subject, class code, year group and academic year are copied from the class, never taken from the page, so homework survives the class being removed at the year switch. \[DB\]
+- **FR-17.6** Once any grade is recorded, the grading system can't be changed and the homework can't be deleted, only withdrawn. \[DB\]
+- **FR-17.7** The teacher can attach files (PDF, Word, PowerPoint, Excel, OpenDocument, images, text or CSV, up to 20 MB each) and https:// links. The same people who can set the homework add or remove them. Files are private and open through a link that lasts ten minutes. \[DB\]
+
+**Grading systems**
+
+- **FR-17.8** Teachers pick from: Mark out of …, Percentage, A\*–U, 9–1, WAEC, Effort 1–4, Complete / Incomplete, or Not graded. Every system also accepts "Not handed in" and "Excused". Lookups holders edit the systems; a system is retired, never deleted, so old grades stay readable. \[DB\]
+- **FR-17.9** A grade must fit the system (a mark between 0 and the maximum, or one of its grades) and can only be recorded for a student in the class. \[DB\]
+
+**Who sees what**
+
+| Who | What was set, with files | Grades |
+| --- | --- | --- |
+| Class's teachers, Head of Department, admin | Yes | Yes, and can record them |
+| SMT | Yes | Yes |
+| Other staff (mentors, pastoral, assessment managers) | Yes | No |
+| Students | Their own classes', this school year | Their own, once the teacher releases the marks |
+| Parents | No | No |
+
+- **FR-17.10** Students see homework on their weekly timetable, on the lesson it is due in, with a week selector, and on a Homework page laid out by day, with overdue and recently graded lists. \[Page\]
+- **FR-17.11** Every homework grade entered, changed or deleted is logged permanently in Grade History, like any other grade. Only SMT and admins can read those entries, and /assessments/grade-history hides them unless "including homework" is chosen. \[DB\]
+- **FR-17.12** Homework grades are never used by reports, transcripts, result sets or target grades. The report's own Homework judgement is still typed by the teacher. \[DB\]
+
+**Not built yet:** students handing work in online (the principal's answer was "not yet"), and notifications: setting homework or releasing marks sends no email or inbox message.
+
+## 21. Non-functional requirements
 
 The database, not the browser, decides who someone is and what they may do; sensitive changes are logged permanently; the whole database is backed up nightly.
 
@@ -678,7 +723,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 - **NFR-9** Every page works on a phone; staff often use Formwork from phones. \[Page\]
 - **NFR-10** Sized for about 260 students, 60 staff and 1,000 parent logins. Email is sent at about 12 a minute. \[Design\]
 
-## 21. Known issues and open decisions
+## 22. Known issues and open decisions
 
 27 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; none is fixed yet. The first five stop something working today.
 
@@ -714,7 +759,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
-## 22. Glossary
+## 23. Glossary
 
 | Term | Meaning |
 | --- | --- |

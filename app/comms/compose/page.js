@@ -18,6 +18,8 @@ const TARGET_TYPES = [
   { value: 'class', label: 'Teaching class', kind: 'multi', optionsKey: 'classes', students: true },
   { value: 'other_half', label: 'Other Half activity', kind: 'multi', optionsKey: 'otherHalf', students: true },
   { value: 'sports_house', label: 'Sports house', kind: 'multi', optionsKey: 'sportsHouses', students: true },
+  // Groups made at /groups (migration 284); archived ones aren't offered.
+  { value: 'student_group', label: 'Student group', kind: 'multi', optionsKey: 'studentGroups', students: true },
   { value: 'all_staff', label: 'All staff', kind: 'none' },
   { value: 'staff_role', label: 'Staff role', kind: 'multi', optionsKey: 'roles' },
 ];
@@ -64,6 +66,15 @@ function ComposeInner() {
     supabase.from('other_half_activities').select('activity_id, activity_name, day_of_week').eq('is_active', true).order('activity_name').then(({ data }) => {
       put('otherHalf', (data || []).map((a) => ({ value: String(a.activity_id), label: `${a.activity_name}${DAYS[a.day_of_week] ? ` (${DAYS[a.day_of_week]})` : ''}` })));
     });
+    supabase.from('student_groups').select('group_id, name').is('archived_at', null).order('name').then(({ data }) => {
+      put('studentGroups', (data || []).map((g) => ({ value: String(g.group_id), label: g.name })));
+    });
+    // "Message this group" on a group's page opens here with it ticked.
+    const groupParam = new URLSearchParams(window.location.search).get('group');
+    if (groupParam && /^\d+$/.test(groupParam)) {
+      setTargetType('student_group');
+      setTargetValues(new Set([groupParam]));
+    }
     // Leavers aren't messaged (migration 237), so their old forms, years and houses aren't offered.
     supabase.from('students').select('year_group, form_class, sports_house').eq('status', 'active').then(({ data }) => {
       put('years', distinct(data, 'year_group').sort((a, b) => a - b).map((y) => ({ value: String(y), label: `Year ${y}` })));

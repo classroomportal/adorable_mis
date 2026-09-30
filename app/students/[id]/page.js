@@ -7,6 +7,7 @@ import RequireAuth from '../../RequireAuth';
 import EventCommentEditor from '../../components/EventCommentEditor';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import { kindLabel } from '../../../lib/studentGroups';
 import { STUDENT_GENDERS, genderLabel } from '../../../lib/studentFields';
 import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
@@ -116,6 +117,7 @@ function StudentDetail() {
   const [fullView, setFullView] = useState(false);
   const [view, openView] = useHashView();
   const [siblings, setSiblings] = useState([]);
+  const [groups, setGroups] = useState([]); // student groups they're in (migration 284), staff only
 
   const [blocks, setBlocks] = useState([]); // curriculum_blocks applicable to this student's year
   const [blockClasses, setBlockClasses] = useState({}); // block_id -> [classes]
@@ -197,6 +199,13 @@ function StudentDetail() {
     // readable by every member of staff; links marked Other don't count).
     const { data: sibs } = await supabase.rpc('student_siblings', { p_student_id: s.student_id });
     setSiblings(sibs || []);
+
+    const { data: grp } = await supabase
+      .from('student_group_members')
+      .select('added_at, student_groups(group_id, name, kind, archived_at)')
+      .eq('student_id', s.student_id);
+    setGroups((grp || []).filter((g) => g.student_groups)
+      .sort((a, b) => (!!a.student_groups.archived_at - !!b.student_groups.archived_at) || a.student_groups.name.localeCompare(b.student_groups.name)));
 
     const { data: p } = await supabase
       .from('student_parent')
@@ -698,6 +707,7 @@ function StudentDetail() {
     canSeeMedical && { key: 'medical', label: 'Medical', icon: '🩺', sub: 'Health record' },
     { key: 'parents', label: 'Parents / Guardians', icon: '👪', sub: parents.length === 0 ? 'None on record' : plural(parents.length, 'contact') },
     { key: 'siblings', label: 'Siblings', icon: '🧒', sub: siblings.length === 0 ? 'None found' : `${plural(siblings.filter((sib) => sib.status === 'active').length, 'sibling')} at school${siblings.some((sib) => sib.status !== 'active') ? `, ${siblings.filter((sib) => sib.status !== 'active').length} left` : ''}` },
+    { key: 'groups', label: 'Groups', icon: '👥', sub: groups.length === 0 ? 'Not in any group' : plural(groups.filter((g) => !g.student_groups.archived_at).length, 'group') },
     { key: 'timetable', label: 'Timetable', icon: '🗓️', sub: `${student.first_name}'s week` },
     { key: 'blocks', label: 'Curriculum Blocks', icon: '🧩', sub: blocks.length === 0 ? 'None set up' : `${allocatedBlocks} of ${blocks.length} allocated` },
     { key: 'attendance', label: 'Attendance', icon: '📊', sub: attendancePct === null ? 'No data yet' : `${attendancePct}% this year` },
@@ -988,6 +998,29 @@ function StudentDetail() {
                       <td>{sib.status === 'active' ? sib.year_group : '—'}</td>
                       <td>{sib.status === 'active' ? sib.form_class : '—'}</td>
                       <td>{sib.status === 'active' ? 'At school' : `Left${sib.leaving_date ? ` ${formatUKDate(sib.leaving_date)}` : ''}`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Section>
+      )}
+
+      {activeView === 'groups' && (
+        <Section title="Groups">
+          {groups.length === 0 ? (
+            <p>Not in any student group. Groups are made at <a href="/groups">Student Groups</a>.</p>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Group</th><th>Kind</th><th>Added</th></tr></thead>
+                <tbody>
+                  {groups.map((g) => (
+                    <tr key={g.student_groups.group_id} style={g.student_groups.archived_at ? { color: 'var(--ink-soft)' } : undefined}>
+                      <td><a href={`/groups/${g.student_groups.group_id}`}>{g.student_groups.name}</a>{g.student_groups.archived_at && ' (archived)'}</td>
+                      <td>{kindLabel(g.student_groups.kind)}</td>
+                      <td>{formatUKDate(g.added_at.slice(0, 10))}</td>
                     </tr>
                   ))}
                 </tbody>

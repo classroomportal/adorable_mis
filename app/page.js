@@ -393,6 +393,7 @@ const TABS = [
     description: 'Lookups, student numbers, class lists, imports and backups.',
     items: ({ hasAccess }) => [
       { href: '/admin/lookups', label: 'Lookups', desc: "Drop-down lists such as houses and behaviour types." },
+      { href: '/groups', label: 'Student Groups', desc: "Groups of students for activities, marks and messages." },
       { href: '/admin/student-numbers', label: 'Student Numbers', desc: "Boys and girls by year, mentor group and class." },
       { href: '/admin/class-lists', label: 'Class Lists', desc: "Print class lists." },
       { href: '/students/import', label: 'Import Students', desc: "Upload a student list." },

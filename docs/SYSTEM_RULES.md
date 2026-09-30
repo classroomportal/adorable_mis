@@ -145,6 +145,15 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 
 **View as Parent:** admin, SMT and the school office can see a parent's portal, using only their own access (234).
 
+**Student groups** (284, `/groups` under Administration; design in `docs/student-groups-design.md`)
+- A group is a list of students for an activity, a club, the prefects, marks or messages. Only **SMT, pastoral, the school office and admins** can create a group, change it, archive it, or add and remove students and the staff who run it. Teachers can open `/groups` and look groups up but not change them.
+- All staff can see every group and who is in it. Students and parents see nothing about groups yet, whatever "Who can see it" says; the portals will only ever show groups marked for them.
+- Only current students can be added. A student who leaves stays on the list, marked as left, and stops getting the group's messages.
+- A group is archived, never deleted. An archived group can't be messaged or have students added.
+- A group built from a rule (behaviour, progress; not built yet) can only ever be staff-only.
+- Every change to a group, its students or its staff is logged in Change History under **groups**.
+- A student's profile has a Groups tile listing the groups they are in.
+
 ---
 
 ## 4. The Other Half
@@ -532,7 +541,7 @@ How the list behaves:
 **Sending messages**
 - Only SMT, pastoral and the school office (and admins) can send messages (091).
 - A message to one person is emailed to them as well as going to their Formwork inbox.
-- A message to a group of students (all students, year groups, forms, boarding houses, mentor groups, teaching classes, Other Half activities or sports houses; several at once) can go to the students, their parents, or both (277). **Parents in a group message are emailed too**, unless parent emails are paused. Students and staff in a group message get it in their inbox only.
+- A message to a group of students (all students, year groups, forms, boarding houses, mentor groups, teaching classes, Other Half activities, sports houses or student groups (284); several at once) can go to the students, their parents, or both (277). **Parents in a group message are emailed too**, unless parent emails are paused. Students and staff in a group message get it in their inbox only.
 - Parents without a Formwork login (never sent their welcome letter) can't be reached by a message. "Check recipient count" says how many there are.
 - Group messages reach active students, and the parents of active students, only.
 - Everyone sees only their own inbox.
@@ -574,6 +583,7 @@ How the list behaves:
   - **access:** roles, page permissions, logins;
   - **parent links;**
   - **email:** reply-to settings.
+  - **groups:** student groups, who is in them and who runs them (284).
 - Changes made directly in the database show as "Principal (direct)".
 
 **Grade History** covers grades (see [§9](#9-assessment-results-and-reports)).

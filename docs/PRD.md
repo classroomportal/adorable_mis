@@ -75,23 +75,24 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 
 ## What is live today
 
-13 of 15 areas are complete for daily use; admissions and year setup are part-built. Full detail is in the [functional specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714).
+13 of 16 areas are complete for daily use; homework is a pilot on two classes, and admissions and year setup are part-built. Full detail is in the [functional specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714).
 
 | Area | State | What it does | Open issues |
 | --- | --- | --- | --- |
-| Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out | 1 |
-| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students | 1 |
+| Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out; a parent's welcome letter can be resent to reset a forgotten password | 1 |
+| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type | 1 |
 | Timetable and imports | Live | Nova-T import with preview; lesson-level teacher and room | 0 |
 | Registers | Live | Any staff marks any register; 15-minute not-done alerts | 1 |
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks | 5 |
-| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review | 5 |
+| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile | 5 |
 | Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017 | 3 |
+| Homework | Pilot | Set from the register or /homework, with files and links; graded outside reports; on students' timetables; 10\_1/Ma and 11\_1/Ma only, admins only | 0 |
 | Reports and transcripts | Live | Draft→checked comments with AI help; KS3 and KS4/5 transcripts | 2 |
 | Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists; the bursar adds paid top-ups from recorded payments | 3 |
 | Fees | Live | Invoices, batches, discounts; two-person price approval; locked prices | 1 |
 | Clinic, pastoral, HR | Live | Nurse-only medical records; HR records | 0 |
-| Messages and email | Live | One queue; Reply-To per kind; parent pause switch | 0 |
-| Calendar and administration | Live | SMT calendar, which parents can subscribe to on their phones; editable rules on Lookups; backups | 1 |
+| Messages and email | Live | One queue; Reply-To per kind; parent pause switch; messages to the students or parents of any group of students, with parents emailed | 0 |
+| Calendar and administration | Live | SMT calendar, which parents can subscribe to on their phones; editable rules on Lookups; one school-wide order for students' tiles and every row of the staff dashboard; backups | 1 |
 | Admissions | Part-built | Applicants, tests, interviews, letters, form fee and deposit; Next Year's Numbers from places allowed per year group, boys and girls | 2 + enrolment missing |
 | Next year setup | Part-built | Academic years, mentor structure, next year's Nova-T plan | 2 + most steps missing |
 
