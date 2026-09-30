@@ -120,9 +120,10 @@ function WelcomeEmailsInner() {
   }, [candidates]);
 
   // A parent with children in more than one year shows under each of them;
-  // once sent, they're "Already sent" everywhere.
+  // once sent, they're "Already sent" everywhere. With no year ticked the
+  // Show filter covers every year group, so it is never hidden.
   const inYears = useMemo(
-    () => candidates.filter((c) => (c.years || []).some((y) => years.has(y))),
+    () => (years.size === 0 ? candidates : candidates.filter((c) => (c.years || []).some((y) => years.has(y)))),
     [candidates, years],
   );
 
@@ -202,7 +203,7 @@ function WelcomeEmailsInner() {
 
   async function handleSend(resend) {
     const list = resend ? chosenResend : chosen;
-    const yearList = query ? `matching "${search.trim()}"` : [...years].sort((a, b) => a - b).map((y) => `Y${y}`).join(', ');
+    const yearList = query ? `matching "${search.trim()}"` : years.size === 0 ? 'all year groups' : [...years].sort((a, b) => a - b).map((y) => `Y${y}`).join(', ');
     const n = `${list.length} parent${list.length === 1 ? '' : 's'}`;
     const question = resend
       ? `Email the welcome letter again to ${n} (${yearList})? They have never signed in; their password is reset to the date-of-birth password in the letter.`
@@ -293,7 +294,7 @@ function WelcomeEmailsInner() {
 
       <div className="card">
         <p style={{ marginTop: 0 }}>
-          Choose year groups to send the welcome letter to parents of those students. Each parent&apos;s first password is their oldest
+          Choose year groups to send the welcome letter to parents of those students (with none ticked, the list covers every year group). Each parent&apos;s first password is their oldest
           current child&apos;s date of birth (DDMMYYYY), and they must choose their own the first time they sign in. A parent is only
           sent the letter once from <em>Not sent yet</em>, and parents who have already signed in are never sent it. To send it
           again to a parent who hasn&apos;t signed in, choose <em>Show: Already sent</em>; their password is reset to the
@@ -302,7 +303,7 @@ function WelcomeEmailsInner() {
         {!loading && !loadError && (
           <p>
             <strong>{totalSignedIn}</strong> parent{totalSignedIn === 1 ? ' has' : 's have'} signed in so far.
-            {' '}To see who, tick the year groups and choose <em>Show: Signed in</em>.
+            {' '}To see who, choose <em>Show: Signed in</em>.
           </p>
         )}
 
@@ -329,24 +330,22 @@ function WelcomeEmailsInner() {
               />
             </div>
 
-            {(years.size > 0 || query) && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', alignItems: 'center', marginTop: '0.75rem' }}>
-                <label style={INLINE_LABEL}>
-                  Show
-                  <select value={show} onChange={(e) => changeShow(e.target.value)}>
-                    {SHOW_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </label>
-                <span style={{ color: '#555' }}>
-                  {counts.ready} not sent yet · {counts.sent} already sent · {counts.blocked} can&apos;t be sent · {counts.signedIn} signed in
-                </span>
-              </div>
-            )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', alignItems: 'center', marginTop: '0.75rem' }}>
+              <label style={INLINE_LABEL}>
+                Show
+                <select value={show} onChange={(e) => changeShow(e.target.value)} style={{ width: 'auto' }}>
+                  {SHOW_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </label>
+              <span style={{ color: '#555' }}>
+                {counts.ready} not sent yet · {counts.sent} already sent · {counts.blocked} can&apos;t be sent · {counts.signedIn} signed in
+              </span>
+            </div>
           </>
         )}
       </div>
 
-      {(years.size > 0 || query) && !loading && (
+      {!loading && !loadError && (
         <div className="card">
           {((show === 'ready' && counts.ready > 0) || (resending && pool.some(canResend))) && (
             <div style={{ marginBottom: '0.5rem' }}>
