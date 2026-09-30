@@ -6,6 +6,10 @@ School MIS for Adorable British College (Next.js 14 App Router + Supabase). Live
 
 **A large part of this schema was built directly against the live Supabase instance and was never committed to `sql/` or `migrations/`.** Those two folders are an incomplete, roughly-chronological history — they are not a reliable source of truth for what currently exists. `sql/CURRENT_SCHEMA.md` is a full introspected dump of the live database (tables, columns, RLS policies, triggers, views, functions, extensions, cron jobs), generated 16 September 2026 via the Supabase MCP connector. Check it before assuming a table/view/function doesn't exist, or guessing at its shape — several real incidents this session came directly from not doing that (see that file's intro for specifics: a PII-leaking view, an undocumented trigger that emailed real staff, etc.). Regenerate it (don't hand-edit) when the schema has drifted meaningfully.
 
+`docs/SYSTEM_RULES.md` is a plain-English description of what the system does and the rules it enforces (who can do what, windows, limits, known gaps), written for school leaders. Keep it in step when a migration changes a rule it describes.
+
+**Living documents: the Functional Specification and the PRD.** Two Claude Docs on claude.ai are the master description of the product: [Formwork — Functional Specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714) (what the system does today, as numbered requirements, including the audit trail and known issues) and [Formwork — Product Requirements (PRD)](https://claude.ai/code/artifact/d7ffd5d9-797b-4db0-b4b9-01f122498f7b) (goals, prioritised requirements, roadmap). `docs/FUNCTIONAL_SPEC.md` and `docs/PRD.md` are exported snapshots; never edit them by hand. When the user says "update PRD and FS" (FS = Functional Specification), "update docs with changes" or anything like it (or a change alters a rule they describe), follow `.claude/skills/update-docs/SKILL.md`, which has the doc ids and the steps.
+
 `sql/schema.sql` is the *original* bootstrap schema from early in the project — kept for history, not current.
 
 ## Getting live database access in a fresh session
