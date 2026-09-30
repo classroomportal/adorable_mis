@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
 import { schoolToday } from '../../lib/schoolTime';
-import { addDays, weekStartOf, loadMyHomework } from '../../lib/homework';
+import { addDays, weekStartOf, loadMyHomework, isOutstanding } from '../../lib/homework';
 import { useTileOrder, sortTiles } from '../../lib/tileOrder';
 
 // A student's home page: the same big tiles as their portal, in the
@@ -27,7 +27,7 @@ export default function StudentHome() {
       setHomeworkOn(true);
       const today = schoolToday();
       const { homework } = await loadMyHomework(today, addDays(weekStartOf(today), 6));
-      setDueThisWeek(homework.filter((h) => !h.marked).length);
+      setDueThisWeek(homework.filter(isOutstanding).length);
     })();
   }, [studentId]);
 

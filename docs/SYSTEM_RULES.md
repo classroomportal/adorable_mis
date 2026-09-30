@@ -496,6 +496,8 @@ How the list behaves:
 - **Who sees grades:** the class's teachers, the Head of Department, SMT and admins. Other staff (mentors, pastoral, assessment managers) can see what homework was set but not the grades.
 - **Students** see their classes' homework on their timetable (on the lesson it's due in) and on a Homework page laid out by day. They see their **own** grade and comment only after the teacher releases the marks, and only for the current school year.
 - **Files and links** (281): the teacher can attach files (PDF, Word, PowerPoint, Excel, OpenDocument, images, text or CSV, up to 20 MB each) and `https://` links to a homework. The same people who can set it can add or remove them. Anyone who can see the homework can open them: all staff, and students in the class while it is set. Files are private and open through a link that lasts ten minutes. Students can't upload anything yet.
+- **Ticking done** (288): a student can tick their own homework as done, and untick it, until a grade is released. It is their own note, not a hand-in or a grade. The class's teachers, the Head of Department, SMT and admins see the ticks in the mark book. Nobody else does.
+- **Colours on the student's screens:** red is overdue or not handed in, amber is due today, green is ticked done (the card shrinks to just the subject), purple is graded.
 - **Parents** see nothing about homework.
 - **Not part of reporting:** homework grades are never used by reports, transcripts, result sets or target grades. The report's own Homework judgement is still typed by the teacher.
 - **No notifications:** setting homework or releasing marks sends no email or inbox message.

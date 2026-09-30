@@ -29,16 +29,20 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const [rowErrors, setRowErrors] = useState({});
+  const [doneAt, setDoneAt] = useState({}); // student_id -> when they ticked it done
 
   const values = scheme?.homework_scheme_values?.slice().sort((a, b) => a.sort_order - b.sort_order).map((v) => v.value) || [];
   const max = scheme?.kind === 'mark' ? Number(hw.out_of ?? scheme.fixed_max) : null;
   const withdrawn = hw.status === 'withdrawn';
 
   const load = useCallback(async () => {
-    const [{ data: enrol }, { data: marks }] = await Promise.all([
+    const [{ data: enrol }, { data: marks }, { data: ticks }] = await Promise.all([
       supabase.from('student_class').select('students(student_id, first_name, last_name, status)').eq('class_id', cls.class_id),
       supabase.from('homework_marks').select('student_id, grade, score, comment').eq('homework_id', hw.homework_id),
+      // Students' own "done" ticks (migration 288), shown as a guide.
+      supabase.from('homework_done').select('student_id, done_at').eq('homework_id', hw.homework_id),
     ]);
+    setDoneAt(Object.fromEntries((ticks || []).map((t) => [t.student_id, t.done_at])));
     const byId = new Map();
     (enrol || []).map((e) => e.students).filter((s) => s && s.status === 'active').forEach((s) => byId.set(s.student_id, s));
     const missing = (marks || []).map((m) => m.student_id).filter((id) => !byId.has(id));
@@ -171,6 +175,11 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
                 <td>
                   {s.last_name}, {s.first_name}
                   {s.notInClass && <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>no longer in this class</div>}
+                  {doneAt[s.student_id] && (
+                    <div style={{ fontSize: '0.8rem', color: '#1a5c30' }} title="The student ticked this as done. It isn't a grade.">
+                      ✓ ticked done {new Date(doneAt[s.student_id]).toLocaleDateString('en-GB', { timeZone: 'Africa/Lagos', day: 'numeric', month: 'short' })}
+                    </div>
+                  )}
                   {rowErrors[s.student_id] && <div style={{ fontSize: '0.8rem', color: '#a3232c' }}>{rowErrors[s.student_id]}</div>}
                 </td>
                 <td style={{ minWidth: '12rem' }}>
