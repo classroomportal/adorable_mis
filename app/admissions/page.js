@@ -77,6 +77,7 @@ function ApplicantsInner() {
         <button type="button" onClick={() => router.push('/admissions/new')}>New application</button>
       </div>
       <p style={{ color: '#666', marginTop: '0.4rem' }}>
+        <a href="/admissions/projections">Next year's numbers</a>{' · '}
         <a href="/admissions/sessions">Test days</a>{' · '}
         <a href="/admissions/papers">Test papers</a>{' · '}
         <a href="/admissions/letters">Standard letters</a>{' · '}
