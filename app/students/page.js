@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatUKDate } from '../../lib/formatDate';
 import RequireAuth from '../RequireAuth';
@@ -80,14 +80,32 @@ function StudentsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeHouseScope]);
 
+  // Typing a name (or changing a filter once a list is showing) searches
+  // straight away, after a short pause so each keystroke isn't its own query.
+  // Nothing loads on arrival: the whole school with photos is slow, so that
+  // still waits for a name or the Load students button.
+  const latestRequest = useRef(0);
+  useEffect(() => {
+    if (!search.trim() && !hasLoaded) return undefined;
+    const timer = setTimeout(loadStudents, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, yearFilter, formFilter, statusFilter, leftYearFilter]);
+
   async function loadStudents() {
+    // Only the newest search may fill the list: a slow earlier one (fewer
+    // letters, more students) must not land on top of it.
+    const requestId = ++latestRequest.current;
+    const isStale = () => requestId !== latestRequest.current;
     setLoading(true);
     setError(null);
     let query = supabase.from('student_summary').select('*').order('last_name', { ascending: true });
     if (statusFilter) query = query.eq('status', statusFilter);
     if (yearFilter) query = query.eq('year_group', Number(yearFilter));
     if (formFilter) query = query.eq('form_class', formFilter);
-    if (search.trim()) query = query.or(`first_name.ilike.%${search.trim()}%,last_name.ilike.%${search.trim()}%`);
+    // Commas, brackets and wildcards would break or widen the .or() filter.
+    const term = search.replace(/[,()%*\\]/g, '').trim();
+    if (term) query = query.or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`);
 
     // student_summary has no boarding_house or leaving_date column, so a
     // Houseparent's scope and the year-left filter are applied by first
@@ -103,12 +121,14 @@ function StudentsList() {
           .gte('leaving_date', `${leftYearFilter}-01-01`).lte('leaving_date', `${leftYearFilter}-12-31`);
       }
       const { data: scoped, error: scopeErr } = await idQuery;
+      if (isStale()) return;
       if (scopeErr) { setError(scopeErr.message); setLoading(false); return; }
       const ids = (scoped || []).map((s) => s.student_id);
       query = query.in('student_id', ids.length ? ids : [-1]);
     }
 
     const { data, error } = await query;
+    if (isStale()) return;
     if (error) { setError(error.message); setLoading(false); return; }
 
     // Only fetch photos for the students actually matching the filter,
@@ -120,6 +140,7 @@ function StudentsList() {
       const { data: extra } = await supabase.from('students').select('student_id, photo_base64, leaving_date').in('student_id', ids);
       extraMap = Object.fromEntries((extra || []).map((p) => [p.student_id, p]));
     }
+    if (isStale()) return;
     setStudents((data || []).map((s) => ({
       ...s,
       photo_base64: extraMap[s.student_id]?.photo_base64 || undefined,
@@ -191,11 +212,11 @@ function StudentsList() {
             </select>
           </label>
         )}
-        <button type="submit" disabled={loading}>{loading ? 'Loading...' : 'Load students'}</button>
+        <button type="submit">{loading ? 'Loading...' : 'Load students'}</button>
       </form>
 
       {!hasLoaded && !loading && (
-        <p style={{ color: '#5a6b8c' }}>Choose filters (or leave blank for everyone) and press Load students.</p>
+        <p style={{ color: '#5a6b8c' }}>Start typing a name to search, or choose filters (or leave blank for everyone) and press Load students.</p>
       )}
 
       {hasLoaded && (
