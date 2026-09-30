@@ -1,8 +1,10 @@
 # Student groups: design
 
-Status, 30 September 2026: **design only, nothing built.** The principal's first
-four decisions are recorded under "Decided". The questions under "Still to decide"
-need an answer before the parts they affect are built.
+Status, 30 September 2026: **stage 1 built** (migration 284): groups, members,
+the staff who run them, `/groups` under Administration, the Groups tile on a
+student's profile, and "Student group" as a message target. Stages 2–4
+(rule-built groups, mark sheets, portal views) are not built yet. All the
+principal's decisions are under "Decided".
 
 What was asked for (the principal, 30 Sept 2026): "we need to create groups of
 students sometimes for particular activities, sometimes for recording particular
@@ -111,8 +113,7 @@ groups can't run it.
 - `group_marks`: one mark per student per sheet, checked against the grading
   system, only for members of the group.
 - **Who records marks:** the group's staff and the people who can manage groups.
-- **Who reads marks:** the same people, plus SMT. Students and parents: see
-  "Still to decide".
+- **Who reads marks:** the same people, plus SMT. Not students or parents.
 - Every mark entered, changed or deleted is logged in `grade_history`
   (`table_name = 'group_marks'`), like every other grade. Never read by reports,
   transcripts, result sets or target grades, and never written to `results`.
@@ -142,35 +143,34 @@ the real number. This is one new branch in `message_group_students()`.
 | --- | --- | --- | --- | --- |
 | smt, pastoral, school_office, admin | Yes | All groups | Yes | Yes |
 | A group's own staff | No | Their groups | Their groups | Their groups |
-| Other staff | No | All groups (see "Still to decide") | No | No |
-| Students | No | Their own groups, if shown to students | No | See "Still to decide" |
-| Parents | No | Their children's groups, if shown to parents | No | See "Still to decide" |
+| Other staff | No | All groups | No | No |
+| Students | No | Their own groups, if shown to students (stage 4) | No | No |
+| Parents | No | Their children's groups, if shown to parents (stage 4) | No | No |
 
-## Still to decide
+## Also decided (the principal, 30 Sept 2026: "go with your suggestion")
 
-1. **Should rule-built groups ever be shown to students and parents?** Proposed:
-   no. A group built from "negative behaviour" or "below target" is always
-   staff-only, whatever its settings, so a list like that can never appear on a
-   portal.
-2. **Can all staff see every group's members**, or only groups they run?
-   Proposed: all staff can see members of every group (like classes today),
-   but only those who run it or manage groups see its marks.
-3. **Do students and parents ever see group marks?** Proposed: not in the first
-   version, as for homework before release.
-4. **Activities: is a register needed?** For example, taking attendance on a
-   trip or at a club. Proposed: not in the first version. If needed, it would
-   be a separate group register, never written to the school `attendance`
-   table.
-5. **Which rules first?** The five above, or fewer to start (proposed: negative
-   behaviour and below target first).
-6. **Where the tile sits:** under Pastoral, Administration or its own tile.
+1. **Rule-built groups are always staff-only.** A list built from behaviour or
+   progress can never be shown to students or parents (enforced by the
+   `student_groups_rule_staff_only` check).
+2. **All staff can see every group and its members**, like classes. Only the
+   people who run a group, or manage groups, will see its marks.
+3. **Students and parents don't see group marks** in the first version.
+4. **No group register** in the first version. If one is added, it stays
+   separate from the school `attendance` table.
+5. **First rules:** negative behaviour and below target.
+6. **The tile sits under Administration** (`/groups`, "Student Groups").
+
+`/groups` is granted to smt, pastoral, school_office (who manage groups) and
+teacher (who can look them up); other roles can be given it at
+`/admin/permissions`.
 
 ## Build plan
 
-1. **Phase 1:** groups, members, staff, `/groups`, the student profile card,
-   messages to a group, change log. (Makes activities, prefects and messaging
-   work.)
-2. **Phase 2:** rule-built groups (preview, save as dated snapshot, build again).
+1. **Phase 1 (built, migration 284):** groups, members, staff, `/groups`, the
+   student profile card, messages to a group, change log. (Makes activities,
+   prefects and messaging work.)
+2. **Phase 2:** rule-built groups (preview, save as dated snapshot, build
+   again), starting with negative behaviour and below target.
 3. **Phase 3:** mark sheets and `group_marks`, with Grade History.
 4. **Phase 4:** the student and parent portal views.
 
