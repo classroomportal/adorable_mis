@@ -1,9 +1,11 @@
 ---
 name: update-docs
-description: Bring Formwork's living documents (the Functional Specification and the PRD artifacts) up to date with what has changed in the app. Use whenever the user asks, in any wording, to update the docs with changes, for example "update docs with changes", "update the docs", "update docs with today's changes", "update the artifacts", "update the spec", "update the PRD", "update both documents", "bring the docs up to date" or "/update-docs". Also use after a change that alters a rule the documents describe.
+description: Bring Formwork's living documents (the Functional Specification and the PRD artifacts) up to date with what has changed in the app. FS = Functional Specification. Use whenever the user asks, in any wording, to update these documents, above all "update PRD and FS" (or "update FS and PRD", "update the PRD", "update the FS"), and also "update docs with changes", "update the docs", "update docs with today's changes", "update the artifacts", "update the spec", "update the PRD", "update both documents", "bring the docs up to date" or "/update-docs". Also use after a change that alters a rule the documents describe.
 ---
 
 # Update Formwork's living documents
+
+The user's phrase for this is **"update PRD and FS"**. When they say it, run every step below for both documents, without asking first.
 
 Formwork has two living documents on claude.ai (Claude Docs). They are the master copies; `docs/FUNCTIONAL_SPEC.md` and `docs/PRD.md` are snapshots exported from them. Never edit the snapshots by hand.
 
