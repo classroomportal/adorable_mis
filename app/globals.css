@@ -1737,3 +1737,17 @@ button.hw-attachment:hover { background: var(--brand-050); }
 
 /* The grade a homework mark converts to (migration 289). */
 .hw-mark-grade { align-self: center; min-width: 2.2rem; font-weight: 700; color: #4b2d73; }
+
+/* Homework mark sheet: a class's marks over a period. */
+.hw-sheet { font-size: 0.85rem; }
+.hw-sheet th, .hw-sheet td { white-space: nowrap; }
+.hw-sheet .hw-sheet-name { position: sticky; left: 0; background: white; z-index: 1; min-width: 10rem; }
+.hw-sheet thead .hw-sheet-name { background: var(--slate-100); }
+.hw-sheet-hw { max-width: 9rem; white-space: normal !important; vertical-align: bottom; }
+button.hw-sheet-link { background: none; color: var(--brand-800); border: none; padding: 0; font: inherit; font-weight: 700; text-align: left; text-decoration: underline; cursor: pointer; }
+button.hw-sheet-link:hover { background: none; color: var(--brand-900); }
+.hw-sheet-due { font-weight: 400; font-size: 0.75rem; color: var(--ink-soft); }
+.hw-sheet-cell { text-align: center; }
+.hw-sheet-none { color: var(--slate-200); }
+.hw-sheet-missing { color: #a3232c; font-weight: 700; }
+.hw-sheet-excused { color: var(--ink-soft); }
