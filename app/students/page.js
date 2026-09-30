@@ -4,8 +4,12 @@ import { supabase } from '../../lib/supabaseClient';
 import { formatUKDate } from '../../lib/formatDate';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
+import { useAuth } from '../../lib/AuthContext';
 
 function StudentsList() {
+  // Only the school office can add students (migration 275).
+  const { staffRoles } = useAuth();
+  const canAddStudent = (staffRoles || []).includes('school_office');
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -130,7 +134,7 @@ function StudentsList() {
   return (
     <div>
       <h1>Students</h1>
-      <p><a href="/students/new">+ Add a new student</a></p>
+      {canAddStudent && <p><a href="/students/new">+ Add a new student</a></p>}
       {houseScope && !canWidenScope && (
         <p style={{ background: '#fdecad', padding: '0.4rem 0.6rem', borderRadius: '4px', display: 'inline-block' }}>
           Showing {houseScope} students only (Houseparent view)
