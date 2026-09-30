@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 286). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 287). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -643,7 +643,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
 | Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
-| Grade History | Every score, target, transcript grade and homework grade entered, changed or deleted, with old and new grade. Homework grades are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
+| Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
 | Admission letters | Every letter produced, as sent, who sent it and the email address | Each applicant's page | Admissions, SMT, admin | Yes |
@@ -700,7 +700,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 
 ## 21. FR-18 Student groups
 
-SMT, pastoral staff and the school office make groups of students for activities, clubs, the prefects, interventions and messages, and can have the system build a group from a rule. Built 30 September 2026 (migrations 284–285); the design and the principal's decisions are in docs/student-groups-design.md.
+SMT, pastoral staff and the school office make groups of students for activities, clubs, the prefects, interventions and messages, and can have the system build a group from a rule. Built 30 September 2026 (migrations 284–285 and 287); the design and the principal's decisions are in docs/student-groups-design.md.
 
 **Groups and members**
 
@@ -723,7 +723,14 @@ SMT, pastoral staff and the school office make groups of students for activities
 - **FR-18.11** "Student group" is a message target: one or more groups, to the students, their parents or both, exactly like a year group (FR-12.1, FR-12.2). "Message this group" on a group's page opens the message with it chosen. \[DB\]
 - **FR-18.12** Every change to a group, its students or its staff is logged permanently in Change History under Student groups. \[DB\]
 
-**Not built yet:** mark sheets for a group, kept outside reporting (stage 3), and showing groups on the student and parent portals (stage 4).
+**Group marks**
+
+- **FR-18.13** A group can have mark sheets: a title, a date and a grading system from the homework list (Mark out of …, Percentage, A\*–U, 9–1, WAEC, Effort 1–4, Complete / Incomplete, Not graded). Marks are entered in a mark book on the group's page. \[Page\]
+- **FR-18.14** A mark must fit the grading system, or be Absent, Not handed in or Excused, and can only be recorded for a student in the group. Once a sheet has marks its grading system can't change and it can only be withdrawn, not deleted; an archived group's marks can't be changed. \[DB\]
+- **FR-18.15** The staff who run the group, SMT, pastoral staff, the school office and admins record and read the marks. Other staff see only that a sheet exists; students and parents see nothing. \[DB\]
+- **FR-18.16** Group marks are outside reporting: never used by reports, transcripts, result sets or target grades. Every mark entered, changed or deleted is logged in Grade History, where only SMT and admins can read it and it is hidden unless chosen, like homework. \[DB\]
+
+**Not built yet:** showing groups on the student and parent portals (stage 4).
 
 ## 22. Non-functional requirements
 
