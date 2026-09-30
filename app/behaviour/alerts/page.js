@@ -18,6 +18,7 @@ function AlertsInner() {
   const [alerts, setAlerts] = useState(null);
   const [house, setHouse] = useState(null);
   const [open, setOpen] = useState(null);
+  const [level, setLevel] = useState('all'); // 'all' | '-3' | '-4' | '-5'
 
   useEffect(() => {
     async function load() {
@@ -37,7 +38,16 @@ function AlertsInner() {
     load();
   }, [profile?.is_demo_account]);
 
-  const shown = (alerts || []).filter((a) => !house || a.students?.boarding_house === house);
+  const inHouse = (alerts || []).filter((a) => !house || a.students?.boarding_house === house);
+  // -5 covers anything worse too, so no event is ever filtered out of sight.
+  const matchesLevel = (a, l) => (l === 'all' ? true : l === '-5' ? a.points <= -5 : a.points === Number(l));
+  const shown = inHouse.filter((a) => matchesLevel(a, level));
+  const LEVELS = [
+    { value: 'all', label: 'All' },
+    { value: '-3', label: '-3' },
+    { value: '-4', label: '-4' },
+    { value: '-5', label: '-5 or worse' },
+  ];
 
   return (
     <div>
@@ -48,9 +58,27 @@ function AlertsInner() {
       {house && <p style={{ color: 'var(--ink-soft)', fontSize: '0.85rem' }}>Showing {house} only (Houseparent view)</p>}
       {!isPastoralOrSmt ? (
         <p>Behaviour alerts are for pastoral staff, houseparents and SMT.</p>
-      ) : alerts === null ? <p>Loading…</p> : shown.length === 0 ? (
+      ) : alerts === null ? <p>Loading…</p> : inHouse.length === 0 ? (
         <p>No events of -3 points or worse logged in the last 7 days.</p>
       ) : (
+        <>
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', margin: '0 0 0.75rem' }} role="group" aria-label="Filter by points">
+          {LEVELS.map((l) => (
+            <button
+              key={l.value}
+              type="button"
+              className={level === l.value ? undefined : 'secondary'}
+              aria-pressed={level === l.value}
+              onClick={() => { setLevel(l.value); setOpen(null); }}
+              style={{ width: 'auto' }}
+            >
+              {l.label} ({inHouse.filter((a) => matchesLevel(a, l.value)).length})
+            </button>
+          ))}
+        </div>
+        {shown.length === 0 ? (
+          <p>No events at {LEVELS.find((l) => l.value === level)?.label} in the last 7 days.</p>
+        ) : (
         <div className="table-scroll"><table>
           <thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th><th></th></tr></thead>
           <tbody>
@@ -87,6 +115,8 @@ function AlertsInner() {
             ))}
           </tbody>
         </table></div>
+        )}
+        </>
       )}
     </div>
   );

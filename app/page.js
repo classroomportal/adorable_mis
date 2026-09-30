@@ -135,11 +135,54 @@ function QuickLinks({ hasAccess }) {
 // allowedHrefs, when given, greys out any item not in the set instead of hiding it —
 // used by the training account so it can see the full shape of what a real SMT
 // member has access to, without being able to actually open the unverified parts.
-function ModuleCard({ icon, label, accent, description, items, allowedHrefs }) {
+// Next year's admissions at a glance, beside the Admissions icon: every
+// application for the entry year being recruited for (withdrawn ones left
+// out), and how many families have accepted a place (accepted, deposit paid
+// or enrolled). Only fetched for people who can see applicants (RLS agrees).
+function AdmissionsCounts() {
+  const [counts, setCounts] = useState(null);
+  useEffect(() => {
+    (async () => {
+      const { data: years } = await supabase.from('academic_years').select('academic_year_id, label, status').order('start_date');
+      const year = (years || []).find((y) => y.status === 'planning') || (years || []).find((y) => y.status === 'current');
+      if (!year) return;
+      const base = () => supabase.from('applicants').select('applicant_id', { count: 'exact', head: true })
+        .eq('entry_academic_year_id', year.academic_year_id);
+      const [{ count: applied }, { count: accepted }] = await Promise.all([
+        base().neq('status', 'withdrawn'),
+        base().in('status', ['accepted', 'deposit_paid', 'enrolled']),
+      ]);
+      setCounts({ label: year.label, applied: applied ?? 0, accepted: accepted ?? 0 });
+    })();
+  }, []);
+  if (!counts) return null;
+  const box = { textAlign: 'center', minWidth: '4.5rem' };
+  return (
+    <a href="/admissions" style={{ display: 'flex', gap: '1rem', textDecoration: 'none', color: 'inherit' }} title={`Admissions for ${counts.label}`}>
+      <div style={box}>
+        <div className="stat-card-value">{counts.applied}</div>
+        <div className="stat-card-label">Applications {counts.label}</div>
+      </div>
+      <div style={box}>
+        <div className="stat-card-value">{counts.accepted}</div>
+        <div className="stat-card-label">Accepted</div>
+      </div>
+    </a>
+  );
+}
+
+function ModuleCard({ icon, label, accent, description, items, allowedHrefs, extra }) {
   if (!items || items.length === 0) return null;
   return (
     <div className={`module-card accent-${accent}`}>
-      <div className="module-card-icon">{icon}</div>
+      {extra ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+          <div className="module-card-icon">{icon}</div>
+          {extra}
+        </div>
+      ) : (
+        <div className="module-card-icon">{icon}</div>
+      )}
       <div className="module-card-title">{label}</div>
       {description && <div className="module-card-desc">{description}</div>}
       <div className="module-card-chips">
@@ -202,6 +245,19 @@ const TABS = [
     ].filter((it) => hasAccess(it.href)),
   },
   {
+    key: 'admissions', label: 'Admissions', icon: '📥', accent: 'family',
+    description: 'Applications, entrance tests, interviews, offers and letters.',
+    items: ({ hasAccess }) => [
+      { href: '/admissions', label: 'Applicants', desc: "Every application for an entry year, and where it has got to." },
+      { href: '/admissions/new', label: 'New Application', resource: '/admissions', desc: "Record a new application and the family's contacts." },
+      { href: '/admissions/projections', label: "Next Year's Numbers", resource: '/admissions', desc: "New places for boys and girls in each year next year, how many are still free, and next year's roll." },
+      { href: '/admissions/sessions', label: 'Test Days', desc: "Fix test dates, book applicants on, and enter English, Maths and CAT4." },
+      { href: '/admissions/papers', label: 'Test Papers', desc: "The English and Maths paper for each year group, and its maximum mark." },
+      { href: '/admissions/letters', label: 'Standard Letters', desc: "The school's letters for test dates, interviews, offers and outcomes." },
+      { href: '/admissions/schools', label: 'Previous Schools', desc: "Schools applicants come from; merge duplicates." },
+    ].filter((it) => hasAccess(it.resource || it.href)),
+  },
+  {
     key: 'clinic', label: 'Clinic', icon: '🩺', accent: 'clinic',
     description: 'Sick bay log, height & weight rounds and immunisations.',
     items: ({ hasAccess }) => [
@@ -243,6 +299,7 @@ const TABS = [
       // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
       // Class Allocation, not this.
       { href: '/admin/import-classes', label: 'Import Nova-T', desc: "Upload the Nova-T timetable files." },
+      { href: '/admin/next-year', label: 'Next Year Setup', desc: "Next year's mentor groups, then its Nova-T timetable, planned without touching this year." },
       { href: '/admin/import-staff-commitments', label: 'Import Meetings', desc: "Upload staff meetings and non-working periods." },
       { href: '/admin/bell-times', label: 'Bell Times', desc: "Which periods run each day, and their times." },
       { href: '/admin/print-timetables', label: 'Print Timetables', desc: "Print student timetables for a year group." },
@@ -276,6 +333,7 @@ const TABS = [
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
     description: 'Charges, payments, discounts and the debtors list.',
     items: ({ hasAccess }) => [
+      { href: '/bursar/fee-approvals', label: 'Fee Approvals', desc: "New fee prices, approved by the principal and the college secretary together." },
       { href: '/bursar/charge-checklist', label: 'Charge Checklist', desc: "Charge a fee to a group of students." },
       { href: '/bursar/fee-items', label: 'Fee Items', desc: "Fee items and their prices." },
       { href: '/bursar/discounts', label: 'Discounts', desc: "Give students fee discounts." },
@@ -283,6 +341,7 @@ const TABS = [
       { href: '/bursar/fees-table', label: 'All Students', desc: "Charged, paid and owed for every student." },
       { href: '/bursar/debtors', label: 'Debtors List', desc: "Students who owe fees, with parent contacts." },
       { href: '/bursar/audit', label: 'Audit', desc: "Recent fee charges, with undo." },
+      { href: '/bursar/admission-forms', label: 'Admission Payments', desc: "Admission form fees and deposits from applicants' families." },
       { href: '/smt/fees-dashboard', label: 'SMT Dashboard', desc: "Fee collection totals, and publishing fees to parents." },
     ].filter((it) => hasAccess(it.href)),
   },
@@ -292,6 +351,7 @@ const TABS = [
     items: ({ hasAccess, staffRoles }) => [
       { href: '/tuckshop/purchase', label: 'Sell Items', desc: "Sell items from a student's balance." },
       { href: '/tuckshop/topup', label: 'Top Up Balance', desc: "Add money to tuckshop balances." },
+      { href: '/bursar/tuckshop-top-up', label: 'Add Paid Top-Up', desc: "Put a payment you've recorded onto a student's tuckshop balance." },
       { href: '/tuckshop/balances', label: 'Balances', desc: "Every student's tuckshop balance." },
       { href: '/tuckshop/preorders', label: 'Preorders', desc: "Student preorders waiting to be handed out." },
       { href: '/tuckshop/items', label: 'Items & Prices', desc: "Tuckshop items and prices." },
@@ -460,6 +520,7 @@ export default function Home() {
             accent={t.accent}
             description={t.description}
             items={t.items({ hasAccess, staffRoles })}
+            extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts /> : null}
           />
         ))}
       </div>

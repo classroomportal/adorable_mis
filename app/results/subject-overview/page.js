@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { groupBySchoolYear, schoolYearGroupLabel } from '../../../lib/academicYear';
 import {
   ComposedChart, Bar, Cell, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -167,6 +168,10 @@ function SubjectOverviewInner() {
   const selectedStudentYearGroup = isStudent ? ownStudent?.year_group : matchedStudent?.year_group;
   const selectedEvent = datasets.find((d) => String(d.event_id) === String(selectedEventId));
   const shownDatasets = datasets.filter((d) => datasetFitsStudent(d, selectedStudentYearGroup));
+
+  // Date order within each school year, this year first (lib/academicYear.js).
+  // shownDatasets itself stays newest-first: the defaults pick [0].
+  const datasetGroups = groupBySchoolYear(shownDatasets);
 
   // Choosing a student from another year group can hide the chosen set; move to
   // the newest one they sat rather than leave an option that isn't in the list.
@@ -336,10 +341,14 @@ function SubjectOverviewInner() {
             style={{ padding: '0.4rem', border: '1px solid #ccc', borderRadius: '4px', minWidth: '220px' }}
           >
             <option value="">Select a dataset...</option>
-            {shownDatasets.map((d) => (
-              <option key={d.event_id} value={d.event_id}>
-                {datasetLabel(d, selectedStudentYearGroup)} — {formatUKDate(d.event_date)}
-              </option>
+            {datasetGroups.map((g) => (
+              <optgroup key={g.year} label={schoolYearGroupLabel(g)}>
+                {g.sets.map((d) => (
+                  <option key={d.event_id} value={d.event_id}>
+                    {datasetLabel(d, selectedStudentYearGroup)} — {formatUKDate(d.event_date)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

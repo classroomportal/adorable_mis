@@ -79,11 +79,21 @@ export const fieldStyle = { display: 'flex', flexDirection: 'column', gap: '0.25
 // "New students check — 5 Oct 2026" wrapped onto two lines. This list is as
 // wide as the field and keeps every entry on one line.
 //
-// Result sets dated today or earlier come first, most recent at the top; ones
-// still to come sit underneath under "Upcoming", soonest first.
+// Result sets dated today or earlier come first, in date order (first date
+// at the top, most recent at the bottom, as the principal asked); ones still
+// to come sit underneath under "Upcoming", soonest first. The list opens
+// scrolled to the chosen set, or to the most recent one.
 export default function ResultSetPicker({ resultSets, value, onChange, placeholder = 'Select a result set...' }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+  const listRef = useRef(null);
+
+  // Open scrolled to the chosen set, or failing that the most recent one.
+  useEffect(() => {
+    if (!open || !listRef.current) return;
+    const el = listRef.current.querySelector('[aria-selected="true"]') || listRef.current.querySelector('[data-latest]');
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,7 +111,7 @@ export default function ResultSetPicker({ resultSets, value, onChange, placehold
 
   const today = localToday();
   const pastAndToday = resultSets.filter((r) => r.event_date <= today)
-    .sort((a, b) => b.event_date.localeCompare(a.event_date));
+    .sort((a, b) => a.event_date.localeCompare(b.event_date));
   const upcoming = resultSets.filter((r) => r.event_date > today)
     .sort((a, b) => a.event_date.localeCompare(b.event_date));
   const selected = resultSets.find((r) => String(r.event_id) === String(value));
@@ -119,9 +129,12 @@ export default function ResultSetPicker({ resultSets, value, onChange, placehold
   const dateStyle = { color: 'var(--ink-soft)', fontVariantNumeric: 'tabular-nums', minWidth: '6.5rem', flexShrink: 0 };
   const headingStyle = { fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink-soft)', padding: '0.5rem 0.65rem 0.25rem' };
 
+  const latestId = pastAndToday.length ? pastAndToday[pastAndToday.length - 1].event_id : null;
+
   const renderRow = (r) => (
     <button
       key={r.event_id}
+      data-latest={r.event_id === latestId ? '' : undefined}
       type="button"
       role="option"
       aria-selected={String(r.event_id) === String(value)}
@@ -154,6 +167,7 @@ export default function ResultSetPicker({ resultSets, value, onChange, placehold
       {open && (
         <div
           role="listbox"
+          ref={listRef}
           style={{
             position: 'absolute', zIndex: 20, top: 'calc(100% + 4px)', left: 0, right: 0,
             background: 'white', border: '1px solid var(--slate-200)', borderRadius: 8,

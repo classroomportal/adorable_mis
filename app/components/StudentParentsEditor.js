@@ -11,6 +11,12 @@ import { supabase } from '../../lib/supabaseClient';
 // phone number here changes it for siblings too — which is what you want, and
 // the form says so. "Remove" only unlinks the parent from this student; the
 // parents row (and any parent-portal login attached to it) is left alone.
+//
+// Relationship belongs to the link, not the parent (student_parent.relationship,
+// migration 272): the same person can be one child's Mother and "Other" to a
+// child they only follow through the portal. Links marked Other never make
+// children siblings. parents.relationship_type is only the fallback shown for a
+// link with none of its own, and is set when a new parent is added.
 
 const RELATIONSHIPS = ['Mother', 'Father', 'Guardian', 'Grandparent', 'Other'];
 const EMPTY_NEW = { first_name: '', last_name: '', relationship_type: '', phone: '', email: '', address: '', is_primary_contact: false };
@@ -24,7 +30,6 @@ function parentFields(p) {
   return {
     first_name: trimOrNull(p.first_name),
     last_name: trimOrNull(p.last_name),
-    relationship_type: trimOrNull(p.relationship_type),
     phone: trimOrNull(p.phone),
     email: trimOrNull(p.email),
     address: trimOrNull(p.address),
@@ -38,6 +43,7 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
     is_primary_contact: !!l.is_primary_contact,
     remove: false,
     ...Object.fromEntries(Object.entries(l.parents || {}).map(([k, v]) => [k, v ?? ''])),
+    relationship: l.relationship || l.parents?.relationship_type || '',
   })));
   const [sharedCounts, setSharedCounts] = useState({}); // parent_id -> other children linked
   const [newParent, setNewParent] = useState(null);
@@ -104,8 +110,12 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
         const { error } = await supabase.from('parents').update(fields).eq('parent_id', r.parent_id);
         if (error) { setStatus(`Error: ${error.message}`); setSaving(false); return; }
       }
-      if (!!before.is_primary_contact !== r.is_primary_contact) {
-        const { error } = await supabase.from('student_parent').update({ is_primary_contact: r.is_primary_contact })
+      const beforeRel = before.relationship || before.parents?.relationship_type || null;
+      const linkChanges = {};
+      if (!!before.is_primary_contact !== r.is_primary_contact) linkChanges.is_primary_contact = r.is_primary_contact;
+      if (beforeRel !== trimOrNull(r.relationship)) linkChanges.relationship = trimOrNull(r.relationship);
+      if (Object.keys(linkChanges).length > 0) {
+        const { error } = await supabase.from('student_parent').update(linkChanges)
           .eq('student_id', studentId).eq('parent_id', r.parent_id);
         if (error) { setStatus(`Error: ${error.message}`); setSaving(false); return; }
       }
@@ -113,16 +123,16 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
 
     for (const p of toLink) {
       const { error } = await supabase.from('student_parent')
-        .insert({ student_id: Number(studentId), parent_id: p.parent_id, is_primary_contact: !!p.is_primary_contact });
+        .insert({ student_id: Number(studentId), parent_id: p.parent_id, is_primary_contact: !!p.is_primary_contact, relationship: trimOrNull(p.relationship) });
       if (error) { setStatus(`Error: ${error.message}`); setSaving(false); return; }
     }
 
     if (newParent) {
       const { data: created, error } = await supabase.from('parents')
-        .insert(parentFields(newParent)).select('parent_id').single();
+        .insert({ ...parentFields(newParent), relationship_type: trimOrNull(newParent.relationship_type) }).select('parent_id').single();
       if (error) { setStatus(`Error: ${error.message}`); setSaving(false); return; }
       const { error: linkErr } = await supabase.from('student_parent')
-        .insert({ student_id: Number(studentId), parent_id: created.parent_id, is_primary_contact: newParent.is_primary_contact });
+        .insert({ student_id: Number(studentId), parent_id: created.parent_id, is_primary_contact: newParent.is_primary_contact, relationship: trimOrNull(newParent.relationship_type) });
       if (linkErr) { setStatus(`Error: ${linkErr.message}`); setSaving(false); return; }
     }
 
@@ -153,13 +163,13 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
           <legend>{r.first_name || r.last_name ? `${r.first_name} ${r.last_name}`.trim() : 'Parent'}</legend>
           {sharedCounts[r.parent_id] > 0 && (
             <p style={{ fontSize: '0.85rem', margin: '0 0 0.5rem' }}>
-              Also linked to {sharedCounts[r.parent_id]} other {sharedCounts[r.parent_id] === 1 ? 'child' : 'children'} — changes to these details apply there too.
+              Also linked to {sharedCounts[r.parent_id]} other {sharedCounts[r.parent_id] === 1 ? 'child' : 'children'} — changes to name and contact details apply there too; the relationship is for this student only.
             </p>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
             <label>First name{input(r.first_name, (v) => setRow(i, { first_name: v }), { disabled: r.remove })}</label>
             <label>Last name{input(r.last_name, (v) => setRow(i, { last_name: v }), { disabled: r.remove })}</label>
-            <label>Relationship{relationshipSelect(r.relationship_type, (v) => setRow(i, { relationship_type: v }))}</label>
+            <label>Relationship to this student{relationshipSelect(r.relationship, (v) => setRow(i, { relationship: v }))}</label>
             <label>Phone{input(r.phone, (v) => setRow(i, { phone: v }), { type: 'tel', disabled: r.remove })}</label>
             <label>Email{input(r.email, (v) => setRow(i, { email: v }), { type: 'email', disabled: r.remove })}</label>
             <label>Address{input(r.address, (v) => setRow(i, { address: v }), { disabled: r.remove })}</label>
@@ -182,7 +192,10 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
 
       {toLink.map((p, i) => (
         <p key={p.parent_id}>
-          Will link <strong>{p.first_name} {p.last_name}</strong>{p.relationship_type ? ` (${p.relationship_type})` : ''}
+          Will link <strong>{p.first_name} {p.last_name}</strong> as{' '}
+          <span style={{ display: 'inline-block', width: '10rem' }}>
+            {relationshipSelect(p.relationship, (v) => setToLink((ls) => ls.map((x, j) => (j === i ? { ...x, relationship: v } : x))))}
+          </span>
           {' '}<label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}>
             <input type="checkbox" style={{ width: 'auto' }} checked={!!p.is_primary_contact}
               onChange={(e) => setToLink((ls) => ls.map((x, j) => (j === i ? { ...x, is_primary_contact: e.target.checked } : x)))} />
@@ -224,7 +237,7 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
                   {p.first_name} {p.last_name}
                   {p.relationship_type ? ` (${p.relationship_type})` : ''}
                   {p.email ? ` · ${p.email}` : ''}{p.phone ? ` · ${p.phone}` : ''}
-                  {' '}<button type="button" className="secondary" onClick={() => { setToLink((ls) => [...ls, { ...p, is_primary_contact: false }]); setSearch(''); }}>Link</button>
+                  {' '}<button type="button" className="secondary" onClick={() => { setToLink((ls) => [...ls, { ...p, is_primary_contact: false, relationship: p.relationship_type || '' }]); setSearch(''); }}>Link</button>
                 </li>
               ))}
             </ul>

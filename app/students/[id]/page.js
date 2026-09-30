@@ -7,6 +7,7 @@ import RequireAuth from '../../RequireAuth';
 import EventCommentEditor from '../../components/EventCommentEditor';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import { STUDENT_GENDERS, genderLabel } from '../../../lib/studentFields';
 import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
 import MedicalRecordCard from '../../components/MedicalRecordCard';
@@ -65,6 +66,8 @@ function StudentDetail() {
   // Parents and the student_parent links are writable by admin and the
   // school office under their RLS policies, so only they get the Edit button.
   const canEditParents = isAdmin || (staffRoles || []).includes('school_office');
+  // Word copies of transcripts are for the office to tidy up before sending.
+  const canDownloadWordTranscripts = isAdmin || ['school_office', 'smt', 'assessment_manager'].some((r) => (staffRoles || []).includes(r));
   const [editingParents, setEditingParents] = useState(false);
   // Portal login state per linked parent (parent_login_status, migration 159)
   // and the outcome of the last Create login click, keyed by parent_id.
@@ -189,21 +192,15 @@ function StudentDetail() {
     setEditForm(s);
     if (!s) { setLoading(false); return; }
 
-    if (s.family_id) {
-      const { data: sibs } = await supabase
-        .from('students')
-        .select('student_id, first_name, last_name, year_group, form_class')
-        .eq('family_id', s.family_id)
-        .eq('status', 'active')
-        .neq('student_id', id);
-      setSiblings(sibs || []);
-    } else {
-      setSiblings([]);
-    }
+    // Brothers and sisters, leavers included, found through shared parents
+    // (student_siblings, migrations 267-272: student_parent itself isn't
+    // readable by every member of staff; links marked Other don't count).
+    const { data: sibs } = await supabase.rpc('student_siblings', { p_student_id: s.student_id });
+    setSiblings(sibs || []);
 
     const { data: p } = await supabase
       .from('student_parent')
-      .select('parent_id, is_primary_contact, parents(first_name,last_name,phone,email,address,relationship_type)')
+      .select('parent_id, is_primary_contact, relationship, parents(first_name,last_name,phone,email,address,relationship_type)')
       .eq('student_id', id);
     setParents(p || []);
 
@@ -697,7 +694,7 @@ function StudentDetail() {
     { key: 'core', label: 'Core Data', icon: '🪪', sub: student.dob ? `Born ${formatUKDate(student.dob)}` : 'Personal details' },
     canSeeMedical && { key: 'medical', label: 'Medical', icon: '🩺', sub: 'Health record' },
     { key: 'parents', label: 'Parents / Guardians', icon: '👪', sub: parents.length === 0 ? 'None on record' : plural(parents.length, 'contact') },
-    siblings.length > 0 && { key: 'siblings', label: 'Siblings', icon: '🧒', sub: `${plural(siblings.length, 'sibling')} at school` },
+    { key: 'siblings', label: 'Siblings', icon: '🧒', sub: siblings.length === 0 ? 'None found' : `${plural(siblings.filter((sib) => sib.status === 'active').length, 'sibling')} at school${siblings.some((sib) => sib.status !== 'active') ? `, ${siblings.filter((sib) => sib.status !== 'active').length} left` : ''}` },
     { key: 'timetable', label: 'Timetable', icon: '🗓️', sub: `${student.first_name}'s week` },
     { key: 'blocks', label: 'Curriculum Blocks', icon: '🧩', sub: blocks.length === 0 ? 'None set up' : `${allocatedBlocks} of ${blocks.length} allocated` },
     { key: 'attendance', label: 'Attendance', icon: '📊', sub: attendancePct === null ? 'No data yet' : `${attendancePct}% this year` },
@@ -739,7 +736,7 @@ function StudentDetail() {
       {activeView === 'documents' && (
         <Section title="Reports &amp; Documents">
           <TermTestScoresDownload studentId={student.student_id} />
-          <KeyStageTranscriptDownload studentId={student.student_id} />
+          <KeyStageTranscriptDownload studentId={student.student_id} allowWord={canDownloadWordTranscripts} />
           <PublishedDocuments studentId={student.student_id} />
         </Section>
       )}
@@ -795,7 +792,7 @@ function StudentDetail() {
                   <p><strong>Student email:</strong> {student.student_email || '—'}</p>
                   <p><strong>Admission date:</strong> {formatUKDate(student.admission_date) || '—'}</p>
                   <p><strong>Admitted/letter date:</strong> {formatUKDate(student.admitted_letter_date) || '—'}</p>
-                  <p><strong>Gender:</strong> {student.gender || '—'}</p>
+                  <p><strong>Gender:</strong> {genderLabel(student.gender) || '—'}</p>
                   <p><strong>Nationality:</strong> {student.nationality || '—'}</p>
                   <p><strong>State of origin:</strong> {student.state_of_origin || '—'}</p>
                   <p><strong>LGA:</strong> {student.lga || '—'}</p>
@@ -863,7 +860,10 @@ function StudentDetail() {
               {editForm.admitted_letter_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(editForm.admitted_letter_date)}</span>}
             </label>
             <label>Gender
-              <input disabled={!canEditField('gender')} value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} />
+              <select disabled={!canEditField('gender')} value={editForm.gender || ''} onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })} required>
+                {!editForm.gender && <option value="">Choose...</option>}
+                {STUDENT_GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+              </select>
             </label>
             <label>Nationality
               <input disabled={!canEditField('nationality')} value={editForm.nationality || ''} onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value })} />
@@ -972,20 +972,25 @@ function StudentDetail() {
 
       {activeView === 'siblings' && (
         <Section title="Siblings">
-          <div className="table-scroll">
-            <table>
-              <thead><tr><th>Name</th><th>Year</th><th>Form</th></tr></thead>
-              <tbody>
-                {siblings.map((sib) => (
-                  <tr key={sib.student_id} className="student-link" onClick={() => window.location.href = `/students/${sib.student_id}`}>
-                    <td>{sib.first_name} {sib.last_name}</td>
-                    <td>{sib.year_group}</td>
-                    <td>{sib.form_class}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {siblings.length === 0 ? (
+            <p>No brothers or sisters found. Siblings are found through the parents they share on record; links marked &quot;Other&quot; don&apos;t count.</p>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Name</th><th>Year</th><th>Form</th><th>Status</th></tr></thead>
+                <tbody>
+                  {siblings.map((sib) => (
+                    <tr key={sib.student_id} className="student-link" onClick={() => { window.location.href = `/students/${sib.student_id}`; }}>
+                      <td><a href={`/students/${sib.student_id}`} onClick={(e) => e.stopPropagation()}>{sib.first_name} {sib.last_name}</a></td>
+                      <td>{sib.status === 'active' ? sib.year_group : '—'}</td>
+                      <td>{sib.status === 'active' ? sib.form_class : '—'}</td>
+                      <td>{sib.status === 'active' ? 'At school' : `Left${sib.leaving_date ? ` ${formatUKDate(sib.leaving_date)}` : ''}`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Section>
       )}
 
@@ -1011,7 +1016,7 @@ function StudentDetail() {
                 {parents.map((pp) => (
                   <tr key={pp.parent_id}>
                     <td>{pp.parents?.first_name} {pp.parents?.last_name}</td>
-                    <td>{pp.parents?.relationship_type}</td>
+                    <td>{pp.relationship || pp.parents?.relationship_type}</td>
                     <td>{pp.parents?.phone}</td>
                     <td>{pp.parents?.email}</td>
                     <td>{pp.is_primary_contact ? 'Yes' : ''}</td>

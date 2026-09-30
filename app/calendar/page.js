@@ -6,6 +6,8 @@ import RequireResource from '../RequireResource';
 import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
 import { CALENDAR_CATEGORY_LABELS } from '../../lib/calendarExport';
+import { academicYearOf, loadCurrentAcademicYearLabel } from '../../lib/academicYear';
+import { schoolToday } from '../../lib/schoolTime';
 
 const CATEGORY_LABELS = CALENDAR_CATEGORY_LABELS;
 
@@ -18,6 +20,9 @@ function CalendarInner() {
   const [terms, setTerms] = useState([]);
   const [events, setEvents] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('');
+  // Only this academic year by default: the historic end-of-term exam result
+  // sets (migrations 246/252) go back to 2017 and swamp the list otherwise.
+  const [yearFilter, setYearFilter] = useState(() => academicYearOf(schoolToday()));
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [newEvent, setNewEvent] = useState({ event_date: '', event_name: '', category: 'relp', year_group_note: '', is_result_set: false });
@@ -47,6 +52,7 @@ function CalendarInner() {
   useEffect(() => {
     loadTerms();
     loadEvents();
+    loadCurrentAcademicYearLabel().then(setYearFilter);
   }, []);
 
   function termError(t) {
@@ -137,11 +143,26 @@ function CalendarInner() {
     loadEvents();
   }
 
-  const filtered = categoryFilter ? events.filter((e) => e.category === categoryFilter) : events;
+  const inYear = (date) => yearFilter === 'all' || academicYearOf(date) === yearFilter;
+  const yearOptions = [...new Set([
+    ...events.map((e) => academicYearOf(e.event_date)),
+    ...terms.map((t) => academicYearOf(t.start_date)),
+    yearFilter !== 'all' ? yearFilter : null,
+  ].filter(Boolean))].sort().reverse();
+  const shownTerms = terms.filter((t) => inYear(t.start_date));
+  const filtered = events.filter((e) => inYear(e.event_date) && (!categoryFilter || e.category === categoryFilter));
 
   return (
     <div>
       <h1>Academic Calendar</h1>
+
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+        Academic year
+        <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+          {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+          <option value="all">All years</option>
+        </select>
+      </label>
 
       <div className="card">
         <h2>Terms</h2>
@@ -149,7 +170,7 @@ function CalendarInner() {
           <table>
             <thead><tr><th>Term</th><th>Start</th><th>End</th>{canEdit && <th>Actions</th>}</tr></thead>
             <tbody>
-              {terms.map((t) => (
+              {shownTerms.map((t) => (
                 editingTermId === t.term_id ? (
                   <tr key={t.term_id}>
                     <td><input value={termDraft.term_name} onChange={(ev) => setTermDraft({ ...termDraft, term_name: ev.target.value })} /></td>
