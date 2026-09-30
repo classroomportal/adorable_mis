@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import { useAuth } from '../../../lib/AuthContext';
 import { schoolToday } from '../../../lib/schoolTime';
 import { STUDENT_GENDERS } from '../../../lib/studentFields';
 
@@ -131,6 +132,15 @@ function NewStudentInner() {
   );
 }
 
+// Only the school office can add students; the database enforces this too
+// (migration 275), so an admin without school_office would just get an error.
+function OfficeOnly({ children }) {
+  const { profileLoaded, staffRoles } = useAuth();
+  if (!profileLoaded) return <p>Loading...</p>;
+  if (!(staffRoles || []).includes('school_office')) return <p>Only the school office can add a new student.</p>;
+  return children;
+}
+
 export default function NewStudentPage() {
-  return <RequireAuth><NewStudentInner /></RequireAuth>;
+  return <RequireAuth><OfficeOnly><NewStudentInner /></OfficeOnly></RequireAuth>;
 }
