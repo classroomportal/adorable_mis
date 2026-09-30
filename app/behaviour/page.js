@@ -236,6 +236,8 @@ function BehaviourPageInner() {
 
   function handleTypeChange(newType) {
     setForm({ ...form, type: newType, category: '', points: '' });
+    // Pictures are for positive events only (migration 297).
+    if (newType === 'negative') setPhoto(null);
   }
 
   // Points are set centrally per category (/admin/lookups) — staff can't change
@@ -306,7 +308,7 @@ function BehaviourPageInner() {
     setStatus('Saving...');
     // The picture is stored once and every event logged here points at it.
     let photoId = null;
-    if (photo) {
+    if (photo && form.type === 'positive') {
       const { data: ph, error: phErr } = await supabase
         .from('behaviour_photos')
         .insert({ image_jpeg_base64: photo })
@@ -546,6 +548,9 @@ function BehaviourPageInner() {
           />
         </label>
 
+        {/* Pictures are for positive events only (the principal, 30 Sept 2026;
+            migration 297 refuses one on a negative event). */}
+        {form.type === 'positive' && (
         <div className="bl-field">
           Picture (optional)
           {photo ? (
@@ -566,6 +571,7 @@ function BehaviourPageInner() {
             </label>
           )}
         </div>
+        )}
 
         <button type="submit" className="bl-submit" disabled={saving || photoBusy}>
           {saving ? 'Saving…' : usingGroup ? `Log for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Log event'}

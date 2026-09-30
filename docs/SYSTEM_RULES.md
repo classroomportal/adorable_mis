@@ -390,7 +390,7 @@ How the list behaves:
 - **"Logged by" is always the signed-in person**, so nobody can log an event under a colleague's name (138).
 - The event's class is worked out from the class the teacher shares with the student (145). Parents see the subject, not the teacher.
 - **Serious means −5.** A −5 event can't be saved without a written explanation (166).
-- Staff can attach one picture per logging. Pictures are shrunk in the browser and must be under about 150 KB.
+- Staff can attach one picture per logging, on positive events only (migration 297, the principal, 30 Sept 2026): the picture field is hidden for negative events and the database refuses a picture on one. Pictures are shrunk in the browser and must be under about 150 KB.
 
 **Editing and deleting** (207, 208, 211)
 - The teacher who logged an event can edit it, and so can pastoral, houseparent, head of boarding, SMT, school office and admin.
