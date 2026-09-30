@@ -7,16 +7,16 @@
 -- be either "Mother" or "Other", never both, and migration 271 (skip
 -- "Other" parents when finding siblings) couldn't tell Daniel's real
 -- family from the children she only monitors. The principal's rule
--- (30 Sept 2026): cs@ is recorded as Mother for Daniel MBA only, and as
--- Other for everyone else she is linked to; links marked Other never make
--- children siblings.
+-- (30 Sept 2026): cs@ is recorded as Mother for her own children, Daniel,
+-- Denzel and Jolie MBA, and as Other for everyone else she is linked to;
+-- links marked Other never make children siblings.
 --
 -- What:
 --   * student_parent.relationship: the relationship for this parent and this
 --     child. Filled from parents.relationship_type for every existing link;
 --     pages now show and edit this, falling back to the parent's own value
 --     where a link has none.
---   * cs@'s links: Mother for Daniel MBA, Other for the rest. principal@'s
+--   * cs@'s links: Mother for Daniel, Denzel and Jolie MBA, Other for the rest. principal@'s
 --     parent record was already Other, so its links are Other already.
 --   * student_siblings(): two children are siblings through a parent only
 --     when neither of their links to that parent is Other.
@@ -36,10 +36,10 @@ where p.parent_id = sp.parent_id
   and sp.relationship is null
   and p.relationship_type is not null;
 
--- cs@: Daniel MBA's mother; Other for everyone else she is linked to.
+-- cs@: mother of Daniel, Denzel and Jolie MBA; Other for everyone else.
 update public.student_parent sp
 set relationship = case
-    when s.first_name = 'Daniel' and s.last_name = 'MBA' then 'Mother'
+    when s.last_name = 'MBA' and s.first_name in ('Daniel', 'Denzel', 'Jolie') then 'Mother'
     else 'Other'
   end
 from public.parents p, public.students s
