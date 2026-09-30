@@ -64,7 +64,7 @@ Where a rule has changed several times, only the current version is given. Migra
 ---
 
 **Dashboard tile order** (280, 282, 283)
-- The order of the big tiles on students' home page and portal, and of the staff dashboard (the top row, row 2 with Log behaviour, the numbers and My Children, and the larger tiles underneath, 282–283, 292; the number of active students is shown on the Students tile), is set once for everyone at `/admin/tile-order` (Arrange Tiles). Only admins have that page for now.
+- The order of the big tiles on students' home page and portal, and of the staff dashboard (the top row, row 2 with Log behaviour and My Children, and the larger tiles underneath, 282–283, 292–293; the numbers of active students, staff and behaviour alerts are shown on the Students, Staff & Access and Pastoral tiles), is set once for everyone at `/admin/tile-order` (Arrange Tiles). Only admins have that page for now.
 - The order doesn't change which tiles someone sees. That is still decided by page access (and, for Homework, the pilot). A new tile that hasn't been placed yet goes after the others.
 
 ---
