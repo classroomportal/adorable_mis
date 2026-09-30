@@ -160,6 +160,7 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
   - Both can be limited to chosen year groups, forms and boarding houses. Only current students are picked.
 - A built group records its rule, settings and date, is always staff-only, and never changes by itself. Students can still be added or taken out by hand. "Build again" starts a new dated group from the same settings, which can be changed first. Only students the rule picks can be saved into a built group.
 - Every change to a group, its students or its staff is logged in Change History under **groups**.
+- **Group marks** (287): a group can have mark sheets (a test or occasion, a date, and a grading system from the homework list). The staff who run the group, SMT, pastoral and the school office record and read the marks; other staff only see that a sheet exists. Students and parents see nothing. A mark must fit the grading system, or be Absent, Not handed in or Excused, and can only be for a student in the group. Once a sheet has marks its grading system can't change and it can only be withdrawn, not deleted. An archived group's marks can't be changed. Group marks are **not part of reporting** and never feed reports, transcripts, result sets or targets. Every change is in Grade History, readable by SMT and admins only (like homework).
 - A student's profile has a Groups tile listing the groups they are in.
 
 ---
@@ -451,7 +452,7 @@ How the list behaves:
 **Every grade change is logged permanently** in Grade History (215)
 - This covers every insert, change and delete of scores, target grades, transcript grades and homework grades, with the old and new grade and who did it.
 - Nobody can edit or delete the log, even from the database editor.
-- It is readable by SMT, assessment managers and admins at `/assessments/grade-history`. Homework grades in it are readable by SMT and admins only, not assessment managers, and are hidden unless "including homework" is chosen (278).
+- It is readable by SMT, assessment managers and admins at `/assessments/grade-history`. Homework grades and student group marks in it are readable by SMT and admins only, not assessment managers, and are hidden unless "including homework and group marks" is chosen (278, 287).
 
 **Result sets**
 - A result set is a calendar event with the "result set" box ticked. SMT and admins manage the calendar (205).

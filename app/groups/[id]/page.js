@@ -6,6 +6,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import GroupMarkSheets from '../../components/GroupMarkSheets';
 import { GROUP_KINDS, GROUP_VISIBILITY, kindLabel, visibilityLabel, canManageGroups, describeRule } from '../../../lib/studentGroups';
 
 // One student group (migration 284): its students and the staff who run it.
@@ -162,6 +163,8 @@ function GroupInner() {
   const current = members.filter((m) => m.students?.status === 'active');
   const leavers = members.length - current.length;
   const staffIds = new Set(groupStaff.map((s) => s.staff_id));
+  // The database decides (can_mark_student_group()); this only shows the controls.
+  const canMark = canManage || (profile?.staff_id != null && staffIds.has(profile.staff_id));
 
   return (
     <div>
@@ -247,6 +250,9 @@ function GroupInner() {
           <button type="button" disabled={busy || !staffPick} onClick={addStaff}>Add</button>
         </div>
       )}
+
+      <h2>Mark sheets</h2>
+      <GroupMarkSheets groupId={groupId} canMark={canMark} archived={archived} members={members} />
 
       <h2>Students ({current.length}{leavers > 0 ? `, and ${leavers} who ha${leavers === 1 ? 's' : 've'} left` : ''})</h2>
 
