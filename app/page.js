@@ -29,17 +29,6 @@ function Chip({ href, label, desc, disabled, tipId }) {
   );
 }
 
-function StatCard({ label, value, icon, accent, href }) {
-  return (
-    <a className={`stat-card accent-${accent}`} href={href} style={{ textDecoration: 'none' }}>
-      <div className="stat-card-icon">{icon}</div>
-      <div>
-        <div className="stat-card-value">{value ?? '—'}</div>
-        <div className="stat-card-label">{label}</div>
-      </div>
-    </a>
-  );
-}
 
 // Staff who are also parents: their login is linked to a parent record
 // (profiles.parent_id), or failing that their sign-in email matches one.
@@ -55,47 +44,32 @@ function useIsStaffParent() {
   return isParent;
 }
 
-// Row 2: Log behaviour, the numbers, and My Children for staff who are also
-// parents (all moved here from row 1 at the principal's request; the
-// active-students number is on the Students card, migration 292). Order set
+// Row 2: Log behaviour, and My Children for staff who are also parents (both
+// moved here from row 1 at the principal's request). The numbers that used to
+// sit here are on their module cards: active students on Students (292),
+// staff on Staff & Access and behaviour alerts on Pastoral (293). Order set
 // at /admin/tile-order.
-function DashboardStats({ isDemoAccount, hasAccess }) {
-  const [stats, setStats] = useState(null);
+function DashboardStats({ hasAccess }) {
   const order = useTileOrder('staff_stats');
   const isParent = useIsStaffParent();
-
-  useEffect(() => {
-    async function load() {
-      const [{ count: staffCount }, { data: alerts }] = await Promise.all([
-        supabase.from('staff').select('staff_id', { count: 'exact', head: true }).eq('is_demo', !!isDemoAccount),
-        supabase.from('behaviour_events').select('event_id').eq('type', 'negative').lte('points', -3).is('voided_at', null).eq('is_demo', !!isDemoAccount).gte('event_date', schoolDateOffset(-7)),
-      ]);
-      setStats({
-        staff: staffCount ?? 0,
-        alerts: (alerts || []).length,
-      });
-    }
-    load();
-  }, [isDemoAccount]);
-
+  const tiles = sortTiles([
+    // Logging behaviour is the thing most staff come here to do, so it has
+    // a big tile of its own rather than only a chip on the Students card.
+    hasAccess('/behaviour') && { key: 'log_behaviour', href: '/behaviour', label: 'Log behaviour', icon: '✍️', accent: 'students', sub: 'Positive or negative, one student or a group' },
+    isParent && hasAccess('/parent-portal') && { key: 'my_children', label: 'My Children', icon: '👪', accent: 'students', href: '/parent-portal', sub: "Your children's grades and behaviour" },
+  ].filter(Boolean), order);
+  if (tiles.length === 0) return null;
   return (
     <div className="stat-card-row">
-      {sortTiles([
-        // Logging behaviour is the thing most staff come here to do, so it has
-        // a big tile of its own rather than only a chip on the Students card.
-        hasAccess('/behaviour') && { key: 'log_behaviour', link: true, href: '/behaviour', label: 'Log behaviour', icon: '✍️', accent: 'students', sub: 'Positive or negative, one student or a group' },
-        { key: 'staff', label: 'Staff', value: stats?.staff, icon: '🧑‍🏫', accent: 'school', href: '/staff/roles' },
-        { key: 'alerts', label: 'Behaviour alerts (7 days)', value: stats?.alerts, icon: '⚠️', accent: 'students', href: '/behaviour/alerts' },
-        isParent && hasAccess('/parent-portal') && { key: 'my_children', link: true, label: 'My Children', icon: '👪', accent: 'students', href: '/parent-portal', sub: "Your children's grades and behaviour" },
-      ].filter(Boolean), order).map(({ key, link, ...c }) => (link ? (
-        <a key={key} className={`stat-card quick-link accent-${c.accent}`} href={c.href}>
+      {tiles.map((c) => (
+        <a key={c.key} className={`stat-card quick-link accent-${c.accent}`} href={c.href}>
           <div className="stat-card-icon">{c.icon}</div>
           <div>
             <div className="quick-link-label">{c.label}</div>
             <div className="stat-card-label">{c.sub}</div>
           </div>
         </a>
-      ) : <StatCard key={key} {...c} />))}
+      ))}
     </div>
   );
 }
@@ -185,20 +159,37 @@ function AdmissionsCounts() {
   );
 }
 
-// The number of active students, beside the Students card's icon (moved off
-// the dashboard's second row at the principal's request, migration 292).
-function ActiveStudentsCount({ isDemoAccount }) {
+// A number beside a module card's icon, linking to where it comes from, in
+// the same style as the Admissions counts. They moved off the dashboard's
+// second row at the principal's request (migrations 292–293).
+const CARD_COUNTS = {
+  students: {
+    href: '/students', label: 'Active students', title: 'Find a student',
+    load: (demo) => supabase.from('students').select('student_id', { count: 'exact', head: true })
+      .eq('status', 'active').eq('is_demo', demo).then(({ count }) => count ?? 0),
+  },
+  staff: {
+    href: '/staff/roles', label: 'Staff', title: 'Staff and their roles',
+    load: (demo) => supabase.from('staff').select('staff_id', { count: 'exact', head: true })
+      .eq('is_demo', demo).then(({ count }) => count ?? 0),
+  },
+  pastoral: {
+    href: '/behaviour/alerts', label: 'Behaviour alerts (7 days)', title: 'Behaviour alerts',
+    load: (demo) => supabase.from('behaviour_events').select('event_id', { count: 'exact', head: true })
+      .eq('type', 'negative').lte('points', -3).is('voided_at', null).eq('is_demo', demo)
+      .gte('event_date', schoolDateOffset(-7)).then(({ count }) => count ?? 0),
+  },
+};
+
+function CardCount({ cardKey, isDemoAccount }) {
+  const spec = CARD_COUNTS[cardKey];
   const [count, setCount] = useState(null);
-  useEffect(() => {
-    supabase.from('students').select('student_id', { count: 'exact', head: true })
-      .eq('status', 'active').eq('is_demo', !!isDemoAccount)
-      .then(({ count: n }) => setCount(n ?? 0));
-  }, [isDemoAccount]);
+  useEffect(() => { spec.load(!!isDemoAccount).then(setCount); }, [spec, isDemoAccount]);
   if (count == null) return null;
   return (
-    <a href="/students" style={{ textDecoration: 'none', color: 'inherit', textAlign: 'center', minWidth: '4.5rem' }} title="Find a student">
+    <a href={spec.href} style={{ textDecoration: 'none', color: 'inherit', textAlign: 'center', minWidth: '4.5rem' }} title={spec.title}>
       <div className="stat-card-value">{count}</div>
-      <div className="stat-card-label">Active students</div>
+      <div className="stat-card-label">{spec.label}</div>
     </a>
   );
 }
@@ -523,7 +514,7 @@ export default function Home() {
   return (
     <div>
       <QuickLinks hasAccess={hasAccess} />
-      <DashboardStats isDemoAccount={profile?.is_demo_account} hasAccess={hasAccess} />
+      <DashboardStats hasAccess={hasAccess} />
       <div className="module-card-grid">
         {sortTiles(TABS, moduleOrder).map((t) => (
           <ModuleCard
@@ -534,7 +525,7 @@ export default function Home() {
             description={t.description}
             items={t.items({ hasAccess, staffRoles })}
             extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts />
-              : t.key === 'students' && hasAccess('/students') ? <ActiveStudentsCount isDemoAccount={profile?.is_demo_account} />
+              : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} isDemoAccount={profile?.is_demo_account} />
               : null}
           />
         ))}
