@@ -12,6 +12,7 @@ import { useHashView, DashboardTile, DashboardBack } from '../components/Dashboa
 import { closingWarning } from '../../lib/tuckshopSchedule';
 import BehaviourPhoto from '../components/BehaviourPhoto';
 import { HomeworkChip, HomeworkDetail } from '../components/HomeworkChip';
+import { useTileOrder, sortTiles } from '../../lib/tileOrder';
 import { schoolToday } from '../../lib/schoolTime';
 import {
   addDays, weekStartOf, defaultWeekStart, shortDate, loadMyHomework,
@@ -104,6 +105,7 @@ function PortalInner() {
   const [weekHomework, setWeekHomework] = useState([]);
   const [recentHomework, setRecentHomework] = useState([]); // last four weeks up to the end of this week
   const [selectedHw, setSelectedHw] = useState(null);
+  const tileOrder = useTileOrder('student');
 
   async function load() {
     if (!studentId) return;
@@ -353,30 +355,41 @@ function PortalInner() {
 
       {activeView === null ? (
         <div className="dashboard-tiles">
-          <DashboardTile label="Timetable" icon="🗓️" sub="My week" onClick={() => openView('timetable')} />
-          {homeworkOn && (
-            <DashboardTile
-              label="Homework" icon="📘" onClick={() => openView('homework')}
-              sub={dueThisWeek === 0 ? 'Nothing due this week' : `${dueThisWeek} due this week`}
-            />
-          )}
-          <DashboardTile
-            label="The Other Half" icon="🎭" href="/portal/other-half"
-            sub={otherHalf.length === 0 ? 'Choose activities' : `${otherHalf.length} activit${otherHalf.length === 1 ? 'y' : 'ies'} chosen`}
-          />
-          <DashboardTile
-            label="Assessment" icon="⭐" onClick={() => openView('assessment')}
-            sub={shownTargetCount === 0 ? 'No targets set' : `${shownTargetCount} subject${shownTargetCount === 1 ? '' : 's'} tracked`}
-          />
-          <DashboardTile
-            label="Behaviour" icon="📋" onClick={() => openView('behaviour')}
-            sub={behaviour.length === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative`}
-          />
-          <DashboardTile
-            label="Tuckshop" icon="🛒" href="/portal/tuckshop"
-            sub={tuckshopBalance === null ? 'Balance & orders' : `₦${Number(tuckshopBalance).toLocaleString()} balance`}
-          />
-          <DashboardTile label="Messages" icon="📬" sub="View inbox" href="/inbox" />
+          {/* The order is set school-wide at /admin/tile-order (migration 280). */}
+          {sortTiles([
+            { key: 'timetable', el: <DashboardTile key="timetable" label="Timetable" icon="🗓️" sub="My week" onClick={() => openView('timetable')} /> },
+            homeworkOn && { key: 'homework', el: (
+              <DashboardTile
+                key="homework" label="Homework" icon="📘" onClick={() => openView('homework')}
+                sub={dueThisWeek === 0 ? 'Nothing due this week' : `${dueThisWeek} due this week`}
+              />
+            ) },
+            { key: 'other_half', el: (
+              <DashboardTile
+                key="other_half" label="The Other Half" icon="🎭" href="/portal/other-half"
+                sub={otherHalf.length === 0 ? 'Choose activities' : `${otherHalf.length} activit${otherHalf.length === 1 ? 'y' : 'ies'} chosen`}
+              />
+            ) },
+            { key: 'assessment', el: (
+              <DashboardTile
+                key="assessment" label="Assessment" icon="⭐" onClick={() => openView('assessment')}
+                sub={shownTargetCount === 0 ? 'No targets set' : `${shownTargetCount} subject${shownTargetCount === 1 ? '' : 's'} tracked`}
+              />
+            ) },
+            { key: 'behaviour', el: (
+              <DashboardTile
+                key="behaviour" label="Behaviour" icon="📋" onClick={() => openView('behaviour')}
+                sub={behaviour.length === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative`}
+              />
+            ) },
+            { key: 'tuckshop', el: (
+              <DashboardTile
+                key="tuckshop" label="Tuckshop" icon="🛒" href="/portal/tuckshop"
+                sub={tuckshopBalance === null ? 'Balance & orders' : `₦${Number(tuckshopBalance).toLocaleString()} balance`}
+              />
+            ) },
+            { key: 'messages', el: <DashboardTile key="messages" label="Messages" icon="📬" sub="View inbox" href="/inbox" /> },
+          ].filter(Boolean), tileOrder).map((t) => t.el)}
         </div>
       ) : (
         <DashboardBack onClick={() => openView(null)}>Back to my portal</DashboardBack>

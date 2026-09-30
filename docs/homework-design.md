@@ -16,6 +16,11 @@ Not built yet:
 - the Lookups card for grading schemes (edit them in SQL for now);
 - "Set for several classes".
 
+Since then (the principal, 30 Sept 2026):
+- teachers set homework from the class register (a Homework panel on `/attendance`);
+- students have big tiles on their home page, with Homework second;
+- the order of the big tiles is set school-wide at `/admin/tile-order` (migration 280).
+
 Widening the pilot means adding classes to `homework_classes` and granting
 `/homework` to `teacher` and `head_of_department`.
 

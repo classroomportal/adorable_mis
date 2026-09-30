@@ -9,6 +9,7 @@ import { formatUKDate } from '../../lib/formatDate';
 import { formatTimeRange } from '../../lib/formatTime';
 import { schoolToday, minutesSinceSchoolTime } from '../../lib/schoolTime';
 import { useAuth } from '../../lib/AuthContext';
+import RegisterHomework from '../components/RegisterHomework';
 
 function AttendanceInner() {
   const searchParams = useSearchParams();
@@ -337,6 +338,9 @@ function AttendanceInner() {
           </p>
         )}
       </div>
+
+      {/* Only shows for classes the signed-in teacher can set homework for. */}
+      {classId && <RegisterHomework classId={classId} />}
 
       {classId && (
         <form onSubmit={handleSubmit} className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
