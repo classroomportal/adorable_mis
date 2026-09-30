@@ -27,6 +27,7 @@ function AttendanceInner() {
   const [slot, setSlot] = useState(null); // {start_time, end_time} of this class's slot in this period
   const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
   const [lastGrades, setLastGrades] = useState({}); // student_id -> {grade, week_start_date}, for this class's subject
+  const [gradesShown, setGradesShown] = useState(false); // the Last grade column, off by default
   const [status, setStatus] = useState(null);
   const [loadingRoster, setLoadingRoster] = useState(false);
 
@@ -155,7 +156,10 @@ function AttendanceInner() {
   }
 
   // Only subject classes have a subject to show a grade for; mentor groups don't.
-  const showLastGrade = subjectClasses.some((c) => String(c.class_id) === String(classId));
+  // Grades are hidden until the teacher asks for them (the principal, 30 Sept
+  // 2026): the register is often on the classroom screen.
+  const canShowLastGrade = subjectClasses.some((c) => String(c.class_id) === String(classId));
+  const showLastGrade = canShowLastGrade && gradesShown;
 
   const codeToStatus = Object.fromEntries(codes.map((c) => [c.code, c.status]));
   function isLateCode(code) {
@@ -355,6 +359,11 @@ function AttendanceInner() {
                 <Link href={`/behaviour?classId=${classId}&date=${date}`} className="secondary" style={{ width: 'fit-content', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '0.5rem 0.65rem', borderRadius: '6px', fontSize: '1rem', lineHeight: 'normal' }}>
                   Log behaviour for this class
                 </Link>
+                {canShowLastGrade && (
+                  <button type="button" className="secondary" style={{ width: 'fit-content' }} onClick={() => setGradesShown((v) => !v)}>
+                    {gradesShown ? 'Hide grades' : 'Show last grades'}
+                  </button>
+                )}
               </div>
               {slot?.start_time && (
                 <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: '#666' }}>

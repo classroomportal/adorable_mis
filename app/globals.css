@@ -1734,3 +1734,6 @@ button.hw-attachment:hover { background: var(--brand-050); }
   display: inline-block; cursor: pointer; background: white; color: var(--brand-700);
   border: 1px solid var(--brand-700); border-radius: 8px; padding: 0.4rem 0.7rem; flex: 0 0 auto; width: auto;
 }
+
+/* The grade a homework mark converts to (migration 289). */
+.hw-mark-grade { align-self: center; min-width: 2.2rem; font-weight: 700; color: #4b2d73; }

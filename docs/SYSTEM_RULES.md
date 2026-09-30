@@ -237,6 +237,7 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 - A **late** mark needs the minutes late (0–600). While the lesson is running the box suggests the minutes since the start.
 - Changes and deletions of marks are logged in Change History. Taking a register isn't logged.
 - Next to each student, the register shows their other marks today as coloured badges (M, L1–L6, OH, EP).
+- A subject class's register can show each student's last grade in that subject, but only after the teacher presses **Show last grades**. It is hidden by default because the register is often on the classroom screen **(page only)**.
 
 **Registers Not Done** (`/pastoral/registers-not-done`)
 
@@ -492,7 +493,7 @@ How the list behaves:
 - **Who can set, edit and mark it:** the class teacher, the teacher of any single lesson of the class, the Head of Department for the subject, and admins.
 - **Where it's set:** from the class register (`/attendance`), where a Homework panel appears for classes the teacher can set homework for, or from `/homework`, which also has the mark books.
 - **Setting it:** each piece of homework has a title, instructions (plain text), a deadline (a date, and optionally the lesson it's due in, which must be one of the class's lessons that day) and a grading system: Mark out of …, Percentage, A*–U, 9–1, WAEC, Effort 1–4, Complete / Incomplete or Not graded. Any grading system also accepts "Not handed in" and "Excused".
-- **Grades:** a grade must fit the grading system (a mark between 0 and the maximum, or one of the list's grades). A grade can only be recorded for a student in the class. Once any grade is recorded, the grading system can't be changed and the homework can't be deleted, only withdrawn.
+- **Grades:** a grade must fit the grading system (a mark between 0 and the maximum, or one of the list's grades). A mark is converted to a grade from the subject's grade boundaries for the class's year group (289): 11 out of 14 is 79%, which is a B. The database works out the grade; a percentage between two bands takes the lower one. Changing a boundary later doesn't regrade saved homework marks. A grade can only be recorded for a student in the class. Once any grade is recorded, the grading system can't be changed and the homework can't be deleted, only withdrawn.
 - **Who sees grades:** the class's teachers, the Head of Department, SMT and admins. Other staff (mentors, pastoral, assessment managers) can see what homework was set but not the grades.
 - **Students** see their classes' homework on their timetable (on the lesson it's due in) and on a Homework page laid out by day. They see their **own** grade and comment only after the teacher releases the marks, and only for the current school year.
 - **Files and links** (281): the teacher can attach files (PDF, Word, PowerPoint, Excel, OpenDocument, images, text or CSV, up to 20 MB each) and `https://` links to a homework. The same people who can set it can add or remove them. Anyone who can see the homework can open them: all staff, and students in the class while it is set. Files are private and open through a link that lasts ten minutes. Students can't upload anything yet.
