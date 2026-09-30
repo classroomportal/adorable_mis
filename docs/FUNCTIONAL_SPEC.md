@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 291). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 295). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -151,7 +151,7 @@ Every member of staff can read the whole student record; what each role can chan
 | Tuckshop | Order, see balance and purchases | See balance and purchases; cannot order |
 | Other Half | Choose activities during Evening Prep | See the chosen activity |
 | Published documents | Own | Each child's |
-| Homework (pilot classes) | Own classes' homework, files and links; own grade once released; this school year | No |
+| Homework (Years 10 and 11) | Own classes' homework, files and links; own grade once released; this school year | No |
 | Inbox | Yes | Yes |
 
 - **FR-2.12** Each portal shows only the signed-in student's own data, or the parent's linked children's. \[DB\]
@@ -514,8 +514,8 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 
 **Home dashboard**
 
-- **FR-13.5** Staff see a top row of big tiles (Log behaviour, My Timetable, Calendar, Inbox), a second row with counts of active students, staff and behaviour alerts and, for staff who are also parents, My Children, and module cards underneath. Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions, Certificates and Behaviour Appeals are on Pastoral, Class Allocation on Timetable. Students see big tiles (Timetable, Homework for students in pilot classes, The Other Half, Assessment, Behaviour, Tuckshop, Messages); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
-- **FR-13.8** The order of the big tiles on students' home page and of every row of the staff dashboard (the top row, the second row and the module cards, which the bursar's home page also uses) is set once for the whole school at /admin/tile-order (admins). Tiles not yet placed go after the ordered ones. The order never changes which tiles someone sees; page access and the homework pilot still decide that. \[DB\]
+- **FR-13.5** Staff see a top row of big tiles (My Timetable, Calendar and, for staff who are also parents, My Children), a second row (Log behaviour, Inbox with its unread count), and module cards underneath. Three cards carry a number beside their icon that links to its page: active students on Students, staff on Staff & Access, behaviour alerts in the last 7 days on Pastoral, each shown only to those who can open that page (migrations 292–294). Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions, Certificates and Behaviour Appeals are on Pastoral, Class Allocation on Timetable. Students see big tiles (Timetable, Homework for students in a class with homework switched on, The Other Half, Assessment, Behaviour, Tuckshop, Messages); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
+- **FR-13.8** The order of the big tiles on students' home page and of every row of the staff dashboard (the top row, the second row and the module cards, which the bursar's home page also uses) is set once for the whole school at /admin/tile-order (admins). Tiles not yet placed go after the ordered ones. The order never changes which tiles someone sees; page access and which classes have homework switched on still decide that. \[DB\]
 
 **Administration pages**
 
@@ -663,12 +663,12 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 ## 20. FR-17 Homework
 
-Teachers set homework for a class with a deadline and a grading system, and record a grade for each student. The grades inform the end-of-term written report (FR-17.12) but never transcripts, result sets or target grades. It is a pilot from 30 September 2026, on 10\_1/Ma and 11\_1/Ma only (the principal's classes). The design and the principal's decisions are in docs/homework-design.md.
+Teachers set homework for a class with a deadline and a grading system, and record a grade for each student. The grades inform the end-of-term written report (FR-17.12) but never transcripts, result sets or target grades. It began as a pilot on 10\_1/Ma and 11\_1/Ma and has been open to every Year 10 and 11 teaching group since 30 September 2026 (migration 295). The design and the principal's decisions are in docs/homework-design.md.
 
-**Pilot and access**
+**Which classes, and access**
 
-- **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. \[DB\]
-- **FR-17.2** /homework has no roles granted yet, so during the pilot only admins see the page and the staff tile. \[DB\]
+- **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. Every Year 10 and 11 class is switched on except mentor groups and Prep (supervised study, not a taught subject); a class created by a later timetable import has to be switched on again. \[DB\]
+- **FR-17.2** /homework is granted to teachers, Heads of Department and SMT (and admins). The page lists only the switched-on classes the person can set homework for, in one call to the database; a Year 7–9 teacher sees that it isn't switched on for their classes yet. \[DB\]
 
 **Setting homework**
 
