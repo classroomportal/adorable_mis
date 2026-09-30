@@ -1,8 +1,11 @@
 # Homework: design
 
-Status, 30 September 2026: **design only, nothing built.** Open questions for
-the principal are at the end. Where a question has a recommended answer, the
-design below assumes it.
+Status, 30 September 2026: **design only, nothing built.** Revised the same
+day with the principal's answers (listed under "Decided" at the end): parents
+don't see homework, grades are visible only to the class's teachers, the Head
+of Department, SMT and admin, there are no notifications, HoDs and SMT get an
+overview, report writers get a homework hint, students don't keep past years'
+grades, and there is no online hand-in yet.
 
 What was asked for:
 
@@ -97,9 +100,11 @@ not deleted or have its values removed, so old grades stay readable.
   never read by `lib/reportWriting.js`, `lib/generateWrittenReport.js`,
   `lib/generateKeyStageTranscript.js`, `lib/transcriptGrades.js`, target
   grades or `missing_grades_by_class()`.
-- Report writing keeps its own `homework_grade`. Showing a teacher a summary
-  of a student's homework record *while* they write that grade is a later
-  option (open question 5), not part of this build.
+- Report writing keeps its own `homework_grade`, typed by the teacher. The
+  report-writing page shows the teacher a **hint**: the student's homework
+  record in that subject for the report period (see "Report-writing hint"
+  under Pages). It is shown next to the box, never copied into it, and
+  nothing is saved from it.
 - **Changes are still logged permanently.** CLAUDE.md requires every grade
   table to carry `trg_log_grade_change`. `log_grade_change()` is nearly
   generic already. It needs one new `case` branch so that a
@@ -107,6 +112,12 @@ not deleted or have its values removed, so old grades stay readable.
   column is named `score` so it is picked up as old/new score. At
   `/assessments/grade-history` a "Homework" filter keeps these rows apart
   from reporting grades, and they are hidden by default.
+- **The grade log must not widen who sees homework grades.** `grade_history`
+  is readable by SMT and assessment managers (`grade_history_read`).
+  Assessment managers aren't among those who may see homework grades (see
+  Access control), so that policy gains `and (table_name <> 'homework_marks'
+  or user_has_staff_role(array['smt']))`. Admins pass through
+  `user_has_staff_role()` as usual.
 
 ## Tables (one migration, 276)
 
@@ -143,7 +154,7 @@ verbs their policies allow), the `a_backup_mode_guard` trigger, and
 | `due_slot_id` → `timetable_slots` null | which lesson it's due in. The form suggests the class's next lessons. Null means "by the end of that day". `on delete set null`. |
 | `scheme_id` → `homework_schemes` | must be active when the homework is set |
 | `out_of` numeric null | required when the scheme is "Mark out of …", otherwise null |
-| `marks_released` boolean | false until the teacher releases the marks to students and parents |
+| `marks_released` boolean | false until the teacher releases the marks to the students |
 | `status` text | `set` or `withdrawn`. Withdrawn homework disappears for students but stays for staff. |
 | `set_by_staff_id`, `created_by`, `updated_by`, `created_at`, `updated_at` | stamped from `auth.uid()` |
 
@@ -181,13 +192,20 @@ recorded can still be changed after the student leaves the class.
 
   Identity comes only from `auth.uid()`. A class ID in the request is
   checked, not trusted.
-- **`homework_for_week(p_student_id int, p_week_start date)`**: `security
-  definer`. Returns the week's homework for one student, with their own mark
-  only if it has been released. It checks the caller first: the student
-  themselves (`my_student_id()`), their parent (`p_student_id in
-  my_current_child_ids()`), or staff. It saves the portal from joining four
-  tables under three different policies, and it is the one place the "only
-  released marks" rule is applied for students and parents.
+- **`can_view_homework_marks(p_class_id int)`**: `security definer stable`.
+  True if `can_set_homework(p_class_id)` is true or the caller holds `smt`
+  (via `user_has_staff_role()`, so admin too). This is who may read grades
+  (the principal's decision, 30 Sept 2026). Mentors, pastoral staff,
+  assessment managers and other staff can't.
+- **`my_homework(p_from date, p_to date)`**: `security definer`. Returns the
+  signed-in student's homework due between the two dates, with their own mark
+  only if it has been released and belongs to the **current academic year**.
+  It takes no student ID: it uses `my_student_id()`, and returns nothing for
+  anyone who isn't a student. It saves the portal from joining four tables,
+  and it is the one place the student-facing rules are applied (released
+  marks only, current year only, withdrawn homework hidden). The timetable
+  asks for one week. The Homework grid asks for one week, plus the previous
+  four weeks for its Overdue and Recently graded lists.
 
 ## Access control
 
@@ -198,26 +216,31 @@ The database is the boundary. The page guards only decide what to show.
 | **Class teacher / teacher of any lesson of the class** | create, edit, withdraw, delete (if unmarked) for that class | record, change and remove marks for students in that class; release them |
 | **Head of Department** | the same, for classes in their department | the same, for their department |
 | **Admin** | the same for all classes | the same for all classes |
-| **SMT, pastoral, mentors, other staff** | read all | read all (staff can already read all `results`; recommended the same here, see open question 2) |
-| **Student** | read homework for classes they're in (status `set`) | read **their own** marks, only once released |
-| **Parent** | read homework for their current children's classes (via `my_current_child_ids()`, so leavers drop out, per migration 255) | read their children's own marks, only once released |
+| **SMT** | read all | read all |
+| **Pastoral, mentors, assessment managers, other staff** | read all (what was set and when) | **nothing** |
+| **Student** | read homework for classes they're in (status `set`) | read **their own** marks, only once released, and only for the current academic year |
+| **Parent** | nothing (the principal's decision) | nothing |
 | **Anyone else / not signed in** | nothing | nothing |
+
+Staff can read every homework *task* so that a mentor or a cover teacher can
+see what a student has been set. Only the grades are restricted.
 
 The RLS policies, in outline:
 
 - `homework`:
   - select: `is_staff_or_admin()`; or the class is one of
-    `my_student_id()`'s classes and `status = 'set'`; or the class is one of a
-    current child's classes and `status = 'set'`.
+    `my_student_id()`'s classes and `status = 'set'`. There is no parent
+    clause.
   - insert: `can_set_homework(class_id)`, with the check pinning
     `status = 'set'` and `marks_released = false`.
   - update: `can_set_homework(class_id)` in both `using` and `with check`, so
     homework can't be moved to someone else's class.
   - delete: `can_set_homework(class_id)`, plus the "no marks" trigger.
 - `homework_marks`:
-  - select: `is_staff_or_admin()`; or `student_id = my_student_id()` and the
-    homework is released; or `student_id in (select my_current_child_ids())`
-    and the homework is released.
+  - select: `can_view_homework_marks()` on the homework's class; or
+    `student_id = my_student_id()`, the homework is released and not
+    withdrawn, and its `academic_year_id` is the year whose `status =
+    'current'` in `academic_years`. There is no parent clause.
   - insert, update and delete: `can_set_homework()` on the homework's class.
 - `homework_schemes` and `homework_scheme_values`:
   - select: any signed-in user.
@@ -227,15 +250,22 @@ Grants: `select, insert, update, delete` on `homework` and `homework_marks`;
 `select, insert, update` on the two scheme tables (no delete, by Decision 2).
 
 Nothing goes through `app/api`, so no server route is added and
-`scripts/check-api-auth.js` is unaffected. Students and parents write
-nothing.
+`scripts/check-api-auth.js` is unaffected. Students write nothing. Parents
+neither read nor write anything.
 
 ### Things this deliberately closes off
 
 - **A student seeing a classmate's grade.** Marks are readable by a student
   only where `student_id = my_student_id()`. The mark book is a staff page.
 - **Grades showing before the teacher is ready.** `marks_released` is checked
-  in the policy and in `homework_for_week()`, not in the page.
+  in the policy and in `my_homework()`, not in the page.
+- **Staff outside the class reading grades**, whether directly, through the
+  grade history, or through the overview. Every read path goes through
+  `can_view_homework_marks()` or the narrowed `grade_history_read`.
+- **Parents.** No policy mentions parents. A parent login gets empty results
+  even from a hand-made request.
+- **Last year's grades after the year switch.** The student policy and
+  `my_homework()` check the current academic year. Staff still see them.
 - **Setting homework for a class you don't teach**, by editing the
   `class_id` in a copied request. `can_set_homework()` is re-checked on
   update.
@@ -265,10 +295,46 @@ Resource `/homework`, granted to `teacher`, `head_of_department`, `smt` and
   suited to the scheme (a number box, a drop-down, or a Complete tick),
   buttons for Not handed in and Excused, an optional comment, a "Mark all
   handed in / Complete" shortcut, and **Release marks**.
-- Later: a department / whole-school overview (open question 4).
+- A Head of Department sees their department's classes here and can set,
+  edit and mark homework in them, like the class teacher.
 
 On the staff timetable (`/staff/timetable`), a small marker on a lesson shows
 homework is due that lesson. Clicking it opens the mark book.
+
+### HoD and SMT: `/homework/overview` (new resource, Assessment section)
+
+Resource `/homework/overview`, granted to `head_of_department`, `smt` and
+`admin`. It is read-only, and one week is shown at a time (with the same week
+selector).
+
+- **One row per class**, grouped by department then year group, with:
+  - the teacher
+  - how many pieces of homework were set that week
+  - how many have marks recorded
+  - how many "Not handed in"
+  - whether marks have been released
+- **Classes with nothing set that week** are listed too, so gaps show.
+- **Clicking a class** opens its homework and mark books, read-only unless the
+  viewer can also set homework for it (as a HoD in their own department can).
+- **A HoD sees only their department.** This isn't a filter in the page:
+  `can_view_homework_marks()` only returns rows for their department's
+  classes. SMT and admin see every department.
+- **A "Not handed in" list** under the table: the students with two or more
+  missing pieces that week, with the subjects.
+
+### Report-writing hint (`/reports/write-subject-comments`)
+
+Next to the report's homework-grade box, the page shows the student's
+homework in that subject during the report period, read-only. For example:
+"8 set · 7 marked · 1 not handed in", and the grades, newest first.
+
+- **It is only a prompt.** The teacher still chooses and types the report's
+  grade. Nothing is copied or saved from the hint.
+- **It reads `homework_marks` under the normal policy.** The report writer
+  teaches the class, so `can_view_homework_marks()` lets them see it. A
+  writer who doesn't teach the class sees no hint.
+- **The period** is the report period's term (`report_periods.term_id` →
+  `terms.start_date` to `end_date`).
 
 ### Students: the timetable on `/portal`
 
@@ -317,19 +383,16 @@ with the number of pieces still due this week.
 - **On a phone**, the columns stack as one section per day, with today first
   and the rest of the week after it.
 
-This view needs no extra data. It uses the same `homework_for_week()` call as
-the timetable, grouped by `due_on` instead of by lesson. The overdue and
-recently-graded lists come from a second call that covers the previous four
-weeks. That call returns the same columns and applies the same
-released-marks rule. The grouping lives in `lib/homework.js`
-(`groupHomeworkByDay()`), next to `placeHomeworkInCells()`.
+This view needs no extra data. It uses the same `my_homework()` call as the
+timetable, grouped by `due_on` instead of by lesson. The Overdue and Recently
+graded lists come from the same call over the previous four weeks. The
+grouping lives in `lib/homework.js` (`groupHomeworkByDay()`), next to
+`placeHomeworkInCells()`.
 
-### Parents: the same timetable and by-day grid on `/parent-portal`
+### Parents: nothing
 
-Both views are shown for one child at a time, using the same data from
-`homework_for_week()`. This is
-recommended (open question 1) but can be switched off at launch without any
-schema change: the parent policy clauses are simply left out.
+Parents don't see homework or homework grades (the principal's decision). The
+parent portal is unchanged.
 
 ### Admin: `/admin/lookups`
 
@@ -338,29 +401,21 @@ retire schemes.
 
 ### Shared code
 
-- `lib/homework.js`: `loadHomeworkForWeek()`, `placeHomeworkInCells(cellMap,
+- `lib/homework.js`: `loadMyHomework()`, `placeHomeworkInCells(cellMap,
   homework, lessons)`, `groupHomeworkByDay(homework, weekStart)` and
   `weekStart(date)`.
 - `app/components/HomeworkChip.js`: the chip and its expanding panel, used by
-  the portal, the parent portal and the staff timetable.
+  the student portal and the staff timetable.
 
 The existing `cellMap` shape (`Mon-3 → [entries]`) gains an optional
 `homework` array per entry, so the grid rendering barely changes.
 
 ## Notifications
 
-None at launch. The timetable and the Homework tile are the notice. Options
-for later (open question 3):
-
-- An inbox notice to the class when homework is set.
-  `post_student_notice()` hardcodes the kind `'detention'`, so it would need
-  a kind parameter first.
-- A "due tomorrow" digest.
-- A notice when marks are released.
-
-Any email would go through `queue_workspace_email()` with a new
-`email_reply_to('homework')` row. Its reply-to should be the setting teacher,
-which the reply routes don't support yet.
+None (the principal's decision). There are no inbox notices and no emails,
+to students or anyone else. The timetable and the Homework tile are how
+students find out. This design adds nothing to `queue_workspace_email()` or
+`email_reply_routes`.
 
 ## Year switch, leavers and imports
 
@@ -369,12 +424,13 @@ which the reply routes don't support yet.
   the homework keeps its subject and class code for the record.
 - **Students changing set:** their marks stay under the old homework. They
   see the new class's homework from the moment `student_class` changes.
-- **Leavers:** the login is locked (migration 251) and parents stop seeing
-  them (migration 255). Marks are kept, readable by staff.
+- **Leavers:** the login is locked (migration 251). Their marks are kept,
+  readable by those allowed to see the class's grades.
 - **Next year:** homework carries `academic_year_id`. Once the switch has
-  run, the portal shows only the current year's (the student is no longer in
-  last year's classes). Last year's released marks stay visible to the student
-  through `homework_marks` (open question 6 asks whether that's wanted).
+  run, students see only the current year's homework and grades (the
+  principal's decision). Last year's stay in the database for staff: the
+  class's teachers (while the class exists), the HoD, SMT and admin, and the
+  grade history.
 - **Backup mode:** new tables carry `a_backup_mode_guard`, so teachers can't
   save during a backup, as elsewhere.
 
@@ -387,9 +443,10 @@ which the reply routes don't support yet.
    Release.
 3. **Student timetable:** the week selector, chips and panel, then the
    Homework tile's by-day grid, with its overdue and recently graded lists.
-4. **Parent portal**, if agreed.
-5. **Staff timetable** marker, the Lookups card, and the Grade History filter.
-6. Update `docs/SYSTEM_RULES.md`, the Functional Specification and the PRD,
+4. **`/homework/overview`** for HoDs and SMT.
+5. **Report-writing hint** on `/reports/write-subject-comments`.
+6. **Staff timetable** marker, the Lookups card, and the Grade History filter.
+7. Update `docs/SYSTEM_RULES.md`, the Functional Specification and the PRD,
    and regenerate `sql/CURRENT_SCHEMA.md`.
 
 **Test before release**, signed in as each role:
@@ -399,34 +456,35 @@ which the reply routes don't support yet.
 - A single-lesson override teacher can set homework for that class.
 - A HoD can act in their department only.
 - A student sees their own classes' homework, and their own grade only after
-  release, never a classmate's.
-- A parent sees only a current child's homework.
+  release, never a classmate's, and not for homework whose year isn't
+  current. Test this by giving a test homework a planning year's
+  `academic_year_id`.
+- A parent login gets nothing from `homework`, `homework_marks` or
+  `my_homework()`.
+- A mentor, a pastoral member of staff and an assessment manager can read
+  homework tasks but get no marks, including from `grade_history`.
+- A HoD's overview shows only their department. SMT's shows all.
+- The report-writing hint appears for the class's own teacher and not for
+  anyone else.
 - Withdrawn homework disappears for students.
 - A grade outside the scheme is refused.
 - Every mark change appears in the grade history.
 
-## Open questions for the principal
+## Decided (the principal, 30 September 2026)
 
-1. **Parents:** should parents see homework and released grades on the
-   parent portal? *Recommended: yes, read-only.*
-2. **Staff visibility:** may all staff (mentors, pastoral, SMT) read every
-   homework grade, as they can read results today, or only the class's
-   teachers, HoD, SMT and admin? *Recommended: all staff, for consistency and
-   so mentors can follow up missing work.*
-3. **Notifications:** should students (or parents) get an inbox notice or
-   email when homework is set or marks are released? *Recommended: not at
-   launch.*
-4. **Oversight:** should HoDs and SMT get an overview (homework set per class
-   per week, and how many not handed in), and should HoDs be able to set and
-   edit homework in their department or only view it? *Recommended: an
-   overview in phase 2; HoDs can edit.*
-5. **Reports:** stay completely separate, or show the teacher a student's
-   homework record as a hint while they write the report's homework grade?
-   *Recommended: separate at launch, the hint later.*
-6. **Past years:** should students keep seeing last year's homework grades
-   after the year switch? *Recommended: yes, as a "Past years" list under the Homework grid.*
-7. **Online hand-in:** should students be able to upload their work (a new
-   private storage bucket, like `student-documents`)? *Recommended: not in
-   this build. It is the biggest addition in size and in safeguarding
-   terms (files from students), and can come later without changing
-   anything above.*
+1. **Parents:** no. Parents don't see homework or homework grades.
+2. **Staff visibility:** no, not all staff. Grades are visible only to the
+   class's teachers, the Head of Department, SMT and admin. Homework tasks
+   (without grades) stay readable by all staff.
+3. **Notifications:** no. No inbox notices or emails.
+4. **Oversight:** yes. HoDs and SMT get `/homework/overview`, and HoDs can
+   set and edit homework in their department.
+5. **Reports:** yes. The report-writing page shows the teacher a hint of the
+   student's homework record. The report's homework grade is still typed by
+   the teacher, and homework grades never feed a report automatically.
+6. **Past years:** no. After the year switch, students see only the current
+   year's homework and grades.
+7. **Online hand-in:** not yet. It is left out of this build. When it comes,
+   it will need a private storage bucket and its own design pass (files from
+   students raise safeguarding questions). Nothing above has to change for
+   it.
