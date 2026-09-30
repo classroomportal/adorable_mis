@@ -192,13 +192,14 @@ function ProjectionsInner() {
     const free = allowed && sub(allowed, confirmed[y]);
     const predictedFree = allowed && sub(free, scale(offered[y], offerPct), scale(inProcess[y], processPct));
     const roll = add(movingUp, confirmed[y]);
-    return { y, allowed, movingUp, confirmed: confirmed[y], free, offered: offered[y], inProcess: inProcess[y], predictedFree, roll };
+    const predictedRoll = add(roll, scale(offered[y], offerPct), scale(inProcess[y], processPct));
+    return { y, allowed, movingUp, confirmed: confirmed[y], free, offered: offered[y], inProcess: inProcess[y], predictedFree, roll, predictedRoll };
   });
   const setRows = rows.filter((r) => r.allowed);
   const sumCount = (k) => add(...rows.map((r) => r[k]));
   const sumPlaces = (k) => (setRows.length ? add(...setRows.map((r) => r[k])) : null);
   const totals = {
-    allowed: sumPlaces('allowed'), movingUp: sumCount('movingUp'), roll: sumCount('roll'),
+    allowed: sumPlaces('allowed'), movingUp: sumCount('movingUp'), roll: sumCount('roll'), predictedRoll: sumCount('predictedRoll'),
     confirmed: sumCount('confirmed'), free: sumPlaces('free'), offered: sumCount('offered'),
     inProcess: sumCount('inProcess'), predictedFree: sumPlaces('predictedFree'),
   };
@@ -222,6 +223,9 @@ function ProjectionsInner() {
     />
   );
 
+  // A rule between the three column groups: new entrants, carried over,
+  // and next year's total.
+  const groupStart = { borderLeft: '2px solid #ccc' };
   const cells = (r, strong) => (
     <>
       <td>
@@ -236,8 +240,13 @@ function ProjectionsInner() {
       <td><Count c={r.offered} /></td>
       <td><Count c={r.inProcess} /></td>
       <td><Places c={r.predictedFree} strong /></td>
-      <td><Count c={r.movingUp} /></td>
-      <td><Count c={r.roll} /></td>
+      <td style={groupStart}>
+        <Count c={r.movingUp} />
+        {r.y > YEAR_GROUPS[0] && <div style={{ fontSize: '0.75em', color: '#888' }}>now Year {r.y - 1}</div>}
+        {r.y === YEAR_GROUPS[0] && <div style={{ fontSize: '0.75em', color: '#888' }}>all new</div>}
+      </td>
+      <td style={groupStart}><Count c={r.roll} /></td>
+      <td><Count c={r.predictedRoll} /></td>
     </>
   );
 
@@ -245,7 +254,7 @@ function ProjectionsInner() {
     <div>
       <h1 style={{ margin: 0 }}>Next Year's Numbers</h1>
       <p style={{ color: '#666', marginTop: '0.4rem' }}>
-        {years.next.label}: the new places for boys and girls in each year, and how many are still free once new admissions are counted. Students moving up are shown for next year's roll; they don't use up new places. <a href="/admissions">Applicants</a>
+        {years.next.label}: for each year group, the new entrants we allow and how many places are still free, the students carried over from {years.current.label}, and the total. Students carried over don't use up new places. Year {lastYear} leave. <a href="/admissions">Applicants</a>
       </p>
 
       <div className="stat-card-row">
@@ -253,7 +262,7 @@ function ProjectionsInner() {
           ['New places allowed', totals.allowed, `${years.next.label} intake, every year group`],
           ['New, confirmed', totals.confirmed, 'Accepted, deposit paid or enrolled'],
           ['Places still free', totals.free, 'New places less confirmed new'],
-          [`Year ${lastYear} leaving`, leaving, `End of ${years.current.label}`],
+          [`Carried over from ${years.current.label}`, totals.movingUp, `Today's Years ${YEAR_GROUPS[0]}–${lastYear - 1}, moving up`],
           [`Roll ${years.next.label}`, totals.roll, 'Moving up + confirmed new'],
         ].map(([label, c, note]) => (
           <div key={label} className="stat-card accent-family" title={note}>
@@ -290,25 +299,31 @@ function ProjectionsInner() {
           )}
         </div>
         <p style={{ color: '#666', fontSize: '0.85em', marginBottom: 0 }}>
-          The two shares only change <strong>Predicted free</strong>; they're your estimate and aren't saved.
+          The two shares only change the <strong>predicted</strong> figures; they're your estimate and aren't saved.
           Unsuccessful and withdrawn applicants are never counted.
         </p>
         {message && <p style={{ color: message.error ? '#a3232c' : '#1a7a3d', marginBottom: 0 }}><strong>{message.text}</strong></p>}
       </div>
 
       <div className="card">
-        <div className="table-scroll"><table>
+        <div className="table-scroll"><table className="projection-table">
           <thead>
             <tr>
-              <th>{years.next.label}</th>
-              <th title="New boys and girls the school will take into this year group">New places allowed</th>
-              <th title="Accepted, deposit paid or enrolled">New: confirmed</th>
-              <th title="New places less confirmed new">Places still free</th>
-              <th title="Offered a place, no reply yet">New: offered</th>
-              <th title="Enquiry, form paid, test booked, tested, invited to interview, interviewed or on the waiting list">New: in process</th>
+              <th rowSpan={2} style={{ verticalAlign: 'bottom' }}>{years.next.label}</th>
+              <th colSpan={6} style={{ textAlign: 'center' }}>New entrants into the year</th>
+              <th style={{ ...groupStart, textAlign: 'center' }}>Carried over</th>
+              <th colSpan={2} style={{ ...groupStart, textAlign: 'center' }}>Total in {years.next.label}</th>
+            </tr>
+            <tr>
+              <th title="New boys and girls the school will take into this year group">Allowed</th>
+              <th title="Accepted, deposit paid or enrolled">Confirmed</th>
+              <th title="Allowed less confirmed">Places still free</th>
+              <th title="Offered a place, no reply yet">Offered</th>
+              <th title="Enquiry, form paid, test booked, tested, invited to interview, interviewed or on the waiting list">In process</th>
               <th title={`Places still free less ${offerPct}% of offers and ${processPct}% of those in process`}>Predicted free</th>
-              <th title="Today's students in the year below">Moving up</th>
-              <th title="Moving up + confirmed new">Roll next year</th>
+              <th style={groupStart} title={`Students in ${years.current.label} moving up into this year`}>From {years.current.label}</th>
+              <th style={groupStart} title="Carried over + confirmed new entrants">Confirmed</th>
+              <th title={`Confirmed + ${offerPct}% of offers + ${processPct}% of those in process`}>Predicted</th>
             </tr>
           </thead>
           <tbody>
@@ -318,13 +333,15 @@ function ProjectionsInner() {
             </tr>
             {rows.map((r) => (
               <tr key={r.y}>
-                <td><strong>Year {r.y}</strong>{r.y > YEAR_GROUPS[0] && <div style={{ fontSize: '0.8em', color: '#666' }}>Year {r.y - 1} now</div>}</td>
+                <td><strong>Year {r.y}</strong></td>
                 {cells(r)}
               </tr>
             ))}
             <tr>
               <td><strong>Leaving</strong><div style={{ fontSize: '0.8em', color: '#666' }}>Year {lastYear} now</div></td>
-              <td colSpan={9}><Count c={leaving} /></td>
+              <td colSpan={6} />
+              <td style={groupStart}><Count c={leaving} /></td>
+              <td colSpan={2} style={groupStart} />
             </tr>
           </tbody>
         </table></div>
