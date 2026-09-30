@@ -43,6 +43,7 @@ function StatCard({ label, value, icon, accent, href }) {
 
 function DashboardStats({ isDemoAccount, hasAccess }) {
   const [stats, setStats] = useState(null);
+  const order = useTileOrder('staff_stats');
 
   useEffect(() => {
     async function load() {
@@ -62,9 +63,11 @@ function DashboardStats({ isDemoAccount, hasAccess }) {
 
   return (
     <div className="stat-card-row">
-      <StatCard label="Active students" value={stats?.students} icon="🎓" accent="myinfo" href="/students" />
-      <StatCard label="Staff" value={stats?.staff} icon="🧑‍🏫" accent="school" href="/staff/roles" />
-      <StatCard label="Behaviour alerts (7 days)" value={stats?.alerts} icon="⚠️" accent="students" href="/behaviour/alerts" />
+      {sortTiles([
+        { key: 'students', label: 'Active students', value: stats?.students, icon: '🎓', accent: 'myinfo', href: '/students' },
+        { key: 'staff', label: 'Staff', value: stats?.staff, icon: '🧑‍🏫', accent: 'school', href: '/staff/roles' },
+        { key: 'alerts', label: 'Behaviour alerts (7 days)', value: stats?.alerts, icon: '⚠️', accent: 'students', href: '/behaviour/alerts' },
+      ], order).map(({ key, ...c }) => <StatCard key={key} {...c} />)}
     </div>
   );
 }
@@ -392,6 +395,8 @@ const TABS = [
 export default function Home() {
   const { session, profile, staffRoles, hasAccess } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  // Order of the larger tiles, set at /admin/tile-order (migration 282).
+  const moduleOrder = useTileOrder('staff_modules');
   const [showSplash, setShowSplash] = useState(false);
 
   useEffect(() => {
@@ -462,7 +467,7 @@ export default function Home() {
   // Bursar staff get a dedicated finance-only landing page instead of the full
   // multi-role staff dashboard, unless they also hold a broader role (admin).
   if (!isAdmin && (staffRoles || []).includes('bursar')) {
-    const bursarTabs = TABS.filter((t) => t.key === 'fees' || t.key === 'tuckshop');
+    const bursarTabs = sortTiles(TABS.filter((t) => t.key === 'fees' || t.key === 'tuckshop'), moduleOrder);
     return (
       <div>
         <h1>Welcome — Bursar</h1>
@@ -487,7 +492,7 @@ export default function Home() {
       <QuickLinks hasAccess={hasAccess} />
       <DashboardStats isDemoAccount={profile?.is_demo_account} hasAccess={hasAccess} />
       <div className="module-card-grid">
-        {TABS.map((t) => (
+        {sortTiles(TABS, moduleOrder).map((t) => (
           <ModuleCard
             key={t.key}
             icon={t.icon}

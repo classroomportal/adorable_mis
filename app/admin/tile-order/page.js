@@ -97,6 +97,8 @@ function TileOrderInner() {
       </p>
       <TileList dashboard="student" />
       <TileList dashboard="staff" />
+      <TileList dashboard="staff_stats" />
+      <TileList dashboard="staff_modules" />
     </div>
   );
 }
