@@ -6,6 +6,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import { loadHomeworkReportSummary, homeworkSummaryLabel } from '../../../lib/homework';
 
 const TYPE_LABEL = { mentor: 'Mentor', houseparent: 'Houseparent', smt: 'SMT' };
 
@@ -77,6 +78,9 @@ function CheckReportsInner() {
         .from('target_grades').select('student_id, subject_id, target_grade').in('student_id', studentIds);
       for (const t of tg || []) targets[`${t.student_id}:${t.subject_id}`] = t.target_grade;
     }
+    // The term's homework marks (migration 291); the database returns only
+    // what this checker may see.
+    const homework = await loadHomeworkReportSummary(periodId, studentIds);
 
     const subjectItems = (subjectRows || []).map((r) => {
       const key = `${r.student_id}:${r.subject_id}`;
@@ -87,6 +91,7 @@ function CheckReportsInner() {
         authorName: `${r.staff?.first_name || ''} ${r.staff?.last_name || ''}`.trim(),
         comment: r.comment || '', effortGrade: r.effort_grade,
         presentationGrade: r.presentation_grade, homeworkGrade: r.homework_grade,
+        homeworkMarks: homeworkSummaryLabel(homework[key]),
         latestGrade: perf[key]?.latestGrade, latestScorePct: perf[key]?.latestScorePct, targetGrade: targets[key],
         ai: null,
       };
@@ -213,6 +218,7 @@ function CheckReportsInner() {
                       {it.effortGrade ? ` — effort: ${it.effortGrade}` : ''}
                       {it.presentationGrade ? ` — presentation: ${it.presentationGrade}` : ''}
                       {it.homeworkGrade ? ` — homework: ${it.homeworkGrade}` : ''}
+                      {it.homeworkMarks ? ` (marks this term: ${it.homeworkMarks})` : ''}
                       {it.targetGrade ? ` — target: ${it.targetGrade}` : ''}
                       {it.latestGrade ? ` — latest: ${it.latestGrade}` : ''}
                     </span>

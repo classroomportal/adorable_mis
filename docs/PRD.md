@@ -86,7 +86,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks | 5 |
 | Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile | 5 |
 | Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017 | 3 |
-| Homework | Pilot | Set from the register or /homework, with files and links; graded outside reports; on students' timetables, where students tick it done; 10\_1/Ma and 11\_1/Ma only, admins only | 0 |
+| Homework | Pilot | Set from the register or /homework, with files and links; marks converted to grades outside reports; a class mark sheet over any dates; on students' timetables, where students tick it done; 10\_1/Ma and 11\_1/Ma only, admins only | 0 |
 | Reports and transcripts | Live | Draft→checked comments with AI help; KS3 and KS4/5 transcripts | 2 |
 | Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists; the bursar adds paid top-ups from recorded payments | 3 |
 | Fees | Live | Invoices, batches, discounts; two-person price approval; locked prices | 1 |
