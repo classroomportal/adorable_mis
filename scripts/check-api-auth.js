@@ -29,6 +29,9 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const PUBLIC_ROUTES = {
   // 'app/api/example/route.js': 'why this must work before sign-in',
+  'app/api/calendar-feed/[token]/route.js':
+    "parents' calendar apps fetch the school calendar feed without signing in; " +
+    'the secret per-parent token in the URL is the check (migration 274, agreed by the principal 30 Sept 2026)',
 };
 
 const METHODS = 'GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS';
