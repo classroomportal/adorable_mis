@@ -351,7 +351,7 @@ const TABS = [
     items: ({ hasAccess, staffRoles }) => [
       { href: '/tuckshop/purchase', label: 'Sell Items', desc: "Sell items from a student's balance." },
       { href: '/tuckshop/topup', label: 'Top Up Balance', desc: "Add money to tuckshop balances." },
-      { href: '/bursar/tuckshop-top-up', label: 'Add Paid Top-Up', desc: "Add money a family has already paid to a student's tuckshop balance." },
+      { href: '/bursar/tuckshop-top-up', label: 'Add Paid Top-Up', desc: "Put a payment you've recorded onto a student's tuckshop balance." },
       { href: '/tuckshop/balances', label: 'Balances', desc: "Every student's tuckshop balance." },
       { href: '/tuckshop/preorders', label: 'Preorders', desc: "Student preorders waiting to be handed out." },
       { href: '/tuckshop/items', label: 'Items & Prices', desc: "Tuckshop items and prices." },
