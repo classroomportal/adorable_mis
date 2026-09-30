@@ -1,7 +1,25 @@
 # Homework: design
 
-Status, 30 September 2026: **design only, nothing built.** Revised the same
-day with the principal's answers (listed under "Decided" at the end): parents
+Status, 30 September 2026: **pilot built and live** (migrations 276–277) on
+the principal's two maths classes, 10_1/Ma and 11_1/Ma (`homework_classes`).
+Built:
+- the tables, rules and grade log;
+- `/homework` (set, edit, withdraw, mark book, release marks);
+- homework chips and a week selector on the student timetable;
+- the Homework tile's by-day grid;
+- the Grade History filter.
+
+Not built yet:
+- `/homework/overview`;
+- the report-writing hint;
+- the staff timetable marker;
+- the Lookups card for grading schemes (edit them in SQL for now);
+- "Set for several classes".
+
+Widening the pilot means adding classes to `homework_classes` and granting
+`/homework` to `teacher` and `head_of_department`.
+
+Revised the same day with the principal's answers (listed under "Decided" at the end): parents
 don't see homework, grades are visible only to the class's teachers, the Head
 of Department, SMT and admin, there are no notifications, HoDs and SMT get an
 overview, report writers get a homework hint, students don't keep past years'
@@ -377,7 +395,8 @@ with the number of pieces still due this week.
 - **Under the grid**, two short lists:
   - **Overdue**, from earlier weeks: past the deadline, no mark yet, from the
     last four weeks.
-  - **Recently graded**: marks released in the last two weeks.
+  - **Recently graded**: released grades for homework due in the last four
+    weeks.
 - **Empty days say "Nothing due"**, so a blank column isn't mistaken for a
   loading error.
 - **On a phone**, the columns stack as one section per day, with today first
