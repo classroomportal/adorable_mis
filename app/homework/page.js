@@ -146,7 +146,7 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
       <button type="button" className="secondary" onClick={onBack} style={btnSmall}>← Back to {cls.class_code}</button>
       <h2 style={{ marginBottom: '0.25rem' }}>{hw.title}</h2>
       <p style={{ margin: '0 0 0.5rem', color: 'var(--ink-soft)' }}>
-        {classLabel(cls)} · due {formatUKDate(hw.due_on, { weekday: true })} · {schemeLabel(scheme, hw.out_of)} · {markedCount} of {students.length} marked
+        {classLabel(cls)} · due {formatUKDate(hw.due_on, { weekday: true })} · {schemeLabel(scheme, hw.out_of)} · {markedCount} of {students.length} marked · {Object.keys(doneAt).length} ticked done
       </p>
       {withdrawn && <p style={{ color: '#a3232c' }}>This homework has been withdrawn, so it can&apos;t be marked. Restore it first.</p>}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', margin: '0.5rem 0 0.75rem' }}>
@@ -236,6 +236,7 @@ function HomeworkInner() {
   const [mode, setMode] = useState({ kind: 'list' }); // list | form (homework?) | marks (homework)
   const [roster, setRoster] = useState(0);
   const [markCounts, setMarkCounts] = useState({}); // homework_id -> marks recorded
+  const [tickCounts, setTickCounts] = useState({}); // homework_id -> students who ticked it done
   const pendingHomework = useRef(null);
   const [status, setStatus] = useState(null);
 
@@ -271,12 +272,19 @@ function HomeworkInner() {
       supabase.from('student_class').select('students(status)').eq('class_id', classId),
     ]);
     const ids = (data || []).map((h) => h.homework_id);
-    const { data: marks } = ids.length
-      ? await supabase.from('homework_marks').select('homework_id').in('homework_id', ids)
-      : { data: [] };
+    const [{ data: marks }, { data: ticks }] = ids.length
+      ? await Promise.all([
+        supabase.from('homework_marks').select('homework_id').in('homework_id', ids),
+        // Students' own "done" ticks (migration 288).
+        supabase.from('homework_done').select('homework_id').in('homework_id', ids),
+      ])
+      : [{ data: [] }, { data: [] }];
     const counts = {};
     (marks || []).forEach((m) => { counts[m.homework_id] = (counts[m.homework_id] || 0) + 1; });
     setMarkCounts(counts);
+    const ticked = {};
+    (ticks || []).forEach((t) => { ticked[t.homework_id] = (ticked[t.homework_id] || 0) + 1; });
+    setTickCounts(ticked);
     setHomework(data || []);
     setRoster((enrol || []).filter((e) => e.students?.status === 'active').length);
   }, [classId]);
@@ -387,6 +395,9 @@ function HomeworkInner() {
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {n} / {roster}
                         <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{hw.marks_released ? 'released' : 'not released'}</div>
+                        {tickCounts[hw.homework_id] > 0 && (
+                          <div style={{ fontSize: '0.8rem', color: '#1a5c30' }}>✓ {tickCounts[hw.homework_id]} ticked done</div>
+                        )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>

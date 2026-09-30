@@ -18,6 +18,7 @@ export default function RegisterHomework({ classId }) {
   const [schemes, setSchemes] = useState([]);
   const [homework, setHomework] = useState([]);
   const [markCounts, setMarkCounts] = useState({});
+  const [tickCounts, setTickCounts] = useState({}); // students who ticked it done (migration 288)
   const [formOpen, setFormOpen] = useState(false);
   const [status, setStatus] = useState(null);
 
@@ -30,12 +31,19 @@ export default function RegisterHomework({ classId }) {
       .order('due_on');
     setHomework(data || []);
     const ids = (data || []).map((h) => h.homework_id);
-    const { data: marks } = ids.length
-      ? await supabase.from('homework_marks').select('homework_id').in('homework_id', ids)
-      : { data: [] };
+    const [{ data: marks }, { data: ticks }] = ids.length
+      ? await Promise.all([
+        supabase.from('homework_marks').select('homework_id').in('homework_id', ids),
+        // Students' own "done" ticks (migration 288).
+        supabase.from('homework_done').select('homework_id').in('homework_id', ids),
+      ])
+      : [{ data: [] }, { data: [] }];
     const counts = {};
     (marks || []).forEach((m) => { counts[m.homework_id] = (counts[m.homework_id] || 0) + 1; });
     setMarkCounts(counts);
+    const ticked = {};
+    (ticks || []).forEach((t) => { ticked[t.homework_id] = (ticked[t.homework_id] || 0) + 1; });
+    setTickCounts(ticked);
   }, [classId]);
 
   useEffect(() => {
@@ -84,6 +92,7 @@ export default function RegisterHomework({ classId }) {
               <span style={{ color: 'var(--ink-soft)' }}>
                 · due {formatUKDate(h.due_on, { weekday: true })}{h.due_on < today ? ' (past)' : ''}{' '}
                 · {markCounts[h.homework_id] || 0} marked{h.marks_released ? ', released' : ''}
+                · {tickCounts[h.homework_id] || 0} ticked done
               </span>{' '}
               <a href={`/homework?class=${classId}&homework=${h.homework_id}`} style={{ ...btnSmall, whiteSpace: 'nowrap' }}>Mark book →</a>
             </li>
