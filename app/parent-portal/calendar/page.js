@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
+import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import { schoolToday } from '../../../lib/schoolTime';
 import { academicYearOf, loadCurrentAcademicYearLabel } from '../../../lib/academicYear';
@@ -19,7 +20,71 @@ const STAFF_ONLY_CATEGORIES = new Set(['teacher_assessment', 'report_period']);
 
 const labelFor = (category) => CALENDAR_CATEGORY_LABELS[category] || '';
 
+// The parent's own subscription link (migration 274). Their calendar app
+// fetches it every few hours, so changes SMT make to the school calendar
+// reach the parent's phone by themselves, unlike the one-off downloads below.
+// Only a parent login has one; staff opening this page don't see the card.
+function SubscribeCard() {
+  const [token, setToken] = useState(null);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    supabase.rpc('my_calendar_feed_token').then(({ data, error: err }) => {
+      if (err) setError('Your calendar link could not be loaded. Please try again later.');
+      else setToken(data);
+    });
+  }, []);
+
+  async function reset() {
+    if (!window.confirm('Make a new link? The old one will stop working, so any calendar already subscribed with it will stop updating until you subscribe again.')) return;
+    const { data, error: err } = await supabase.rpc('my_calendar_feed_token', { p_reset: true });
+    if (err) { setError('A new link could not be made. Please try again later.'); return; }
+    setToken(data);
+    setCopied(false);
+  }
+
+  const httpsUrl = token ? `${window.location.origin}/api/calendar-feed/${token}.ics` : '';
+  const webcalUrl = httpsUrl.replace(/^https?:/, 'webcal:');
+
+  async function copy() {
+    try { await navigator.clipboard.writeText(httpsUrl); setCopied(true); } catch { setCopied(false); }
+  }
+
+  return (
+    <div className="card">
+      <h2>Keep your calendar up to date</h2>
+      <p style={{ fontSize: '0.9rem' }}>
+        Subscribe once and school events appear in your phone or computer calendar, and stay up to date:
+        if a date moves or an event is cancelled, your calendar changes too (it checks every few hours).
+      </p>
+      {error ? <p style={{ color: '#b00020' }}>{error}</p> : !token ? <p>Loading…</p> : (
+        <>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+            <button type="button" onClick={() => { window.location.href = webcalUrl; }}>
+              Subscribe (iPhone, Mac, Outlook)
+            </button>
+            <button
+              type="button"
+              onClick={() => window.open(`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`, '_blank', 'noopener')}
+            >
+              Subscribe in Google Calendar
+            </button>
+            <button type="button" className="secondary" onClick={copy}>{copied ? 'Link copied' : 'Copy link'}</button>
+          </div>
+          <p style={{ fontSize: '0.85rem', color: '#5b6472', margin: 0 }}>
+            This link is yours alone, so please don&apos;t share it. If it has been passed on,{' '}
+            <button type="button" className="secondary" onClick={reset} style={{ padding: '0.1rem 0.5rem' }}>make a new link</button>{' '}
+            and subscribe again with that one.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ParentCalendarInner() {
+  const { profile } = useAuth();
   const [terms, setTerms] = useState([]);
   const [events, setEvents] = useState(null);
   const [showPast, setShowPast] = useState(false);
@@ -69,11 +134,15 @@ function ParentCalendarInner() {
         )}
       </div>
 
+      {profile?.parent_id && <SubscribeCard />}
+
       <div className="card">
         <h2>Events</h2>
         <p style={{ fontSize: '0.9rem' }}>
-          Tap <strong>Add</strong> on any event to put it in your own calendar — <em>Apple / Outlook</em> downloads a
-          calendar file your phone or computer opens, <em>Google</em> opens Google Calendar.
+          You can also save single events to your own calendar — <em>Apple / Outlook</em> downloads a
+          calendar file your phone or computer opens, <em>Google</em> opens Google Calendar. These are one-off
+          copies: they <strong>won&apos;t change</strong> if the school changes the event later
+          {profile?.parent_id ? ', so subscribing above is better' : ''}.
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
           <button
@@ -81,7 +150,7 @@ function ParentCalendarInner() {
             disabled={upcoming.length === 0}
             onClick={() => downloadIcs(upcoming, 'abc-school-calendar.ics', labelFor)}
           >
-            Add all upcoming events ({upcoming.length})
+            Save a copy of all upcoming events ({upcoming.length})
           </button>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
             <input type="checkbox" checked={showPast} onChange={(e) => setShowPast(e.target.checked)} />
