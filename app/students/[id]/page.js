@@ -221,7 +221,9 @@ function StudentDetail() {
       // Events withdrawn on appeal (voided_at, migration 196) stay in the log,
       // crossed out with the appeal's resolution notes (any staff can read a
       // decided appeal, migration 223).
-      .select('*, behaviour_appeals(resolution_notes, reviewed_at)')
+      // Who logged it: behaviour_events links to staff twice (staff_id and
+      // protocol_reviewed_by), so the embed names its foreign key.
+      .select('*, behaviour_appeals(resolution_notes, reviewed_at), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('student_id', id)
       .order('event_date', { ascending: false });
     setBehaviour(be || []);
@@ -678,6 +680,7 @@ function StudentDetail() {
     const ap = Array.isArray(e.behaviour_appeals) ? e.behaviour_appeals[0] : e.behaviour_appeals;
     return ap?.resolution_notes || '';
   };
+  const loggedBy = (e) => (e.staff ? `${e.staff.first_name} ${e.staff.last_name}` : '—');
   const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
   const positiveCount = behaviour.filter((b) => b.type === 'positive' && !b.voided_at).length;
   const negativeCount = behaviour.filter((b) => b.type === 'negative' && !b.voided_at).length;
@@ -1158,7 +1161,7 @@ function StudentDetail() {
         {behaviour.length === 0 ? <p>No events logged.</p> : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Points</th><th>Description</th></tr></thead>
+              <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Points</th><th>Logged by</th><th>Description</th></tr></thead>
               <tbody>
                 {behaviour.map((b) => b.voided_at ? (
                   // Withdrawn on appeal: shown as given (voided_points,
@@ -1168,6 +1171,7 @@ function StudentDetail() {
                     <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`} style={{ opacity: 0.6 }}>{b.type}</span></td>
                     <td><s>{b.category}</s></td>
                     <td><s>{b.voided_points ?? b.points}</s></td>
+                    <td>{loggedBy(b)}</td>
                     <td style={{ minWidth: '16rem' }}>
                       {b.description && <div><s>{b.description}</s></div>}
                       <div style={{ fontSize: '0.85em', marginTop: '0.2rem' }}>
@@ -1183,6 +1187,7 @@ function StudentDetail() {
                     <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
                     <td>{b.category}</td>
                     <td>{b.points}</td>
+                    <td>{loggedBy(b)}</td>
                     <td style={{ minWidth: '16rem' }}>
                       <EventCommentEditor
                         event={b}
