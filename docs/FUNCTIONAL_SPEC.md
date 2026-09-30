@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 272). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 275). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -108,7 +108,8 @@ Only Formwork creates logins; nobody can create their own account, by email or b
 
 **Server routes**
 
-- **FR-1.10** Every server route checks the caller's sign-in and page access before doing anything, and the build fails if one doesn't. Backup is admin-only whatever the permissions page says. \[DB + build check\]
+- **FR-1.10** Every server route except the parents' calendar feed (FR-1.11) checks the caller's sign-in and page access before doing anything, and the build fails if one doesn't. Backup is admin-only whatever the permissions page says. \[DB + build check\]
+- **FR-1.11** One route works without sign-in: the parents' calendar feed (/api/calendar-feed/…), because calendar apps can't sign in. Each parent's secret link is the check instead, and the build check lists this route as its only exception. It returns only the events parents see on their calendar page, and nothing once none of the parent's children is still at the school. Agreed by the principal, 30 Sept 2026 (migration 274). \[DB + build check\]
 
 ## 5. FR-2 Students, parents and portals
 
@@ -162,6 +163,7 @@ Every member of staff can read the whole student record; what each role can chan
 **Gender**
 
 - **FR-2.17** Every student's gender is required and is Male or Female, chosen from a list on the New Student page and the student record. It can't be blanked by an edit or a CSV re-import; the import converts Male/Female and refuses a new student without one. \[DB\]
+- **FR-2.18** Only the school office can add a new student, at /students/new or /students/import; holding admin is not enough. Admins can still see, correct and delete student records. Someone who holds both admin and school\_office adds students through their office role, so to stop a person adding students, remove their school\_office role (migration 275). \[DB\]
 
 ## 6. FR-3 Timetable, classes and Nova-T imports
 
@@ -395,6 +397,7 @@ Students pre-order within fixed weekly windows, with at most 2 food items per tu
 
 - **FR-9.8** A balance is the student's Tuckshop charges on their fee invoice minus their purchases. Nothing is charged at ordering; the price used is the item's price when handed out. There is no balance check, so a balance can go negative. \[DB\]
 - **FR-9.9** Top-up: staff enter a target balance (default ₦40,000) and the difference is added to the fee invoice as a Tuck Shop Recharge, for one student, a form, a year or everyone. \[DB\]
+- **FR-9.15** Paid top-up (/bursar/tuckshop-top-up, bursar only): the bursar first records the money on Record a Payment, then picks that payment and adds all or part of it to the student's balance. It adds a Tuck Shop Recharge line on the payment's own invoice, so the payment already covers it and no unpaid bill is created. Each line records the payment it came from; a payment can't be added for more than it was, and can't be deleted while credit taken from it remains. Not shown on /bursar/audit, so no undo there. The page lists all of a student's payments, so the bursar must pick only money sent in as tuckshop credit. (Migration 273.) \[DB\]
 - **FR-9.10** Counter sales at /tuckshop/purchase have no limits and no window. \[DB\]
 
 **Hand-out (/tuckshop/hand-out)**
@@ -500,6 +503,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 - **FR-13.2** Adding a report-period event also creates the report period, with its year groups and due dates. \[Page\]
 - **FR-13.3** SMT add and edit terms; only admins delete a term (it also deletes that term's OH programme). \[DB\]
 - **FR-13.4** Parents see a read-only calendar of term dates and events, without staff deadlines. \[Page\]
+- **FR-13.7** Parents can subscribe to the school calendar from /parent-portal/calendar (iPhone, Mac and Outlook; Google; or copy the link). Each parent has a private link that their calendar app re-checks every few hours, so moved or cancelled events update on their phone by themselves. A parent can make a new link, which stops the old one working. The feed holds events from the current academic year on, without Teacher Assessment weeks or report periods, and goes empty once none of their children is still at the school. The one-off download buttons remain, labelled as copies that won't update. Staff don't see the subscribe card, including in View as Parent. (Migration 274.) \[DB\]
 
 **Home dashboard**
 
@@ -654,7 +658,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 - **NFR-1** Every database policy and function identifies the caller from their sign-in, never from an ID sent by the page. Any student, staff or parent ID in a request is treated as a claim to check. \[DB\]
 - **NFR-2** "Who did it" columns (payments, charge batches, tuckshop sales and hand-out locks, email settings) are stamped from the signed-in account, overwriting whatever the page sent. \[DB\]
 - **NFR-3** Page visibility (/admin/permissions) is for display only and is never the security boundary. \[Design\]
-- **NFR-4** Server routes check the caller first; the build fails if one doesn't, and no route uses the database's master key. \[Build check\]
+- **NFR-4** Server routes check the caller first (the one exception, the parents' calendar feed, is checked by its secret link instead); the build fails if one doesn't, and no route uses the database's master key. \[Build check\]
 
 **Audit**
 

@@ -14,17 +14,17 @@
 --      source verbatim, CRs included. The previous snapshots preserved them.
 --      If your tooling strips or normalises CRs, the file will differ from the
 --      database in a way that is invisible on screen -- check with
---      `grep -c $'\r' sql/CURRENT_SCHEMA.md` (expected: 369 as of this run).
+--      `grep -c $'\r' sql/CURRENT_SCHEMA.md` (expected: 223 as of 30 September 2026).
 --
 --   2. Verify rather than eyeball. Each section below has a matching md5
 --      query; take the md5 from the database and compare it against the
 --      section as written to the file. That is the only practical way to know
 --      a 130KB dump of RLS policies and function bodies copied faithfully:
 --
---        section  md5 as of 22 September 2026
---        views    41bfd52a164405d5a704d8bc6420b725
---        tables   d28d960c54525cf1b439639af65c39d9
---        funcs    974e65e9edaacbdfef7f5e9f4a1e62e2
+--        section  md5 as of 30 September 2026 (after migration 275)
+--        views    d768692c3655578a2ea9527693948c50
+--        tables   01bc072a747bfb34e7af12c2a1e993b1
+--        funcs    175e4d27152a3412a5316dc23e58d7f9
 --
 -- The header, "Quick facts" and "Known gaps" sections of the markdown file are
 -- prose, not generated. Update them by hand; the fact queries at the bottom of

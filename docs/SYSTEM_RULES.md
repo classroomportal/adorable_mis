@@ -57,8 +57,8 @@ Where a rule has changed several times, only the current version is given. Migra
 **Bursar:** a bursar who isn't an admin sees a home page with only the Fees and Tuckshop tiles.
 
 **Server routes**
-- Formwork has three: the backup route and the two AI comment routes.
-- Each one checks the caller's sign-in and page access before doing anything.
+- Formwork has four: the backup route, the two AI comment routes, and the parents' calendar feed.
+- Each one checks the caller's sign-in and page access before doing anything, except the calendar feed (274). Calendar apps can't sign in, so each parent's secret link is the check instead; the principal agreed this on 30 Sept 2026, and it is the build check's only exception.
 - The build fails if a route is missing that check. Backup is admin-only whatever the permissions page says.
 
 ---
@@ -103,6 +103,7 @@ Where a rule has changed several times, only the current version is given. Migra
 - All staff can read the whole student record.
 - What each role can edit is set field by field (38 fields). A change to a field the editor wasn't granted is refused (151). The school office has all 38.
 - Only admins and the school office can change fees fields, ethnicity/FSM fields and family links.
+- **Only the school office can add a new student** (`/students/new`, `/students/import`); being an admin is not enough (275). Admins can still see, correct and delete student records. Someone with both roles adds students through their office role.
 - Only admins can delete a student.
 - Admission number: six digits, issued automatically from the next number in the series. No two students can share one (176).
 - Admission date is required. If it's left blank on a new record, it becomes today (194).
@@ -331,6 +332,7 @@ How the list behaves:
 - The price used is the item's price **at that moment**, so a price change between ordering and hand-out changes what the student pays.
 - **There is no balance check**, so a balance can go negative ("owing").
 - Top-up: staff enter a target balance (default ₦40,000). The difference is added to the student's fee invoice as a "Tuck Shop Recharge". Top-ups can be done for one student, a form, a year or everyone.
+- Paid top-up (`/bursar/tuckshop-top-up`, bursar only, 273): the bursar records the money on Record a Payment first, then adds all or part of that payment to the student's balance. The recharge goes on the payment's own invoice, so no unpaid bill is created. A payment can't be used for more than it was, and can't be deleted while credit taken from it remains.
 - Counter sales (`/tuckshop/purchase`) have no limits and no window.
 
 **Hand-out** (`/tuckshop/hand-out`, 228–233)
@@ -566,6 +568,8 @@ How the list behaves:
 **Backup mode:** an admin can freeze all changes for 1–60 minutes (default 30). It switches itself off at the end.
 
 **Calendar and terms:** SMT can add and edit calendar events and terms. Only admins can delete a term.
+
+**Parents' calendar subscription** (274): each parent has a private link on `/parent-portal/calendar` that their phone or Google/Outlook calendar re-checks every few hours, so event changes reach them by themselves. A parent can make a new link, which stops the old one. The feed holds only parent-visible events (no Teacher Assessment weeks or report periods) from the current academic year on, and goes empty once none of the parent's children is still at the school.
 
 **Demo account:** the staff_demo training account has been removed. There is no practice login.
 
