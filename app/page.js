@@ -55,8 +55,10 @@ function useIsStaffParent() {
   return isParent;
 }
 
-// Row 2: the numbers, and My Children for staff who are also parents (moved
-// here from row 1 at the principal's request). Order set at /admin/tile-order.
+// Row 2: Log behaviour, the numbers, and My Children for staff who are also
+// parents (all moved here from row 1 at the principal's request; the
+// active-students number is on the Students card, migration 292). Order set
+// at /admin/tile-order.
 function DashboardStats({ isDemoAccount, hasAccess }) {
   const [stats, setStats] = useState(null);
   const order = useTileOrder('staff_stats');
@@ -64,13 +66,11 @@ function DashboardStats({ isDemoAccount, hasAccess }) {
 
   useEffect(() => {
     async function load() {
-      const [{ count: studentCount }, { count: staffCount }, { data: alerts }] = await Promise.all([
-        supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('status', 'active').eq('is_demo', !!isDemoAccount),
+      const [{ count: staffCount }, { data: alerts }] = await Promise.all([
         supabase.from('staff').select('staff_id', { count: 'exact', head: true }).eq('is_demo', !!isDemoAccount),
         supabase.from('behaviour_events').select('event_id').eq('type', 'negative').lte('points', -3).is('voided_at', null).eq('is_demo', !!isDemoAccount).gte('event_date', schoolDateOffset(-7)),
       ]);
       setStats({
-        students: studentCount ?? 0,
         staff: staffCount ?? 0,
         alerts: (alerts || []).length,
       });
@@ -81,7 +81,9 @@ function DashboardStats({ isDemoAccount, hasAccess }) {
   return (
     <div className="stat-card-row">
       {sortTiles([
-        { key: 'students', label: 'Active students', value: stats?.students, icon: '🎓', accent: 'myinfo', href: '/students' },
+        // Logging behaviour is the thing most staff come here to do, so it has
+        // a big tile of its own rather than only a chip on the Students card.
+        hasAccess('/behaviour') && { key: 'log_behaviour', link: true, href: '/behaviour', label: 'Log behaviour', icon: '✍️', accent: 'students', sub: 'Positive or negative, one student or a group' },
         { key: 'staff', label: 'Staff', value: stats?.staff, icon: '🧑‍🏫', accent: 'school', href: '/staff/roles' },
         { key: 'alerts', label: 'Behaviour alerts (7 days)', value: stats?.alerts, icon: '⚠️', accent: 'students', href: '/behaviour/alerts' },
         isParent && hasAccess('/parent-portal') && { key: 'my_children', link: true, label: 'My Children', icon: '👪', accent: 'students', href: '/parent-portal', sub: "Your children's grades and behaviour" },
@@ -115,12 +117,10 @@ function QuickLinks({ hasAccess }) {
       .then(({ count }) => setUnread(count ?? 0));
   }, [session]);
 
-  // Order set school-wide at /admin/tile-order (migration 280). Logging
-  // behaviour is the thing most staff come here to do, so it has a big tile
-  // of its own rather than only a chip on the Students card.
+  // Order set school-wide at /admin/tile-order (migration 280). Log
+  // behaviour is in row 2 (DashboardStats).
   const order = useTileOrder('staff');
   const links = sortTiles([
-    { key: 'log_behaviour', href: '/behaviour', label: 'Log behaviour', icon: '✍️', accent: 'students', sub: 'Positive or negative, one student or a group' },
     { key: 'timetable', href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
     { key: 'calendar', href: '/calendar', label: 'Calendar', icon: '📅', accent: 'school', sub: 'Term dates and school events' },
     {
@@ -181,6 +181,24 @@ function AdmissionsCounts() {
         <div className="stat-card-value">{counts.accepted}</div>
         <div className="stat-card-label">Accepted</div>
       </div>
+    </a>
+  );
+}
+
+// The number of active students, beside the Students card's icon (moved off
+// the dashboard's second row at the principal's request, migration 292).
+function ActiveStudentsCount({ isDemoAccount }) {
+  const [count, setCount] = useState(null);
+  useEffect(() => {
+    supabase.from('students').select('student_id', { count: 'exact', head: true })
+      .eq('status', 'active').eq('is_demo', !!isDemoAccount)
+      .then(({ count: n }) => setCount(n ?? 0));
+  }, [isDemoAccount]);
+  if (count == null) return null;
+  return (
+    <a href="/students" style={{ textDecoration: 'none', color: 'inherit', textAlign: 'center', minWidth: '4.5rem' }} title="Find a student">
+      <div className="stat-card-value">{count}</div>
+      <div className="stat-card-label">Active students</div>
     </a>
   );
 }
@@ -515,7 +533,9 @@ export default function Home() {
             accent={t.accent}
             description={t.description}
             items={t.items({ hasAccess, staffRoles })}
-            extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts /> : null}
+            extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts />
+              : t.key === 'students' && hasAccess('/students') ? <ActiveStudentsCount isDemoAccount={profile?.is_demo_account} />
+              : null}
           />
         ))}
       </div>
