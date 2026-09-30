@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 288). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 290). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -212,7 +212,7 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.2** One mark per student, per date, per period: present, late, absent or authorised absence. Saving again overwrites. \[DB\]
 - **FR-4.3** No register can be saved for a future date (Lagos time). Past dates are allowed after a confirmation. \[DB / Page\]
 - **FR-4.4** A late mark needs the minutes late (0–600). While the lesson is running, the box suggests the minutes since it started. \[DB range; Page requires it\]
-- **FR-4.5** Beside each student, the register shows their other marks today as coloured badges (M, L1–L6, OH, EP), and for subject classes their last grade. \[Page\]
+- **FR-4.5** Beside each student, the register shows their other marks today as coloured badges (M, L1–L6, OH, EP), and for subject classes their last grade. The last grades are hidden until the teacher presses "Show last grades", so they are not on the class's screen by default. \[Page\]
 - **FR-4.6** Changes and deletions of marks are logged permanently in Change History; taking a register is not. \[DB\]
 - **FR-4.7** Parents can read their own children's attendance; students cannot read attendance. \[DB\]
 
@@ -672,7 +672,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 
 **Setting homework**
 
-- **FR-17.3** Homework is set from the class register (/attendance, a Homework panel for classes the teacher can set it for) or from /homework. Each piece has a title, plain-text instructions, a deadline date, optionally the lesson it is due in (one of the class's lessons that day), and a grading system. \[Page\]
+- **FR-17.3** Homework is set from the class register (/attendance, a Homework panel for classes the teacher can set it for) or from /homework. Each piece has a title of at most 10 characters (so it fits the mark sheet; the database refuses a longer title on new homework or a changed title, migration 290), plain-text instructions, a deadline date, optionally the lesson it is due in (one of the class's lessons that day), and a grading system. \[Page\]
 - **FR-17.4** Setting, editing and marking are open to the class teacher, the teacher of any single lesson of the class, the Head of Department for the subject, and admins. \[DB\]
 - **FR-17.5** The subject, class code, year group and academic year are copied from the class, never taken from the page, so homework survives the class being removed at the year switch. \[DB\]
 - **FR-17.6** Once any grade is recorded, the grading system can't be changed and the homework can't be deleted, only withdrawn. \[DB\]
@@ -681,7 +681,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 **Grading systems**
 
 - **FR-17.8** Teachers pick from: Mark out of …, Percentage, A\*–U, 9–1, WAEC, Effort 1–4, Complete / Incomplete, or Not graded. Every system also accepts "Not handed in" and "Excused". Lookups holders edit the systems; a system is retired, never deleted, so old grades stay readable. \[DB\]
-- **FR-17.9** A grade must fit the system (a mark between 0 and the maximum, or one of its grades) and can only be recorded for a student in the class. \[DB\]
+- **FR-17.9** A grade must fit the system (a mark between 0 and the maximum, or one of its grades) and can only be recorded for a student in the class. A mark is converted to a grade from the subject's boundaries for the class's year group (11 out of 14 is 79%, a B). The database works the grade out and ignores any grade sent with a mark; a percentage between two bands takes the lower one, and changing a boundary later doesn't regrade saved marks (migration 289). \[DB\]
 
 **Who sees what**
 
@@ -698,6 +698,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 - **FR-17.12** Homework grades are never used by reports, transcripts, result sets or target grades. The report's own Homework judgement is still typed by the teacher. \[DB\]
 - **FR-17.13** A student can tick their own homework as done, and untick it, until a grade is released. It is the student's own note, not a hand-in or a grade. They can tick only homework set for their class, and the time is recorded by the database. The class's teachers, the Head of Department, SMT and admins see how many students ticked each homework on the homework list and the register's Homework panel, and each student's tick in the mark book; classmates, other staff and parents don't. \[DB\]
 - **FR-17.14** On the student's Homework page and timetable, colour shows where each piece stands: red for overdue or not handed in, amber for due today, green for ticked done, purple for graded, blue for due later. A ticked card shrinks to just the subject. Ticked homework no longer counts as due this week or overdue. \[Page\]
+- **FR-17.15** Each class on /homework has a mark sheet: one row per student and one column per homework due between two dates (the current term by default), each column headed by the title and due date. It shows each student's average of their number-marked homework with its grade from the subject's boundaries, how many were marked and how many weren't handed in, and downloads as CSV. It shows only what the person may already see. \[Page\]
 
 **Not built yet:** students handing work in online (the principal's answer was "not yet"), and notifications: setting homework or releasing marks sends no email or inbox message.
 
