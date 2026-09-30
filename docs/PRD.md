@@ -109,7 +109,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | P0-4 | The live Nova-T import refuses next year's file | Importing a planning-year file outside plan mode is blocked, with a message pointing to Next Year Setup | Not started |
 | P0-5 | Assessment managers can save subject settings, or the fields they can't save are read-only | No save on /admin/subject-settings silently does nothing | Not started |
 | P0-6 | An admission form fee is approved for 2026/27 and 2027/28 | The bursar records a form payment and the applicant moves to Form paid | Not started |
-| P0-7 | A tuckshop top-up records a matching pre-paid payment | After a top-up the parent's invoice doesn't show as unpaid | Not started |
+| P0-7 | A tuckshop top-up records a matching pre-paid payment | After a top-up the parent's invoice doesn't show as unpaid | Done |
 
 ### P1 — before September 2027
 
