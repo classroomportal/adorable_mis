@@ -11,9 +11,9 @@ A large amount of this schema was built directly against the live Supabase insta
 - `handle_negative_behaviour()` (a trigger on `behaviour_events`) and `notify_pastoral_on_negative_behaviour()` both existed live, undocumented, and the latter genuinely emails real staff — seeding demo data once accidentally emailed real people before this was discovered.
 - `detentions`, `register_alerts`, `house_assignments`, `behaviour_event_audit` all existed as real tables with real foreign keys, invisible until specifically queried for.
 
-Generated: 30 September 2026, after migration 274. Project ref: `drjtcegtucovhbyfdpbx` (Supabase project "adorable_mis").
+Generated: 30 September 2026, after migration 275. Project ref: `drjtcegtucovhbyfdpbx` (Supabase project "adorable_mis").
 
-**Full regeneration.** Every section below was re-introspected on 30 September 2026 and checked by md5 against the live database: each table and each function individually, then each whole section (views `d768692c3655578a2ea9527693948c50`, tables `01bc072a747bfb34e7af12c2a1e993b1`, functions `175e4d27152a3412a5316dc23e58d7f9`). 223 carriage returns in function bodies are preserved as stored (see `sql/generate_current_schema.sql`). The previous snapshot was dated 22 September 2026 (email section refreshed 27 September).
+**Full regeneration.** Every section below was re-introspected on 30 September 2026 (after migration 275) and checked by md5 against the live database: each table and each function individually, then each whole section (views `d768692c3655578a2ea9527693948c50`, tables `01bc072a747bfb34e7af12c2a1e993b1`, functions `175e4d27152a3412a5316dc23e58d7f9`). 223 carriage returns in function bodies are preserved as stored (see `sql/generate_current_schema.sql`). The previous snapshot was dated 22 September 2026 (email section refreshed 27 September).
 
 ## Quick facts
 
@@ -41,6 +41,7 @@ Generated: 30 September 2026, after migration 274. Project ref: `drjtcegtucovhby
   - **Tuckshop**: special sessions, hand-out saves, order schedule; tuckshop top-ups from recorded payments (273, `invoice_line_items.from_payment_id`).
   - **Backup mode**: `system_backup_mode`, `enforce_backup_mode()`, `start_backup_mode()` / `end_backup_mode()`.
   - **Parent calendar feed** (274): `parent_calendar_feeds`, `my_calendar_feed_token()`, `calendar_feed_events()`.
+  - **New students** (275): `school_office_insert_students` is the only insert route into `students`; the admin policy is split into `admin_read_students`, `admin_update_students` and `admin_delete_students`.
 
 ## Earlier notes
 

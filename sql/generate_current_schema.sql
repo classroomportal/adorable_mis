@@ -21,7 +21,7 @@
 --      section as written to the file. That is the only practical way to know
 --      a 130KB dump of RLS policies and function bodies copied faithfully:
 --
---        section  md5 as of 30 September 2026 (after migration 274)
+--        section  md5 as of 30 September 2026 (after migration 275)
 --        views    d768692c3655578a2ea9527693948c50
 --        tables   01bc072a747bfb34e7af12c2a1e993b1
 --        funcs    175e4d27152a3412a5316dc23e58d7f9
