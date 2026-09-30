@@ -20,7 +20,11 @@ const TABLES = {
   results: 'Assessment result',
   target_grades: 'Target grade',
   transcript_grades: 'Transcript grade',
+  // Outside reporting (migration 278), so left out unless asked for. RLS
+  // only returns these rows to SMT and admins.
+  homework_marks: 'Homework grade',
 };
+const ALL_WITH_HOMEWORK = '*';
 const ACTIONS = { INSERT: 'Entered', UPDATE: 'Changed', DELETE: 'Deleted' };
 // Bookkeeping columns that change on every save and say nothing about the grade.
 const IGNORED_FIELDS = new Set(['updated_at', 'updated_by', 'created_at', 'is_demo', 'grade', 'target_grade', 'score']);
@@ -48,6 +52,7 @@ function recordLabel(h) {
     return [row.result_type, row.week_start_date ? `week of ${formatUKDate(row.week_start_date)}` : null].filter(Boolean).join(', ');
   }
   if (h.table_name === 'transcript_grades') return `Year ${row.year_group}, term ${row.term_number}`;
+  if (h.table_name === 'homework_marks') return `homework #${row.homework_id}`;
   return '';
 }
 
@@ -113,7 +118,8 @@ function GradeHistoryInner() {
       .order('changed_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(LIMIT);
-    if (table) query = query.eq('table_name', table);
+    if (!table) query = query.neq('table_name', 'homework_marks');
+    else if (table !== ALL_WITH_HOMEWORK) query = query.eq('table_name', table);
     if (action) query = query.eq('action', action);
     if (staffFilter === 'none') query = query.is('changed_by_staff_id', null);
     else if (staffFilter) query = query.eq('changed_by_staff_id', Number(staffFilter));
@@ -206,7 +212,8 @@ function GradeHistoryInner() {
         <label>
           Type
           <select value={table} onChange={(e) => setTable(e.target.value)}>
-            <option value="">All grades</option>
+            <option value="">All grades except homework</option>
+            <option value={ALL_WITH_HOMEWORK}>All grades including homework</option>
             {Object.entries(TABLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
@@ -248,7 +255,7 @@ function GradeHistoryInner() {
                 {rows.map((h) => {
                   const others = otherChanges(h);
                   const claimed = claimedTeacher(h);
-                  const scoreChanged = h.table_name === 'results' && (h.old_score !== null || h.new_score !== null)
+                  const scoreChanged = ['results', 'homework_marks'].includes(h.table_name) && (h.old_score !== null || h.new_score !== null)
                     && String(h.old_score) !== String(h.new_score);
                   return (
                     <tr key={h.id} style={h.action === 'DELETE' ? { background: '#fdf1f1' } : undefined}>

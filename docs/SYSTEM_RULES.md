@@ -426,9 +426,9 @@ How the list behaves:
 - Assessment users can't delete.
 
 **Every grade change is logged permanently** in Grade History (215)
-- This covers every insert, change and delete of scores, target grades and transcript grades, with the old and new grade and who did it.
+- This covers every insert, change and delete of scores, target grades, transcript grades and homework grades, with the old and new grade and who did it.
 - Nobody can edit or delete the log, even from the database editor.
-- It is readable by SMT, assessment managers and admins at `/assessments/grade-history`.
+- It is readable by SMT, assessment managers and admins at `/assessments/grade-history`. Homework grades in it are readable by SMT and admins only, not assessment managers, and are hidden unless "including homework" is chosen (278).
 
 **Result sets**
 - A result set is a calendar event with the "result set" box ticked. SMT and admins manage the calendar (205).
@@ -462,6 +462,17 @@ How the list behaves:
 - Checkers, SMT and admin can approve a comment or send it back.
 - Only **checked** comments are printed on the written report.
 - The AI "draft a comment" and "check comments" buttons only use what the page sends. Only people with the relevant page can use them.
+
+**Homework** (278, 279; pilot from 30 Sept 2026, `/homework`)
+- **Pilot:** homework can only be set for classes an admin has switched on. At the moment that is 10_1/Ma and 11_1/Ma. Only admins have the `/homework` page until roles are granted it.
+- **Who can set, edit and mark it:** the class teacher, the teacher of any single lesson of the class, the Head of Department for the subject, and admins.
+- **Setting it:** each piece of homework has a title, instructions (plain text), a deadline (a date, and optionally the lesson it's due in, which must be one of the class's lessons that day) and a grading system: Mark out of …, Percentage, A*–U, 9–1, WAEC, Effort 1–4, Complete / Incomplete or Not graded. Any grading system also accepts "Not handed in" and "Excused".
+- **Grades:** a grade must fit the grading system (a mark between 0 and the maximum, or one of the list's grades). A grade can only be recorded for a student in the class. Once any grade is recorded, the grading system can't be changed and the homework can't be deleted, only withdrawn.
+- **Who sees grades:** the class's teachers, the Head of Department, SMT and admins. Other staff (mentors, pastoral, assessment managers) can see what homework was set but not the grades.
+- **Students** see their classes' homework on their timetable (on the lesson it's due in) and on a Homework page laid out by day. They see their **own** grade and comment only after the teacher releases the marks, and only for the current school year.
+- **Parents** see nothing about homework.
+- **Not part of reporting:** homework grades are never used by reports, transcripts, result sets or target grades. The report's own Homework judgement is still typed by the teacher.
+- **No notifications:** setting homework or releasing marks sends no email or inbox message.
 
 **Certificates:** these are behaviour-points certificates. See the gap in [§14](#14-known-gaps-and-inconsistencies-found-while-writing-this).
 

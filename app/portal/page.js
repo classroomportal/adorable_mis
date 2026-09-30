@@ -11,6 +11,12 @@ import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf
 import { useHashView, DashboardTile, DashboardBack } from '../components/Dashboard';
 import { closingWarning } from '../../lib/tuckshopSchedule';
 import BehaviourPhoto from '../components/BehaviourPhoto';
+import { HomeworkChip, HomeworkDetail } from '../components/HomeworkChip';
+import { schoolToday } from '../../lib/schoolTime';
+import {
+  addDays, weekStartOf, defaultWeekStart, shortDate, loadMyHomework,
+  placeHomeworkInCells, groupHomeworkByDay, homeworkStatus,
+} from '../../lib/homework';
 
 
 // Which of these events have a picture this viewer may see. Row-level
@@ -24,6 +30,42 @@ async function loadVisiblePhotoIds(events) {
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+// Previous / this / next week, shared by the timetable and the Homework grid.
+function WeekPicker({ weekStart, onChange }) {
+  const thisWeek = defaultWeekStart();
+  return (
+    <div className="hw-week-picker no-print">
+      <button type="button" className="secondary" onClick={() => onChange(addDays(weekStart, -7))} aria-label="Previous week">←</button>
+      <span>Week of {shortDate(weekStart)}</span>
+      <button type="button" className="secondary" onClick={() => onChange(addDays(weekStart, 7))} aria-label="Next week">→</button>
+      {weekStart !== thisWeek && (
+        <button type="button" className="secondary" onClick={() => onChange(thisWeek)}>This week</button>
+      )}
+    </div>
+  );
+}
+
+// One homework as a card on the Homework grid or in its lists.
+function HomeworkCard({ hw, selected, onSelect, showDate }) {
+  const status = homeworkStatus(hw);
+  return (
+    <button
+      type="button"
+      className={`hw-card hw-${status.key}${selected ? ' hw-card-selected' : ''}`}
+      onClick={() => onSelect(selected ? null : hw.homework_id)}
+      aria-expanded={selected}
+    >
+      <span className="hw-card-subject">{hw.subject_name}</span>
+      <span className="hw-card-title">{hw.title}</span>
+      <span className="hw-card-meta">
+        {showDate ? `${shortDate(hw.due_on)} · ` : ''}
+        {hw.due_period != null ? `Lesson ${hw.due_period}` : 'End of day'}
+      </span>
+      <span className={`hw-status hw-${status.key}`}>{status.label}</span>
+    </button>
+  );
+}
 
 function PortalInner() {
   const { profile } = useAuth();
@@ -54,6 +96,14 @@ function PortalInner() {
   // Warning in the last hours before a tuckshop ordering window closes.
   const [tuckshopWarning, setTuckshopWarning] = useState(null);
   const [view, openView] = useHashView();
+
+  // Homework (migration 278): only shown once one of the student's classes
+  // has it switched on (homework_classes), so nothing changes for anyone else.
+  const [homeworkOn, setHomeworkOn] = useState(false);
+  const [weekStart, setWeekStart] = useState(defaultWeekStart());
+  const [weekHomework, setWeekHomework] = useState([]);
+  const [recentHomework, setRecentHomework] = useState([]); // last four weeks up to the end of this week
+  const [selectedHw, setSelectedHw] = useState(null);
 
   async function load() {
     if (!studentId) return;
@@ -116,7 +166,13 @@ function PortalInner() {
         .from('student_class')
         .select(`classes(class_id, room, class_code, subjects(subject_name, display_name, subject_code), staff(first_name, last_name), timetable_slots(${LESSON_COLUMNS}))`)
         .eq('student_id', studentId);
-      setTimetableClasses((data || []).map((row) => row.classes).filter(Boolean));
+      const classes = (data || []).map((row) => row.classes).filter(Boolean);
+      setTimetableClasses(classes);
+      const classIds = classes.map((c) => c.class_id);
+      const { data: hwClasses } = classIds.length
+        ? await supabase.from('homework_classes').select('class_id').in('class_id', classIds)
+        : { data: [] };
+      setHomeworkOn((hwClasses || []).length > 0);
       const { data: oh } = await supabase.from('other_half_timetable').select('*').eq('student_id', studentId);
       setOtherHalf(oh || []);
       setTimetableLoading(false);
@@ -135,6 +191,17 @@ function PortalInner() {
   }, [studentId]);
 
   useEffect(() => { load(); }, [studentId]);
+
+  useEffect(() => {
+    if (!homeworkOn) return;
+    loadMyHomework(weekStart, addDays(weekStart, 6)).then(({ homework }) => setWeekHomework(homework));
+  }, [homeworkOn, weekStart]);
+
+  useEffect(() => {
+    if (!homeworkOn) return;
+    const today = schoolToday();
+    loadMyHomework(addDays(today, -28), addDays(weekStartOf(today), 6)).then(({ homework }) => setRecentHomework(homework));
+  }, [homeworkOn]);
 
   function appealFor(eventId) {
     const existing = appeals.find((a) => a.event_id === eventId);
@@ -175,6 +242,7 @@ function PortalInner() {
     (c.timetable_slots || []).forEach((slot) => {
       const key = `${slot.day_of_week}-${slot.period_number}`;
       const entry = {
+        classId: c.class_id,
         subject: c.subjects?.display_name || c.subjects?.subject_name,
         room: lessonRoom(slot, c),
         teacher: lessonTeacher(slot, c),
@@ -192,11 +260,26 @@ function PortalInner() {
     time: formatTimeRange(r.start_time, r.end_time),
   }));
 
-  function renderTimetableGrid() {
+  // Homework goes on the lesson it's due in; homework whose class has no lesson
+  // that day is listed under the day's heading.
+  const unplacedHomework = homeworkOn ? placeHomeworkInCells(cellMap, weekHomework, periods) : {};
+  const selectedHomework = [...weekHomework, ...recentHomework].find((h) => h.homework_id === selectedHw) || null;
+
+  function renderTimetableGrid({ forPrint = false } = {}) {
+    const withHomework = homeworkOn && !forPrint;
     return (
       <div className="timetable-grid">
         <div className="tt-head"></div>
-        {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
+        {DAYS.map((d, i) => (
+          <div key={d} className="tt-head">
+            {withHomework ? shortDate(addDays(weekStart, i)) : d}
+            {withHomework && (unplacedHomework[d] || []).map((hw) => (
+              <div key={hw.homework_id} style={{ marginTop: '0.25rem' }}>
+                <HomeworkChip hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} />
+              </div>
+            ))}
+          </div>
+        ))}
         {periods.map((p) => (
           <Fragment key={p.period_number}>
             <div className="tt-cell tt-period-label">{p.period_name}</div>
@@ -210,6 +293,11 @@ function PortalInner() {
                           {e.subject}<br />
                           <span style={{ opacity: 0.6 }}>{e.room}{e.teacher ? ` · ${e.teacher}` : ''}</span><br />
                           <span style={{ opacity: 0.6, fontSize: '0.85em' }}>{e.time}</span>
+                          {withHomework && (e.homework || []).map((hw) => (
+                            <div key={hw.homework_id} style={{ marginTop: '0.25rem' }}>
+                              <HomeworkChip hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} />
+                            </div>
+                          ))}
                         </div>
                       ))
                     : ''}
@@ -228,7 +316,18 @@ function PortalInner() {
   const firstName = studentName.split(' ')[0];
 
   // Sections that open on this page; the other tiles link to their own pages.
-  const VIEWS = ['timetable', 'assessment', 'behaviour'];
+  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour'];
+
+  // Homework tile badge and lists.
+  const today = schoolToday();
+  const thisWeekEnd = addDays(weekStartOf(today), 6);
+  const dueThisWeek = recentHomework.filter((h) => !h.marked && h.due_on >= today && h.due_on <= thisWeekEnd).length;
+  const overdueEarlier = recentHomework.filter((h) => !h.marked && h.due_on < today && h.due_on < weekStart);
+  const recentlyGraded = recentHomework.filter((h) => h.marked).sort((a, b) => b.due_on.localeCompare(a.due_on));
+  const homeworkByDay = groupHomeworkByDay(weekHomework, weekStart);
+  const weekendHomework = [...homeworkByDay[addDays(weekStart, 5)], ...homeworkByDay[addDays(weekStart, 6)]];
+  const gridDays = DAYS.map((d, i) => ({ key: d, date: addDays(weekStart, i), items: homeworkByDay[addDays(weekStart, i)] }));
+  if (weekendHomework.length) gridDays.push({ key: 'Weekend', date: addDays(weekStart, 5), items: weekendHomework, weekend: true });
   const activeView = VIEWS.includes(view) ? view : null;
 
   return (
@@ -255,6 +354,12 @@ function PortalInner() {
       {activeView === null ? (
         <div className="dashboard-tiles">
           <DashboardTile label="Timetable" icon="🗓️" sub="My week" onClick={() => openView('timetable')} />
+          {homeworkOn && (
+            <DashboardTile
+              label="Homework" icon="📘" onClick={() => openView('homework')}
+              sub={dueThisWeek === 0 ? 'Nothing due this week' : `${dueThisWeek} due this week`}
+            />
+          )}
           <DashboardTile
             label="The Other Half" icon="🎭" href="/portal/other-half"
             sub={otherHalf.length === 0 ? 'Choose activities' : `${otherHalf.length} activit${otherHalf.length === 1 ? 'y' : 'ies'} chosen`}
@@ -290,8 +395,53 @@ function PortalInner() {
         ) : timetableClasses.length === 0 ? (
           <p>No timetable found yet.</p>
         ) : (
-          <div className="table-scroll">
-            {renderTimetableGrid()}
+          <>
+            {homeworkOn && <WeekPicker weekStart={weekStart} onChange={(w) => { setWeekStart(w); setSelectedHw(null); }} />}
+            <div className="table-scroll">
+              {renderTimetableGrid()}
+            </div>
+            {homeworkOn && <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} />}
+          </>
+        )}
+      </div>
+      )}
+
+      {activeView === 'homework' && (
+      <div className="card">
+        <h2 style={{ margin: 0 }}>My Homework</h2>
+        <WeekPicker weekStart={weekStart} onChange={(w) => { setWeekStart(w); setSelectedHw(null); }} />
+        <div className={`hw-grid${gridDays.length > 5 ? ' hw-grid-6' : ''}`}>
+          {gridDays.map((d) => (
+            <div key={d.key} className={`hw-day${!d.weekend && d.date === today ? ' hw-today' : ''}`}>
+              <div className="hw-day-head">{d.weekend ? 'Weekend' : shortDate(d.date)}</div>
+              {d.items.length === 0 ? (
+                <div className="hw-nothing">Nothing due</div>
+              ) : d.items.map((hw) => (
+                <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate={d.weekend} />
+              ))}
+            </div>
+          ))}
+        </div>
+        <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} />
+
+        {overdueEarlier.length > 0 && (
+          <>
+            <h3>Overdue from earlier weeks</h3>
+            <div className="hw-list">
+              {overdueEarlier.map((hw) => (
+                <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate />
+              ))}
+            </div>
+          </>
+        )}
+        <h3>Recently graded</h3>
+        {recentlyGraded.length === 0 ? (
+          <p style={{ color: 'var(--ink-soft)' }}>No grades from the last four weeks yet.</p>
+        ) : (
+          <div className="hw-list">
+            {recentlyGraded.map((hw) => (
+              <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate />
+            ))}
           </div>
         )}
       </div>
@@ -300,7 +450,7 @@ function PortalInner() {
       {timetableClasses.length > 0 && (
         <div className="timetable-print">
           <h2>{studentName}</h2>
-          {renderTimetableGrid()}
+          {renderTimetableGrid({ forPrint: true })}
         </div>
       )}
 
