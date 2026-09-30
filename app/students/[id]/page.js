@@ -191,17 +191,11 @@ function StudentDetail() {
     setEditForm(s);
     if (!s) { setLoading(false); return; }
 
-    if (s.family_id) {
-      const { data: sibs } = await supabase
-        .from('students')
-        .select('student_id, first_name, last_name, year_group, form_class')
-        .eq('family_id', s.family_id)
-        .eq('status', 'active')
-        .neq('student_id', id);
-      setSiblings(sibs || []);
-    } else {
-      setSiblings([]);
-    }
+    // Brothers and sisters still at the school, found through shared parents
+    // (student_siblings, migration 267: student_parent itself isn't readable
+    // by every member of staff).
+    const { data: sibs } = await supabase.rpc('student_siblings', { p_student_id: s.student_id });
+    setSiblings(sibs || []);
 
     const { data: p } = await supabase
       .from('student_parent')
@@ -699,7 +693,6 @@ function StudentDetail() {
     { key: 'core', label: 'Core Data', icon: '🪪', sub: student.dob ? `Born ${formatUKDate(student.dob)}` : 'Personal details' },
     canSeeMedical && { key: 'medical', label: 'Medical', icon: '🩺', sub: 'Health record' },
     { key: 'parents', label: 'Parents / Guardians', icon: '👪', sub: parents.length === 0 ? 'None on record' : plural(parents.length, 'contact') },
-    siblings.length > 0 && { key: 'siblings', label: 'Siblings', icon: '🧒', sub: `${plural(siblings.length, 'sibling')} at school` },
     { key: 'timetable', label: 'Timetable', icon: '🗓️', sub: `${student.first_name}'s week` },
     { key: 'blocks', label: 'Curriculum Blocks', icon: '🧩', sub: blocks.length === 0 ? 'None set up' : `${allocatedBlocks} of ${blocks.length} allocated` },
     { key: 'attendance', label: 'Attendance', icon: '📊', sub: attendancePct === null ? 'No data yet' : `${attendancePct}% this year` },
@@ -787,6 +780,16 @@ function StudentDetail() {
               <p><strong>DOB:</strong> {formatUKDate(student.dob)}</p>
               <p><strong>Year group:</strong> {student.year_group} &nbsp; <strong>Form:</strong> {student.form_class}</p>
               <p><strong>Status:</strong> {student.status}{student.leaving_date ? ` (leaving date: ${formatUKDate(student.leaving_date)})` : ''}</p>
+              <p>
+                <strong>Siblings in school:</strong>{' '}
+                {siblings.length === 0 ? 'None' : siblings.map((sib, i) => (
+                  <Fragment key={sib.student_id}>
+                    {i > 0 && ', '}
+                    <a href={`/students/${sib.student_id}`}>{sib.first_name} {sib.last_name}</a>
+                    {' '}({[sib.year_group && `Year ${sib.year_group}`, sib.form_class].filter(Boolean).join(', ')})
+                  </Fragment>
+                ))}
+              </p>
 
               {fullView && (
                 <>
@@ -970,25 +973,6 @@ function StudentDetail() {
 
       {canSeeMedical && activeView === 'medical' && (
         <MedicalRecordCard studentId={student.student_id} canEdit={canEditMedical} />
-      )}
-
-      {activeView === 'siblings' && (
-        <Section title="Siblings">
-          <div className="table-scroll">
-            <table>
-              <thead><tr><th>Name</th><th>Year</th><th>Form</th></tr></thead>
-              <tbody>
-                {siblings.map((sib) => (
-                  <tr key={sib.student_id} className="student-link" onClick={() => window.location.href = `/students/${sib.student_id}`}>
-                    <td>{sib.first_name} {sib.last_name}</td>
-                    <td>{sib.year_group}</td>
-                    <td>{sib.form_class}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
       )}
 
       {activeView === 'parents' && (
