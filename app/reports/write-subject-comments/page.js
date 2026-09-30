@@ -12,6 +12,7 @@ import {
   scopeToReportPeriod, inReportPeriod,
 } from '../../../lib/reportWriting';
 import { subjectFacts } from '../../../lib/reportFacts';
+import { loadHomeworkReportSummary, homeworkSummaryLabel, suggestedHomeworkJudgement } from '../../../lib/homework';
 import GradeChip from '../../components/GradeChip';
 import GradeSparkline from '../../components/GradeSparkline';
 
@@ -40,6 +41,8 @@ function WriteSubjectCommentsInner() {
   // Grades this year in this subject: { points, weeks: [{ label, date }] (the last few, shown as columns),
   // byStudent: student_id -> { results: [{ ...result, label }], target } }
   const [grades, setGrades] = useState(null);
+  // The term's homework per student in this subject, from any class (migration 291).
+  const [homework, setHomework] = useState({});
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [generatingFor, setGeneratingFor] = useState(null); // student_id currently generating, or null
   const [status, setStatus] = useState(null);
@@ -118,6 +121,17 @@ function WriteSubjectCommentsInner() {
     for (const s of studentList) {
       if (!nextRows[s.student_id]) nextRows[s.student_id] = { ...EMPTY_ROW };
     }
+    // Homework marks this term suggest the Homework judgement where the
+    // teacher hasn't chosen one yet; it is saved only when they save.
+    const hw = await loadHomeworkReportSummary(periodId, ids, selectedClass.subject_id);
+    for (const s of studentList) {
+      const row = nextRows[s.student_id];
+      const suggestion = suggestedHomeworkJudgement(hw[`${s.student_id}:${selectedClass.subject_id}`]);
+      if (row.status === 'draft' && !row.homework_grade && suggestion) {
+        nextRows[s.student_id] = { ...row, homework_grade: suggestion, homework_suggested: true };
+      }
+    }
+    setHomework(hw);
     setRows(nextRows);
 
     // Every grade this year in this subject, and the target, so the teacher
@@ -197,6 +211,7 @@ function WriteSubjectCommentsInner() {
       effortGrade: row.effort_grade,
       presentationGrade: row.presentation_grade,
       homeworkGrade: row.homework_grade,
+      homeworkMarks: homeworkSummaryLabel(homework[`${student.student_id}:${selectedClass?.subject_id}`]),
       targetGrade: g.target,
       gradeHistory: g.results.map((r) => ({ label: r.label, grade: r.grade, isExam: isExamResult(r) })),
       bestGrade: summary && `${summary.best.grade} (${summary.best.label})`,
@@ -304,6 +319,7 @@ function WriteSubjectCommentsInner() {
                   )}
 
                   <GradesThisYear grades={grades} studentId={s.student_id} />
+                  <HomeworkThisTerm summary={homework[`${s.student_id}:${selectedClass.subject_id}`]} suggested={row.homework_suggested} />
 
                   <div className="report-judgements">
                     {JUDGEMENTS.map((j) => (
@@ -311,7 +327,10 @@ function WriteSubjectCommentsInner() {
                         {j.label}
                         <select
                           value={row[j.column] || ''}
-                          onChange={(e) => updateField(s.student_id, j.column, e.target.value)}
+                          onChange={(e) => {
+                            updateField(s.student_id, j.column, e.target.value);
+                            if (j.column === 'homework_grade') updateField(s.student_id, 'homework_suggested', false);
+                          }}
                           disabled={locked}
                         >
                           <option value="">— Select —</option>
@@ -369,6 +388,20 @@ function WriteSubjectCommentsInner() {
         <p style={{ color: '#666' }}>No students are linked to this class yet.</p>
       )}
     </div>
+  );
+}
+
+// The term's homework marks in this subject, from any class the student has
+// been in (migration 291). The printed report shows the grade only.
+function HomeworkThisTerm({ summary, suggested }) {
+  if (!summary) return null;
+  return (
+    <p style={{ fontSize: '0.85rem', margin: '0.25rem 0 0.5rem' }}>
+      <span style={{ color: '#5b6472' }}>Homework this term:</span>{' '}
+      <strong>{homeworkSummaryLabel(summary)}</strong>
+      {summary.grade && <span style={{ color: '#5b6472' }}> · the report will show Homework: {summary.grade}</span>}
+      {suggested && <span style={{ color: '#5b6472' }}> · Homework judgement suggested from these marks; change it if needed</span>}
+    </p>
   );
 }
 

@@ -121,6 +121,15 @@ not deleted or have its values removed, so old grades stay readable.
 
 ## Decision 3: homework grades are kept apart from reporting
 
+> **Changed by migration 291 (the principal, 30 Sept 2026).** Homework marks
+> now follow the student and feed the end-of-term written report, through
+> `homework_report_summary()` only. The report writer shows the term's
+> average, grade and counts and pre-fills the Homework judgement from it; the
+> printed report shows the grade only (never the percentage); a subject with
+> no marks keeps the teacher's judgement. Transcripts, result sets, target
+> grades and `results` still never read homework. See "Changes after the
+> pilot started" at the end. The text below is the original decision.
+
 - Homework marks live in their own table, `homework_marks`. They are **never**
   written to `results`, never tagged to a result set (`calendar_events`), and
   never read by `lib/reportWriting.js`, `lib/generateWrittenReport.js`,
@@ -515,3 +524,25 @@ students find out. This design adds nothing to `queue_workspace_email()` or
    it will need a private storage bucket and its own design pass (files from
    students raise safeguarding questions). Nothing above has to change for
    it.
+
+## Changes after the pilot started (the principal, 30 September 2026)
+
+- **Marks follow the student (291).** A student who changes class or teacher
+  keeps their marks in view: whoever teaches them in that subject now can read
+  all their homework marks in it for the current school year, from any class.
+  The teacher who gave the marks, the Head of Department, SMT and admins still
+  see them. Students already saw their own released marks after a move.
+- **Reports use homework (291), replacing decision 5.** While writing a
+  subject comment the teacher sees each student's homework for the report
+  period's term in that subject (any class): average of number-marked work,
+  its grade from the subject's boundaries, how many were marked and how many
+  weren't handed in. The Homework judgement is pre-filled from the average
+  (80%+ Excellent, 60–79 Good, 40–59 Satisfactory, under 40 Needs
+  Improvement) and the teacher can change it. Checkers assigned to the period
+  see the same. All marks recorded for homework due in the term count,
+  released or not; Not handed in is counted, not averaged as zero.
+- **The printed report shows the grade only**, e.g. "Homework: B", in place
+  of the judgement where there are homework marks; otherwise the teacher's
+  judgement. The principal first chose to print the average too, then
+  changed it to the grade alone. This is the one thing parents now see from
+  homework (decision 1 otherwise stands).
