@@ -92,6 +92,57 @@ function StudentsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, yearFilter, formFilter, statusFilter, leftYearFilter]);
 
+  // A short list of matching names under the search box, like the bursar's
+  // student pickers: pick one to open that student. It follows the Status,
+  // Year and Form filters and a houseparent's house, and skips photos so it
+  // stays quick.
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const latestSuggest = useRef(0);
+  useEffect(() => {
+    const term = search.replace(/[,()%*\\]/g, '').trim();
+    if (term.length < 2) { setSuggestions([]); return undefined; }
+    const timer = setTimeout(async () => {
+      const requestId = ++latestSuggest.current;
+      let q = supabase.from('students')
+        .select('student_id, first_name, last_name, form_class, year_group, status')
+        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
+        .order('last_name').order('first_name')
+        .limit(8);
+      if (statusFilter === 'active') q = q.eq('status', 'active');
+      else if (statusFilter) q = q.neq('status', 'active');
+      if (yearFilter) q = q.eq('year_group', Number(yearFilter));
+      if (formFilter) q = q.eq('form_class', formFilter);
+      if (activeHouseScope) q = q.eq('boarding_house', activeHouseScope);
+      const { data } = await q;
+      if (requestId !== latestSuggest.current) return;
+      setSuggestions(data || []);
+      setHighlighted(-1);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [search, statusFilter, yearFilter, formFilter, activeHouseScope]);
+
+  function openStudent(s) {
+    window.location.href = `/students/${s.student_id}`;
+  }
+
+  function onSearchKeyDown(e) {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlighted((h) => (h + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlighted((h) => (h <= 0 ? suggestions.length - 1 : h - 1));
+    } else if (e.key === 'Enter' && highlighted >= 0) {
+      e.preventDefault();
+      openStudent(suggestions[highlighted]);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  }
+
   async function loadStudents() {
     // Only the newest search may fill the list: a slow earlier one (fewer
     // letters, more students) must not land on top of it.
@@ -178,7 +229,55 @@ function StudentsList() {
       <form onSubmit={(e) => { e.preventDefault(); loadStudents(); }}>
         <label>
           Search name
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Wilson" />
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setShowSuggestions(false)}
+              onKeyDown={onSearchKeyDown}
+              placeholder="e.g. Wilson"
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={showSuggestions && suggestions.length > 0}
+              aria-controls="student-suggestions"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul
+                id="student-suggestions"
+                role="listbox"
+                style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
+                  margin: '0.25rem 0 0', padding: 0, listStyle: 'none',
+                  background: '#fff', border: '1px solid #d5dce8', borderRadius: '8px',
+                  boxShadow: '0 6px 18px rgba(20, 35, 70, 0.12)', overflow: 'hidden',
+                  minWidth: '16rem',
+                }}
+              >
+                {suggestions.map((s, i) => (
+                  <li
+                    key={s.student_id}
+                    role="option"
+                    aria-selected={i === highlighted}
+                    // mousedown, not click: the input's blur would close the list first.
+                    onMouseDown={(e) => { e.preventDefault(); openStudent(s); }}
+                    onMouseEnter={() => setHighlighted(i)}
+                    style={{
+                      padding: '0.5rem 0.75rem', cursor: 'pointer', fontWeight: 400,
+                      background: i === highlighted ? '#eef3f8' : 'transparent',
+                      borderTop: i === 0 ? 'none' : '1px solid #eef1f6',
+                    }}
+                  >
+                    {s.first_name} {s.last_name}
+                    <span style={{ color: '#8492a6' }}>
+                      {' '}· {s.form_class || 'No form'} · Year {s.year_group}{s.status !== 'active' ? ' · Left' : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </label>
         <label>
           Year group
