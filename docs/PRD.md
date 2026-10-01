@@ -85,7 +85,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | Registers | Live | Any staff marks any register; 15-minute not-done alerts | 1 |
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks; a student group can be placed in an activity by the school and locked, until unlocked or a date | 5 |
 | Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile; pictures on positive events only | 5 |
-| Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017 | 3 |
+| Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017; assessment managers delete a wrong score from the student's profile | 3 |
 | Homework | Years 10–11 | Set from the register or /homework, with files and links; marks converted to grades that follow the student across classes; the term's homework suggests the report's Homework judgement and prints as a grade on the written report; a class mark sheet over any dates; a student view for staff; late joiners don't inherit earlier homework; on students' timetables, where students tick it done; every Year 10 and 11 teaching group (not mentor groups or Prep), for their teachers, Heads of Department and SMT | 0 |
 | Reports and transcripts | Live | Draft→checked comments with AI help; KS3 and KS4/5 transcripts | 2 |
 | Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists; the bursar adds paid top-ups from recorded payments | 3 |

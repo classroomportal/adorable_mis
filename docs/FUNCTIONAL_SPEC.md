@@ -344,7 +344,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.3** A teacher enters or changes scores only for students in their own classes, in that class's subject. Assessment managers, assessment users and admins can enter any score. \[DB\]
 - **FR-7.4** Scores are percentages (0–100). The grade is worked out from the subject's boundaries for that year group when the score is typed, and saved with it; later boundary changes don't regrade saved scores. \[Page\]
 - **FR-7.5** One score per student, per subject, per result set. Types: short test, teacher assessment, exam grade (plus imported term exams). \[DB\]
-- **FR-7.6** The class teacher, a Head of Department for their department's subjects, and assessment managers and admins can delete a score. Assessment users can't. \[DB\]
+- **FR-7.6** The class teacher, a Head of Department for their department's subjects, and assessment managers and admins can delete a score. Assessment users can't. Scores are deleted on Enter Results, or by assessment managers and admins with the Delete button beside each score on a student's profile (Results tab), with a confirmation. \[DB / Page\]
 - **FR-7.7** Every insert, change and delete of a score, target or transcript grade is logged permanently in Grade History, with old and new grade and who did it. Nobody can edit the log. SMT, assessment managers and admins read it at /assessments/grade-history. \[DB\]
 
 **Boundaries, subjects and targets**
