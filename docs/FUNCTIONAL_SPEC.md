@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 300). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 302). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -250,6 +250,13 @@ The Other Half (OH) is the after-lessons activity programme, run entirely in For
 - **FR-5.7** A student can choose, change or clear a choice only when all of these hold: it is Evening Prep now (the EP bell time for today, currently 19:00–21:00 Mon–Fri); choices are open for the term and the closing time hasn't passed; the activity is active; the student is active and in one of its year groups; and the activity isn't full. \[DB\]
 - **FR-5.8** One choice per student per weekday per term; choosing again replaces it. Two students can't both take the last place. \[DB\]
 - **FR-5.9** Staff with OH management can place, move or remove any student's choice at any time at /other-half/choices, and can go over capacity or outside the year groups after an "anyway?" warning. \[DB / Page warning\]
+
+**Placed and locked by the school (migration 302)**
+
+- **FR-5.14** From a student group's page, SMT, pastoral staff, the school office, the Other Half coordinator and admins can put every current student in the group into one activity. It replaces each student's choice for that day only. A full activity, one outside a student's year group, or replacing existing choices gets an "anyway?" warning, then goes ahead. \[DB / Page warning\]
+- **FR-5.15** The placement can be locked until staff unlock it, locked until a date (that day included), or not locked. While a lock is in force the student can't change or clear that day, even during Evening Prep with choices open. Who locked it and when are recorded by the database. \[DB\]
+- **FR-5.16** When a lock ends (its date passes or staff unlock one student or the whole group), the student stays in the activity and may change it at Evening Prep while choices are open. \[DB\]
+- **FR-5.17** Students and parents see "Placed by the school" and the end date, if any, never why. The group's page shows each student's activity per day and its lock. \[Page\]
 
 **Registers and absentees**
 
@@ -722,7 +729,7 @@ SMT, pastoral staff and the school office make groups of students for activities
 
 **Groups built from a rule**
 
-- **FR-18.8** At /groups/build the person building chooses a rule and every setting each time (the principal: build settings must be editable). Negative behaviour: negative points between two chosen dates at or below a chosen threshold, withdrawn events not counted. Below target: latest grade below target in at least a chosen number of subjects, counting only results from a chosen date, compared by grade points and WAEC only against WAEC. Both can be narrowed by year, form and boarding house. \[DB\]
+- **FR-18.8** At /groups/build the person building chooses a rule and every setting each time (the principal: build settings must be editable). Negative behaviour: negative points between two chosen dates at or below a chosen threshold, withdrawn events not counted. Below target: latest grade below target in at least a chosen number of subjects, counting only results from a chosen date, compared by grade points and WAEC only against WAEC. Positive behaviour (migration 301): positive points between two chosen dates at or above a chosen total, withdrawn events not counted. Term exam average (301): the student's average percentage across their subjects in one chosen term exam, below or at/above a chosen mark; marks without a score are skipped, and last year's exams can be chosen, each student judged on the exam they sat. Attendance (301): present or late as a percentage of all register marks between two chosen dates, below a chosen percentage, leaving out students with fewer than a chosen number of marks. A subject (302): in one chosen subject, the latest grade since a chosen date below a chosen grade or below the student's target, compared by grade points and WAEC only against WAEC. All six can be narrowed by year, form and boarding house. A group can then be placed in an Other Half activity and locked (FR-5.14 to FR-5.17). \[DB\]
 - **FR-18.9** "Show students" lists who matches today, with the reason; the builder can untick students before saving. Only students the rule picks can be saved, and a group can't claim a rule it wasn't built from. \[DB\]
 - **FR-18.10** A built group records its rule, settings and date, is always staff-only, and never changes by itself; students can still be added or taken out by hand. "Build again" starts a new dated group from the same settings, which can be changed first. \[DB\]
 

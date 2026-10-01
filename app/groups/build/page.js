@@ -7,9 +7,9 @@ import { useAuth } from '../../../lib/AuthContext';
 import { schoolToday } from '../../../lib/schoolTime';
 import { GROUP_KINDS, GROUP_RULES, describeRule, canManageGroups } from '../../../lib/studentGroups';
 
-// Build a student group from a rule (migration 285). Every setting is chosen
-// here, each time: the dates, the threshold, the number of subjects and which
-// years, forms and houses (the principal: "system build parameters must be
+// Build a student group from a rule (migrations 285, 301, 302). Every setting is
+// chosen here, each time: the dates, thresholds, percentages, the exam, the
+// number of subjects and which years, forms and houses (the principal: "system build parameters must be
 // editable"). "Show students" asks the database who matches today; untick
 // anyone to leave out, then save it as a dated, staff-only group.
 // /groups/build?from=<group_id> starts from an earlier group's settings.
@@ -36,7 +36,7 @@ function BuildInner() {
 
   const [rule, setRule] = useState('negative_behaviour');
   const [settings, setSettings] = useState(null);
-  const [lookups, setLookups] = useState({ years: [], forms: [], houses: [] });
+  const [lookups, setLookups] = useState({ years: [], forms: [], houses: [], exams: [], subjects: [], grades: [] });
   const [preview, setPreview] = useState(null); // rows from student_group_rule_preview
   const [previewedFor, setPreviewedFor] = useState(null); // JSON of the settings the preview used
   const [ticked, setTicked] = useState(new Set());
@@ -47,24 +47,42 @@ function BuildInner() {
   const [error, setError] = useState(null);
 
   // Starting values: this term so far, the current school year, three
-  // subjects, −6 points. All of them can be changed before building.
+  // subjects, −6 / +40 points, the latest term exam with marks below 50%, and
+  // attendance below 90% over at least 20 sessions. All of them can be
+  // changed before building.
   useEffect(() => {
     (async () => {
       const today = schoolToday();
-      const [{ data: term }, { data: year }, { data: pupils }, { data: houses }] = await Promise.all([
+      const [{ data: term }, { data: year }, { data: pupils }, { data: houses }, { data: examSets }, { data: subjects }, { data: grades }] = await Promise.all([
         supabase.from('terms').select('start_date').lte('start_date', today).gte('end_date', today).maybeSingle(),
         supabase.from('academic_years').select('start_date').eq('status', 'current').maybeSingle(),
         supabase.from('students').select('year_group, form_class').eq('status', 'active'),
         supabase.from('boarding_houses').select('name').order('name'),
+        // Each term's exams are one set per year group on the same date (migration 246).
+        supabase.from('calendar_events').select('event_date, exam_term').not('exam_term', 'is', null).lte('event_date', today).order('event_date', { ascending: false }),
+        supabase.from('subjects').select('subject_id, subject_name, display_name').order('subject_name'),
+        supabase.from('grade_scale').select('grade, points').order('points', { ascending: false }),
       ]);
+      const exams = [];
+      (examSets || []).forEach((e) => {
+        if (!exams.some((x) => x.value === e.event_date)) {
+          exams.push({ value: e.event_date, label: `Term ${e.exam_term} exam, ${new Date(`${e.event_date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}` });
+        }
+      });
       setLookups({
         years: [...new Set((pupils || []).map((s) => s.year_group).filter((y) => y != null))].sort((a, b) => a - b).map((y) => ({ value: String(y), label: `Year ${y}` })),
         forms: [...new Set((pupils || []).map((s) => s.form_class).filter(Boolean))].sort().map((f) => ({ value: f, label: f })),
         houses: (houses || []).map((h) => ({ value: h.name, label: h.name })),
+        exams,
+        subjects: (subjects || []).map((x) => ({ value: String(x.subject_id), label: x.display_name || x.subject_name })),
+        grades: (grades || []).map((g) => g.grade),
       });
       const defaults = {
-        from: term?.start_date || today, to: today, threshold: -6,
+        from: term?.start_date || today, to: today, threshold: -6, positive_threshold: 40,
         min_subjects: 3, since: year?.start_date || today,
+        exam_date: exams[0]?.value || '', direction: 'below', exam_percent: 50,
+        attendance_percent: 90, min_sessions: 20,
+        subject_id: '', mode: 'below_target', grade: 'C',
         year_groups: [], forms: [], houses: [],
       };
 
@@ -75,9 +93,16 @@ function BuildInner() {
         if (g?.rule_type) {
           setRule(g.rule_type);
           setKind(g.kind);
-          const earlier = { ...defaults, ...g.rule_settings };
-          // A behaviour period that ended in the past moves up to today.
-          if (g.rule_type === 'negative_behaviour' && earlier.to < today) earlier.to = today;
+          const saved = { ...g.rule_settings };
+          // The form keeps each rule's number in its own field.
+          if (g.rule_type === 'positive_behaviour') { saved.positive_threshold = saved.threshold; delete saved.threshold; }
+          if (g.rule_type === 'term_exam') saved.exam_percent = saved.percent;
+          if (g.rule_type === 'attendance') saved.attendance_percent = saved.percent;
+          if (g.rule_type === 'subject_grade') saved.subject_id = String(saved.subject_id);
+          delete saved.percent;
+          const earlier = { ...defaults, ...saved };
+          // A period that ended in the past moves up to today.
+          if (['negative_behaviour', 'positive_behaviour', 'attendance'].includes(g.rule_type) && earlier.to < today) earlier.to = today;
           setSettings(earlier);
           return;
         }
@@ -96,6 +121,21 @@ function BuildInner() {
     const common = { year_groups: settings.year_groups, forms: settings.forms, houses: settings.houses };
     if (rule === 'negative_behaviour') {
       return { ...common, from: settings.from, to: settings.to, threshold: -Math.abs(Number(settings.threshold)) };
+    }
+    if (rule === 'positive_behaviour') {
+      return { ...common, from: settings.from, to: settings.to, threshold: Math.abs(Number(settings.positive_threshold)) };
+    }
+    if (rule === 'term_exam') {
+      return { ...common, exam_date: settings.exam_date, direction: settings.direction, percent: Number(settings.exam_percent) };
+    }
+    if (rule === 'attendance') {
+      return { ...common, from: settings.from, to: settings.to, percent: Number(settings.attendance_percent), min_sessions: Number(settings.min_sessions) };
+    }
+    if (rule === 'subject_grade') {
+      return {
+        ...common, subject_id: Number(settings.subject_id), mode: settings.mode, since: settings.since,
+        ...(settings.mode === 'below_grade' ? { grade: settings.grade } : {}),
+      };
     }
     return { ...common, min_subjects: Number(settings.min_subjects), since: settings.since };
   }
@@ -153,15 +193,78 @@ function BuildInner() {
           <span style={{ fontSize: '0.85rem' }}>{GROUP_RULES.find((r) => r.value === rule)?.desc}</span>
         </label>
 
-        {rule === 'negative_behaviour' ? (
+        {['negative_behaviour', 'positive_behaviour', 'attendance'].includes(rule) && (
           <>
             <label>From<input type="date" value={settings.from} onChange={(e) => set('from', e.target.value)} required /></label>
             <label>To<input type="date" value={settings.to} onChange={(e) => set('to', e.target.value)} required /></label>
-            <label>Negative points, this many or worse
-              <input type="number" max={-1} min={-1000} step={1} value={settings.threshold} onChange={(e) => set('threshold', e.target.value)} required />
+          </>
+        )}
+        {rule === 'negative_behaviour' && (
+          <label>Negative points, this many or worse
+            <input type="number" max={-1} min={-1000} step={1} value={settings.threshold} onChange={(e) => set('threshold', e.target.value)} required />
+          </label>
+        )}
+        {rule === 'positive_behaviour' && (
+          <label>Positive points, this many or more
+            <input type="number" min={1} max={1000} step={1} value={settings.positive_threshold} onChange={(e) => set('positive_threshold', e.target.value)} required />
+          </label>
+        )}
+        {rule === 'attendance' && (
+          <>
+            <label>Attendance below (%)
+              <input type="number" min={1} max={100} step="any" value={settings.attendance_percent} onChange={(e) => set('attendance_percent', e.target.value)} required />
+            </label>
+            <label>Only students with at least (sessions marked)
+              <input type="number" min={1} max={10000} step={1} value={settings.min_sessions} onChange={(e) => set('min_sessions', e.target.value)} required />
             </label>
           </>
-        ) : (
+        )}
+        {rule === 'term_exam' && (
+          <>
+            <label>Term exam
+              <select value={settings.exam_date} onChange={(e) => set('exam_date', e.target.value)} required>
+                {lookups.exams.length === 0 && <option value="">No term exams yet</option>}
+                {lookups.exams.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+              </select>
+            </label>
+            <label>Average
+              <select value={settings.direction} onChange={(e) => set('direction', e.target.value)}>
+                <option value="below">below</option>
+                <option value="at_or_above">at or above</option>
+              </select>
+            </label>
+            <label>Percentage
+              <input type="number" min={0} max={100} step="any" value={settings.exam_percent} onChange={(e) => set('exam_percent', e.target.value)} required />
+            </label>
+          </>
+        )}
+        {rule === 'subject_grade' && (
+          <>
+            <label>Subject
+              <select value={settings.subject_id} onChange={(e) => set('subject_id', e.target.value)} required>
+                <option value="">Choose a subject…</option>
+                {lookups.subjects.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+              </select>
+            </label>
+            <label>Latest grade
+              <select value={settings.mode} onChange={(e) => set('mode', e.target.value)}>
+                <option value="below_target">below their target</option>
+                <option value="below_grade">below a grade</option>
+              </select>
+            </label>
+            {settings.mode === 'below_grade' && (
+              <label>Grade
+                <select value={settings.grade} onChange={(e) => set('grade', e.target.value)} required>
+                  {lookups.grades.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </label>
+            )}
+            <label>Count results from
+              <input type="date" value={settings.since} onChange={(e) => set('since', e.target.value)} required />
+            </label>
+          </>
+        )}
+        {rule === 'below_target' && (
           <>
             <label>Below target in at least (subjects)
               <input type="number" min={1} max={20} step={1} value={settings.min_subjects} onChange={(e) => set('min_subjects', e.target.value)} required />
