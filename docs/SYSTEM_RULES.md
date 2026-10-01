@@ -48,7 +48,7 @@ Where a rule has changed several times, only the current version is given. Migra
 
 **Departments and scopes**
 - A role can be tied to one department (Science, Maths, Languages, Creative, Humanities) or to one boarding house (051).
-- A Head of Department's Class Progress view is filtered to their department **(page only)**.
+- A Head of Department's Class Progress view is filtered to their department **(page only)**. SMT and admins see every class, even if they are also a Head of Department (312). Class Progress is a big tile on the top row for Heads of Department, SMT and admins; other staff with the page (teachers, pastoral, assessment staff) find it on the Assessment card.
 - A Head of Department's right to delete scores is limited to their department by the database.
 - Heads of Department can move any student into any class, not only classes in their department (104).
 
@@ -64,7 +64,7 @@ Where a rule has changed several times, only the current version is given. Migra
 ---
 
 **Dashboard tile order** (280, 282, 283)
-- The order of the big tiles on students' home page and portal, and of the staff dashboard (the top row with My Timetable, Calendar and My Children, row 2 with Log behaviour and Inbox, and the larger tiles underneath, 282–283, 292–294; the numbers of active students, staff and behaviour alerts are shown on the Students, Staff & Access and Pastoral tiles), is set once for everyone at `/admin/tile-order` (Arrange Tiles). Only admins have that page for now.
+- The order of the big tiles on students' home page and portal, and of the staff dashboard (the top row with My Timetable, Calendar, My Children and Class Progress, row 2 with Log behaviour, Inbox, Missed Lessons and Homework Monitor, and the larger tiles underneath, 282–283, 292–294; the numbers of active students, staff and behaviour alerts are shown on the Students, Staff & Access and Pastoral tiles), is set once for everyone at `/admin/tile-order` (Arrange Tiles). Only admins have that page for now. A page with a big tile isn't also a link on a card (1 Oct 2026), so the cards stay short.
 - The order doesn't change which tiles someone sees. That is still decided by page access (and, for Homework, the pilot). A new tile that hasn't been placed yet goes after the others.
 
 ---
@@ -272,7 +272,7 @@ How the list behaves:
 
 **Missed Lessons** (`/pastoral/missed-lessons`, migrations 307–308)
 
-A tile on the staff dashboard's second row, with today's count, and a link on the Pastoral card. For one day (today unless another date is picked), it lists every active student who:
+A tile on the staff dashboard's second row, with today's count. For one day (today unless another date is picked), it lists every active student who:
 - was marked **present or late** at least once that day, and
 - was marked **absent without a reason** (unauthorised: No reason given, Unauthorised absence) at one or more other periods, before or after.
 
@@ -547,7 +547,7 @@ How it behaves:
 - **Marks follow the student** (291): if a student changes class or teacher, whoever teaches them in that subject now can see all their homework marks in it for this school year, from any class. The teacher who gave the marks still sees them too.
 - **Joining a class late** (298): Formwork records the day a student joins each class. Homework due before that day is not shown to them and they are left out of its mark book and the mark sheet, unless they already have a mark for it. Students already in a class on 1 Oct 2026 count as joining on 1 Sept 2026.
 - **Student view:** on `/homework`, staff can open any class they can see there in "Student view", which shows that class's week of homework exactly as its students see it, without any student's ticks or grades.
-- **Homework Monitor** (311, `/homework/monitor`, a tile on the staff dashboard; SMT and admins): homework as students see it. For a year group, every class's homework due in a chosen week on the students' cards (filterable by subject), with a table of each subject's switched-on classes and which have nothing due that week. For one student in that year, their timetable with homework on it and their Homework page, exactly as they see it: their own Done ticks and their grades once released, under the same rules as the student's own page. Nothing can be changed from it.
+- **Homework Monitor** (311, `/homework/monitor`, a tile on the staff dashboard's second row; SMT and admins): homework as students see it. For a year group, every class's homework due in a chosen week on the students' cards (filterable by subject), with a table of each subject's switched-on classes and which have nothing due that week. For one student in that year, their timetable with homework on it and their Homework page, exactly as they see it: their own Done ticks and their grades once released, under the same rules as the student's own page. Nothing can be changed from it.
 - **Students** see their classes' homework on their timetable (on the lesson it's due in) and on a Homework page laid out by day. They see their **own** grade and comment only after the teacher releases the marks, and only for the current school year.
 - **Files and links** (281): the teacher can attach files (PDF, Word, PowerPoint, Excel, OpenDocument, images, text or CSV, up to 20 MB each) and `https://` links to a homework. The same people who can set it can add or remove them. Anyone who can see the homework can open them: all staff, and students in the class while it is set. Files are private and open through a link that lasts ten minutes. Students can't upload anything yet.
 - **Ticking done** (288): a student can tick their own homework as done, and untick it, until a grade is released. It is their own note, not a hand-in or a grade. The class's teachers, the Head of Department, SMT and admins see how many students ticked each homework on the homework list and the register's Homework panel, and each student's tick in the mark book. Nobody else does.

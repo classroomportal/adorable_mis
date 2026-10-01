@@ -94,16 +94,33 @@ function DashboardStats({ hasAccess }) {
   return <TileRow tiles={tiles} />;
 }
 
-// Row 1: the everyday destinations, timetable and calendar, and My Children
+// Class Progress is a top-row tile for Heads of Department, SMT and admins
+// (the principal, 1 Oct 2026, migration 312): an HoD sees their department's
+// classes, SMT and admins see every class (my_department_scope()). Everyone
+// else with the page (teachers, pastoral, assessment staff) keeps the link on
+// the Assessment card instead.
+function showsClassProgressTile(hasAccess, staffRoles, isAdmin) {
+  const roles = staffRoles || [];
+  return hasAccess('/classes/progress') && (isAdmin || roles.includes('smt') || roles.includes('head_of_department'));
+}
+
+// Row 1: the everyday destinations, timetable and calendar, My Children
 // for staff who are also parents (moved here from row 2 at the principal's
-// request, migration 294). Order set school-wide at /admin/tile-order.
-function QuickLinks({ hasAccess }) {
+// request, migration 294), and Class Progress for HoDs and SMT (312). Order
+// set school-wide at /admin/tile-order.
+function QuickLinks({ hasAccess, staffRoles, isAdmin }) {
   const order = useTileOrder('staff');
   const isParent = useIsStaffParent();
+  const roles = staffRoles || [];
+  const wholeSchool = isAdmin || roles.includes('smt');
   const tiles = sortTiles([
     { key: 'timetable', href: '/staff/timetable', label: 'My Timetable', icon: '🗓️', accent: 'myinfo', sub: 'Your lessons, rooms and meetings' },
     { key: 'calendar', href: '/calendar', label: 'Calendar', icon: '📅', accent: 'school', sub: 'Term dates and school events' },
     isParent && { key: 'my_children', href: '/parent-portal', label: 'My Children', icon: '👪', accent: 'students', sub: "Your children's grades and behaviour" },
+    showsClassProgressTile(hasAccess, staffRoles, isAdmin) && {
+      key: 'class_progress', href: '/classes/progress', label: 'Class Progress', icon: '📈', accent: 'school',
+      sub: wholeSchool ? 'Every class against its targets' : "Your department's classes against their targets",
+    },
   ].filter((l) => l && hasAccess(l.href)), order);
   return <TileRow tiles={tiles} className="quick-link-row" />;
 }
@@ -240,6 +257,9 @@ function ModuleCard({ icon, label, accent, description, items, allowedHrefs, ext
 // used to carry. ModuleCard already hides a tab once its items list is
 // empty, so a tab with no accessible items just disappears — no separate
 // tab-level gate needed.
+// A page with a big tile in row 1 or 2 isn't also a link on a card (the
+// principal, 1 Oct 2026: the cards had become cluttered): Missed Lessons,
+// Homework Monitor, and Class Progress for those who get its tile.
 const TABS = [
   {
     key: 'students', label: 'Students', icon: '🎓', accent: 'students',
@@ -251,7 +271,6 @@ const TABS = [
       { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
       { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
       { href: '/homework', label: 'Homework', desc: "Set homework for a class and record grades. Years 10 and 11 for now." },
-      { href: '/homework/monitor', label: 'Homework Monitor', desc: "Homework being set, as students see it: a whole year group's week, or one student's timetable." },
       // Shares the /results grant rather than having a resource of its own.
       { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
       { href: '/results/subject-overview', label: 'Review Results', desc: "A student's exam results in each subject against the cohort average." },
@@ -270,7 +289,6 @@ const TABS = [
       { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
       { href: '/behaviour/review', label: 'Behaviour Review', desc: "Check serious incidents (office) and behaviour pictures (SMT) before parents can see them." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
-      { href: '/pastoral/missed-lessons', label: 'Missed Lessons', desc: "Students in school on a day who missed one or more lessons." },
       { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
       { href: '/pastoral/birthdays', label: 'Birthdays', desc: "Staff and students with a birthday in the next 7 days." },
       { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
@@ -351,16 +369,17 @@ const TABS = [
   {
     key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school',
     description: 'Import results, target grades and manage grading setup.',
-    items: ({ hasAccess }) => [
+    // Class Progress is here only for those without its top-row tile.
+    items: ({ hasAccess, staffRoles, isAdmin }) => [
       { href: '/results/import-gradebook', label: 'Import Results', desc: "Upload the weekly Moodle gradebook." },
       { href: '/target-grades/import', label: 'Import Targets', desc: "Upload students' target grades." },
-      { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
+      !showsClassProgressTile(hasAccess, staffRoles, isAdmin) && { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
       { href: '/results/top-ten', label: 'Top 10', desc: "Print the top 10 students for a result set." },
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
       { href: '/assessments/import', label: 'Import CAT4/NGRT', desc: "Upload CAT4 and NGRT scores." },
       { href: '/assessments/grade-history', label: 'Grade History', desc: "Every grade entered, changed or deleted, and who did it." },
-    ].filter((it) => hasAccess(it.href)),
+    ].filter((it) => it && hasAccess(it.href)),
   },
   {
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
@@ -490,7 +509,7 @@ export default function Home() {
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ hasAccess, staffRoles })}
+              items={t.items({ hasAccess, staffRoles, isAdmin })}
               allowedHrefs={demoAllowedHrefs}
             />
           ))}
@@ -514,7 +533,7 @@ export default function Home() {
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ hasAccess, staffRoles })}
+              items={t.items({ hasAccess, staffRoles, isAdmin })}
             />
           ))}
         </div>
@@ -524,7 +543,7 @@ export default function Home() {
 
   return (
     <div>
-      <QuickLinks hasAccess={hasAccess} />
+      <QuickLinks hasAccess={hasAccess} staffRoles={staffRoles} isAdmin={isAdmin} />
       <DashboardStats hasAccess={hasAccess} />
       <div className="module-card-grid">
         {sortTiles(TABS, moduleOrder).map((t) => (
@@ -534,7 +553,7 @@ export default function Home() {
             label={t.label}
             accent={t.accent}
             description={t.description}
-            items={t.items({ hasAccess, staffRoles })}
+            items={t.items({ hasAccess, staffRoles, isAdmin })}
             extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts />
               : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].resource || CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} isDemoAccount={profile?.is_demo_account} />
               : null}
