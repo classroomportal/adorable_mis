@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 305). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 306). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -332,7 +332,7 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 
 **Other students in a serious event** (migrations 303–305, the principal, 1 Oct 2026)
 
-- **FR-6.21** On a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty), staff can add other students as a witness, involved or target. They find each one with a filter by name, year group and house, when logging at /behaviour or later from the event. Whoever can edit the event (FR-6.6) can add, change or remove them; all staff can see them. The event's own student can't be added, nor anything added to an event withdrawn on appeal. Being added gives a student no points, detention or alert. Changes are logged in Change History (behaviour). \[DB\]
+- **FR-6.21** On a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty), staff can add other students as a witness, involved or target. They find each one with a filter by name, year group and house, when logging at /behaviour (under the explanation, behind a "+ Add a witness, someone involved or a target" button, so the event is written first) or later from the event. Whoever can edit the event (FR-6.6) can add, change or remove them; all staff can see them. The event's own student can't be added, nor anything added to an event withdrawn on appeal. Being added gives a student no points, detention or alert. Changes are logged in Change History (behaviour). \[DB\]
 - **FR-6.22** Students and parents never see these links, on any portal. Once parents can see an event, its explanation can't name any of the other students (first, last, preferred or legal names, as whole words; a name the event's own student shares, such as a sibling's surname, doesn't count). Releasing the event, editing its text, or adding a student its text already names is refused, with the word to reword. \[DB\]
 - **FR-6.23** A negative event reaches parents only through the review (FR-6.9). Staff can't make an event visible to parents, mark it reviewed or change its type directly, and a new negative event always starts hidden. \[DB\]
 
