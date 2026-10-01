@@ -2,6 +2,7 @@ import './globals.css';
 import { AuthProvider } from '../lib/AuthContext';
 import NavBar from './NavBar';
 import BackupModeBanner from './components/BackupModeBanner';
+import MissedLessonAlerts from './components/MissedLessonAlerts';
 
 export const metadata = {
   title: 'Formwork',
@@ -15,6 +16,7 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <NavBar />
           <BackupModeBanner />
+          <MissedLessonAlerts />
           <main style={{ padding: '1.5rem', maxWidth: 1000, margin: '0 auto' }}>
             {children}
           </main>

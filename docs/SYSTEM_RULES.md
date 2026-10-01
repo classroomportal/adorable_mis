@@ -282,6 +282,21 @@ How the list behaves:
 - Today's list refreshes every minute.
 - Open to SMT, pastoral, school office and admin. The list is worked out in the database (`students_missed_lessons()`), which refuses anyone else.
 
+**Missed-lesson pop-up on the office's screens** (migration 309)
+
+A full-screen flashing pop-up, on whatever Formwork page is open, for anyone whose role is granted **Missed-lesson pop-ups** at Permissions (school office to start with). It appears when, today:
+- a period started **at least 15 minutes ago**, and
+- a student is marked **absent without a reason** (unauthorised) in that period's register, and
+- the same student was marked **present or late at an earlier period** today.
+
+How it behaves:
+- It shows who, their year, mentor group and house, the lesson, teacher and room they should be in, where they were last seen, and who marked them absent.
+- **Seen: dealing with it** (with an optional note) clears that student and period from every office screen and records who saw it and when.
+- If the teacher corrects the mark (to present, late or an authorised absence), the alert disappears by itself.
+- **Hide for 2 minutes** hides the alerts showing on that screen only; a new alert still appears at once.
+- It checks every minute, flashes the browser tab's title, and beeps when a new alert arrives (once someone has clicked on the page; browsers block sound before that).
+- Being admin does not give the pop-up; only a role with the grant does. The checks happen in the database.
+
 **Register alerts** (`/admin/register-alerts`)
 - Every 15 minutes, outstanding registers are copied into a permanent alert list: one per lesson per day, and one per OH activity per member of staff per day.
 - An alert stays even if the register is taken later. Someone must mark it resolved.
