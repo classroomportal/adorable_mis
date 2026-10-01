@@ -160,7 +160,10 @@ const CARD_COUNTS = {
       .eq('is_demo', demo).then(({ count }) => count ?? 0),
   },
   pastoral: {
-    href: '/behaviour/alerts', label: 'Behaviour alerts (7 days)', title: 'Behaviour alerts',
+    // The alerts page opens with the /behaviour grant; no role holds a
+    // '/behaviour/alerts' key, so checking the href hid the count from
+    // everyone except admin logins (cs@ is admin by role, not login).
+    href: '/behaviour/alerts', resource: '/behaviour', label: 'Behaviour alerts (7 days)', title: 'Behaviour alerts',
     load: (demo) => supabase.from('behaviour_events').select('event_id', { count: 'exact', head: true })
       .eq('type', 'negative').lte('points', -3).is('voided_at', null).eq('is_demo', demo)
       .gte('event_date', schoolDateOffset(-7)).then(({ count }) => count ?? 0),
@@ -511,7 +514,7 @@ export default function Home() {
             description={t.description}
             items={t.items({ hasAccess, staffRoles })}
             extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts />
-              : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} isDemoAccount={profile?.is_demo_account} />
+              : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].resource || CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} isDemoAccount={profile?.is_demo_account} />
               : null}
           />
         ))}
