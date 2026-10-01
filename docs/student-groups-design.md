@@ -64,7 +64,7 @@ So one kind of thing, a **student group**, used in four ways:
 
 ### 1. Groups and members
 
-- `student_groups`: name, description, **kind** (`activity`, `marks`, `intervention`,
+- `student_groups`: name, description, **kind** (`activity`, shown as "Other Half" since 1 Oct 2026, `marks`, `intervention`,
   `leadership`, `other`, just a label to sort and filter by), **visibility**
   (`staff`, `students`, `students_and_parents`), academic year, created by, and
   for a rule-built group the rule and its settings, plus the date it was built.
