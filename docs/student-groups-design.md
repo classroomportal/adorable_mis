@@ -1,12 +1,13 @@
 # Student groups: design
 
-Status, 30 September 2026: **stages 1–3 built.** Stage 1 (migration 284):
+Status, 1 October 2026: **all four stages built.** Stage 1 (migration 284):
 groups, members, the staff who run them, `/groups` under Administration, the
 Groups tile on a student's profile, and "Student group" as a message target.
 Stage 2 (migration 285): groups built from a rule at `/groups/build`, with
 every setting chosen each time (the principal: "system build parameters must
 be editable"). Stage 3 (migration 287): mark sheets for a group, outside
-reporting. Stage 4 (portal views) is not built yet. All the principal's
+reporting. Stage 4 (migration 300): a Groups tile on the student and parent
+portals, listing only the groups marked to be shown. All the principal's
 decisions are under "Decided".
 
 What was asked for (the principal, 30 Sept 2026): "we need to create groups of
@@ -147,8 +148,8 @@ the real number. This is one new branch in `message_group_students()`.
 | smt, pastoral, school_office, admin | Yes | All groups | Yes | Yes |
 | A group's own staff | No | Their groups | Their groups | Their groups |
 | Other staff | No | All groups | No | No |
-| Students | No | Their own groups, if shown to students (stage 4) | No | No |
-| Parents | No | Their children's groups, if shown to parents (stage 4) | No | No |
+| Students | No | Which of their own groups are shown to students (not the other members) | No | No |
+| Parents | No | Which of their children's groups are shown to parents (not the other members) | No | No |
 
 ## Also decided (the principal, 30 Sept 2026: "go with your suggestion")
 
@@ -181,7 +182,15 @@ teacher (who can look them up); other roles can be given it at
    `student_group_marks` on the group's page, with Grade History. "Absent" is
    allowed as well as "Not handed in" and "Excused", since group marks are
    often a test on the day.
-4. **Phase 4:** the student and parent portal views.
+4. **Phase 4 (built, migration 300):** a Groups tile on the student portal
+   (and the student home page) and the parent portal, shown only when there
+   is a group to list. It reads through `portal_student_groups(student_id)`,
+   not through policies on the group tables, so a student learns which groups
+   they are in but never who else is: name, description, kind and who runs
+   it. Students see groups marked for students or for students and parents;
+   parents only the latter, and only for current children; staff viewing as a
+   parent get the parent's view. Archived groups, earlier school years and
+   rule-built groups are never shown.
 
 Each phase is one migration and its pages, with grants to `authenticated` only,
 RLS on every table through `auth.uid()` helpers, and the `docs/SYSTEM_RULES.md`

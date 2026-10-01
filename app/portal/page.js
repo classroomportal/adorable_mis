@@ -14,6 +14,8 @@ import BehaviourPhoto from '../components/BehaviourPhoto';
 import { HomeworkChip, HomeworkDetail } from '../components/HomeworkChip';
 import { WeekPicker, HomeworkCard } from '../components/HomeworkWeek';
 import { useTileOrder, sortTiles } from '../../lib/tileOrder';
+import { loadPortalGroups } from '../../lib/studentGroups';
+import PortalGroups from '../components/PortalGroups';
 import { schoolToday } from '../../lib/schoolTime';
 import {
   addDays, weekStartOf, defaultWeekStart, shortDate, loadMyHomework,
@@ -71,6 +73,8 @@ function PortalInner() {
   const [recentHomework, setRecentHomework] = useState([]); // last four weeks up to the end of this week
   const [selectedHw, setSelectedHw] = useState(null);
   const tileOrder = useTileOrder('student');
+  // Groups shown to students (migration 300); the tile appears only if there are any.
+  const [groups, setGroups] = useState([]);
   const [hwError, setHwError] = useState(null);
 
   // Tick or untick "Done". Shown at once, then saved; put back if the save fails.
@@ -173,6 +177,8 @@ function PortalInner() {
   }, [studentId]);
 
   useEffect(() => { load(); }, [studentId]);
+
+  useEffect(() => { loadPortalGroups(studentId).then(setGroups); }, [studentId]);
 
   useEffect(() => {
     if (!homeworkOn) return;
@@ -298,7 +304,7 @@ function PortalInner() {
   const firstName = studentName.split(' ')[0];
 
   // Sections that open on this page; the other tiles link to their own pages.
-  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour'];
+  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour', 'groups'];
 
   // Homework tile badge and lists.
   const today = schoolToday();
@@ -369,6 +375,12 @@ function PortalInner() {
               />
             ) },
             { key: 'messages', el: <DashboardTile key="messages" label="Messages" icon="📬" sub="View inbox" href="/inbox" /> },
+            groups.length > 0 && { key: 'groups', el: (
+              <DashboardTile
+                key="groups" label="Groups" icon="👥" onClick={() => openView('groups')}
+                sub={`${groups.length} group${groups.length === 1 ? '' : 's'}`}
+              />
+            ) },
           ].filter(Boolean), tileOrder).map((t) => t.el)}
         </div>
       ) : (
@@ -463,6 +475,13 @@ function PortalInner() {
         <p style={{ marginTop: '0.75rem' }}>
           <a href="/results/subject-overview">View my subject overview (max &amp; average %) →</a>
         </p>
+      </div>
+      )}
+
+      {activeView === 'groups' && (
+      <div className="card">
+        <h2>My Groups</h2>
+        <PortalGroups groups={groups} />
       </div>
       )}
 
