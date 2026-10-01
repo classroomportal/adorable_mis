@@ -270,6 +270,19 @@ How the list behaves:
 - OH activities are listed the same way, 15 minutes after that day's OH start, if at least one student has chosen the activity (157).
 - The page is open to pastoral, houseparent, SMT and admin. Each teacher also sees a banner on their own timetable with their overdue count.
 
+**Out of Lesson** (`/pastoral/out-of-lesson`, migration 307)
+
+A tile on the staff dashboard's second row, with the count, and a link on the Pastoral card. It looks at the period running right now (nothing during breaks, before or after the school day, or outside term) and lists every active student who was marked present or late at an earlier period today and:
+- has been **marked absent** (an unauthorised code) in this period's register, or
+- has **no lesson this period**: nothing in any of their classes, and at the Other Half no activity chosen for today.
+
+How the list behaves:
+- Authorised absences (illness, appointments and so on) are left out: those students are accounted for.
+- A student whose register for this period hasn't been taken yet isn't listed; Registers Not Done covers that.
+- Each row shows where the student was last seen (the period of their latest present mark), their mentor group and house, and, for those marked absent, the lesson and teacher they should be with.
+- The page and the tile refresh every minute.
+- Open to SMT, pastoral, school office and admin. The list is worked out in the database (`students_out_of_lesson()`), which refuses anyone else.
+
 **Register alerts** (`/admin/register-alerts`)
 - Every 15 minutes, outstanding registers are copied into a permanent alert list: one per lesson per day, and one per OH activity per member of staff per day.
 - An alert stays even if the register is taken later. Someone must mark it resolved.
