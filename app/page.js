@@ -45,24 +45,24 @@ function useIsStaffParent() {
 }
 
 // Row 2: Log behaviour and Inbox (both moved here from row 1 at the
-// principal's request, migrations 292 and 294), and Out of Lesson for those
-// with the page (migration 307). The numbers that used to sit
+// principal's request, migrations 292 and 294), and Missed Lessons for those
+// with the page (migrations 307–308). The numbers that used to sit
 // here are on their module cards (292–293). Order set at /admin/tile-order.
 function DashboardStats({ hasAccess }) {
   const { session } = useAuth();
   const [unread, setUnread] = useState(null);
-  const [outOfLesson, setOutOfLesson] = useState(null);
+  const [missed, setMissed] = useState(null);
   const order = useTileOrder('staff_stats');
-  const canSeeOutOfLesson = hasAccess('/pastoral/out-of-lesson');
+  const canSeeMissed = hasAccess('/pastoral/missed-lessons');
 
-  // Students present earlier today who aren't in a lesson now (migration 307).
+  // Students in school today who have missed a lesson (migration 308).
   useEffect(() => {
-    if (!canSeeOutOfLesson) return undefined;
-    const load = () => supabase.rpc('students_out_of_lesson').then(({ data }) => setOutOfLesson(data || null));
+    if (!canSeeMissed) return undefined;
+    const load = () => supabase.rpc('students_missed_lessons').then(({ data }) => setMissed(data?.students?.length ?? null));
     load();
     const interval = setInterval(load, 60000);
     return () => clearInterval(interval);
-  }, [canSeeOutOfLesson]);
+  }, [canSeeMissed]);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -83,11 +83,10 @@ function DashboardStats({ hasAccess }) {
       sub: unread == null ? 'Your messages' : unread === 0 ? 'No unread messages' : `${unread} unread`,
     },
     {
-      key: 'out_of_lesson', href: '/pastoral/out-of-lesson', label: 'Out of Lesson', icon: '🚸', accent: 'clinic',
-      sub: outOfLesson == null ? 'Present earlier, not in a lesson now'
-        : !outOfLesson.period ? 'No lesson running now'
-        : outOfLesson.students.length === 0 ? `Everyone accounted for (${outOfLesson.period.period_name})`
-        : `${outOfLesson.students.length} student${outOfLesson.students.length === 1 ? '' : 's'} (${outOfLesson.period.period_name})`,
+      key: 'missed_lessons', href: '/pastoral/missed-lessons', label: 'Missed Lessons', icon: '🚸', accent: 'clinic',
+      sub: missed == null ? 'In school today, but missed a lesson'
+        : missed === 0 ? 'Nobody has missed a lesson today'
+        : `${missed} student${missed === 1 ? '' : 's'} missed a lesson today`,
     },
   ].filter((l) => hasAccess(l.href)), order);
   return <TileRow tiles={tiles} />;
@@ -268,7 +267,7 @@ const TABS = [
       { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
       { href: '/behaviour/review', label: 'Behaviour Review', desc: "Check serious incidents (office) and behaviour pictures (SMT) before parents can see them." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
-      { href: '/pastoral/out-of-lesson', label: 'Out of Lesson', desc: "Students present earlier today who aren't in a lesson now." },
+      { href: '/pastoral/missed-lessons', label: 'Missed Lessons', desc: "Students in school on a day who missed one or more lessons." },
       { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
       { href: '/pastoral/birthdays', label: 'Birthdays', desc: "Staff and students with a birthday in the next 7 days." },
       { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
