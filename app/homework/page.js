@@ -43,7 +43,7 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
 
   const load = useCallback(async () => {
     const [{ data: enrol }, { data: marks }, { data: ticks }] = await Promise.all([
-      supabase.from('student_class').select('students(student_id, first_name, last_name, status)').eq('class_id', cls.class_id),
+      supabase.from('student_class').select('joined_on, students(student_id, first_name, last_name, status)').eq('class_id', cls.class_id),
       supabase.from('homework_marks').select('student_id, grade, score, comment').eq('homework_id', hw.homework_id),
       // Students' own "done" ticks (migration 288), shown as a guide.
       supabase.from('homework_done').select('student_id, done_at').eq('homework_id', hw.homework_id),
@@ -57,7 +57,12 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
     }
     setDoneAt(Object.fromEntries((ticks || []).map((t) => [t.student_id, t.done_at])));
     const byId = new Map();
-    (enrol || []).map((e) => e.students).filter((s) => s && s.status === 'active').forEach((s) => byId.set(s.student_id, s));
+    // A student who joined the class after this was due isn't listed
+    // (migration 298), unless they already have a mark for it.
+    const marked = new Set((marks || []).map((m) => m.student_id));
+    (enrol || []).filter((e) => e.students && e.students.status === 'active'
+      && (!e.joined_on || e.joined_on <= hw.due_on || marked.has(e.students.student_id)))
+      .forEach((e) => byId.set(e.students.student_id, e.students));
     const missing = (marks || []).map((m) => m.student_id).filter((id) => !byId.has(id));
     if (missing.length) {
       const { data: extra } = await supabase.from('students').select('student_id, first_name, last_name, status').in('student_id', missing);
@@ -260,7 +265,8 @@ function HomeworkInner() {
   const [classId, setClassId] = useState(null);
   const [homework, setHomework] = useState([]);
   const [mode, setMode] = useState({ kind: 'list' }); // list | form (homework?) | marks (homework)
-  const [roster, setRoster] = useState(0);
+  const [roster, setRoster] = useState([]); // active students' join dates
+  const rosterFor = (hw) => roster.filter((d) => !d || d <= hw.due_on).length;
   const [markCounts, setMarkCounts] = useState({}); // homework_id -> marks recorded
   const [tickCounts, setTickCounts] = useState({}); // homework_id -> students who ticked it done
   const pendingHomework = useRef(null);
@@ -310,7 +316,7 @@ function HomeworkInner() {
     const [{ data }, { data: enrol }] = await Promise.all([
       supabase.from('homework').select('*').eq('class_id', classId)
         .order('due_on', { ascending: false }).order('homework_id', { ascending: false }),
-      supabase.from('student_class').select('students(status)').eq('class_id', classId),
+      supabase.from('student_class').select('joined_on, students(status)').eq('class_id', classId),
     ]);
     const ids = (data || []).map((h) => h.homework_id);
     const [{ data: marks }, { data: ticks }] = ids.length
@@ -327,7 +333,9 @@ function HomeworkInner() {
     (ticks || []).forEach((t) => { ticked[t.homework_id] = (ticked[t.homework_id] || 0) + 1; });
     setTickCounts(ticked);
     setHomework(data || []);
-    setRoster((enrol || []).filter((e) => e.students?.status === 'active').length);
+    // Each active student's join date (migration 298): a homework counts only
+    // the students in the class by its due date.
+    setRoster((enrol || []).filter((e) => e.students?.status === 'active').map((e) => e.joined_on || ''));
   }, [classId]);
 
   useEffect(() => { loadHomework(); setMode({ kind: 'list' }); setStatus(null); }, [loadHomework]);
@@ -461,7 +469,7 @@ function HomeworkInner() {
                         {formatUKDate(hw.due_on, { weekday: true })}
                         <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
                           {lesson ? `Lesson ${lesson.period_number}` : 'End of day'}
-                          {cls.canSet && !withdrawn && hw.due_on < today && n < roster ? ' · past due' : ''}
+                          {cls.canSet && !withdrawn && hw.due_on < today && n < rosterFor(hw) ? ' · past due' : ''}
                         </div>
                       </td>
                       <td>
@@ -474,7 +482,7 @@ function HomeworkInner() {
                       </td>
                       <td>{schemeLabel(schemeFor(hw), hw.out_of)}</td>
                       {cls.canSet && <td style={{ whiteSpace: 'nowrap' }}>
-                        {n} / {roster}
+                        {n} / {rosterFor(hw)}
                         <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{hw.marks_released ? 'released' : 'not released'}</div>
                         {tickCounts[hw.homework_id] > 0 && (
                           <div style={{ fontSize: '0.8rem', color: '#1a5c30' }}>✓ {tickCounts[hw.homework_id]} ticked done</div>
