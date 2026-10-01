@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 300). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 301). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -722,7 +722,7 @@ SMT, pastoral staff and the school office make groups of students for activities
 
 **Groups built from a rule**
 
-- **FR-18.8** At /groups/build the person building chooses a rule and every setting each time (the principal: build settings must be editable). Negative behaviour: negative points between two chosen dates at or below a chosen threshold, withdrawn events not counted. Below target: latest grade below target in at least a chosen number of subjects, counting only results from a chosen date, compared by grade points and WAEC only against WAEC. Both can be narrowed by year, form and boarding house. \[DB\]
+- **FR-18.8** At /groups/build the person building chooses a rule and every setting each time (the principal: build settings must be editable). Negative behaviour: negative points between two chosen dates at or below a chosen threshold, withdrawn events not counted. Below target: latest grade below target in at least a chosen number of subjects, counting only results from a chosen date, compared by grade points and WAEC only against WAEC. Positive behaviour (migration 301): positive points between two chosen dates at or above a chosen total, withdrawn events not counted. Term exam average (301): the student's average percentage across their subjects in one chosen term exam, below or at/above a chosen mark; marks without a score are skipped, and last year's exams can be chosen, each student judged on the exam they sat. Attendance (301): present or late as a percentage of all register marks between two chosen dates, below a chosen percentage, leaving out students with fewer than a chosen number of marks. All five can be narrowed by year, form and boarding house. \[DB\]
 - **FR-18.9** "Show students" lists who matches today, with the reason; the builder can untick students before saving. Only students the rule picks can be saved, and a group can't claim a rule it wasn't built from. \[DB\]
 - **FR-18.10** A built group records its rule, settings and date, is always staff-only, and never changes by itself; students can still be added or taken out by hand. "Build again" starts a new dated group from the same settings, which can be changed first. \[DB\]
 

@@ -161,7 +161,7 @@ the real number. This is one new branch in `message_group_students()`.
 3. **Students and parents don't see group marks** in the first version.
 4. **No group register** in the first version. If one is added, it stays
    separate from the school `attendance` table.
-5. **First rules:** negative behaviour and below target.
+5. **First rules:** negative behaviour and below target. The other three (positive behaviour, term exam average, attendance) followed on 1 Oct 2026 (migration 301, the principal: "build the other three group rules").
 6. **The tile sits under Administration** (`/groups`, "Student Groups").
 
 `/groups` is granted to smt, pastoral, school_office (who manage groups) and
@@ -178,6 +178,14 @@ teacher (who can look them up); other roles can be given it at
    settings): negative behaviour and below target. Every setting is chosen
    each time; the form only starts from this term, this school year, −6
    points and 3 subjects.
+   **Migration 301** added the other three rules: positive behaviour (points
+   at or above a total between two dates), term exam average (one term
+   exam, chosen by its date, below or at/above a percentage; a student is
+   judged on the year-group set they sat, so last year's exams work) and
+   attendance (present or late as a share of all marks between two dates,
+   below a percentage, leaving out students with fewer than a chosen number
+   of marks). Starting values: +40 points, the latest term exam below 50%,
+   attendance below 90% over at least 20 sessions.
 3. **Phase 3 (built, migration 287):** `student_group_mark_sheets` and
    `student_group_marks` on the group's page, with Grade History. "Absent" is
    allowed as well as "Not handed in" and "Excused", since group marks are
