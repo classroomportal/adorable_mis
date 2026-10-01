@@ -5,7 +5,9 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { schoolToday } from '../../../lib/schoolTime';
-import { GROUP_KINDS, GROUP_RULES, describeRule, canManageGroups } from '../../../lib/studentGroups';
+import { GROUP_KINDS, GROUP_RULES, OTHER_HALF_KIND, describeRule, canManageGroups } from '../../../lib/studentGroups';
+import { formatUKDate } from '../../../lib/formatDate';
+import { OH_DAYS, OH_DAY_NAMES, formatYearGroups, loadCurrentOtherHalfTermId } from '../../../lib/otherHalf';
 
 // Build a student group from a rule (migrations 285, 301, 302). Every setting is
 // chosen here, each time: the dates, thresholds, percentages, the exam, the
@@ -45,6 +47,12 @@ function BuildInner() {
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // Kind "Other Half": which activity to place the saved group in, and the
+  // lock (place_group_in_other_half(), migration 302).
+  const [oh, setOh] = useState(null); // { termId, activities, taken } once loaded
+  const [ohActivityId, setOhActivityId] = useState('');
+  const [ohLock, setOhLock] = useState('until_unlocked'); // until_unlocked | until_date | none
+  const [ohUntil, setOhUntil] = useState('');
 
   // Starting values: this term so far, the current school year, three
   // subjects, −6 / +40 points, the latest term exam with marks below 50%, and
@@ -111,6 +119,20 @@ function BuildInner() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (kind !== OTHER_HALF_KIND || oh) return;
+    (async () => {
+      const termId = await loadCurrentOtherHalfTermId();
+      if (!termId) { setOh({ termId: null, activities: [], taken: {} }); return; }
+      const [{ data: acts }, { data: counts }] = await Promise.all([
+        supabase.from('other_half_activities').select('activity_id, activity_name, day_of_week, year_groups, capacity')
+          .eq('term_id', termId).eq('is_active', true).order('activity_name'),
+        supabase.rpc('other_half_places_taken', { p_term_id: termId }),
+      ]);
+      setOh({ termId, activities: acts || [], taken: Object.fromEntries((counts || []).map((c) => [c.activity_id, c.taken])) });
+    })();
+  }, [kind, oh]);
+
   if (!canManage) return <p>Only SMT, pastoral staff and the school office can build student groups.</p>;
   if (!settings) return <p>Loading…</p>;
 
@@ -158,14 +180,49 @@ function BuildInner() {
   }
 
   async function save() {
+    const placing = kind === OTHER_HALF_KIND && ohActivityId;
+    const a = placing ? oh.activities.find((x) => String(x.activity_id) === String(ohActivityId)) : null;
+    if (placing && ohLock === 'until_date' && !ohUntil) { setError('Choose the last day of the lock.'); return; }
+    if (a) {
+      // The same "anyway?" warnings as placing from the group's page.
+      const ids = [...ticked];
+      const { data: existing } = await supabase.from('other_half_choices').select('student_id, activity_id')
+        .eq('term_id', oh.termId).eq('day_of_week', a.day_of_week).in('student_id', ids);
+      const alreadyIn = (existing || []).filter((c) => c.activity_id === a.activity_id).length;
+      const replacing = (existing || []).length - alreadyIn;
+      const joining = ids.length - alreadyIn;
+      const warnings = [];
+      if (a.capacity != null) {
+        const left = a.capacity - (oh.taken[a.activity_id] || 0);
+        if (joining > left) warnings.push(`${a.activity_name} has ${Math.max(left, 0)} place${left === 1 ? '' : 's'} left and ${joining} student${joining === 1 ? '' : 's'} would join.`);
+      }
+      const wrongYear = preview.filter((r) => ticked.has(r.student_id) && !(a.year_groups || []).includes(r.year_group)).length;
+      if (wrongYear) warnings.push(`${wrongYear} student${wrongYear === 1 ? ' is' : 's are'} not in its year groups (${formatYearGroups(a.year_groups)}).`);
+      if (replacing) warnings.push(`${replacing} student${replacing === 1 ? '' : 's'} will lose the ${OH_DAY_NAMES[a.day_of_week]} activity they chose.`);
+      const lockWords = ohLock === 'none' ? 'not locked' : ohLock === 'until_unlocked' ? 'locked until staff unlock it' : `locked until ${formatUKDate(ohUntil)}`;
+      const question = `Save the group and put its ${ids.length} student${ids.length === 1 ? '' : 's'} in ${a.activity_name} on ${OH_DAY_NAMES[a.day_of_week]}s, ${lockWords}?`;
+      if (!window.confirm([...warnings, question].join('\n\n'))) return;
+    }
+
     setBusy(true);
     setError(null);
     const { data, error: err } = await supabase.rpc('build_student_group', {
       p_name: name, p_description: description, p_kind: kind, p_rule: rule,
       p_settings: ruleSettings(), p_student_ids: [...ticked],
     });
+    if (err) { setBusy(false); setError(err.message); return; }
+    if (a) {
+      const { error: placeErr } = await supabase.rpc('place_group_in_other_half', {
+        p_group_id: data, p_activity_id: a.activity_id,
+        p_lock: ohLock !== 'none', p_locked_until: ohLock === 'until_date' ? ohUntil : null,
+      });
+      if (placeErr) {
+        setBusy(false);
+        setError(`The group was saved, but placing it in ${a.activity_name} failed: ${placeErr.message}. Open the group to try again.`);
+        return;
+      }
+    }
     setBusy(false);
-    if (err) { setError(err.message); return; }
     window.location.href = `/groups/${data}`;
   }
 
@@ -318,11 +375,51 @@ function BuildInner() {
                     {GROUP_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
                   </select>
                 </label>
+                {kind === OTHER_HALF_KIND && (
+                  !oh ? <span style={{ flexBasis: '100%' }}>Loading Other Half activities…</span>
+                    : !oh.termId ? <span style={{ flexBasis: '100%', color: 'var(--ink-soft)' }}>No Other Half term is running, so the group can&apos;t be placed yet.</span>
+                      : (
+                        <>
+                          <label>Other Half activity
+                            <select value={ohActivityId} onChange={(e) => setOhActivityId(e.target.value)}>
+                              <option value="">Choose later on the group&apos;s page</option>
+                              {OH_DAYS.map((d) => {
+                                const list = oh.activities.filter((x) => x.day_of_week === d);
+                                return list.length === 0 ? null : (
+                                  <optgroup key={d} label={OH_DAY_NAMES[d]}>
+                                    {list.map((x) => (
+                                      <option key={x.activity_id} value={x.activity_id}>
+                                        {x.activity_name} ({x.capacity == null ? 'no limit' : `${Math.max(x.capacity - (oh.taken[x.activity_id] || 0), 0)} left`})
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                );
+                              })}
+                            </select>
+                          </label>
+                          {ohActivityId && (
+                            <label>Lock their choice
+                              <select value={ohLock} onChange={(e) => setOhLock(e.target.value)}>
+                                <option value="until_unlocked">until we unlock it</option>
+                                <option value="until_date">until a date</option>
+                                <option value="none">don&apos;t lock</option>
+                              </select>
+                            </label>
+                          )}
+                          {ohActivityId && ohLock === 'until_date' && (
+                            <label>Last day locked<input type="date" min={schoolToday()} value={ohUntil} onChange={(e) => setOhUntil(e.target.value)} required /></label>
+                          )}
+                          <span style={{ flexBasis: '100%', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+                            Replaces each student&apos;s choice for that day only. Students and parents see &quot;Placed by the school&quot;, never why.
+                          </span>
+                        </>
+                      )
+                )}
                 <label style={{ flexBasis: '100%' }}>Description (optional)
                   <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={2000} />
                 </label>
                 <button type="submit" disabled={busy || stale || ticked.size === 0 || !name.trim()}>
-                  Save group of {ticked.size} student{ticked.size === 1 ? '' : 's'}
+                  {kind === OTHER_HALF_KIND && ohActivityId ? 'Save and place' : 'Save'} group of {ticked.size} student{ticked.size === 1 ? '' : 's'}
                 </button>
               </form>
             </>

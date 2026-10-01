@@ -25,7 +25,7 @@ function GroupsInner() {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [kind, setKind] = useState('activity');
+  const [kind, setKind] = useState('other');
   const [visibility, setVisibility] = useState('staff');
   const [saving, setSaving] = useState(false);
 

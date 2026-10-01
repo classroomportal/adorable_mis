@@ -213,6 +213,7 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 
 **Placed and locked by the school** (302, the principal's decisions of 1 Oct 2026)
 - From a student group's page, SMT, pastoral, the school office, the `other_half` coordinator and admins can put every current student in the group into one activity. It replaces each student's choice for that day only; other days are untouched.
+- A group whose kind is **Other Half** (the kind formerly called Activity, renamed 1 Oct 2026) is for the Other Half. When a group built from a rule is saved with that kind, the activity and the lock can be chosen on the same form, and saving places the group in one step. Trips and clubs go under "Other".
 - The placement can be **locked until staff unlock it**, **locked until a date** (that day included), or not locked.
 - While a lock is in force, the student can't change or clear that day's activity, even during Evening Prep with choices open. The database refuses it.
 - When a lock ends (its date passes or staff unlock it), the student **stays in the activity** and may change it at Evening Prep while choices are open.
