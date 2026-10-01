@@ -425,6 +425,7 @@ How the list behaves:
   - Events with a picture: SMT or admin decide. They can send the text with the picture, send the text only, or decline.
   - −5 events without a picture: the school office or admin release the text.
   - −1 to −4 events without a picture never go to parents.
+- **The review is the only way a negative event reaches parents** (305): staff can't make an event visible to parents, mark it reviewed or change its type directly, and a new negative event always starts hidden.
 - SMT get a "picture to check" notice in their Formwork inbox.
 
 **Behaviour alert emails** (168, 202)
