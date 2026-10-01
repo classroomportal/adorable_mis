@@ -79,14 +79,14 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 
 | Area | State | What it does | Open issues |
 | --- | --- | --- | --- |
-| Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out; a parent's welcome letter can be resent to reset a forgotten password | 1 |
+| Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out; parent welcome letters sent by admins or the school office, and resendable to reset a forgotten password | 1 |
 | Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type; who added each student and every change to a student record are logged; names are tidied of stray spaces | 1 |
 | Timetable and imports | Live | Nova-T import with preview; lesson-level teacher and room | 0 |
 | Registers | Live | Any staff marks any register; 15-minute not-done alerts | 1 |
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks | 5 |
-| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile | 5 |
+| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile; pictures on positive events only | 5 |
 | Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017 | 3 |
-| Homework | Years 10–11 | Set from the register or /homework, with files and links; marks converted to grades that follow the student across classes; the term's homework suggests the report's Homework judgement and prints as a grade on the written report; a class mark sheet over any dates; on students' timetables, where students tick it done; every Year 10 and 11 teaching group (not mentor groups or Prep), for their teachers, Heads of Department and SMT | 0 |
+| Homework | Years 10–11 | Set from the register or /homework, with files and links; marks converted to grades that follow the student across classes; the term's homework suggests the report's Homework judgement and prints as a grade on the written report; a class mark sheet over any dates; a student view for staff; late joiners don't inherit earlier homework; on students' timetables, where students tick it done; every Year 10 and 11 teaching group (not mentor groups or Prep), for their teachers, Heads of Department and SMT | 0 |
 | Reports and transcripts | Live | Draft→checked comments with AI help; KS3 and KS4/5 transcripts | 2 |
 | Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists; the bursar adds paid top-ups from recorded payments | 3 |
 | Fees | Live | Invoices, batches, discounts; two-person price approval; locked prices | 1 |
