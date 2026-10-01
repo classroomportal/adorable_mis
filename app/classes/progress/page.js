@@ -20,46 +20,9 @@ function gradeScaleOf(grade) {
   return isWaecGrade(grade) ? 'waec' : 'igcse';
 }
 
-// Which results count as belonging to a chosen result set.
-//
-// Scores entered on /results/enter carry result_set_event_id. Scores written
-// by /results/import-gradebook do not — they are keyed on the week alone — so
-// a result set also claims untagged rows from its own date, which is how
-// /results/subject-overview already reads them. Without that, picking "T3
-// Exam" would show an empty table, since every result imported so far is
-// untagged.
-function belongsToResultSet(r, ev) {
-  return r.result_set_event_id === ev.event_id
-    || (r.result_set_event_id == null && r.week_start_date === ev.event_date);
-}
-
-// One grade per student+subject: the chosen result set's, or the most recent
-// if no result set is chosen. Now that a week can hold more than one result
-// set, "most recent" ties on week_start_date are broken by result_id, so the
-// later-entered score wins rather than whichever row arrived first.
-function pickGrades(results, chosenSet) {
-  const picked = {};
-  (results || []).forEach((r) => {
-    if (!r.grade) return;
-    if (chosenSet && !belongsToResultSet(r, chosenSet)) return;
-    const key = `${r.student_id}-${r.subject_id}`;
-    const prev = picked[key];
-    if (!prev) { picked[key] = r; return; }
-    if (chosenSet) {
-      // Within one result set, a row actually tagged with it beats a row
-      // matched only on its date.
-      if (r.result_set_event_id != null && prev.result_set_event_id == null) picked[key] = r;
-      return;
-    }
-    if (r.week_start_date > prev.week_start_date) picked[key] = r;
-    else if (r.week_start_date === prev.week_start_date && r.result_id > prev.result_id) picked[key] = r;
-  });
-  return picked;
-}
-
-function buildRows(data, chosenSet) {
+function buildRows(data, grades) {
   if (!data) return [];
-  const { classes, sc, students, targets, results, gs, subjMeta, departmentScope, ownClassIds } = data;
+  const { classes, sc, students, targets, gs, subjMeta, departmentScope, ownClassIds } = data;
 
   const departmentBySubject = Object.fromEntries((subjMeta || []).map((s) => [s.subject_id, s.department_name]));
 
@@ -74,7 +37,9 @@ function buildRows(data, chosenSet) {
   const activeStudentIds = new Set((students || []).map((s) => s.student_id));
   const yearByStudent = Object.fromEntries((students || []).map((s) => [s.student_id, s.year_group]));
 
-  const gradeByKey = pickGrades(results, chosenSet);
+  // One grade per student and subject, picked by class_progress_grades()
+  // (migration 313): the chosen result set's, or the most recent.
+  const gradeByKey = Object.fromEntries((grades || []).map((g) => [`${g.student_id}-${g.subject_id}`, g]));
   const targetByKey = Object.fromEntries((targets || []).map((t) => [`${t.student_id}-${t.subject_id}`, t.target_grade]));
 
   const studentsByClass = {};
@@ -165,12 +130,11 @@ function ClassProgressInner() {
     }
 
     async function load() {
-      const [classes, sc, students, targets, results, gs, subjMeta, myScope, sets] = await Promise.all([
+      const [classes, sc, students, targets, gs, subjMeta, myScope, sets] = await Promise.all([
         fetchAll('classes', 'class_id, class_code, subject_id, staff_id, subjects(subject_name), staff(first_name, last_name)', (q) => q.not('subject_id', 'is', null)),
         fetchAll('student_class', 'student_id, class_id'),
         fetchAll('students', 'student_id, year_group', (q) => q.eq('status', 'active')),
         fetchAll('target_grades', 'student_id, subject_id, target_grade'),
-        fetchAll('results', 'result_id, student_id, subject_id, grade, week_start_date, result_set_event_id'),
         fetchAll('grade_scale', '*'),
         fetchAll('subjects', 'subject_id, subject_name, display_name, target_fallback_subject_id, department_name'),
         supabase.rpc('my_department_scope'),
@@ -193,14 +157,27 @@ function ClassProgressInner() {
       }
       setOwnOnly(!!ownClassIds);
       setResultSets(sets?.data || []);
-      setData({ classes, sc, students, targets, results, gs, subjMeta, departmentScope, ownClassIds });
+      setData({ classes, sc, students, targets, gs, subjMeta, departmentScope, ownClassIds });
       setLoading(false);
     }
     load();
   }, [profile, staffRoles]);
 
   const chosenSet = resultSets.find((e) => String(e.event_id) === String(resultSetFilter)) || null;
-  const rows = useMemo(() => buildRows(data, chosenSet), [data, chosenSet]);
+  const [grades, setGrades] = useState(null);
+  // Re-picked in the database whenever the result set changes (migration 313),
+  // instead of downloading every result ever recorded.
+  useEffect(() => {
+    let cancelled = false;
+    setGrades(null);
+    supabase.rpc('class_progress_grades', { p_event_id: resultSetFilter ? Number(resultSetFilter) : null })
+      .then(({ data: g, error }) => {
+        if (error) console.error('class_progress_grades:', error.message);
+        if (!cancelled) setGrades(g || []);
+      });
+    return () => { cancelled = true; };
+  }, [resultSetFilter]);
+  const rows = useMemo(() => buildRows(data, grades), [data, grades]);
 
   const years = useMemo(() => [...new Set(rows.map((r) => r.year))].filter(Boolean).sort((a, b) => a - b), [rows]);
   const subjects = useMemo(() => [...new Set(rows.map((r) => r.subject))].filter(Boolean).sort(), [rows]);
@@ -255,7 +232,7 @@ function ClassProgressInner() {
         </label>
       </div>
 
-      {loading ? <p>Loading...</p> : (
+      {loading || grades === null ? <p>Loading...</p> : (
         <div className="table-scroll"><table>
           <thead>
             <tr><th>Class</th><th>Subject</th><th>Teacher</th><th>Year</th><th>Students<br />Compared</th><th>+ / ~ / -</th><th>Overall</th></tr>
@@ -278,7 +255,7 @@ function ClassProgressInner() {
           </tbody>
         </table></div>
       )}
-      {!loading && filtered.length === 0 && (
+      {!loading && grades !== null && filtered.length === 0 && (
         <p>
           {chosenSet
             ? `No classes have comparable target + result data for ${chosenSet.event_name}.`
