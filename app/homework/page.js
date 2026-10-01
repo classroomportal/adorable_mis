@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
+import { useAuth } from '../../lib/AuthContext';
 import { LESSON_COLUMNS } from '../../lib/lessons';
 import { formatUKDate } from '../../lib/formatDate';
 import { schoolToday } from '../../lib/schoolTime';
@@ -248,7 +249,12 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
 }
 
 function HomeworkInner() {
-  const [classes, setClasses] = useState(null); // null = loading
+  const { profile, profileLoaded } = useAuth();
+  const myStaffId = profile?.staff_id ?? null;
+  // Every class on the page, each with `mine` (I teach it, or a lesson of
+  // it) and `canSet` (the database lets me set homework and record grades:
+  // my_homework_class_ids()). null = loading.
+  const [classes, setClasses] = useState(null);
   const [schemes, setSchemes] = useState([]);
   const [classId, setClassId] = useState(null);
   const [homework, setHomework] = useState([]);
@@ -260,31 +266,41 @@ function HomeworkInner() {
   const [status, setStatus] = useState(null);
 
   useEffect(() => {
+    if (!profileLoaded) return;
     (async () => {
-      // The switched-on classes this person can set homework for, by the
-      // same check the database applies on every save (migration 295: one
-      // call rather than one per class, now every Year 10–11 group is on).
-      const [{ data: ids }, { data: sch }] = await Promise.all([
+      // Which switched-on classes this person can set homework for, by the
+      // same check the database applies on every save (migration 295).
+      const [{ data: ids }, { data: sch }, { data: rows }] = await Promise.all([
         supabase.rpc('my_homework_class_ids'),
         supabase.from('homework_schemes').select('*, homework_scheme_values(value, sort_order)').order('sort_order'),
+        supabase.from('homework_classes')
+          .select(`classes(class_id, class_code, subject_id, year_group, staff_id, subjects(subject_name, display_name), timetable_slots(${LESSON_COLUMNS}))`),
       ]);
       setSchemes(sch || []);
-      const classIds = (ids || []).map((r) => (typeof r === 'object' ? r.my_homework_class_ids : r));
-      const { data: rows } = classIds.length
-        ? await supabase.from('classes')
-          .select(`class_id, class_code, subject_id, year_group, staff_id, subjects(subject_name, display_name), timetable_slots(${LESSON_COLUMNS})`)
-          .in('class_id', classIds)
-        : { data: [] };
-      const mine = (rows || []).sort((a, b) => a.class_code.localeCompare(b.class_code));
-      setClasses(mine);
+      const canSet = new Set((ids || []).map((r) => (typeof r === 'object' ? r.my_homework_class_ids : r)));
+      const all = (rows || []).map((r) => r.classes).filter(Boolean).map((c) => ({
+        ...c,
+        mine: myStaffId != null && (c.staff_id === myStaffId || (c.timetable_slots || []).some((t) => t.staff_id === myStaffId)),
+        canSet: canSet.has(c.class_id),
+      }));
+      // Your own classes as buttons; in the drop-down, the other classes in
+      // the subjects you teach (to see what colleagues have set, the
+      // principal, 1 Oct 2026) and any others you manage (Head of
+      // Department, admin).
+      const mySubjects = new Set(all.filter((c) => c.mine).map((c) => c.subject_id));
+      const shown = all
+        .filter((c) => c.mine || c.canSet || mySubjects.has(c.subject_id))
+        .sort((a, b) => a.class_code.localeCompare(b.class_code));
+      setClasses(shown);
       // ?class=…&homework=… (from the register's "Mark book" links).
       const params = new URLSearchParams(window.location.search);
-      const wanted = mine.find((c) => String(c.class_id) === params.get('class'));
+      const wanted = shown.find((c) => String(c.class_id) === params.get('class'));
+      const own = shown.filter((c) => c.mine);
       if (wanted) setClassId(wanted.class_id);
-      else if (mine.length === 1) setClassId(mine[0].class_id);
+      else if (own.length === 1) setClassId(own[0].class_id);
       pendingHomework.current = params.get('homework');
     })();
-  }, []);
+  }, [profileLoaded, myStaffId]);
 
   const cls = (classes || []).find((c) => c.class_id === classId) || null;
 
@@ -317,7 +333,7 @@ function HomeworkInner() {
 
   // Open the mark book asked for in the URL once its class's homework is loaded.
   useEffect(() => {
-    if (!pendingHomework.current) return;
+    if (!pendingHomework.current || !cls?.canSet) return;
     const hw = homework.find((h) => String(h.homework_id) === pendingHomework.current);
     if (hw) { pendingHomework.current = null; setMode({ kind: 'marks', homework: hw }); }
   }, [homework]);
@@ -351,19 +367,34 @@ function HomeworkInner() {
       <h1>Homework</h1>
       <p style={{ color: 'var(--ink-soft)' }}>
         Set homework for a class and record a grade for each student. Students see it on their timetable and
-        Homework page, and see their own grade once you release the marks. Homework grades aren&apos;t part of reports.
+        Homework page, and see their own grade once you release the marks. The term&apos;s homework grades help with the
+        Homework judgement when you write reports.
       </p>
 
       {classes === null ? <p>Loading…</p> : classes.length === 0 ? (
         <div className="card"><p>Homework isn&apos;t switched on for any of your classes yet. It is on for Year 10 and 11 teaching groups.</p></div>
       ) : (
         <div className="card" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <strong style={{ marginRight: '0.25rem' }}>Class</strong>
-          {classes.map((c) => (
-            <button key={c.class_id} type="button" className={c.class_id === classId ? '' : 'secondary'} onClick={() => setClassId(c.class_id)}>
+          {classes.some((c) => c.mine) && <strong style={{ marginRight: '0.25rem' }}>My classes</strong>}
+          {classes.filter((c) => c.mine).map((c) => (
+            <button key={c.class_id} type="button" className={c.class_id === classId ? '' : 'secondary'} onClick={() => { setClassId(c.class_id); setMode({ kind: 'list' }); }}>
               {classLabel(c)}
             </button>
           ))}
+          {classes.some((c) => !c.mine) && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0, flex: '0 1 22rem' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>{classes.some((c) => c.mine) ? 'Other classes' : 'Class'}</span>
+              <select
+                value={cls && !cls.mine ? cls.class_id : ''}
+                onChange={(e) => { if (e.target.value) { setClassId(Number(e.target.value)); setMode({ kind: 'list' }); } }}
+              >
+                <option value="">Choose…</option>
+                {classes.filter((c) => !c.mine).map((c) => (
+                  <option key={c.class_id} value={c.class_id}>{classLabel(c)}{c.canSet ? '' : ' (view only)'}</option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       )}
 
@@ -395,15 +426,22 @@ function HomeworkInner() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <h2 style={{ margin: 0 }}>{classLabel(cls)}</h2>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button type="button" className="secondary" onClick={() => setMode({ kind: 'sheet' })}>Mark sheet</button>
-              <button type="button" onClick={() => setMode({ kind: 'form' })}>Set homework</button>
-            </div>
+            {cls.canSet && (
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button type="button" className="secondary" onClick={() => setMode({ kind: 'sheet' })}>Mark sheet</button>
+                <button type="button" onClick={() => setMode({ kind: 'form' })}>Set homework</button>
+              </div>
+            )}
           </div>
+          {!cls.canSet && (
+            <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+              View only: you can see what has been set for this class. Its own teachers set homework and record the grades.
+            </p>
+          )}
           {status && <p>{status}</p>}
           {homework.length === 0 ? <p>No homework set for this class yet.</p> : (
             <div className="table-scroll"><table>
-              <thead><tr><th>Due</th><th>Homework</th><th>Graded as</th><th>Marked</th><th></th></tr></thead>
+              <thead><tr><th>Due</th><th>Homework</th><th>Graded as</th>{cls.canSet && <><th>Marked</th><th></th></>}</tr></thead>
               <tbody>
                 {homework.map((hw) => {
                   const lesson = (cls.timetable_slots || []).find((s) => s.slot_id === hw.due_slot_id);
@@ -415,7 +453,7 @@ function HomeworkInner() {
                         {formatUKDate(hw.due_on, { weekday: true })}
                         <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
                           {lesson ? `Lesson ${lesson.period_number}` : 'End of day'}
-                          {!withdrawn && hw.due_on < today && n < roster ? ' · past due' : ''}
+                          {cls.canSet && !withdrawn && hw.due_on < today && n < roster ? ' · past due' : ''}
                         </div>
                       </td>
                       <td>
@@ -427,21 +465,21 @@ function HomeworkInner() {
                         </details>
                       </td>
                       <td>{schemeLabel(schemeFor(hw), hw.out_of)}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
+                      {cls.canSet && <td style={{ whiteSpace: 'nowrap' }}>
                         {n} / {roster}
                         <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{hw.marks_released ? 'released' : 'not released'}</div>
                         {tickCounts[hw.homework_id] > 0 && (
                           <div style={{ fontSize: '0.8rem', color: '#1a5c30' }}>✓ {tickCounts[hw.homework_id]} ticked done</div>
                         )}
-                      </td>
-                      <td>
+                      </td>}
+                      {cls.canSet && <td>
                         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
                           <button type="button" style={btnSmall} onClick={() => setMode({ kind: 'marks', homework: hw })}>Mark book</button>
                           {!withdrawn && <button type="button" className="secondary" style={btnSmall} onClick={() => setMode({ kind: 'form', homework: hw })}>Edit</button>}
                           <button type="button" className="secondary" style={btnSmall} onClick={() => setWithdrawn(hw, !withdrawn)}>{withdrawn ? 'Restore' : 'Withdraw'}</button>
                           {n === 0 && <button type="button" className="secondary" style={btnSmall} onClick={() => remove(hw)}>Delete</button>}
                         </div>
-                      </td>
+                      </td>}
                     </tr>
                   );
                 })}
