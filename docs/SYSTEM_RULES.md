@@ -280,11 +280,11 @@ How the list behaves:
 - Authorised absences (illness, appointments and so on) never count as missed.
 - Each row shows the day's marks as badges (M, L1–L6, OH, EP) and, for each missed period, the lesson the student should have been in (their class at that period, using the lesson's own teacher first), the code, and who marked it. For a past day the lesson comes from today's classes and timetable, so it can be out of date after a class change.
 - Today's list refreshes every minute.
-- Open to SMT, pastoral, school office and admin. The list is worked out in the database (`students_missed_lessons()`), which refuses anyone else.
+- Open to SMT, pastoral, school office, attendance officer (migration 310) and admin. The list is worked out in the database (`students_missed_lessons()`), which refuses anyone else.
 
 **Missed-lesson pop-up on the office's screens** (migration 309)
 
-A full-screen flashing pop-up, on whatever Formwork page is open, for anyone whose role is granted **Missed-lesson pop-ups** at Permissions (school office to start with). It appears when, today:
+A full-screen flashing pop-up, on whatever Formwork page is open, for anyone whose role is granted **Missed-lesson pop-ups** at Permissions (school office and attendance officer to start with). It appears when, today:
 - a period started **at least 15 minutes ago**, and
 - a student is marked **absent without a reason** (unauthorised) in that period's register, and
 - the same student was marked **present or late at an earlier period** today.
