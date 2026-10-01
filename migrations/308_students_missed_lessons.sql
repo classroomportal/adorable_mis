@@ -31,7 +31,8 @@
 -- timed out on the DROP FUNCTION and DELETE below (it holds destructive
 -- statements for a confirmation). Everything else went in, and execute on
 -- students_out_of_lesson() was revoked from public, anon and authenticated;
--- the drop and the delete were left for the SQL editor.
+-- the drop and the delete were left for the SQL editor, where the principal
+-- ran them the same evening. The live database now matches this file.
 
 set local formwork.change_note = 'Principal (direct)';
 
