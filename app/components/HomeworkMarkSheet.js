@@ -46,7 +46,7 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
         .eq('class_id', cls.class_id).eq('status', 'set')
         .gte('due_on', from).lte('due_on', to)
         .order('due_on').order('homework_id'),
-      supabase.from('student_class').select('students(student_id, first_name, last_name, status)').eq('class_id', cls.class_id),
+      supabase.from('student_class').select('joined_on, students(student_id, first_name, last_name, status)').eq('class_id', cls.class_id),
       supabase.from('subject_grade_boundaries').select('grade, min_score')
         .eq('subject_id', cls.subject_id).eq('year_group', cls.year_group),
     ]);
@@ -56,7 +56,8 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
       ? await supabase.from('homework_marks').select('homework_id, student_id, grade, score').in('homework_id', ids)
       : { data: [] };
     const byStudent = new Map();
-    (enrol || []).map((e) => e.students).filter((s) => s && s.status === 'active').forEach((s) => byStudent.set(s.student_id, s));
+    (enrol || []).filter((e) => e.students && e.students.status === 'active')
+      .forEach((e) => byStudent.set(e.students.student_id, { ...e.students, joined_on: e.joined_on }));
     const missing = [...new Set((m || []).map((x) => x.student_id))].filter((id) => !byStudent.has(id));
     if (missing.length) {
       const { data: extra } = await supabase.from('students').select('student_id, first_name, last_name, status').in('student_id', missing);
@@ -76,6 +77,8 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
 
   function cell(h, s) {
     const m = marks[`${h.homework_id}:${s.student_id}`];
+    // Due before the student joined the class (migration 298): not theirs.
+    if (!m && s.joined_on && h.due_on < s.joined_on) return { text: '', kind: 'before', title: 'Joined the class after this was due' };
     if (!m) return { text: '', kind: 'none' };
     if (SHORT[m.grade]) return { text: SHORT[m.grade], title: m.grade, kind: m.grade === 'Excused' ? 'excused' : 'missing' };
     if (m.score != null) {
@@ -94,7 +97,8 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
     return {
       avg,
       grade: avg == null ? null : gradeFromBoundaries(avg, boundaries),
-      marked: cells.filter((c) => c.kind !== 'none').length,
+      marked: cells.filter((c) => c.kind !== 'none' && c.kind !== 'before').length,
+      of: cells.filter((c) => c.kind !== 'before').length,
       missing: cells.filter((c) => c.kind === 'missing').length,
     };
   }
@@ -106,7 +110,7 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
       return [
         `${s.last_name}, ${s.first_name}`,
         ...homework.map((h) => { const c = cell(h, s); return c.title || c.text; }),
-        sum.avg == null ? '' : Math.round(sum.avg), sum.grade || '', `${sum.marked}/${homework.length}`, sum.missing,
+        sum.avg == null ? '' : Math.round(sum.avg), sum.grade || '', `${sum.marked}/${sum.of}`, sum.missing,
       ].map(csvCell).join(',');
     });
     const blob = new Blob([[header.map(csvCell).join(','), ...lines].join('\n')], { type: 'text/csv' });
@@ -130,7 +134,7 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
       </div>
       <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
         Homework due between {from ? formatUKDate(from) : '…'} and {to ? formatUKDate(to) : '…'}. The average covers homework marked with a number,
-        and its grade comes from the subject&apos;s grade boundaries. NHI = not handed in, Exc = excused. Click a homework to open its mark book.
+        and its grade comes from the subject&apos;s grade boundaries. NHI = not handed in, Exc = excused, · = due before the student joined the class. Click a homework to open its mark book.
       </p>
       {loading ? <p>Loading…</p> : homework.length === 0 ? (
         <p>No homework is due for this class in these dates.</p>
@@ -164,12 +168,12 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
                   </td>
                   {homework.map((h) => {
                     const c = cell(h, s);
-                    return <td key={h.homework_id} className={`hw-sheet-cell hw-sheet-${c.kind}`} title={c.title}>{c.text || '—'}</td>;
+                    return <td key={h.homework_id} className={`hw-sheet-cell hw-sheet-${c.kind}`} title={c.title}>{c.kind === 'before' ? '·' : (c.text || '—')}</td>;
                   })}
                   <td style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
                     {sum.avg == null ? '—' : `${Math.round(sum.avg)}%${sum.grade ? ` · ${sum.grade}` : ''}`}
                   </td>
-                  <td>{sum.marked}/{homework.length}</td>
+                  <td>{sum.marked}/{sum.of}</td>
                   <td className={sum.missing ? 'hw-sheet-missing' : undefined}>{sum.missing}</td>
                 </tr>
               );
