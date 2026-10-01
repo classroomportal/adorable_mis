@@ -6,6 +6,15 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { classifyAverage, isWaecGrade, STYLE, LABEL } from '../../../lib/gradeCompare';
 import { formatUKDate } from '../../../lib/formatDate';
+import { useAuth } from '../../../lib/AuthContext';
+import { loadStaffLessons } from '../../../lib/lessons';
+
+// Who sees which classes (the principal, 1 Oct 2026): SMT, admins and the
+// oversight roles below see every class; a Head of Department sees their
+// department's (my_department_scope(), migration 312); anyone else, i.e. a
+// teacher, sees only the classes they teach, as class teacher or teacher of
+// any single lesson. This narrows the page; it is not a security boundary.
+const WHOLE_SCHOOL_ROLES = ['smt', 'assessment_manager', 'assessment_user', 'pastoral', 'head_of_boarding'];
 
 function gradeScaleOf(grade) {
   return isWaecGrade(grade) ? 'waec' : 'igcse';
@@ -50,7 +59,7 @@ function pickGrades(results, chosenSet) {
 
 function buildRows(data, chosenSet) {
   if (!data) return [];
-  const { classes, sc, students, targets, results, gs, subjMeta, departmentScope } = data;
+  const { classes, sc, students, targets, results, gs, subjMeta, departmentScope, ownClassIds } = data;
 
   const departmentBySubject = Object.fromEntries((subjMeta || []).map((s) => [s.subject_id, s.department_name]));
 
@@ -78,6 +87,7 @@ function buildRows(data, chosenSet) {
   const out = [];
   (classes || [])
     .filter((c) => !departmentScope || departmentBySubject[c.subject_id] === departmentScope)
+    .filter((c) => !ownClassIds || ownClassIds.has(c.class_id))
     .forEach((c) => {
     const roster = studentsByClass[c.class_id] || [];
     let targetSum = 0, actualSum = 0, n = 0, above = 0, on = 0, below = 0;
@@ -124,6 +134,7 @@ function buildRows(data, chosenSet) {
 }
 
 function ClassProgressInner() {
+  const { profile, staffRoles } = useAuth();
   const [data, setData] = useState(null);
   const [resultSets, setResultSets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,6 +142,7 @@ function ClassProgressInner() {
   const [subjectFilter, setSubjectFilter] = useState('');
   const [resultSetFilter, setResultSetFilter] = useState(''); // '' = most recent result
   const [scopedDepartment, setScopedDepartment] = useState(null);
+  const [ownOnly, setOwnOnly] = useState(false);
 
   useEffect(() => {
     // Supabase caps unpaginated selects at 1000 rows. Several of these
@@ -171,12 +183,21 @@ function ClassProgressInner() {
       // their own classes.
       const departmentScope = myScope?.data || null;
       setScopedDepartment(departmentScope);
+      // A teacher (no whole-school role, not an HoD) sees only their own classes.
+      const wholeSchool = profile?.role === 'admin' || (staffRoles || []).some((r) => WHOLE_SCHOOL_ROLES.includes(r));
+      const isHod = (staffRoles || []).includes('head_of_department');
+      let ownClassIds = null;
+      if (!wholeSchool && !isHod) {
+        const { classes: mine } = profile?.staff_id ? await loadStaffLessons(profile.staff_id) : { classes: [] };
+        ownClassIds = new Set((mine || []).map((c) => c.class_id));
+      }
+      setOwnOnly(!!ownClassIds);
       setResultSets(sets?.data || []);
-      setData({ classes, sc, students, targets, results, gs, subjMeta, departmentScope });
+      setData({ classes, sc, students, targets, results, gs, subjMeta, departmentScope, ownClassIds });
       setLoading(false);
     }
     load();
-  }, []);
+  }, [profile, staffRoles]);
 
   const chosenSet = resultSets.find((e) => String(e.event_id) === String(resultSetFilter)) || null;
   const rows = useMemo(() => buildRows(data, chosenSet), [data, chosenSet]);
@@ -196,6 +217,9 @@ function ClassProgressInner() {
         <p style={{ color: '#e34430', fontWeight: 600 }}>
           Showing {scopedDepartment} department classes only (Head of Department view)
         </p>
+      )}
+      {ownOnly && (
+        <p style={{ color: '#e34430', fontWeight: 600 }}>Showing the classes you teach only</p>
       )}
       <p>Each class's average grade vs the average target grade for the same students. Pick a result set to compare that set's scores, or leave it on Most recent result to use each student's latest score per subject. Classes with fewer than one comparable student are hidden. Target and actual grades are only compared when both are on the same grading scale (IGCSE or WAEC) — a Year 12 class whose result predates their WAEC track (e.g. still IGCSE-graded) won't show a comparison until a WAEC-scale result is entered. Sorted worst-to-best. (+ / ~ / - = Above / On / Below target)</p>
 
