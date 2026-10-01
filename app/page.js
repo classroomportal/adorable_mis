@@ -45,8 +45,8 @@ function useIsStaffParent() {
 }
 
 // Row 2: Log behaviour and Inbox (both moved here from row 1 at the
-// principal's request, migrations 292 and 294), and Missed Lessons for those
-// with the page (migrations 307–308). The numbers that used to sit
+// principal's request, migrations 292 and 294), and Missed Lessons and the
+// Homework Monitor for those with the page (migrations 307–308, 311). The numbers that used to sit
 // here are on their module cards (292–293). Order set at /admin/tile-order.
 function DashboardStats({ hasAccess }) {
   const { session } = useAuth();
@@ -88,6 +88,8 @@ function DashboardStats({ hasAccess }) {
         : missed === 0 ? 'Nobody has missed a lesson today'
         : `${missed} student${missed === 1 ? '' : 's'} missed a lesson today`,
     },
+    // Migration 311: SMT see the homework being set, as students see it.
+    { key: 'homework_monitor', href: '/homework/monitor', label: 'Homework Monitor', icon: '📘', accent: 'school', sub: 'Homework set, by year group or student' },
   ].filter((l) => hasAccess(l.href)), order);
   return <TileRow tiles={tiles} />;
 }
@@ -249,6 +251,7 @@ const TABS = [
       { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
       { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
       { href: '/homework', label: 'Homework', desc: "Set homework for a class and record grades. Years 10 and 11 for now." },
+      { href: '/homework/monitor', label: 'Homework Monitor', desc: "Homework being set, as students see it: a whole year group's week, or one student's timetable." },
       // Shares the /results grant rather than having a resource of its own.
       { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
       { href: '/results/subject-overview', label: 'Review Results', desc: "A student's exam results in each subject against the cohort average." },
