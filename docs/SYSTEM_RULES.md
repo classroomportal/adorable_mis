@@ -82,7 +82,7 @@ Where a rule has changed several times, only the current version is given. Migra
 - Parents sign in with email and password only.
 
 **Parents**
-- Welcome letters are sent by year group from `/parents/welcome-emails`, by admins only, up to 500 per send (172). Each parent gets one letter.
+- Welcome letters are sent by year group from `/parents/welcome-emails`, by admins and the school office, up to 500 per send (172, 299). Each parent gets one letter. Only admins can pause or resume all parent emails.
 - The letter sets the first password to the oldest current child's date of birth (`DDMMYYYY`) and forces a change at first sign-in (160).
 - A first send skips parents who have already signed in.
 - The letter can be sent again to any parent with a login, including parents who have signed in and chosen their own password (237, 276). It resets their password to the date-of-birth one in the letter, and they must choose a new one at their next sign-in.
