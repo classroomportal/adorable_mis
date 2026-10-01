@@ -34,7 +34,7 @@ function CountsRow({ label, counts }) {
   );
 }
 
-function CountsTable({ title, rows, totalCounts }) {
+function CountsTable({ title, rows, totalCounts, labelHeader }) {
   return (
     <div style={{ marginBottom: '2rem' }}>
       <h2 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{title}</h2>
@@ -42,7 +42,7 @@ function CountsTable({ title, rows, totalCounts }) {
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85rem' }}>
           <thead>
             <tr style={{ background: '#f5f5f5' }}>
-              <th style={thStyle}>{title.includes('Class') ? 'Class' : title.includes('Mentor') ? 'Mentor group' : 'Year'}</th>
+              <th style={thStyle}>{labelHeader || (title.includes('Class') ? 'Class' : title.includes('Mentor') ? 'Mentor group' : 'Year')}</th>
               <th style={{ ...thStyle, textAlign: 'center' }}>M</th>
               <th style={{ ...thStyle, textAlign: 'center' }}>F</th>
               <th style={{ ...thStyle, textAlign: 'center' }}>Unknown</th>
@@ -67,6 +67,17 @@ function CountsTable({ title, rows, totalCounts }) {
   );
 }
 
+// Room numbers are text ('1'…'17'); sort them as numbers, with blanks last.
+function compareRooms(a, b) {
+  if (a === NO_ROOM) return 1;
+  if (b === NO_ROOM) return -1;
+  return a.localeCompare(b, undefined, { numeric: true });
+}
+
+const NO_ROOM = 'No room';
+const NO_HOUSE = 'No boarding house';
+const NO_RESTAURANT = 'No restaurant';
+
 function StudentNumbersInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -76,6 +87,12 @@ function StudentNumbersInner() {
 
   const [byMentor, setByMentor] = useState([]); // [{year_group, group_name, counts}]
   const [mentorTotal, setMentorTotal] = useState(newCounts());
+
+  const [byHouse, setByHouse] = useState([]); // [{house, rooms:[{room, counts}], houseTotal}]
+  const [houseTotal, setHouseTotal] = useState(newCounts());
+
+  const [byRestaurant, setByRestaurant] = useState([]); // [{restaurant, counts}]
+  const [restaurantTotal, setRestaurantTotal] = useState(newCounts());
 
   const [bySubject, setBySubject] = useState([]); // [{subject_name, classes:[{class_code, counts}], subjectTotal}]
   const [classTotal, setClassTotal] = useState(newCounts());
@@ -87,7 +104,7 @@ function StudentNumbersInner() {
       try {
         const { data: students, error: sErr } = await supabase
           .from('students')
-          .select('student_id, year_group, gender, form_class, status')
+          .select('student_id, year_group, gender, form_class, status, boarding_house, boarding_room_number, restaurant')
           .in('year_group', YEARS)
           .eq('status', 'active');
         if (sErr) throw sErr;
@@ -128,6 +145,51 @@ function StudentNumbersInner() {
         });
         setByMentor(mentorRows);
         setMentorTotal(mTotal);
+
+        // --- By boarding house and room ---
+        // Room numbers repeat across houses (every house has a room 1), so
+        // rooms are counted within their house, never on the number alone.
+        const houseMap = new Map(); // house -> Map(room -> counts)
+        const hTotal = newCounts();
+        for (const s of students) {
+          const house = s.boarding_house?.trim() || NO_HOUSE;
+          const room = s.boarding_room_number?.trim() || NO_ROOM;
+          if (!houseMap.has(house)) houseMap.set(house, new Map());
+          const roomMap = houseMap.get(house);
+          if (!roomMap.has(room)) roomMap.set(room, newCounts());
+          addStudent(roomMap.get(room), s.gender);
+          addStudent(hTotal, s.gender);
+        }
+        const houseRows = [...houseMap.entries()]
+          .sort((a, b) => (a[0] === NO_HOUSE) - (b[0] === NO_HOUSE) || a[0].localeCompare(b[0]))
+          .map(([house, roomMap]) => {
+            const total = newCounts();
+            const rooms = [...roomMap.entries()]
+              .sort((a, b) => compareRooms(a[0], b[0]))
+              .map(([room, counts]) => {
+                for (const k of ['M', 'F', 'Unknown', 'total']) total[k] += counts[k];
+                return { room, counts };
+              });
+            return { house, rooms, houseTotal: total };
+          });
+        setByHouse(houseRows);
+        setHouseTotal(hTotal);
+
+        // --- By restaurant ---
+        const restMap = new Map();
+        const rTotal = newCounts();
+        for (const s of students) {
+          const r = s.restaurant?.trim() || NO_RESTAURANT;
+          if (!restMap.has(r)) restMap.set(r, newCounts());
+          addStudent(restMap.get(r), s.gender);
+          addStudent(rTotal, s.gender);
+        }
+        setByRestaurant(
+          [...restMap.entries()]
+            .sort((a, b) => (a[0] === NO_RESTAURANT) - (b[0] === NO_RESTAURANT) || a[0].localeCompare(b[0], undefined, { numeric: true }))
+            .map(([restaurant, counts]) => ({ restaurant, counts })),
+        );
+        setRestaurantTotal(rTotal);
 
         // --- By class (every subject class, all years) ---
         // student_class has 4500+ rows school-wide, well past Supabase's default
@@ -184,7 +246,7 @@ function StudentNumbersInner() {
     <div style={{ padding: '1rem', maxWidth: 900, margin: '0 auto', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>Student Numbers by Gender</h1>
       <p style={{ color: '#555', marginTop: 0, marginBottom: '1.5rem' }}>
-        Active students, Years 7–12, broken down by year group, mentor group and class.
+        Active students, Years 7–12, broken down by year group, mentor group, boarding room, restaurant and class.
       </p>
 
       {error && <p style={{ color: 'crimson' }}>Error: {error}</p>}
@@ -202,6 +264,62 @@ function StudentNumbersInner() {
         totalCounts={mentorTotal}
         rows={byMentor.map((r) => (
           <CountsRow key={r.year_group + r.group_name} label={r.group_name} counts={r.counts} />
+        ))}
+      />
+
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>By Boarding House and Room</h2>
+        {byHouse.map((h) => (
+          <details key={h.house} style={{ marginBottom: '0.5rem' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 600, padding: '0.3rem 0' }}>
+              {h.house}{' '}
+              <span style={{ fontWeight: 400, color: '#555' }}>
+                — {h.houseTotal.total} students, {h.rooms.filter((r) => r.room !== NO_ROOM).length} rooms
+              </span>
+            </summary>
+            <div style={{ overflowX: 'auto', border: '1px solid #ddd', borderRadius: 6, marginTop: '0.3rem' }}>
+              <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <th style={thStyle}>Room</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>M</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>F</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>Unknown</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {h.rooms.map((r) => (
+                    <CountsRow key={r.room} label={r.room === NO_ROOM ? r.room : `Room ${r.room}`} counts={r.counts} />
+                  ))}
+                  <tr style={{ background: '#f5f5f5', fontWeight: 600 }}>
+                    <td style={tdStyle}>All</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>{h.houseTotal.M}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>{h.houseTotal.F}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>{h.houseTotal.Unknown || ''}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>{h.houseTotal.total}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+        ))}
+        <div style={{ marginTop: '0.5rem', fontWeight: 600, fontSize: '0.85rem', color: '#555' }}>
+          All houses — M {houseTotal.M} · F {houseTotal.F}
+          {houseTotal.Unknown ? ` · Unknown ${houseTotal.Unknown}` : ''} · {houseTotal.total}
+        </div>
+      </div>
+
+      <CountsTable
+        title="By Restaurant"
+        labelHeader="Restaurant"
+        totalCounts={restaurantTotal}
+        rows={byRestaurant.map((r) => (
+          <CountsRow
+            key={r.restaurant}
+            label={r.restaurant === NO_RESTAURANT ? r.restaurant : `Restaurant ${r.restaurant}`}
+            counts={r.counts}
+          />
         ))}
       />
 
