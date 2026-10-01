@@ -85,6 +85,7 @@ function StudentDetail() {
   const [attendanceToday, setAttendanceToday] = useState([]); // today's marks, lesson by lesson
   const [attendanceSummary, setAttendanceSummary] = useState([]); // today / week / year, counted in the DB
   const [results, setResults] = useState([]);
+  const [resultStatus, setResultStatus] = useState(null);
   const [resultSetEvents, setResultSetEvents] = useState([]); // calendar_events flagged is_result_set
   const [resultSetKey, setResultSetKey] = useState(''); // '' = newest set
   const [targetMap, setTargetMap] = useState({}); // subject_id -> target grade
@@ -403,6 +404,23 @@ function StudentDetail() {
     setEditingTargets(false);
     setTargetStatus(`Saved — ${upserts.length} set, ${clears.length} cleared.`);
     await loadAll();
+  }
+
+  // Deleting a score entered in error, from the Results tab. Shown to
+  // assessment managers and admins, who may delete any score
+  // (can_delete_result(), migration 236; the database is the real check).
+  // The deleted row is kept in Grade History (migration 215).
+  async function deleteResult(r) {
+    const subject = r.subjects?.display_name || r.subjects?.subject_name || 'this subject';
+    const what = `${subject}: ${r.grade ?? '—'}${r.score != null ? ` (${r.score}${r.max_score ? ` / ${r.max_score}` : ''})` : ''}`;
+    if (!window.confirm(`Delete ${what} for ${student.first_name} ${student.last_name}? It is removed from trackers and reports, and kept in Grade History.`)) return;
+    setResultStatus('Deleting…');
+    const { data, error } = await supabase.from('results').delete().eq('result_id', r.result_id).select('result_id');
+    if (error) { setResultStatus(`Error: ${error.message}`); return; }
+    // Row-level security hides a row you may not delete rather than raising.
+    if (!data || data.length === 0) { setResultStatus("That score couldn't be deleted: only assessment managers, admins, the class teacher and the subject's Head of Department can delete scores."); return; }
+    setResults((prev) => prev.filter((x) => x.result_id !== r.result_id));
+    setResultStatus(`Deleted ${what}.`);
   }
 
   function startEditingScores() {
@@ -1329,10 +1347,11 @@ function StudentDetail() {
           </select>
         )}
       >
+        {resultStatus && <p>{resultStatus}</p>}
         {results.length === 0 ? <p>No results recorded.</p> : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Subject</th><th>Score</th><th>Grade</th><th>Target</th><th>vs Target</th></tr></thead>
+              <thead><tr><th>Subject</th><th>Score</th><th>Grade</th><th>Target</th><th>vs Target</th>{canEditAssessment && <th></th>}</tr></thead>
               <tbody>
                 {shown.map((r) => {
                   const target = targetMap[r.subject_id];
@@ -1344,6 +1363,12 @@ function StudentDetail() {
                       <td>{r.grade ?? '—'}</td>
                       <td>{target ?? '—'}</td>
                       <td>{cmp ? <span className="badge" style={STYLE[cmp]}>{LABEL[cmp]}</span> : '—'}</td>
+                      {canEditAssessment && (
+                        <td>
+                          <button type="button" className="secondary" onClick={() => deleteResult(r)}
+                            style={{ padding: '0.1rem 0.5rem', fontSize: '0.8rem' }}>Delete</button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
