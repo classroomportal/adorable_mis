@@ -23,7 +23,7 @@ import EventCommentEditor from '../../components/EventCommentEditor';
 // on an event whose text they can see. A -5 event kept back stays under
 // "Kept hidden" until it's sent, rather than dropping into history with no way
 // back to it. review_behaviour_for_parents() enforces all of this.
-const EVENT_FIELDS = 'event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, visible_to_parents, protocol_reviewed_at, students(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)';
+const EVENT_FIELDS = 'event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, visible_to_parents, protocol_reviewed_at, students!behaviour_events_student_id_fkey(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)';
 
 const PICTURE_STATUS = { pending: 'Waiting', approved: 'Sent', rejected: 'Not sent' };
 
@@ -73,7 +73,7 @@ function ReviewInner() {
         .order('event_date', { ascending: false }),
       supabase
         .from('behaviour_events')
-        .select('event_id, event_date, category, points, visible_to_parents, protocol_reviewed_at, students(first_name, last_name), reviewer:staff!behaviour_events_protocol_reviewed_by_fkey(first_name, last_name), photo:behaviour_photos(status)')
+        .select('event_id, event_date, category, points, visible_to_parents, protocol_reviewed_at, students!behaviour_events_student_id_fkey(first_name, last_name), reviewer:staff!behaviour_events_protocol_reviewed_by_fkey(first_name, last_name), photo:behaviour_photos(status)')
         .not('protocol_reviewed_at', 'is', null)
         .order('protocol_reviewed_at', { ascending: false })
         .limit(30),
