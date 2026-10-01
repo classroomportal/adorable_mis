@@ -64,8 +64,11 @@ function formatSentAt(ts) {
 }
 
 function WelcomeEmailsInner() {
-  const { profile } = useAuth();
+  const { profile, staffRoles } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  // The school office sends letters too (migration 299); pausing all parent
+  // emails stays admin-only.
+  const canSend = isAdmin || (staffRoles || []).includes('school_office');
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -109,15 +112,15 @@ function WelcomeEmailsInner() {
     setLoading(false);
   }
 
-  useEffect(() => { if (isAdmin) { load(); loadDelivery(); } }, [isAdmin]);
+  useEffect(() => { if (canSend) { load(); loadDelivery(); } }, [canSend]);
 
   // Refresh while letters are still going out.
   const inFlight = delivery ? delivery.queued + delivery.sending : 0;
   useEffect(() => {
-    if (!isAdmin || inFlight === 0) return undefined;
+    if (!canSend || inFlight === 0) return undefined;
     const t = setInterval(loadDelivery, 15000);
     return () => clearInterval(t);
-  }, [isAdmin, inFlight]);
+  }, [canSend, inFlight]);
 
   const allYears = useMemo(() => {
     const ys = new Set();
@@ -250,7 +253,7 @@ function WelcomeEmailsInner() {
     setSwitching(false);
   }
 
-  if (!isAdmin) return <p>Only admin can send welcome emails.</p>;
+  if (!canSend) return <p>Only admin and the school office can send welcome emails.</p>;
 
   const paused = emailSetting?.paused ?? true; // unknown counts as paused: never offer Send on a guess
   const resending = isResendView(show);
@@ -275,7 +278,7 @@ function WelcomeEmailsInner() {
                 {emailSetting.note ? ` ${emailSetting.note.replace(/[.\s]*$/, '')}.` : ''}
               </p>
             </div>
-            {paused ? (
+            {!isAdmin ? null : paused ? (
               <button type="button" onClick={() => setEmailsPaused(false)} disabled={switching}>
                 {switching ? 'Saving…' : 'Resume parent emails'}
               </button>
