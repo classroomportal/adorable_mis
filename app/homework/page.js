@@ -10,6 +10,7 @@ import { schoolToday } from '../../lib/schoolTime';
 import { OUTCOMES, loadAttachments, removeAttachment, gradeFromBoundaries } from '../../lib/homework';
 import { AttachmentList } from '../components/HomeworkAttachments';
 import HomeworkMarkSheet from '../components/HomeworkMarkSheet';
+import HomeworkStudentView from '../components/HomeworkStudentView';
 import { Instructions } from '../components/HomeworkChip';
 import HomeworkForm, { btnSmall, schemeLabel, classLabel } from '../components/HomeworkForm';
 
@@ -407,6 +408,10 @@ function HomeworkInner() {
         />
       )}
 
+      {cls && mode.kind === 'student' && (
+        <HomeworkStudentView cls={cls} schemes={schemes} onBack={() => setMode({ kind: 'list' })} />
+      )}
+
       {cls && mode.kind === 'sheet' && (
         <HomeworkMarkSheet
           cls={cls} schemes={schemes}
@@ -426,12 +431,15 @@ function HomeworkInner() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <h2 style={{ margin: 0 }}>{classLabel(cls)}</h2>
-            {cls.canSet && (
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button type="button" className="secondary" onClick={() => setMode({ kind: 'sheet' })}>Mark sheet</button>
-                <button type="button" onClick={() => setMode({ kind: 'form' })}>Set homework</button>
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button type="button" className="secondary" onClick={() => setMode({ kind: 'student' })}>Student view</button>
+              {cls.canSet && (
+                <>
+                  <button type="button" className="secondary" onClick={() => setMode({ kind: 'sheet' })}>Mark sheet</button>
+                  <button type="button" onClick={() => setMode({ kind: 'form' })}>Set homework</button>
+                </>
+              )}
+            </div>
           </div>
           {!cls.canSet && (
             <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
