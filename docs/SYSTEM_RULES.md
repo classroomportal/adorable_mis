@@ -270,6 +270,18 @@ How the list behaves:
 - OH activities are listed the same way, 15 minutes after that day's OH start, if at least one student has chosen the activity (157).
 - The page is open to pastoral, houseparent, SMT and admin. Each teacher also sees a banner on their own timetable with their overdue count.
 
+**Missed Lessons** (`/pastoral/missed-lessons`, migrations 307–308)
+
+A tile on the staff dashboard's second row, with today's count, and a link on the Pastoral card. For one day (today unless another date is picked), it lists every active student who:
+- was marked **present or late** at least once that day, and
+- was marked **absent without a reason** (unauthorised: No reason given, Unauthorised absence) at one or more other periods, before or after.
+
+How the list behaves:
+- Authorised absences (illness, appointments and so on) never count as missed.
+- Each row shows the day's marks as badges (M, L1–L6, OH, EP) and, for each missed period, the lesson the student should have been in (their class at that period, using the lesson's own teacher first), the code, and who marked it. For a past day the lesson comes from today's classes and timetable, so it can be out of date after a class change.
+- Today's list refreshes every minute.
+- Open to SMT, pastoral, school office and admin. The list is worked out in the database (`students_missed_lessons()`), which refuses anyone else.
+
 **Register alerts** (`/admin/register-alerts`)
 - Every 15 minutes, outstanding registers are copied into a permanent alert list: one per lesson per day, and one per OH activity per member of staff per day.
 - An alert stays even if the register is taken later. Someone must mark it resolved.
