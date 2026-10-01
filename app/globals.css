@@ -1374,6 +1374,24 @@ form.behaviour-log textarea { width: 100%; font: inherit; padding: 0.5rem 0.65re
 .bl-photo-preview { display: flex; gap: 0.75rem; align-items: flex-start; flex-wrap: wrap; }
 .bl-photo-preview img { width: 160px; max-height: 160px; object-fit: cover; border-radius: 8px; border: 1px solid var(--slate-200); }
 .bl-row.bl-filters { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+/* Other students in a serious event (InvolvedStudents.js, migration 303). */
+.bl-involved { display: flex; flex-direction: column; gap: 0.5rem; color: var(--ink); }
+.bl-involved label { flex: 0 0 auto; }
+.bl-involved-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.bl-involved-list li { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.9rem; }
+.bl-involved-list li > span { flex: 1 1 10rem; font-weight: 600; }
+.bl-involved-list select { width: auto; }
+.bl-involved-matches {
+  max-height: 260px; overflow-y: auto;
+  border: 1px solid var(--slate-200); border-radius: 8px; padding: 0.25rem 0.6rem;
+}
+.bl-involved-matches > div {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.3rem 0; font-size: 0.9rem;
+}
+.bl-involved-matches > div + div { border-top: 1px solid var(--slate-100, #eef1f5); }
+.bl-involved-add { display: flex; gap: 0.3rem; }
+.bl-involved-event { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.35rem; }
 @media (max-width: 640px) {
   form.behaviour-log { padding: 0.8rem; gap: 0.6rem; }
   .bl-row { grid-template-columns: 1fr; }

@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { formatUKDate } from '../../lib/formatDate';
 import BehaviourPhoto from './BehaviourPhoto';
 import { useBehaviourRules } from '../../lib/behaviourRules';
+import { EventInvolvedStudents } from './InvolvedStudents';
 
 // Who may edit a behaviour event: the member of staff who logged it,
 // pastoral/houseparents/SMT/admin, or the school office (who fix serious
@@ -146,6 +147,9 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
       </div>
       {message && <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{message}</span>}
       {event.photo_id && <BehaviourPhoto photoId={event.photo_id} showStatus />}
+      {event.type === 'negative' && event.points != null && event.points <= seriousPoints && (
+        <EventInvolvedStudents event={event} canEdit={canEdit} />
+      )}
     </div>
   );
 }

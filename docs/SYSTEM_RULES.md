@@ -407,6 +407,7 @@ How the list behaves:
 - **"Logged by" is always the signed-in person**, so nobody can log an event under a colleague's name (138).
 - The event's class is worked out from the class the teacher shares with the student (145). Parents see the subject, not the teacher.
 - **Serious means −5.** A −5 event can't be saved without a written explanation (166).
+- **Other students in a serious event** (migration 303, 1 Oct 2026): on a serious event (−5, e.g. Stage 5, bullying), staff can add other students as a **witness**, **involved** or **target**, found with a filter by name, year group and house. This can be done when logging or later from the event. Anyone who can edit the event can add, change or remove them. All staff can see them; **students and parents never do**, so the explanation still mustn't name anyone. Being added gives a student no points, detention or alert. Changes are logged in Change History.
 - Staff can attach one picture per logging, on positive events only (migration 297, the principal, 30 Sept 2026): the picture field is hidden for negative events and the database refuses a picture on one. Pictures are shrunk in the browser and must be under about 150 KB.
 
 **Editing and deleting** (207, 208, 211)
