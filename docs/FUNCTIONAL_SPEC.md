@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 296). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 300). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -69,7 +69,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | assessment\_manager | Data lead | Any result, target, CAT4/NGRT; transcript grades; Grade History; publishing documents. |
 | assessment\_user | Data assistants | Enter any result or target, but not delete. |
 | bursar | Bursar | Fees, invoices, payments, discounts; tuckshop admin (not Hand Out). |
-| school\_office | Office / SRO | Student records (all fields), parent records and logins, register alerts, releasing −5 behaviour to parents, messages. |
+| school\_office | Office / SRO | Student records (all fields), parent records and logins, parent welcome letters, register alerts, releasing −5 behaviour to parents, messages. |
 | admissions | Admissions | Admissions pages and student entry. |
 | tuckshop | Tuckshop staff | Tuckshop pages only, including Hand Out. |
 | tuckshop\_owner | cs@ (Uju MBA) | As tuckshop, plus the only role that can unlock a saved hand-out list. |
@@ -95,7 +95,7 @@ Only Formwork creates logins; nobody can create their own account, by email or b
 
 - **FR-1.1** A staff login is created automatically when a staff record gets an email, and a student login when a student gets a school email. Each has a random 10-character password. \[DB\]
 - **FR-1.2** The welcome email with that password is sent only when an admin saves the record. Admins can send a password-reset link from the "never signed in" lists for staff and students. \[DB\]
-- **FR-1.3** Parent welcome letters are sent by year group from /parents/welcome-emails, by admins, up to 500 per send, once per parent. The letter sets the first password to the oldest current child's date of birth (DDMMYYYY) and forces a change at first sign-in. A first send skips parents who have already signed in. \[DB\]
+- **FR-1.3** Parent welcome letters are sent by year group from /parents/welcome-emails, by admins and the school office (migration 299, the principal's decision, 1 Oct 2026), up to 500 per send, once per parent. Only admins can pause or resume all emails to parents; the office sees whether they are paused, and nothing is sent while they are. The letter sets the first password to the oldest current child's date of birth (DDMMYYYY) and forces a change at first sign-in. A first send skips parents who have already signed in. \[DB\]
 - **FR-1.4** A letter can be sent again to any parent with a login, including one who has signed in and chosen a password. It resets the password to the date-of-birth one and forces a change at the next sign-in; a parent with a login who was never sent the letter is then recorded as sent. "Show: Signed in" on the page has tick-boxes and "Send again", and the confirmation says how many signed-in parents will lose their chosen password. Still admin only, up to 500 per send, and blocked while parent emails are paused. If a parent who has never signed in has a new email, the login moves to the new address first; the send stops if another login already uses it. \[DB\]
 - **FR-1.5** The school office can create one parent's login from the student page. It gets a random password, emailed (or shown once if parent email is paused), and is not forced to change. \[DB\]
 - **FR-1.6** A student whose email changes before their first sign-in has their login moved to the new address. \[DB\]
@@ -152,6 +152,7 @@ Every member of staff can read the whole student record; what each role can chan
 | Other Half | Choose activities during Evening Prep | See the chosen activity |
 | Published documents | Own | Each child's |
 | Homework (Years 10 and 11) | Own classes' homework, files and links; own grade once released; this school year | No |
+| Student groups | Own groups marked for students or for students and parents (FR-18.17) | Only groups marked for parents (FR-18.17) |
 | Inbox | Yes | Yes |
 
 - **FR-2.12** Each portal shows only the signed-in student's own data, or the parent's linked children's. \[DB\]
@@ -270,7 +271,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 - **FR-6.2** Every event needs a category, and its points come from the category (−1 to −5, +1 to +5). Staff can't type points. Only admins set categories and points, at /admin/lookups. \[DB\]
 - **FR-6.3** "Logged by" is always the signed-in person. The event's class is worked out from the class the teacher shares with the student. \[DB\]
 - **FR-6.4** A −5 (serious) event can't be saved without a written explanation. \[DB\]
-- **FR-6.5** One picture can be attached per logging, shrunk in the browser and under about 150 KB. \[DB\]
+- **FR-6.5** One picture can be attached per logging, on positive events only, shrunk in the browser and under about 150 KB. The page shows the picture field only for positive events, and the database refuses a picture on a negative event (migration 297, the principal's decision, 30 Sept 2026). The six negative events that already had a picture were all declined, so no parent saw them; they are kept. \[DB\]
 
 * **FR-6.5a** Staff can choose students for a group logging by class, house, room, restaurant or year. /behaviour/log searches and filters past events; /behaviour/alerts lists events of −3 or worse in the last 7 days (a houseparent sees their own house). \[Page\]
 * **FR-6.5b** Every list of events shows who logged each one: /behaviour/log, alerts, review, detentions, appeals and the Behaviour tab of a student's profile. \[Page\]
@@ -514,7 +515,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 
 **Home dashboard**
 
-- **FR-13.5** Staff see a top row of big tiles (My Timetable, Calendar and, for staff who are also parents, My Children), a second row (Log behaviour, Inbox with its unread count), and module cards underneath. Three cards carry a number beside their icon that links to its page: active students on Students, staff on Staff & Access, behaviour alerts in the last 7 days on Pastoral, each shown only to those who can open that page (migrations 292–294). Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions, Certificates and Behaviour Appeals are on Pastoral, Class Allocation on Timetable. Students see big tiles (Timetable, Homework for students in a class with homework switched on, The Other Half, Assessment, Behaviour, Tuckshop, Messages); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
+- **FR-13.5** Staff see a top row of big tiles (My Timetable, Calendar and, for staff who are also parents, My Children), a second row (Log behaviour, Inbox with its unread count), and module cards underneath. Three cards carry a number beside their icon that links to its page: active students on Students, staff on Staff & Access, behaviour alerts in the last 7 days on Pastoral, each shown only to those who can open that page (migrations 292–294). Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions, Certificates and Behaviour Appeals are on Pastoral, Class Allocation on Timetable. Students see big tiles (Timetable, Homework for students in a class with homework switched on, The Other Half, Assessment, Behaviour, Tuckshop, Messages, and Groups when they are in a group shown to students); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
 - **FR-13.8** The order of the big tiles on students' home page and of every row of the staff dashboard (the top row, the second row and the module cards, which the bursar's home page also uses) is set once for the whole school at /admin/tile-order (admins). Tiles not yet placed go after the ordered ones. The order never changes which tiles someone sees; page access and which classes have homework switched on still decide that. \[DB\]
 
 **Administration pages**
@@ -668,7 +669,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 **Which classes, and access**
 
 - **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. Every Year 10 and 11 class is switched on except mentor groups and Prep (supervised study, not a taught subject); a new Year 10 or 11 class, from a later timetable import or next year's timetable, is switched on automatically unless it is a mentor group or Prep (migration 296). An admin can still switch a class off, and a re-import doesn't switch it back on. \[DB\]
-- **FR-17.2** /homework is granted to teachers, Heads of Department and SMT (and admins). The page lists only the switched-on classes the person can set homework for, in one call to the database; a Year 7–9 teacher sees that it isn't switched on for their classes yet. \[DB\]
+- **FR-17.2** /homework is granted to teachers, Heads of Department and SMT (and admins). The page shows the person's own classes (those they teach, or teach a lesson of) as buttons. A drop-down holds the other switched-on classes in the subjects they teach, marked view only (what was set, with instructions and files, but no grades and no editing), plus any class they manage as Head of Department or admin; a Year 7–9 teacher sees that it isn't switched on for their classes yet. \[DB\]
 
 **Setting homework**
 
@@ -700,6 +701,8 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 - **FR-17.14** On the student's Homework page and timetable, colour shows where each piece stands: red for overdue or not handed in, amber for due today, green for ticked done, purple for graded, blue for due later. A ticked card shrinks to just the subject. Ticked homework no longer counts as due this week or overdue. \[Page\]
 - **FR-17.15** Each class on /homework has a mark sheet: one row per student and one column per homework due between two dates (the current term by default), each column headed by the title and due date. It shows each student's average of their number-marked homework with its grade from the subject's boundaries, how many were marked and how many weren't handed in, and downloads as CSV. It shows only what the person may already see. \[Page\]
 - **FR-17.16** Marks follow the student. If a student changes class or teacher, whoever teaches them in that subject now can read all their homework marks in it for the current school year, from any class. The teacher who gave the marks, the Head of Department, SMT and admins still see them, and the student still sees their own released marks. (Migration 291.) \[DB\]
+- **FR-17.17** Student view: on /homework, staff can open any class shown there in "Student view", which draws that class's week of homework exactly as its students see it on their Homework page (week picker, coloured cards, detail panel with instructions and files), as a student who hasn't ticked anything or been graded. No student's ticks or grades are shown and nothing can be changed. \[Page\]
+- **FR-17.18** Late joiners: Formwork records the day each student joins a class. Homework due before that day isn't shown to the student, and they are left out of its mark book, the list's marked count and the mark sheet (shown as ·), unless they already have a mark for it. Students already in a class on 1 October 2026 count as joining on 1 September 2026. (Migration 298.) \[DB / Page\]
 
 **Not built yet:** students handing work in online (the principal's answer was "not yet"), and notifications: setting homework or releasing marks sends no email or inbox message.
 
@@ -710,11 +713,11 @@ SMT, pastoral staff and the school office make groups of students for activities
 **Groups and members**
 
 - **FR-18.1** Only SMT, pastoral, the school office and admins can create a group, change its name, kind or visibility, archive it, or add and remove its students and the staff who run it. Teachers can open /groups and look groups up. \[DB\]
-- **FR-18.2** All staff can see every group and who is in it. Students and parents see nothing about groups yet. \[DB\]
+- **FR-18.2** All staff can see every group and who is in it. Students and parents see only the groups shown to them, never the other members (FR-18.17). \[DB\]
 - **FR-18.3** Only current students can be added. A student who leaves stays listed, marked as left, and stops getting the group's messages. \[DB\]
 - **FR-18.4** A group is archived, never deleted. An archived group can't be messaged or have students added. \[DB\]
 - **FR-18.5** Students are added by name (the list of matching names as you type) or a whole year or form at once. Each group names the staff who run it; they can't change who is in it. \[Page\]
-- **FR-18.6** A group records who can see it: staff only, the students in it, or the students and their parents. The portals don't show groups yet (stage 4). \[Page\]
+- **FR-18.6** A group records who can see it: staff only, the students in it, or the students and their parents. The portals show a group only where this allows it (FR-18.17). \[Page\]
 - **FR-18.7** A student's profile has a Groups tile listing the groups they are in. \[Page\]
 
 **Groups built from a rule**
@@ -735,7 +738,10 @@ SMT, pastoral staff and the school office make groups of students for activities
 - **FR-18.15** The staff who run the group, SMT, pastoral staff, the school office and admins record and read the marks. Other staff see only that a sheet exists; students and parents see nothing. \[DB\]
 - **FR-18.16** Group marks are outside reporting: never used by reports, transcripts, result sets or target grades. Every mark entered, changed or deleted is logged in Grade History, where only SMT and admins can read it and it is hidden unless chosen, like homework. \[DB\]
 
-**Not built yet:** showing groups on the student and parent portals (stage 4).
+**Student and parent portals**
+
+- **FR-18.17** A Groups tile appears on the student portal, the student home page and the parent portal when there is a group to show (migration 300). A student sees their groups marked "the students in it" or "the students and their parents"; a parent sees only those marked for parents, and only for children still at the school. Staff viewing as a parent see the parent's view. Archived groups, groups from an earlier school year and groups built from a rule are never shown. \[DB\]
+- **FR-18.18** The portals show a group's name, description, kind and the staff who run it. They never show who else is in it, and never group marks. \[DB\]
 
 ## 22. Non-functional requirements
 
