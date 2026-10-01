@@ -553,7 +553,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /staff/roles | Assign staff roles; warns when a houseparent has no house | HR, admin |
 | /staff/mentor-groups | Assign one or two staff to each mentor group | Granted roles |
 | /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals | Admin, SMT, HR |
-| /admin/student-numbers | Boys, girls and unknown by year, mentor group and class | Granted roles |
+| /admin/student-numbers | Boys, girls and unknown by year, mentor group, boarding house and room (rooms counted within their house), restaurant and class | Granted roles |
 | /admin/class-lists | Print class rosters by year, subject or class | HR, school office, admin |
 | /admin/bell-times | Sessions and times for each weekday | Admin |
 | /admin/subject-settings | Subject display names, departments, key stages, aliases, target fallback | Assessment manager, admin |
