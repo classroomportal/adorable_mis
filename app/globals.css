@@ -1769,3 +1769,28 @@ button.hw-sheet-link:hover { background: none; color: var(--brand-900); }
 .hw-sheet-none { color: var(--slate-200); }
 .hw-sheet-missing { color: #a3232c; font-weight: 700; }
 .hw-sheet-excused { color: var(--ink-soft); }
+
+/* Missed-lesson pop-up on the office's screens (migration 309). */
+.missed-alert-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 5vh 16px; overflow-y: auto;
+  background: rgba(180, 35, 24, 0.35);
+  animation: missed-alert-flash 1s ease-in-out 0s 6 alternate;
+}
+.missed-alert-box {
+  background: white; border: 4px solid #b42318; border-radius: 10px;
+  padding: 1.25rem; width: 100%; max-width: 640px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+.missed-alert-card {
+  border: 1px solid #f3c4c0; background: #fff5f4; border-radius: 8px;
+  padding: 0.75rem; margin-top: 0.75rem;
+}
+@keyframes missed-alert-flash {
+  from { background: rgba(180, 35, 24, 0.15); }
+  to { background: rgba(180, 35, 24, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .missed-alert-overlay { animation: none; }
+}
