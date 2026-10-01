@@ -11,6 +11,7 @@ import { formatUKDate } from '../../lib/formatDate';
 import { resizePhotoToBase64 } from '../../lib/photo';
 import BehaviourPhoto from '../components/BehaviourPhoto';
 import { useBehaviourRules } from '../../lib/behaviourRules';
+import { InvolvedStudentsPicker, saveInvolvedStudents } from '../components/InvolvedStudents';
 
 // boarding_room_number is text, so a plain sort puts "10" before "2". Sort the
 // numeric ones by value and leave anything non-numeric (e.g. "3A") after them.
@@ -68,6 +69,8 @@ function BehaviourPageInner() {
   // One optional picture (migration 209), already shrunk to base64 JPEG.
   const [photo, setPhoto] = useState(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  // Other students in a serious event (migration 303): [{ student_id, involvement }].
+  const [involved, setInvolved] = useState([]);
   // On a slow connection staff assumed the first tap hadn't registered and
   // tapped again, logging every event twice. The ref blocks a second submit
   // synchronously (state alone can let a fast double tap through before the
@@ -333,9 +336,16 @@ function BehaviourPageInner() {
       class_id: groupType === 'mentor' && classId ? Number(classId) : null,
       photo_id: photoId,
     }));
+    // A student can't be both the subject and another student in the event.
+    const others = isSerious ? involved.filter((c) => !studentIds.includes(c.student_id)) : [];
     let error;
+    let linkError = null;
     try {
-      ({ error } = await supabase.from('behaviour_events').insert(rows));
+      let saved;
+      ({ data: saved, error } = await supabase.from('behaviour_events').insert(rows).select('event_id'));
+      if (!error && others.length) {
+        ({ error: linkError } = await saveInvolvedStudents((saved || []).map((r) => r.event_id), others));
+      }
     } catch (err) {
       error = err;
     } finally {
@@ -345,9 +355,12 @@ function BehaviourPageInner() {
     if (error) {
       setStatus(`Error: ${error.message}`);
     } else {
-      setStatus(`Saved ${rows.length} event${rows.length > 1 ? 's' : ''}.`);
+      setStatus(linkError
+        ? `Saved ${rows.length} event${rows.length > 1 ? 's' : ''}, but the other students couldn't be added (${linkError.message}). Add them from the event below.`
+        : `Saved ${rows.length} event${rows.length > 1 ? 's' : ''}.`);
       setForm({ ...form, category: '', points: '', description: '' });
       setPhoto(null);
+      setInvolved([]);
       if (usingGroup) selectAll(); else setSingleStudentId('');
       loadEvents();
     }
@@ -535,6 +548,22 @@ function BehaviourPageInner() {
             <strong>Serious event ({seriousPoints} points or worse) — an explanation is required.</strong>{' '}
             Explain what happened in your own words, following school protocol. Don&apos;t name any other
             student. A school office reviewer checks this before parents see it.
+          </div>
+        )}
+
+        {isSerious && (
+          <div className="bl-field">
+            Other students (optional)
+            <div className="bl-hint" style={{ marginBottom: 0 }}>
+              Add any witness, other student involved, or target. Use the filter to find them. Staff only: students
+              and parents never see this list. It doesn&apos;t give them points.
+            </div>
+            <InvolvedStudentsPicker
+              chosen={involved}
+              onChange={setInvolved}
+              students={allStudents}
+              excludeIds={usingGroup ? Array.from(selected) : singleStudentId ? [Number(singleStudentId)] : []}
+            />
           </div>
         )}
 

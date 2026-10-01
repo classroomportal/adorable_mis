@@ -407,6 +407,8 @@ How the list behaves:
 - **"Logged by" is always the signed-in person**, so nobody can log an event under a colleague's name (138).
 - The event's class is worked out from the class the teacher shares with the student (145). Parents see the subject, not the teacher.
 - **Serious means −5.** A −5 event can't be saved without a written explanation (166).
+- **Other students in a serious event** (migration 303, 1 Oct 2026): on a serious event (−5, e.g. Stage 5, bullying), staff can add other students as a **witness**, **involved** or **target**, found with a filter by name, year group and house. This can be done when logging or later from the event. Anyone who can edit the event can add, change or remove them. All staff can see them; **students and parents never do**, so the explanation still mustn't name anyone. Being added gives a student no points, detention or alert. Changes are logged in Change History.
+  - **Parents never see these names** (304): once an event can be seen by parents, its explanation can't name any of the other students (first, last, preferred or legal names, whole words). The database refuses to release it, edit it to add one, or link a student it already names, and says which word to reword. A name the event's own student shares (e.g. a sibling's surname) doesn't count.
 - Staff can attach one picture per logging, on positive events only (migration 297, the principal, 30 Sept 2026): the picture field is hidden for negative events and the database refuses a picture on one. Pictures are shrunk in the browser and must be under about 150 KB.
 
 **Editing and deleting** (207, 208, 211)
@@ -423,6 +425,7 @@ How the list behaves:
   - Events with a picture: SMT or admin decide. They can send the text with the picture, send the text only, or decline.
   - −5 events without a picture: the school office or admin release the text.
   - −1 to −4 events without a picture never go to parents.
+- **The review is the only way a negative event reaches parents** (305): staff can't make an event visible to parents, mark it reviewed or change its type directly, and a new negative event always starts hidden.
 - SMT get a "picture to check" notice in their Formwork inbox.
 
 **Behaviour alert emails** (168, 202)

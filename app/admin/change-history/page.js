@@ -193,6 +193,8 @@ function ChangeHistoryInner() {
         return `Register mark, ${formatUKDate(r.attend_date)}, period ${r.period_number}`;
       case 'behaviour_events':
         return `Behaviour: ${r.type || ''} ${r.category ? `— ${r.category}` : ''} (${show(r.points)} pts), ${formatUKDate(r.event_date)}`;
+      case 'behaviour_event_students':
+        return `Other student on behaviour event #${r.event_id}: ${r.involvement || ''}`;
       case 'invoice_line_items':
         return `Fee charge: ${r.description || feeItems[r.fee_item_id] || 'charge'}, ${show(r.amount)}`;
       case 'fee_payments':
