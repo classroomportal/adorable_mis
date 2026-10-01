@@ -48,7 +48,7 @@ Where a rule has changed several times, only the current version is given. Migra
 
 **Departments and scopes**
 - A role can be tied to one department (Science, Maths, Languages, Creative, Humanities) or to one boarding house (051).
-- A Head of Department's Class Progress view is filtered to their department **(page only)**. SMT and admins see every class, even if they are also a Head of Department (312). Class Progress is a big tile on the top row for Heads of Department, SMT and admins; other staff with the page (teachers, pastoral, assessment staff) find it on the Assessment card.
+- A Head of Department's Class Progress view is filtered to their department **(page only)**. SMT and admins see every class, even if they are also a Head of Department (312), as do assessment, pastoral and boarding staff. A teacher sees only the classes they teach, as class teacher or for any single lesson (1 Oct 2026). Class Progress is a big tile on the top row for Heads of Department, SMT and admins; other staff with the page (teachers, pastoral, assessment staff) find it on the Assessment card.
 - A Head of Department's right to delete scores is limited to their department by the database.
 - Heads of Department can move any student into any class, not only classes in their department (104).
 
