@@ -464,6 +464,7 @@ How the list behaves:
 - The class teacher can delete their own students' scores.
 - A Head of Department can delete scores in their department's subjects.
 - Assessment managers and admins can delete any score.
+- Where: Enter Results (pick the class and result set), or, for assessment managers and admins, the **Delete** button beside each score on a student's profile (Results tab), which saves finding the class first.
 - Assessment users can't delete.
 
 **Every grade change is logged permanently** in Grade History (215)
