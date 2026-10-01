@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 305). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 310). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -70,6 +70,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | assessment\_user | Data assistants | Enter any result or target, but not delete. |
 | bursar | Bursar | Fees, invoices, payments, discounts; tuckshop admin (not Hand Out). |
 | school\_office | Office / SRO | Student records (all fields), parent records and logins, parent welcome letters, register alerts, releasing −5 behaviour to parents, messages. |
+| attendance\_officer | guardian.counselling@ (Osione ILOEJE), from 1 Oct 2026 (migration 310) | The missed-lesson pop-up and Missed Lessons (FR-4.14–4.20). |
 | admissions | Admissions | Admissions pages and student entry. |
 | tuckshop | Tuckshop staff | Tuckshop pages only, including Hand Out. |
 | tuckshop\_owner | cs@ (Uju MBA) | As tuckshop, plus the only role that can unlock a saved hand-out list. |
@@ -232,6 +233,19 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 
 - **FR-4.13** For each student: today, this week and this academic year — sessions, present, late, authorised absent, absent, and total minutes late. The year starts at the first term beginning on or after 1 August. \[DB\]
 
+**Missed Lessons (/pastoral/missed-lessons, migrations 307–308)**
+
+- **FR-4.14** For a chosen day (today by default), lists every active student who was marked present or late at least once that day and marked absent without a reason (unauthorised: codes N and O) at one or more other periods, before or after. Authorised absences never count. \[DB\]
+- **FR-4.15** Each row shows the day's marks as badges (M, L1–L6, OH, EP) and, for each missed period, the lesson the student should have been in (the lesson's own teacher first), the code and who marked it. For an earlier day the lesson is read from today's classes and timetable (Known issue 28). Today's list refreshes every minute. \[Page\]
+- **FR-4.16** Open to SMT, pastoral, school office, attendance officer and admin; the database refuses anyone else. A tile on the staff dashboard's second row shows today's count (FR-13.5). \[DB\]
+
+**Missed-lesson pop-up (migration 309)**
+
+- **FR-4.17** A full-screen, flashing pop-up appears on whatever Formwork page is open when, today, a period started at least 15 minutes ago and a student who was marked present or late at an earlier period is marked absent without a reason in that period's register. It covers registration, lessons, the Other Half and Evening Prep. \[DB rule; Page display\]
+- **FR-4.18** Each alert shows the student, their year, mentor group and house, the lesson, teacher and room they should be in, where they were last seen, and who marked them absent. \[Page\]
+- **FR-4.19** "Seen: dealing with it", with an optional note, clears the alert from every screen and records who saw it and when; only a live alert can be marked seen. A corrected mark (present, late or an authorised absence) clears the alert by itself. "Hide for 2 minutes" hides the current alerts on that screen only; a new alert still shows at once. \[DB; hiding is Page\]
+- **FR-4.20** It goes to anyone whose role is granted "Missed-lesson pop-ups" at /admin/permissions: school\_office and attendance\_officer to start with. Being admin is not enough. The page checks every minute, flashes the browser tab's title, and beeps on a new alert once someone has clicked on the page. \[DB\]
+
 ## 8. FR-5 The Other Half
 
 The Other Half (OH) is the after-lessons activity programme, run entirely in Formwork; students choose one activity per weekday, only during Evening Prep.
@@ -332,7 +346,7 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 
 **Other students in a serious event** (migrations 303–305, the principal, 1 Oct 2026)
 
-- **FR-6.21** On a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty), staff can add other students as a witness, involved or target. They find each one with a filter by name, year group and house, when logging at /behaviour or later from the event. Whoever can edit the event (FR-6.6) can add, change or remove them; all staff can see them. The event's own student can't be added, nor anything added to an event withdrawn on appeal. Being added gives a student no points, detention or alert. Changes are logged in Change History (behaviour). \[DB\]
+- **FR-6.21** On a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty), staff can add other students as a witness, involved or target. They find each one with a filter by name, year group and house, when logging at /behaviour (under the explanation, behind a "+ Add a witness, someone involved or a target" button, so the event is written first) or later from the event. Whoever can edit the event (FR-6.6) can add, change or remove them; all staff can see them. The event's own student can't be added, nor anything added to an event withdrawn on appeal. Being added gives a student no points, detention or alert. Changes are logged in Change History (behaviour). \[DB\]
 - **FR-6.22** Students and parents never see these links, on any portal. Once parents can see an event, its explanation can't name any of the other students (first, last, preferred or legal names, as whole words; a name the event's own student shares, such as a sibling's surname, doesn't count). Releasing the event, editing its text, or adding a student its text already names is refused, with the word to reword. \[DB\]
 - **FR-6.23** A negative event reaches parents only through the review (FR-6.9). Staff can't make an event visible to parents, mark it reviewed or change its type directly, and a new negative event always starts hidden. \[DB\]
 
@@ -528,7 +542,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 
 **Home dashboard**
 
-- **FR-13.5** Staff see a top row of big tiles (My Timetable, Calendar and, for staff who are also parents, My Children), a second row (Log behaviour, Inbox with its unread count), and module cards underneath. Three cards carry a number beside their icon that links to its page: active students on Students, staff on Staff & Access, behaviour alerts in the last 7 days on Pastoral, each shown only to those who can open that page (migrations 292–294; the alerts page shares the Behaviour page's permission, so the alerts count shows to everyone with it — until 1 Oct 2026 it showed only to admin logins, not to staff who are admin by role, such as cs@). Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions, Certificates and Behaviour Appeals are on Pastoral, Class Allocation on Timetable. Students see big tiles (Timetable, Homework for students in a class with homework switched on, The Other Half, Assessment, Behaviour, Tuckshop, Messages, and Groups when they are in a group shown to students); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
+- **FR-13.5** Staff see a top row of big tiles (My Timetable, Calendar and, for staff who are also parents, My Children), a second row (Log behaviour, Inbox with its unread count, and Missed Lessons with today's count for those who can open it, FR-4.16), and module cards underneath. Three cards carry a number beside their icon that links to its page: active students on Students, staff on Staff & Access, behaviour alerts in the last 7 days on Pastoral, each shown only to those who can open that page (migrations 292–294; the alerts page shares the Behaviour page's permission, so the alerts count shows to everyone with it — until 1 Oct 2026 it showed only to admin logins, not to staff who are admin by role, such as cs@). Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions, Certificates and Behaviour Appeals are on Pastoral, Class Allocation on Timetable. Students see big tiles (Timetable, Homework for students in a class with homework switched on, The Other Half, Assessment, Behaviour, Tuckshop, Messages, and Groups when they are in a group shown to students); parents go straight to their portal; a bursar sees Fees and Tuckshop only. \[Page\]
 - **FR-13.8** The order of the big tiles on students' home page and of every row of the staff dashboard (the top row, the second row and the module cards, which the bursar's home page also uses) is set once for the whole school at /admin/tile-order (admins). Tiles not yet placed go after the ordered ones. The order never changes which tiles someone sees; page access and which classes have homework switched on still decide that. \[DB\]
 
 **Administration pages**
@@ -665,6 +679,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 | Tuckshop hand-out locks | Every save and unlock, numbers given and value | /tuckshop/hand-out | Tuckshop, tuckshop owner | Yes |
 | Register alerts | Every register not taken 15 minutes after the start | /admin/register-alerts | HR, school office, admin | Yes |
 | Behaviour event edits | Old and new comment and category for every edit | No screen yet | Database only | Recorded, not viewable |
+| Missed-lesson alerts seen | Who pressed "Seen" on each missed-lesson alert, when, and their note (migration 309) | No screen yet | Database only | Recorded, not viewable |
 
 **What is not recorded**
 
@@ -787,7 +802,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 23. Known issues and open decisions
 
-27 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; one of them (6) has since been fixed. The first five stop something working today.
+28 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; one of them (6) has since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -818,6 +833,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 25 | Admissions | No admission form fee is set for any year | Bursar can't record form payments yet | Open |
 | 26 | Admissions | The deposit amount recorded isn't checked against the year's deposit | A wrong amount can be recorded | Open |
 | 27 | Fees | No year-group prices have been approved for locked items yet | Locked items can only be charged at an approved single price, if one exists | Open |
+| 28 | Registers | Missed Lessons for an earlier day names the lesson from today's classes and timetable | After a class change the wrong class can be shown; the marks themselves are right | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
