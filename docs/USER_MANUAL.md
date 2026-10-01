@@ -11,7 +11,7 @@ Oct 1, 2026 · @Chris TERRY
 
 This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 1 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
 
-**How it is organised.** Each chapter covers one area of the school's work. It says who can use the pages, walks through the common tasks step by step, and lists the rules the system enforces so you know why something is refused. Where a page is only open to some roles, the chapter says so at the top.
+**How it is organised.** It starts with How each person uses Formwork: a guide for each role (teachers, mentors, leaders, the office, specialist roles, students and parents) to what they do each day, week and term. After that, each chapter covers one area of the school's work. It says who can use the pages, walks through the common tasks step by step, and lists the rules the system enforces so you know why something is refused. Where a page is only open to some roles, the chapter says so at the top.
 
 **About the screenshots.** Every screenshot was taken from a copy of Formwork running on invented demonstration data. The students, staff and parents shown are not real, and no real pupil information appears in this manual. Your screen will show your own school's data and only the tiles your roles open, so it may look slightly different.
 
@@ -21,6 +21,276 @@ This manual explains how to use every part of Formwork, the school's MIS at [mis
 
 - Seeing a page does not mean you can change everything on it. Page access is set at /admin/permissions; what you can actually read or change is decided by the database.
 - All dates and times are Lagos time (WAT), and all money is in naira (₦).
+
+## How each person uses Formwork
+
+This part is organised by person, not by page. Find your role below to see what you do in Formwork each day, each week and each term, in the order you would do it. Each step names the page, and the chapters that follow explain those pages in full. Most staff hold more than one role, so read each section that applies to you.
+
+| If you are… | Read |
+| --- | --- |
+| A teacher | Teachers |
+| A mentor (form tutor), houseparent, pastoral lead or the attendance officer | Mentors and pastoral staff |
+| A Head of Department, assessment manager or member of SMT | Leaders |
+| In the school office, HR, or an administrator | Office, HR and administrators |
+| The bursar, principal or college secretary (for fees), tuckshop staff, admissions or the nurse | Specialist roles |
+| A student or parent, or answering their questions | Students and parents |
+
+### The school year at a glance
+
+The same cycle repeats every term. Knowing it explains why each person's tasks fall when they do.
+
+| When | What happens in Formwork | Who |
+| --- | --- | --- |
+| Before term | Bell times and the Nova-T timetable checked; Other Half programme set up and choices opened; fee items and prices approved; term invoices charged | Admins, SMT, OH coordinator, bursar, principal and college secretary |
+| First week | Students choose Other Half activities at Evening Prep; office checks new students' records and parent logins; clinic runs the resumption check | Students, school office, nurse |
+| Every school day | Registers every lesson; missed-lesson alerts; behaviour logged; homework set and marked; sick bay | Teachers, office, attendance officer, pastoral, nurse |
+| Every week | Short tests entered against the week's result set; tuckshop orders (Wednesday and Saturday); Friday detention | Teachers, students, tuckshop, pastoral |
+| Mid-term | Teacher Assessment week results; Class Progress reviewed; intervention groups built; parents' evening messages | Teachers, Heads of Department, SMT |
+| End of term | End-of-term exams entered; report period set up; comments written, checked and published; fees for next term prepared | Teachers, mentors, checkers, admins, bursar |
+| Through the year | Admissions: enquiries, test days, interviews, offers and deposits for next year | Admissions, bursar, SMT |
+| Summer | Next year's mentor structure and timetable planned at Next Year Setup; leavers marked as left | SMT, admins, school office |
+
+### Before you start
+
+- Sign in at misform.work with your school Google account (chapter 1). If a tile you need is missing, ask an administrator to check your roles.
+- Formwork works on a phone, so you can take a register or log behaviour from the classroom or boarding house.
+- Times are Lagos time. If Formwork refuses something, it is usually a deliberate rule; the chapter for that page explains it.
+
+### Teachers
+
+A teacher's work in Formwork happens mostly in the lesson: take the register, log behaviour, set or check homework. Results and report comments follow the school's weekly and termly cycle.
+
+**Every lesson**
+
+1. Open **My Timetable** on the dashboard and click the lesson. The register opens with the class, period and date already chosen.
+2. Everyone starts as present. Change the code for anyone absent or late, adding minutes late. Press **Save** within the first 15 minutes; after that the lesson appears on Registers Not Done, and at 15-minute checks it becomes a register alert for HR and the office.
+3. If a student who was in an earlier lesson is missing, mark them N (no reason yet). The office gets a pop-up straight away and goes to find them. Don't wait to report it some other way.
+4. To praise or sanction during the lesson, press **Log behaviour for this class** on the register, pick the student(s) and the category, and save. A −5 event needs a written explanation of what happened, naming no other student.
+5. For Year 10 and 11 classes, the **Homework** panel on the register shows what is due. Use **Set homework** there to set the next piece while you're with the class.
+
+**Every day**
+
+- Check the banner on My Timetable for any register you forgot. Taking it late still clears it from the list.
+- Mark homework that came in: open /homework, choose the class, press **Mark book**, enter marks (or Not handed in) and press **Release marks** when you want students to see them.
+- Read your **Inbox** for messages from SMT and the office.
+
+**Every week**
+
+- Enter the short test: Enter Results, choose your class and the week's result set, and type each percentage. The grade appears as you type. Use **Find missing grades by class** to check nobody is left without a mark.
+- Glance at **Class Progress** (or your classes on Weekly Results) to see who is falling below target.
+
+**Each term**
+
+1. **Teacher Assessment week and end-of-term exams**: enter marks against those result sets in the same way as a short test. Exams are one result set per year group ("Y10 Term 1 Exam").
+2. **Report comments**: when SMT open the report period, go to **Subject Comments**, choose the period and each class in turn. For every student, set Effort, Presentation and Homework (Homework is pre-filled from the term's homework marks), and write two or three sentences. **Generate draft** offers a starting point from the student's data; always read and edit it.
+3. **Save Draft** as you go and **Submit** by the comments-due date. If a checker sends a comment back, it reappears as a draft with their note: fix it and submit again.
+4. **Other Half**: if you run an activity, take its register at the OH period from **My Other Half**, exactly like a lesson.
+
+**Good habits**
+
+- Register first, every lesson: a missed register sends the office chasing students who are actually in your room.
+- Keep homework titles short (10 characters, such as "Ex 4B") and put the detail in the instructions.
+- Never type another student's name in a behaviour explanation: if the event is released to parents, Formwork will refuse it.
+- Use **Show last grades** on the register only when the class can't see your screen.
+
+### Mentors and pastoral staff
+
+Pastoral work in Formwork is about noticing early: who is absent, who is collecting negative points, who has a detention, who needs a word. These roles share most pages; the differences are noted below.
+
+**Mentors (form tutors)**
+
+1. **Every morning** take your mentor group's Registration (M) register from My Timetable. It is the first mark of the day, so a student absent here and present later is flagged as a late arrival rather than a missing student.
+2. **Weekly**, open each mentee's profile (Students → search) and look at the Behaviour, Attendance and Results tiles. Talk to anyone with a run of negative points, absences or grades below target.
+3. **Each term** write the mentor comment: **Pastoral Comments**, choose the period and "Mentor". Each student shows their points, best and weakest subjects and the effort grades their teachers gave, so the comment can draw it together in three or four sentences. Submit by the due date.
+
+**Houseparents and the head of boarding**
+
+- Student and behaviour pages open on your own house. Use **Behaviour alerts** each evening to see who in the house has had a −3 or worse in the last 7 days.
+- Take the Evening Prep (EP) register for your house when it is your duty.
+- Decide appeals on events in your house (/appeals): read the student's reason, add a note, and **Uphold** or **Reject**.
+- Write the houseparent comment each term at **Pastoral Comments**, choosing "Houseparent".
+
+**Pastoral leads**
+
+1. **Daily**: check **Behaviour alerts** and **Missing Registers**, and follow up serious events. You can edit an event's category or comment if it was logged wrongly; detentions are recalculated.
+2. **Thursday**: open **Detentions**. The list for Friday is built automatically (a −5 event, or −10 in the week). Students get a reminder at 7:30pm.
+3. **Friday**: after detention, mark each student **Attended** or **Missed**.
+4. **When a pattern appears**: use **Build a group from a rule** (for example, "−6 points or worse since the start of term" or "attendance below 90%"), check the list, and save it as an intervention group. Message the group, or the students' parents, from the group page.
+
+**The attendance officer (and the school office)**
+
+1. Keep Formwork open during the school day. When a student who was seen earlier is marked absent without a reason, a full-screen alert appears on whatever page you have open, with where the student should be and where they were last seen.
+2. Go and find the student, then press **Seen: dealing with it** with a short note. This clears the alert from every screen. If the teacher corrects the mark, it clears by itself.
+3. During the day, keep **Missed Lessons** open as a list of every student who has missed a lesson today.
+4. At the end of the day, check **Register Alerts** and follow up staff whose registers were late.
+
+### Leaders: Heads of Department, assessment staff and SMT
+
+Leaders use Formwork to see what is happening across classes and the school, and to run the termly cycle. Most of their pages read data that teachers and the office enter.
+
+**Heads of Department**
+
+1. **Weekly**: open **Class Progress** from the top row. It shows your department's classes worst first, each class's average grade against its students' average target. Pick a result set to compare a particular test.
+2. Use **Missing Grades** after each test to chase marks that haven't been entered.
+3. Look at your department's homework on /homework: the drop-down lists every class in your subjects, and you can open any class's mark book.
+4. You can correct or delete a score in your department's subjects, and move students between classes at **Class Allocation** when sets change.
+5. **Each term**, read your department's comments before the deadline if you are a checker.
+
+**Assessment manager**
+
+- **Before each term**: make sure every subject's **Grade Boundaries** are right for each year group, and import targets (/target-grades/import) and CAT4/NGRT scores. Check **Target coverage** for students without a target.
+- **After tests and exams**: use Missing Grades and **Top 10**; correct scores where needed. Every change is kept in **Grade History**.
+- **End of term**: generate the Termly Grade Report, Term Test Scores and transcripts at **Generate Reports**, previewing one student first.
+
+**SMT**
+
+**Daily**
+
+- **Missed Lessons** and **Registers Not Done**: who is out of lessons, and which registers haven't been taken.
+- **Behaviour Review**: release or decline events with pictures before parents see them.
+- **Inbox**: automatic behaviour alerts (a −5 event or a week at −8) arrive here and by email.
+
+**Weekly**
+
+- **Homework Monitor**: choose a year group to see every class's homework this week, and which classes set nothing. Choose a student to see their week exactly as they do.
+- **Class Progress** across the whole school.
+- **Fees dashboard**: collected and outstanding by year group.
+
+**Each term**
+
+1. **Calendar** (before term): add terms, events and result sets (tick "result set" for each test and exam), and the report-period event.
+2. **Report Periods**: set dates and year groups, and assign **Checkers**.
+3. **Check Reports**: run the AI check, then approve or send back comments.
+4. **Publish fees** for the term to parents from the SMT fees dashboard once invoices are correct.
+5. **Send Message** for anything families or staff need to know. Check the recipient count first; it tells you how many parents have no login.
+
+**Once a year**: set the new places for next year at **Next Year's Numbers**, and plan the mentor structure and timetable at **Next Year Setup**.
+
+**Audit**: Change History and Grade History show who changed what. Use them when a register, fee, behaviour event or grade is questioned.
+
+### Office, HR and administrators
+
+The office keeps student and parent records right and is first to hear about missing students. HR keeps staff records and roles. Administrators keep the system itself set up.
+
+**School office**
+
+*Every day*
+
+1. Keep Formwork open: the missed-lesson pop-up appears for you as well as the attendance officer (see Mentors and pastoral staff).
+2. Check **Register Alerts** and resolve each once the teacher has been contacted.
+3. Release serious (−5) behaviour events without pictures to parents at **Behaviour Review**, after checking the text names no other student.
+
+*When a family's details change*
+
+- Open the student (Students → search) and **Edit** Core Data: address, house, room, restaurant, form. Every change is logged.
+- Add or change parents from the student's **Parents / Guardians** tile, choosing the relationship (Mother, Father, Other) for that child. Create a parent's login there if they have none.
+- When a student leaves, set their status to left with a leaving date. They are taken out of classes, their login is locked and their parents stop seeing them.
+
+*When a new student joins*
+
+1. **+ Add a new student** (/students/new): names, date of birth, gender, year and form. Only the school office can do this.
+2. Add parents, house, room and restaurant on their profile; ask an admin or HoD to put them in classes at Class Allocation.
+3. Send the parents' welcome letter from **Parent Logins** (/parents/welcome-emails).
+
+*Messages*: send notices to parents, a year group or a student group from **Send Message**, and check **Sent Messages** for read receipts. Use **View as Parent** to see exactly what a parent sees when they ring with a question.
+
+**HR**
+
+- Keep each person's **Staff Record** up to date: appointment, police clearance (the filter shows any missing or due), training, warnings, absence and lateness.
+- Give new staff their roles at **Staff & Roles**, with the house or department where needed. Roles decide what each person sees; check with SMT before giving powerful roles.
+- Review **Register Alerts** each week for staff who repeatedly take registers late.
+
+**Administrators**
+
+*Before each term*
+
+1. Check **Bell Times** for each weekday.
+2. Import the Nova-T timetable at **Import Nova-T**. Read the preview carefully before applying; it shows every class, teacher, room and lesson that will change.
+3. Import any meeting schedule, then check a few teachers' timetables.
+4. Make sure **Permissions** give each role the pages it needs, and adjust **Arrange Tiles** if the school wants a different order.
+
+*Before anything risky* (a bulk import, the year-end changes): **Run a Backup**, which also freezes changes while it runs.
+
+*Each summer*: work with SMT through **Next Year Setup**: mentor groups first, then next year's Nova-T file imported into the plan. Never import next year's file on the normal import page, because it would replace this year's timetable.
+
+### Specialist roles
+
+**Bursar**
+
+*Before each term*
+
+1. If a price needs to change, propose it at **Fee Approvals** with a reason, and ask the principal and the college secretary to approve. Nothing changes until both have.
+2. Charge the term: at **Charge Checklist**, pick each fee item and the term, select the students (filter by year, or **Select all showing**) and charge. Locked items fill in the approved price for each year group. Check the batch on **Audit**, where it can be undone if it was wrong.
+3. Apply discounts at **Discounts** (sibling, staff child, scholarship).
+4. Tell SMT when invoices are ready so they can publish the term to parents.
+
+*Every day*
+
+- Record each payment as it arrives: **Record a Payment**, find the student, enter amount, method, reference and date. The invoice status updates by itself. Download the PDF if the family wants a copy.
+- If part of a payment is meant for the tuckshop, add it at **Add Paid Top-Up** after recording it.
+- Record admission form fees and deposits for applicants at **Admission Payments**.
+
+*Every week*: work through the **Debtors List** (highest balance first, with parent phone and email) and export it for follow-up.
+
+**Principal and college secretary (fee approvals)**
+
+When a price change is proposed, open **Fee Approvals**. Read the change and the reason, then **Approve** or **Reject** (with a reason). The new price only applies once both of you have approved; being an admin doesn't count.
+
+**Tuckshop staff**
+
+1. **Before each tuckshop day**: when ordering closes (Tuesday 9am for Wednesday, Thursday 11pm for Saturday), print the **Order Sheets** for each restaurant and buy stock from the item totals.
+2. **On the day**: open **Hand Out Orders**, choose the restaurant, and tap each student as you hand over their order. If something has run out, press **Edit** and record what they actually got.
+3. **When a restaurant is finished**, press **Save and lock**. Only the tuckshop owner can unlock it.
+4. **Counter sales** at any time: **Sell Items**. Close ordering for holidays or stock-takes at **Ordering On/Off**, and keep prices and food/drink ticks right at **Items & Prices**.
+5. Top up balances at the start of term at **Top Up Balance** (target balance, for a year or the whole school).
+
+**Admissions**
+
+1. **Enquiry**: record each family at **New Application**, child and main contact.
+2. **Form fee paid** (recorded by the bursar): book the child onto a **Test Day**; the test-date letter goes to the family.
+3. **Test day**: print the candidate sheet; afterwards enter English, Maths and CAT4 on the test-day page. Formwork works out the average and whether it passes.
+4. **Decide**: invite to interview, waiting list or unsuccessful. Each decision produces the matching standard letter, emailed to the main contact.
+5. **Interview**: record it on the applicant's page, then offer, waiting list or unsuccessful.
+6. **Acceptance**: mark the family's acceptance; the bursar records the deposit.
+7. Keep **Next Year's Numbers** in view to know how many places are left.
+
+**Nurse**
+
+- **Every day**: record each sick-bay visit at **Sick Bay Log**, including temperature, treatment and any medication with its dose, and tick when parents are told. **Sick Bay Today** shows follow-ups still open.
+- **Start of term**: run the **Resumption Check** for boarders.
+- **Each term**: a **Height & Weight** round by group, and **Immunisations** due or overdue.
+- Medical records are visible only to you and the administrators; teachers and parents can't see them.
+
+### Students and parents
+
+**Students**
+
+- **Each morning**: check **Timetable** for today's lessons and rooms, and **Homework** for what is due (red is overdue, amber due today).
+- **After doing homework**: tick **Done** as a reminder for yourself. It isn't a hand-in; teachers still mark it. Grades appear once your teacher releases them.
+- **At the start of term, in Evening Prep (19:00–21:00)**: choose your Other Half activity for each weekday. Choices close on the date shown. If a day says "Placed by the school", you can't change it.
+- **Twice a week**: order from the **Tuckshop** while the window is open (Monday 5pm to Tuesday 9am for Wednesday; Wednesday 7pm to Thursday 11pm for Saturday). Up to 2 of any item and 2 food items a day; you pay when it's handed out.
+- **When you get a behaviour point you think is unfair**: open **Behaviour** and appeal it once, explaining why. Pastoral staff decide.
+- **At the end of term**: download your report and transcripts from **Assessment**.
+
+**Parents**
+
+- **First sign-in**: use the email the school has and the password in your welcome letter (your oldest child's date of birth as DDMMYYYY), then choose your own password.
+- **Any time**: choose your child, then check **Attendance** (today lesson by lesson), **Conduct**, **Assessment** (grades against targets and reports) and **Timetable**.
+- **Each term**: when the school publishes fees, **Fees** shows the invoice, what has been paid and what is due, with a PDF.
+- **Once**: on **School Calendar**, press **Subscribe** so term dates and events appear in your phone's calendar and update by themselves.
+- **Messages** from the school arrive in your **Inbox** and by email.
+
+**Questions staff are often asked**
+
+| Question | Answer |
+| --- | --- |
+| "I can't sign in." | Staff and students: use the school Google account. Parents: the email the school holds. The office can create or reset a login |
+| "Why can't my child see their homework grade?" | The teacher hasn't released the marks yet |
+| "Why can't I see a behaviour incident I was told about?" | Negative events reach parents only after the office or SMT have reviewed them; minor ones (−1 to −4) are never shown |
+| "Why can't my child change their Other Half activity?" | Choices can only be made during Evening Prep while choices are open, and some placements are locked by the school |
+| "My balance is negative." | Tuckshop orders are charged when handed out and there is no balance check. A top-up adds to the fee invoice |
+| "Why can't I see fees?" | SMT haven't published that term's fees yet |
+| "My child has left and I can't see them." | Parents only see children still at the school; contact the office for old records |
 
 ## 1. Getting started
 
