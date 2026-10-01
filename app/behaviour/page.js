@@ -71,6 +71,7 @@ function BehaviourPageInner() {
   const [photoBusy, setPhotoBusy] = useState(false);
   // Other students in a serious event (migration 303): [{ student_id, involvement }].
   const [involved, setInvolved] = useState([]);
+  const [showInvolved, setShowInvolved] = useState(false);
   // On a slow connection staff assumed the first tap hadn't registered and
   // tapped again, logging every event twice. The ref blocks a second submit
   // synchronously (state alone can let a fast double tap through before the
@@ -361,6 +362,7 @@ function BehaviourPageInner() {
       setForm({ ...form, category: '', points: '', description: '' });
       setPhoto(null);
       setInvolved([]);
+      setShowInvolved(false);
       if (usingGroup) selectAll(); else setSingleStudentId('');
       loadEvents();
     }
@@ -551,22 +553,6 @@ function BehaviourPageInner() {
           </div>
         )}
 
-        {isSerious && (
-          <div className="bl-field">
-            Other students (optional)
-            <div className="bl-hint" style={{ marginBottom: 0 }}>
-              Add any witness, other student involved, or target. Use the filter to find them. Staff only: students
-              and parents never see this list. It doesn&apos;t give them points.
-            </div>
-            <InvolvedStudentsPicker
-              chosen={involved}
-              onChange={setInvolved}
-              students={allStudents}
-              excludeIds={usingGroup ? Array.from(selected) : singleStudentId ? [Number(singleStudentId)] : []}
-            />
-          </div>
-        )}
-
         <label>
           {isSerious ? 'Explanation (required)' : 'Comment (optional)'}
           <textarea
@@ -576,6 +562,31 @@ function BehaviourPageInner() {
             rows={isSerious ? 5 : 3}
           />
         </label>
+
+        {/* After the explanation, so the teacher records what happened
+            first and then adds who else was there (the principal, 1 Oct
+            2026). The filter stays hidden until they ask for it. */}
+        {isSerious && (
+          showInvolved || involved.length > 0 ? (
+            <div className="bl-field">
+              <strong style={{ color: 'var(--ink)' }}>Witnesses and others involved (optional)</strong>
+              <div className="bl-hint" style={{ marginBottom: 0 }}>
+                Find each student with the filter, then choose Witness, Involved or Target. Staff only: students
+                and parents never see this list, and it gives no points.
+              </div>
+              <InvolvedStudentsPicker
+                chosen={involved}
+                onChange={setInvolved}
+                students={allStudents}
+                excludeIds={usingGroup ? Array.from(selected) : singleStudentId ? [Number(singleStudentId)] : []}
+              />
+            </div>
+          ) : (
+            <button type="button" className="secondary" style={{ alignSelf: 'flex-start' }} onClick={() => setShowInvolved(true)}>
+              + Add a witness, someone involved or a target
+            </button>
+          )
+        )}
 
         {/* Pictures are for positive events only (the principal, 30 Sept 2026;
             migration 297 refuses one on a negative event). */}
