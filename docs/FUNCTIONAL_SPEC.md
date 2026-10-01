@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 296). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 30 September 2026 (database migrations up to 298). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -270,7 +270,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 - **FR-6.2** Every event needs a category, and its points come from the category (−1 to −5, +1 to +5). Staff can't type points. Only admins set categories and points, at /admin/lookups. \[DB\]
 - **FR-6.3** "Logged by" is always the signed-in person. The event's class is worked out from the class the teacher shares with the student. \[DB\]
 - **FR-6.4** A −5 (serious) event can't be saved without a written explanation. \[DB\]
-- **FR-6.5** One picture can be attached per logging, shrunk in the browser and under about 150 KB. \[DB\]
+- **FR-6.5** One picture can be attached per logging, on positive events only, shrunk in the browser and under about 150 KB. The page shows the picture field only for positive events, and the database refuses a picture on a negative event (migration 297, the principal's decision, 30 Sept 2026). The six negative events that already had a picture were all declined, so no parent saw them; they are kept. \[DB\]
 
 * **FR-6.5a** Staff can choose students for a group logging by class, house, room, restaurant or year. /behaviour/log searches and filters past events; /behaviour/alerts lists events of −3 or worse in the last 7 days (a houseparent sees their own house). \[Page\]
 * **FR-6.5b** Every list of events shows who logged each one: /behaviour/log, alerts, review, detentions, appeals and the Behaviour tab of a student's profile. \[Page\]
@@ -668,7 +668,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 **Which classes, and access**
 
 - **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. Every Year 10 and 11 class is switched on except mentor groups and Prep (supervised study, not a taught subject); a new Year 10 or 11 class, from a later timetable import or next year's timetable, is switched on automatically unless it is a mentor group or Prep (migration 296). An admin can still switch a class off, and a re-import doesn't switch it back on. \[DB\]
-- **FR-17.2** /homework is granted to teachers, Heads of Department and SMT (and admins). The page lists only the switched-on classes the person can set homework for, in one call to the database; a Year 7–9 teacher sees that it isn't switched on for their classes yet. \[DB\]
+- **FR-17.2** /homework is granted to teachers, Heads of Department and SMT (and admins). The page shows the person's own classes (those they teach, or teach a lesson of) as buttons. A drop-down holds the other switched-on classes in the subjects they teach, marked view only (what was set, with instructions and files, but no grades and no editing), plus any class they manage as Head of Department or admin; a Year 7–9 teacher sees that it isn't switched on for their classes yet. \[DB\]
 
 **Setting homework**
 
@@ -700,6 +700,8 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 - **FR-17.14** On the student's Homework page and timetable, colour shows where each piece stands: red for overdue or not handed in, amber for due today, green for ticked done, purple for graded, blue for due later. A ticked card shrinks to just the subject. Ticked homework no longer counts as due this week or overdue. \[Page\]
 - **FR-17.15** Each class on /homework has a mark sheet: one row per student and one column per homework due between two dates (the current term by default), each column headed by the title and due date. It shows each student's average of their number-marked homework with its grade from the subject's boundaries, how many were marked and how many weren't handed in, and downloads as CSV. It shows only what the person may already see. \[Page\]
 - **FR-17.16** Marks follow the student. If a student changes class or teacher, whoever teaches them in that subject now can read all their homework marks in it for the current school year, from any class. The teacher who gave the marks, the Head of Department, SMT and admins still see them, and the student still sees their own released marks. (Migration 291.) \[DB\]
+- **FR-17.17** Student view: on /homework, staff can open any class shown there in "Student view", which draws that class's week of homework exactly as its students see it on their Homework page (week picker, coloured cards, detail panel with instructions and files), as a student who hasn't ticked anything or been graded. No student's ticks or grades are shown and nothing can be changed. \[Page\]
+- **FR-17.18** Late joiners: Formwork records the day each student joins a class. Homework due before that day isn't shown to the student, and they are left out of its mark book, the list's marked count and the mark sheet (shown as ·), unless they already have a mark for it. Students already in a class on 1 October 2026 count as joining on 1 September 2026. (Migration 298.) \[DB / Page\]
 
 **Not built yet:** students handing work in online (the principal's answer was "not yet"), and notifications: setting homework or releasing marks sends no email or inbox message.
 
