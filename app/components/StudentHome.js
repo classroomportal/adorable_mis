@@ -5,16 +5,21 @@ import { useAuth } from '../../lib/AuthContext';
 import { schoolToday } from '../../lib/schoolTime';
 import { addDays, weekStartOf, loadMyHomework, isOutstanding } from '../../lib/homework';
 import { useTileOrder, sortTiles } from '../../lib/tileOrder';
+import { loadPortalGroups } from '../../lib/studentGroups';
 
 // A student's home page: the same big tiles as their portal, in the
 // school-wide order set at /admin/tile-order (migration 280). Homework only
-// appears once one of their classes has it switched on (migration 278).
+// appears once one of their classes has it switched on (migration 278), and
+// Groups once they are in a group shown to students (migration 300).
 export default function StudentHome() {
   const { profile } = useAuth();
   const studentId = profile?.student_id;
   const order = useTileOrder('student');
   const [homeworkOn, setHomeworkOn] = useState(false);
   const [dueThisWeek, setDueThisWeek] = useState(null);
+  const [groups, setGroups] = useState([]);
+
+  useEffect(() => { loadPortalGroups(studentId).then(setGroups); }, [studentId]);
 
   useEffect(() => {
     if (!studentId) return;
@@ -42,6 +47,10 @@ export default function StudentHome() {
     { key: 'behaviour', href: '/portal#behaviour', label: 'Behaviour', icon: '📋', accent: 'students', sub: 'Your behaviour record' },
     { key: 'tuckshop', href: '/portal/tuckshop', label: 'Tuckshop', icon: '🛒', accent: 'family', sub: 'Balance and orders' },
     { key: 'messages', href: '/inbox', label: 'Messages', icon: '📬', accent: 'family', sub: 'Your inbox' },
+    groups.length > 0 && {
+      key: 'groups', href: '/portal#groups', label: 'Groups', icon: '👥', accent: 'students',
+      sub: `${groups.length} group${groups.length === 1 ? '' : 's'}`,
+    },
   ].filter(Boolean), order);
 
   return (

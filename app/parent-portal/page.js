@@ -13,6 +13,8 @@ import { schoolToday, schoolWeekdayShort } from '../../lib/schoolTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
 import ChildOtherHalf from '../components/ChildOtherHalf';
 import BehaviourPhoto from '../components/BehaviourPhoto';
+import PortalGroups from '../components/PortalGroups';
+import { loadPortalGroups } from '../../lib/studentGroups';
 import {
   AttendanceScopeCards,
   AttendanceTodayTable,
@@ -68,6 +70,9 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
   const [attendanceToday, setAttendanceToday] = useState([]); // today's marks, lesson by lesson
   const [attendanceSummary, setAttendanceSummary] = useState([]); // today / week / year, counted in the DB
   const [tuckshopBalance, setTuckshopBalance] = useState(null);
+  // Groups shown to parents (migration 300). The database returns the
+  // parent's view for staff viewing as a parent too.
+  const [groups, setGroups] = useState([]);
 
   // A parent login already has profile.parent_id set, and so do many staff
   // who are also parents. For those that don't, fall back to matching their
@@ -115,6 +120,8 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
     async function loadChildData() {
       if (!selectedId) return;
       setActiveView(null);
+      setGroups([]);
+      loadPortalGroups(selectedId).then(setGroups);
       const { data: r } = await supabase.from('results').select('*, subjects(subject_name, display_name)').eq('student_id', selectedId).order('week_start_date', { ascending: false });
       setResults(r || []);
       // Fetched together with the targets and set in the same tick: the target
@@ -336,6 +343,14 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                   </button>
                 )}
 
+                {groups.length > 0 && (
+                  <button type="button" className="dashboard-tile" onClick={() => setActiveView('groups')}>
+                    <span className="dashboard-tile-label">Groups</span>
+                    <span className="dashboard-tile-icon">👥</span>
+                    <span className="dashboard-tile-sub">{`${groups.length} group${groups.length === 1 ? '' : 's'}`}</span>
+                  </button>
+                )}
+
                 {/* The school calendar is the same for everyone, so this one
                     stays a link when staff are viewing as a parent. */}
                 <a href="/parent-portal/calendar" className="dashboard-tile" style={{ textDecoration: 'none' }}>
@@ -420,6 +435,13 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                 gradePoints={gradePoints}
                 enrolledSubjectIds={enrolledSubjectIds}
               />
+            </div>
+          )}
+
+          {activeView === 'groups' && (
+            <div className="card">
+              <h2>Groups</h2>
+              <PortalGroups groups={groups} firstName={selectedChild?.first_name} />
             </div>
           )}
 

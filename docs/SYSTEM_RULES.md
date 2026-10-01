@@ -151,7 +151,8 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 
 **Student groups** (284, `/groups` under Administration; design in `docs/student-groups-design.md`)
 - A group is a list of students for an activity, a club, the prefects, marks or messages. Only **SMT, pastoral, the school office and admins** can create a group, change it, archive it, or add and remove students and the staff who run it. Teachers can open `/groups` and look groups up but not change them.
-- All staff can see every group and who is in it. Students and parents see nothing about groups yet, whatever "Who can see it" says; the portals will only ever show groups marked for them.
+- All staff can see every group and who is in it.
+- **Students and parents** (300) see a Groups tile on their portal, only when there is something to show. A student sees the groups they are in that are marked "Staff and the students in it" or "Staff, the students and their parents"; a parent sees only those marked for parents, and only for children still at the school. They see the group's name, description, kind and who runs it, never who else is in it and never marks. Archived groups, groups from an earlier school year and groups built by the system are never shown.
 - Only current students can be added. A student who leaves stays on the list, marked as left, and stops getting the group's messages.
 - A group is archived, never deleted. An archived group can't be messaged or have students added.
 - **Groups built by the system** (285, `/groups/build`): SMT, pastoral and the school office choose a rule and all its settings each time, see who matches today with the reason, untick anyone, and save the list. The rules are:
