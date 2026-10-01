@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 302). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 305). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -19,7 +19,7 @@ This specification describes what Formwork does as built on 1 October 2026 (data
 - **\[DB\]** — enforced by the database. It holds however someone reaches the data, including an edited browser request.
 - **\[Page\]** — enforced only by the web page. It guides normal use but is not a security boundary.
 
-Where behaviour differs from what a page suggests, it is listed in section 23, Known issues. Nothing in that section has been fixed yet.
+Where behaviour differs from what a page suggests, it is listed in section 23, Known issues. An issue that is later fixed stays in that section, marked Fixed.
 
 ## 2. System overview
 
@@ -329,6 +329,12 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.18** Thresholds must be negative whole numbers. Changes apply to new events only; detentions already booked stay as they are. Every change is logged in Change History (behaviour). \[DB\]
 - **FR-6.19** Certificate levels each have a unique name and a unique points value above 0; they can be added, changed or removed. An award records the level's name, so a certificate already given stays given if the points change. \[DB\]
 - **FR-6.20** The serious-event explanation is checked by the database when an event is edited or reviewed, but only by the page when it is first logged. \[DB / Page\]
+
+**Other students in a serious event** (migrations 303–305, the principal, 1 Oct 2026)
+
+- **FR-6.21** On a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty), staff can add other students as a witness, involved or target. They find each one with a filter by name, year group and house, when logging at /behaviour or later from the event. Whoever can edit the event (FR-6.6) can add, change or remove them; all staff can see them. The event's own student can't be added, nor anything added to an event withdrawn on appeal. Being added gives a student no points, detention or alert. Changes are logged in Change History (behaviour). \[DB\]
+- **FR-6.22** Students and parents never see these links, on any portal. Once parents can see an event, its explanation can't name any of the other students (first, last, preferred or legal names, as whole words; a name the event's own student shares, such as a sibling's surname, doesn't count). Releasing the event, editing its text, or adding a student its text already names is refused, with the word to reword. \[DB\]
+- **FR-6.23** A negative event reaches parents only through the review (FR-6.9). Staff can't make an event visible to parents, mark it reviewed or change its type directly, and a new negative event always starts hidden. \[DB\]
 
 ## 10. FR-7 Assessment, results and targets
 
@@ -650,7 +656,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
@@ -781,7 +787,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 23. Known issues and open decisions
 
-27 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; none is fixed yet. The first five stop something working today.
+27 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; one of them (6) has since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -790,7 +796,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 3 | Subject settings | Assessment managers can open the page but only admins can save names, departments and target fallbacks | Saves by others change nothing, silently | Open |
 | 4 | Results | Decimal scores such as 89.5 can fall between whole-number grade bands | Saved with no grade | Open |
 | 5 | Behaviour | /behaviour/review page isn't granted to the school office, who release serious events without pictures | Office can't reach its review task | Open |
-| 6 | Behaviour | Any staff member can change an event's parent visibility with a direct request | Review can be bypassed | Open |
+| 6 | Behaviour | Any staff member can change an event's parent visibility with a direct request | Review can be bypassed | Fixed |
 | 7 | Behaviour | The weekly alert fires again on every further negative event that week | Repeat emails | Open |
 | 8 | Behaviour | Deleting an event that already booked a detention probably fails | Admin can't delete it | Open |
 | 9 | Sign-in | Forced password change is page-only; office-made parent logins and auto-made staff and student logins are never forced to change | First passwords may stay in use | Open |

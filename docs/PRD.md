@@ -8,7 +8,7 @@ Sep 30, 2026 · @Chris TERRY
 
 ## Summary
 
-Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 27 known issues, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
+Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 26 known issues still open, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
 
 **Where the data came from.** Adorable British College has about 260 students in Years 7–12, many of them boarders. Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
 
@@ -84,7 +84,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | Timetable and imports | Live | Nova-T import with preview; lesson-level teacher and room | 0 |
 | Registers | Live | Any staff marks any register; 15-minute not-done alerts | 1 |
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks; a student group can be placed in an activity by the school and locked, until unlocked or a date | 5 |
-| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile; pictures on positive events only | 5 |
+| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile; pictures on positive events only; witnesses, others involved and targets recorded on serious events, staff only, their names kept from parents; release to parents only through the review | 4 |
 | Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017; assessment managers delete a wrong score from the student's profile | 3 |
 | Homework | Years 10–11 | Set from the register or /homework, with files and links; marks converted to grades that follow the student across classes; the term's homework suggests the report's Homework judgement and prints as a grade on the written report; a class mark sheet over any dates; a student view for staff; late joiners don't inherit earlier homework; on students' timetables, where students tick it done; every Year 10 and 11 teaching group (not mentor groups or Prep), for their teachers, Heads of Department and SMT | 0 |
 | Reports and transcripts | Live | Draft→checked comments with AI help; KS3 and KS4/5 transcripts | 2 |
