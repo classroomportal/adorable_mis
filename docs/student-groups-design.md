@@ -203,3 +203,28 @@ teacher (who can look them up); other roles can be given it at
 Each phase is one migration and its pages, with grants to `authenticated` only,
 RLS on every table through `auth.uid()` helpers, and the `docs/SYSTEM_RULES.md`
 and living docs updated with it.
+
+## Placing a group in the Other Half (migration 302)
+
+Asked by the principal on 1 Oct 2026: "choose a group of students who are
+underneath a certain grade or below target in a subject and create a group
+and then allocate them to the other half group and lock their choice in until
+we decide or for a certain amount of time".
+
+1. **Choose the students:** the "A subject" rule at `/groups/build`, i.e. the
+   latest grade in one subject since a chosen date is below a chosen grade
+   or below the student's target in it.
+2. **Place them:** on the group's page, "The Other Half" puts every current
+   student in the group into one activity, replacing their choice for that
+   day only.
+3. **Lock it:** until staff unlock it, until a date, or not at all. While the
+   lock is in force the student can't change or clear that day.
+
+Decided by the principal (same day):
+
+| Question | Decision |
+| --- | --- |
+| Who places and locks | Those who manage the Other Half (smt, other_half, admin) and those who manage groups (pastoral, school_office) |
+| What students and parents see | "Placed by the school" and the end date, never why |
+| When the lock ends | The student stays in the activity and may change it at Evening Prep while choices are open |
+| A full activity, or outside a student's year group | A warning, then it goes ahead |

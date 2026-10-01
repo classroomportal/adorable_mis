@@ -7,7 +7,7 @@ import { useAuth } from '../../../lib/AuthContext';
 import { schoolToday } from '../../../lib/schoolTime';
 import { GROUP_KINDS, GROUP_RULES, describeRule, canManageGroups } from '../../../lib/studentGroups';
 
-// Build a student group from a rule (migrations 285, 301). Every setting is
+// Build a student group from a rule (migrations 285, 301, 302). Every setting is
 // chosen here, each time: the dates, thresholds, percentages, the exam, the
 // number of subjects and which years, forms and houses (the principal: "system build parameters must be
 // editable"). "Show students" asks the database who matches today; untick
@@ -36,7 +36,7 @@ function BuildInner() {
 
   const [rule, setRule] = useState('negative_behaviour');
   const [settings, setSettings] = useState(null);
-  const [lookups, setLookups] = useState({ years: [], forms: [], houses: [], exams: [] });
+  const [lookups, setLookups] = useState({ years: [], forms: [], houses: [], exams: [], subjects: [], grades: [] });
   const [preview, setPreview] = useState(null); // rows from student_group_rule_preview
   const [previewedFor, setPreviewedFor] = useState(null); // JSON of the settings the preview used
   const [ticked, setTicked] = useState(new Set());
@@ -53,13 +53,15 @@ function BuildInner() {
   useEffect(() => {
     (async () => {
       const today = schoolToday();
-      const [{ data: term }, { data: year }, { data: pupils }, { data: houses }, { data: examSets }] = await Promise.all([
+      const [{ data: term }, { data: year }, { data: pupils }, { data: houses }, { data: examSets }, { data: subjects }, { data: grades }] = await Promise.all([
         supabase.from('terms').select('start_date').lte('start_date', today).gte('end_date', today).maybeSingle(),
         supabase.from('academic_years').select('start_date').eq('status', 'current').maybeSingle(),
         supabase.from('students').select('year_group, form_class').eq('status', 'active'),
         supabase.from('boarding_houses').select('name').order('name'),
         // Each term's exams are one set per year group on the same date (migration 246).
         supabase.from('calendar_events').select('event_date, exam_term').not('exam_term', 'is', null).lte('event_date', today).order('event_date', { ascending: false }),
+        supabase.from('subjects').select('subject_id, subject_name, display_name').order('subject_name'),
+        supabase.from('grade_scale').select('grade, points').order('points', { ascending: false }),
       ]);
       const exams = [];
       (examSets || []).forEach((e) => {
@@ -72,12 +74,15 @@ function BuildInner() {
         forms: [...new Set((pupils || []).map((s) => s.form_class).filter(Boolean))].sort().map((f) => ({ value: f, label: f })),
         houses: (houses || []).map((h) => ({ value: h.name, label: h.name })),
         exams,
+        subjects: (subjects || []).map((x) => ({ value: String(x.subject_id), label: x.display_name || x.subject_name })),
+        grades: (grades || []).map((g) => g.grade),
       });
       const defaults = {
         from: term?.start_date || today, to: today, threshold: -6, positive_threshold: 40,
         min_subjects: 3, since: year?.start_date || today,
         exam_date: exams[0]?.value || '', direction: 'below', exam_percent: 50,
         attendance_percent: 90, min_sessions: 20,
+        subject_id: '', mode: 'below_target', grade: 'C',
         year_groups: [], forms: [], houses: [],
       };
 
@@ -93,6 +98,7 @@ function BuildInner() {
           if (g.rule_type === 'positive_behaviour') { saved.positive_threshold = saved.threshold; delete saved.threshold; }
           if (g.rule_type === 'term_exam') saved.exam_percent = saved.percent;
           if (g.rule_type === 'attendance') saved.attendance_percent = saved.percent;
+          if (g.rule_type === 'subject_grade') saved.subject_id = String(saved.subject_id);
           delete saved.percent;
           const earlier = { ...defaults, ...saved };
           // A period that ended in the past moves up to today.
@@ -124,6 +130,12 @@ function BuildInner() {
     }
     if (rule === 'attendance') {
       return { ...common, from: settings.from, to: settings.to, percent: Number(settings.attendance_percent), min_sessions: Number(settings.min_sessions) };
+    }
+    if (rule === 'subject_grade') {
+      return {
+        ...common, subject_id: Number(settings.subject_id), mode: settings.mode, since: settings.since,
+        ...(settings.mode === 'below_grade' ? { grade: settings.grade } : {}),
+      };
     }
     return { ...common, min_subjects: Number(settings.min_subjects), since: settings.since };
   }
@@ -223,6 +235,32 @@ function BuildInner() {
             </label>
             <label>Percentage
               <input type="number" min={0} max={100} step="any" value={settings.exam_percent} onChange={(e) => set('exam_percent', e.target.value)} required />
+            </label>
+          </>
+        )}
+        {rule === 'subject_grade' && (
+          <>
+            <label>Subject
+              <select value={settings.subject_id} onChange={(e) => set('subject_id', e.target.value)} required>
+                <option value="">Choose a subject…</option>
+                {lookups.subjects.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+              </select>
+            </label>
+            <label>Latest grade
+              <select value={settings.mode} onChange={(e) => set('mode', e.target.value)}>
+                <option value="below_target">below their target</option>
+                <option value="below_grade">below a grade</option>
+              </select>
+            </label>
+            {settings.mode === 'below_grade' && (
+              <label>Grade
+                <select value={settings.grade} onChange={(e) => set('grade', e.target.value)} required>
+                  {lookups.grades.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </label>
+            )}
+            <label>Count results from
+              <input type="date" value={settings.since} onChange={(e) => set('since', e.target.value)} required />
             </label>
           </>
         )}

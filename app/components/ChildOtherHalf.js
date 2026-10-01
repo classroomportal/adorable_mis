@@ -19,6 +19,7 @@ export default function ChildOtherHalf({ studentId, yearGroup, firstName }) {
   const [activities, setActivities] = useState([]);
   const [staffMap, setStaffMap] = useState({});
   const [chosen, setChosen] = useState({}); // day_of_week -> activity_id
+  const [locks, setLocks] = useState({}); // day_of_week -> { until }: placed by the school (migration 302)
   const [marks, setMarks] = useState([]);
 
   useEffect(() => {
@@ -32,12 +33,16 @@ export default function ChildOtherHalf({ studentId, yearGroup, firstName }) {
         supabase.from('terms').select('*').eq('term_id', termId).single(),
         supabase.from('other_half_terms').select('*').eq('term_id', termId).maybeSingle(),
         supabase.from('other_half_activities').select('*').eq('term_id', termId).order('activity_name'),
-        supabase.from('other_half_choices').select('day_of_week, activity_id').eq('student_id', studentId).eq('term_id', termId),
+        supabase.from('other_half_choices').select('day_of_week, activity_id, locked, locked_until').eq('student_id', studentId).eq('term_id', termId),
       ]);
       setTerm(t || null);
       setWindowRow(w || null);
       setActivities(acts || []);
       setChosen(Object.fromEntries((ch || []).map((c) => [c.day_of_week, c.activity_id])));
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
+      setLocks(Object.fromEntries((ch || [])
+        .filter((c) => c.locked && (!c.locked_until || c.locked_until >= today))
+        .map((c) => [c.day_of_week, { until: c.locked_until }])));
       const ids = (acts || []).map((a) => a.activity_id);
       if (ids.length) {
         const { data: st } = await supabase
@@ -99,6 +104,12 @@ export default function ChildOtherHalf({ studentId, yearGroup, firstName }) {
                       <td>
                         <strong>{a.activity_name}</strong>
                         {a.description && <div style={{ fontSize: '0.85em', color: '#666' }}>{a.description}</div>}
+                        {/* Placed by the school: never why (the principal's choice). */}
+                        {locks[d] && (
+                          <div style={{ fontSize: '0.85em', color: '#b45309', fontWeight: 600 }}>
+                            Placed by the school{locks[d].until ? ` until ${new Date(`${locks[d].until}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}` : ''}
+                          </div>
+                        )}
                       </td>
                       <td>{a.room || '—'}</td>
                       <td>{staffNames(staffMap[a.activity_id]) || '—'}</td>

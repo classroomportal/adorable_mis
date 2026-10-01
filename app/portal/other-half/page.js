@@ -9,7 +9,9 @@ import { OH_DAY_NAMES, loadOtherHalfSlots, loadCurrentOtherHalfTermId, staffByAc
 // Students choose one activity per Other Half day. Every rule (choices open,
 // only during Evening Prep as Bell Times sets it, their year, the activity
 // not full) is enforced by choose_other_half_activity() in the database;
-// this page just offers what those rules will accept.
+// this page just offers what those rules will accept. A day the school has
+// placed the student in and locked (migration 302) can't be changed until the
+// lock ends; the page says "Placed by the school", never why.
 function StudentOtherHalfInner() {
   const { profile } = useAuth();
   const studentId = profile?.student_id;
@@ -22,6 +24,7 @@ function StudentOtherHalfInner() {
   const [staffMap, setStaffMap] = useState({});
   const [taken, setTaken] = useState({});
   const [mine, setMine] = useState({}); // day_of_week -> activity_id
+  const [locks, setLocks] = useState({}); // day_of_week -> { until } for a lock in force
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const [prepSlots, setPrepSlots] = useState([]); // Evening Prep rows from Bell Times
@@ -57,11 +60,15 @@ function StudentOtherHalfInner() {
     const [{ data: acts }, { data: counts }, { data: ch }] = await Promise.all([
       supabase.from('other_half_activities').select('*').eq('term_id', termId).eq('is_active', true).order('activity_name'),
       supabase.rpc('other_half_places_taken', { p_term_id: termId }),
-      supabase.from('other_half_choices').select('activity_id, day_of_week').eq('student_id', studentId).eq('term_id', termId),
+      supabase.from('other_half_choices').select('activity_id, day_of_week, locked, locked_until').eq('student_id', studentId).eq('term_id', termId),
     ]);
     setActivities(acts || []);
     setTaken(Object.fromEntries((counts || []).map((c) => [c.activity_id, c.taken])));
     setMine(Object.fromEntries((ch || []).map((c) => [c.day_of_week, c.activity_id])));
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
+    setLocks(Object.fromEntries((ch || [])
+      .filter((c) => c.locked && (!c.locked_until || c.locked_until >= today))
+      .map((c) => [c.day_of_week, { until: c.locked_until }])));
     const ids = (acts || []).map((a) => a.activity_id);
     if (ids.length) {
       const { data: st } = await supabase.from('other_half_activity_staff').select('activity_id, staff_id, staff(staff_id, first_name, last_name)').in('activity_id', ids);
@@ -164,6 +171,8 @@ function StudentOtherHalfInner() {
         const chosen = mine[d];
         const chosenActivity = activities.find((a) => a.activity_id === chosen);
         const slot = slots.byDay[d];
+        const lock = locks[d];
+        const canEditDay = canEdit && !lock;
         return (
           <div key={d} className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
@@ -173,9 +182,14 @@ function StudentOtherHalfInner() {
               </h2>
               <span>
                 {chosenActivity ? <>Your choice: <strong>{chosenActivity.activity_name}</strong></> : <span style={{ color: '#b45309', fontWeight: 600 }}>Not chosen yet</span>}
-                {chosen && canEdit && <> <button type="button" className="secondary" disabled={busy} onClick={() => clearChoice(d)}>Clear</button></>}
+                {chosen && canEditDay && <> <button type="button" className="secondary" disabled={busy} onClick={() => clearChoice(d)}>Clear</button></>}
               </span>
             </div>
+            {lock && (
+              <p style={{ margin: '0.5rem 0 0', fontWeight: 600, color: '#b45309' }}>
+                Placed by the school{lock.until ? ` until ${new Date(`${lock.until}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}` : ''}. You can&apos;t change this day{lock.until ? ' until then' : ' for now'}.
+              </p>
+            )}
             <div className="student-card-grid" style={{ marginTop: '0.75rem' }}>
               {mineForYear.filter((a) => a.day_of_week === d).map((a) => {
                 const n = taken[a.activity_id] || 0;
@@ -202,7 +216,7 @@ function StudentOtherHalfInner() {
                       {isMine ? (
                         <span style={{ color: '#1a7f37', fontWeight: 600 }}>✓ Chosen</span>
                       ) : (
-                        <button type="button" disabled={!canEdit || full || busy} onClick={() => choose(a)}>
+                        <button type="button" disabled={!canEditDay || full || busy} onClick={() => choose(a)}>
                           {chosen ? 'Switch to this' : 'Choose'}
                         </button>
                       )}

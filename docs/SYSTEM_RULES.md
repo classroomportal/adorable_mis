@@ -155,17 +155,19 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 - **Students and parents** (300) see a Groups tile on their portal, only when there is something to show. A student sees the groups they are in that are marked "Staff and the students in it" or "Staff, the students and their parents"; a parent sees only those marked for parents, and only for children still at the school. They see the group's name, description, kind and who runs it, never who else is in it and never marks. Archived groups, groups from an earlier school year and groups built by the system are never shown.
 - Only current students can be added. A student who leaves stays on the list, marked as left, and stops getting the group's messages.
 - A group is archived, never deleted. An archived group can't be messaged or have students added.
-- **Groups built by the system** (285, 301, `/groups/build`): SMT, pastoral and the school office choose a rule and all its settings each time, see who matches today with the reason, untick anyone, and save the list. The rules are:
+- **Groups built by the system** (285, 301, 302, `/groups/build`): SMT, pastoral and the school office choose a rule and all its settings each time, see who matches today with the reason, untick anyone, and save the list. The rules are:
   - **Negative behaviour:** negative points between two dates add up to a chosen threshold or worse (e.g. −6). Withdrawn events don't count.
   - **Below target:** the latest grade in a subject, counting only results from a chosen date, is below target in at least a chosen number of subjects. Grades are compared by their points; WAEC grades only against WAEC targets.
   - **Positive behaviour** (301): positive points between two dates add up to a chosen total or more (e.g. +40). Withdrawn events don't count.
   - **Term exam average** (301): a student's average percentage across their subjects in one chosen term exam is below, or at or above, a chosen mark. Marks without a score are skipped. Last year's exams can be chosen; each student is judged on the exam they sat then.
+  - **A subject** (302): in one chosen subject, the latest grade since a chosen date is below a chosen grade, or below the student's target in it. Grades are compared by their points; a WAEC grade only against a WAEC grade.
   - **Attendance** (301): present or late as a percentage of every register mark between two dates (the same sum parents see) is below a chosen percentage. Students with fewer marks than a chosen number are left out.
-  - All five can be limited to chosen year groups, forms and boarding houses. Only current students are picked.
+  - All six can be limited to chosen year groups, forms and boarding houses. Only current students are picked.
 - A built group records its rule, settings and date, is always staff-only, and never changes by itself. Students can still be added or taken out by hand. "Build again" starts a new dated group from the same settings, which can be changed first. Only students the rule picks can be saved into a built group.
 - Every change to a group, its students or its staff is logged in Change History under **groups**.
 - **Group marks** (287): a group can have mark sheets (a test or occasion, a date, and a grading system from the homework list). The staff who run the group, SMT, pastoral and the school office record and read the marks; other staff only see that a sheet exists. Students and parents see nothing. A mark must fit the grading system, or be Absent, Not handed in or Excused, and can only be for a student in the group. Once a sheet has marks its grading system can't change and it can only be withdrawn, not deleted. An archived group's marks can't be changed. Group marks are **not part of reporting** and never feed reports, transcripts, result sets or targets. Every change is in Grade History, readable by SMT and admins only (like homework).
 - A student's profile has a Groups tile listing the groups they are in.
+- **Placing a group in the Other Half** (302): see section 4, "Placed and locked by the school".
 
 ---
 
@@ -208,6 +210,16 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 - One choice per student per weekday per term. Choosing again replaces the earlier choice.
 - Clearing a choice also needs Evening Prep and open choices.
 - Staff placing students can go over capacity or outside the year groups after an "anyway?" warning **(page only)**.
+
+**Placed and locked by the school** (302, the principal's decisions of 1 Oct 2026)
+- From a student group's page, SMT, pastoral, the school office, the `other_half` coordinator and admins can put every current student in the group into one activity. It replaces each student's choice for that day only; other days are untouched.
+- The placement can be **locked until staff unlock it**, **locked until a date** (that day included), or not locked.
+- While a lock is in force, the student can't change or clear that day's activity, even during Evening Prep with choices open. The database refuses it.
+- When a lock ends (its date passes or staff unlock it), the student **stays in the activity** and may change it at Evening Prep while choices are open.
+- A full activity, or one outside a student's year group, gets an "anyway?" warning first and then goes ahead **(page only, the warning)**. So does replacing students' existing choices for that day.
+- Students and parents see "Placed by the school" (and the end date, if there is one), **never why**: a list built from grades is staff-only.
+- Who locked a placement and when are recorded on it by the database. Staff who manage the Other Half can still move a locked student at `/other-half/choices`; the lock stays with the student's day. Removing the choice there removes the lock too.
+- Placements and locks are not yet in Change History.
 
 **OH registers** (`/other-half/register`)
 - The register lists the students who chose the activity.

@@ -7,6 +7,7 @@ import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import GroupMarkSheets from '../../components/GroupMarkSheets';
+import GroupOtherHalf from '../../components/GroupOtherHalf';
 import { GROUP_KINDS, GROUP_VISIBILITY, kindLabel, visibilityLabel, canManageGroups, describeRule } from '../../../lib/studentGroups';
 
 // One student group (migration 284): its students and the staff who run it.
@@ -165,6 +166,8 @@ function GroupInner() {
   const staffIds = new Set(groupStaff.map((s) => s.staff_id));
   // The database decides (can_mark_student_group()); this only shows the controls.
   const canMark = canManage || (profile?.staff_id != null && staffIds.has(profile.staff_id));
+  // Group managers and Other Half managers (can_place_group_in_other_half()).
+  const canPlaceOH = canManage || (staffRoles || []).includes('other_half');
 
   return (
     <div>
@@ -184,7 +187,9 @@ function GroupInner() {
       {group.description && <p>{group.description}</p>}
       {group.visibility !== 'staff' && (
         <p style={{ fontSize: '0.9rem', color: 'var(--ink-soft)' }}>
-          Students and parents don&apos;t see groups on their portals yet; that comes in a later update.
+          {group.visibility === 'students'
+            ? 'The students in it see this group on their portal (its name, description and who runs it, not the other members).'
+            : 'The students in it and their parents see this group on their portals (its name, description and who runs it, not the other members).'}
         </p>
       )}
       {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -253,6 +258,9 @@ function GroupInner() {
 
       <h2>Mark sheets</h2>
       <GroupMarkSheets groupId={groupId} canMark={canMark} archived={archived} members={members} />
+
+      <h2>The Other Half</h2>
+      <GroupOtherHalf groupId={groupId} members={members} archived={archived} canPlace={canPlaceOH} />
 
       <h2>Students ({current.length}{leavers > 0 ? `, and ${leavers} who ha${leavers === 1 ? 's' : 've'} left` : ''})</h2>
 
