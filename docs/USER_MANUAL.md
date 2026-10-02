@@ -976,7 +976,7 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 ![Behaviour alerts, last 7 days](manual-images/52-alerts.jpg)
 
-**Editing.** The teacher who logged an event, pastoral staff, houseparents, the head of boarding, SMT, the school office and admins can change its comment and category (a negative stays negative); detentions are recalculated. Only admins can delete an event. All changes are kept in Change History.
+**Editing.** The teacher who logged an event, pastoral staff, houseparents, the head of boarding, SMT, the school office and admins can change its comment and category (a negative stays negative); detentions are recalculated. Only SMT can delete an event, a merit included; the Delete button is shown only to them. All changes are kept in Change History.
 
 ### What parents see: Behaviour Review (/behaviour/review)
 
@@ -1000,7 +1000,7 @@ The rules below are the current settings; anyone with the Lookups page can chang
 | Weekly alert | −8 in a week | Emails cs@, copied to SMT and sro@; replies go to guardian.counselling@ |
 | Detention room and time | CG4, after lesson 7 | Shown on every detention notice |
 
-**Detentions** (/detention) lists this week's Friday detention with the events behind each one. Staff can't add or delete detentions by hand; they mark each as Scheduled, Attended, Missed or Cancelled, and can print the list. The student (not the parent) gets an email and inbox notice when it is booked and a reminder at 7:30pm on Thursday.
+**Detentions** (/detention) lists this week's Friday detention with the events behind each one. Staff can't add or delete detentions by hand; they mark each as Scheduled, Attended or Missed, and can print the list. Only SMT can mark a detention Cancelled; the option is shown only to them. The student (not the parent) gets an email and inbox notice when it is booked and a reminder at 7:30pm on Thursday.
 
 ![The Friday detention list](manual-images/54-detention.jpg)
 

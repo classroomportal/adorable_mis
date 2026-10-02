@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 318). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 319). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -311,7 +311,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 **Editing and deleting**
 
 - **FR-6.6** The teacher who logged it, pastoral, houseparent, head of boarding, SMT, school office and admin can change an event's comment and category (negative stays negative). Detentions are recalculated. Events withdrawn on appeal can't be edited. \[DB\]
-- **FR-6.7** Only admins can delete an event. Changes and deletions are logged in Change History. \[DB\]
+- **FR-6.7** Only SMT can delete an event, a merit included; holding the smt role is what counts, and admin alone is not enough (migration 319, the principal, 2 Oct 2026). Staff can't withdraw an event or move it to another student any other way; only an upheld appeal withdraws one. Changes and deletions are logged in Change History. \[DB\]
 
 **Release to parents (/behaviour/review)**
 
@@ -331,7 +331,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 **Detentions (/detention)**
 
 - **FR-6.14** A detention is booked automatically for the Friday of the Saturday–Friday week when a −5 event is logged, or when the week's negative total reaches −10 (positive points don't offset). Staff can't add or delete detentions by hand. \[DB\]
-- **FR-6.15** Detentions are in CG4 after lesson 7. Statuses are scheduled, attended, missed and cancelled; whoever has the /detention page updates them. \[DB\]
+- **FR-6.15** Detentions are in CG4 after lesson 7. Statuses are scheduled, attended, missed and cancelled. Whoever has the /detention page marks them attended or missed, but only SMT can cancel one (migration 319, the principal, 2 Oct 2026); the Cancelled option is shown only to SMT. A detention's date and student can't be changed. Detentions still cancel automatically when an event's category is corrected below the thresholds or an appeal is upheld. \[DB\]
 - **FR-6.16** The student (not parents) gets an email and inbox notice when a detention is booked, a reminder at 7:30pm on Thursday, and a notice if it is cancelled. Replies go to SMT. \[DB\]
 
 **Certificates**
@@ -826,7 +826,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 5 | Behaviour | /behaviour/review page isn't granted to the school office, who release serious events without pictures | Office can't reach its review task | Open |
 | 6 | Behaviour | Any staff member can change an event's parent visibility with a direct request | Review can be bypassed | Fixed |
 | 7 | Behaviour | The weekly alert fires again on every further negative event that week | Repeat emails | Open |
-| 8 | Behaviour | Deleting an event that already booked a detention probably fails | Admin can't delete it | Open |
+| 8 | Behaviour | Deleting an event that already booked a detention probably fails | SMT can't delete it | Open |
 | 9 | Sign-in | Forced password change is page-only; office-made parent logins and auto-made staff and student logins are never forced to change | First passwords may stay in use | Open |
 | 10 | Access | HR can give anyone, including themselves, any role except admin | Logged, but not blocked | Open |
 | 11 | Reports | Report checkers see and edit every comment in the period, not only their scope | Wider access than set | Open |
