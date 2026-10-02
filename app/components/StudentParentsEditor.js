@@ -17,6 +17,13 @@ import { supabase } from '../../lib/supabaseClient';
 // child they only follow through the portal. Links marked Other never make
 // children siblings. parents.relationship_type is only the fallback shown for a
 // link with none of its own, and is set when a new parent is added.
+//
+// A new parent's email is checked against existing parents as it's typed. On
+// 1 Oct 2026 a mother who already had a portal login was entered again as a new
+// parent with the same email; her login stayed on the old record, the children
+// moved to the new one, and she signed in to an empty portal. So a match is
+// shown with a "Link this parent instead" button, and saving a second parent
+// with the same email needs a deliberate tick.
 
 const RELATIONSHIPS = ['Mother', 'Father', 'Guardian', 'Grandparent', 'Other'];
 const EMPTY_NEW = { first_name: '', last_name: '', relationship_type: '', phone: '', email: '', address: '', is_primary_contact: false };
@@ -24,6 +31,11 @@ const EMPTY_NEW = { first_name: '', last_name: '', relationship_type: '', phone:
 function trimOrNull(v) {
   const t = (v || '').trim();
   return t === '' ? null : t;
+}
+
+// For .ilike(): match the email exactly, ignoring case, with LIKE's wildcards escaped.
+function exactLike(v) {
+  return v.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
 function parentFields(p) {
@@ -50,6 +62,8 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
   const [search, setSearch] = useState('');
   const [matches, setMatches] = useState([]);
   const [toLink, setToLink] = useState([]); // existing parents rows to link on save
+  const [emailMatches, setEmailMatches] = useState([]); // existing parents with the new parent's email
+  const [allowDuplicate, setAllowDuplicate] = useState(false);
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -82,6 +96,35 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
     return () => clearTimeout(t);
   }, [search, rows, toLink]);
 
+  const newEmail = trimOrNull(newParent?.email);
+  useEffect(() => {
+    setAllowDuplicate(false);
+    if (!newEmail || !newEmail.includes('@')) { setEmailMatches([]); return; }
+    let stale = false;
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('parents')
+        .select('parent_id, first_name, last_name, phone, email, relationship_type, student_parent(students(first_name, last_name, status))')
+        .ilike('email', exactLike(newEmail))
+        .limit(5);
+      if (!stale) setEmailMatches(data || []);
+    }, 300);
+    return () => { stale = true; clearTimeout(t); };
+  }, [newEmail]);
+
+  function linkInstead(p) {
+    if (!rows.some((r) => r.parent_id === p.parent_id) && !toLink.some((x) => x.parent_id === p.parent_id)) {
+      const { student_parent: _children, ...parent } = p;
+      setToLink((ls) => [...ls, {
+        ...parent,
+        is_primary_contact: !!newParent?.is_primary_contact,
+        relationship: newParent?.relationship_type || p.relationship_type || '',
+      }]);
+    }
+    setNewParent(null);
+    setEmailMatches([]);
+  }
+
   function setRow(i, patch) {
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   }
@@ -90,6 +133,10 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
     e.preventDefault();
     if (newParent && !trimOrNull(newParent.first_name) && !trimOrNull(newParent.last_name)) {
       setStatus('Error: the new parent needs at least a first or last name.');
+      return;
+    }
+    if (newParent && emailMatches.length > 0 && !allowDuplicate) {
+      setStatus('Error: a parent with this email is already on record. Link them instead, or tick "Add as a separate parent anyway".');
       return;
     }
     setSaving(true);
@@ -216,6 +263,28 @@ export default function StudentParentsEditor({ studentId, links, onDone, onCance
             <label>Email{input(newParent.email, (v) => setNewParent({ ...newParent, email: v }), { type: 'email' })}</label>
             <label>Address{input(newParent.address, (v) => setNewParent({ ...newParent, address: v }))}</label>
           </div>
+          {emailMatches.length > 0 && (
+            <div style={{ border: '1px solid #d97706', background: '#fffbeb', color: '#78350f', borderRadius: 6, padding: '0.6rem 0.8rem', marginTop: '0.5rem' }}>
+              <strong>This email is already on record.</strong> If this is the same person, link the existing parent so their portal login sees this child too.
+              <ul style={{ margin: '0.4rem 0', paddingLeft: '1.2rem' }}>
+                {emailMatches.map((p) => {
+                  const children = (p.student_parent || []).map((l) => l.students).filter(Boolean);
+                  return (
+                    <li key={p.parent_id} style={{ margin: '0.25rem 0' }}>
+                      {p.first_name} {p.last_name}{p.phone ? ` · ${p.phone}` : ''}
+                      {' · '}{children.length === 0 ? 'no children linked'
+                        : `linked to ${children.map((c) => `${c.first_name} ${c.last_name}${c.status === 'active' ? '' : ' (left)'}`).join(', ')}`}
+                      {' '}<button type="button" onClick={() => linkInstead(p)}>Link this parent instead</button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <input type="checkbox" checked={allowDuplicate} onChange={(e) => setAllowDuplicate(e.target.checked)} style={{ width: 'auto' }} />
+                Add as a separate parent anyway (a different person sharing this email)
+              </label>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <input type="checkbox" checked={newParent.is_primary_contact} onChange={(e) => setNewParent({ ...newParent, is_primary_contact: e.target.checked })} style={{ width: 'auto' }} />
