@@ -217,9 +217,12 @@ function EnterResultsInner() {
     }
   }
 
-  // A Head of Department can open a colleague's class in their department to
-  // delete a score, but can only enter scores for classes they teach.
-  const canWriteSelected = canEnterAnyClass || (!!staffId && selectedClass?.staff_id === staffId);
+  // A Head of Department can enter, change and delete scores in a colleague's
+  // class in their department (migration 321, is_hod_for_subject()).
+  const canWriteSelected =
+    canEnterAnyClass ||
+    (!!staffId && selectedClass?.staff_id === staffId) ||
+    hodDepartments.includes(selectedClass?.subjects?.department_name);
 
   function canDelete(row) {
     if (!row?.resultId) return false;
@@ -285,6 +288,8 @@ function EnterResultsInner() {
       <p>
         {canEnterAnyClass
           ? 'Pick any class and a result set, then enter a percentage for each student — the grade is calculated automatically.'
+          : hodDepartments.length > 0
+          ? "Pick one of your classes or one in your department, and a result set, then enter a percentage for each student — the grade is calculated automatically."
           : 'Pick one of your classes and a result set, then enter a percentage for each student — the grade is calculated automatically.'}
       </p>
       <p><a href="/results/missing" className="secondary">Find missing grades by class</a></p>
@@ -308,7 +313,7 @@ function EnterResultsInner() {
                 {ownClasses.length > 0 && (
                   <optgroup label="My classes">{ownClasses.map((c) => classOption(c, false))}</optgroup>
                 )}
-                <optgroup label="Department classes (view and delete only)">
+                <optgroup label="Department classes">
                   {deptClasses.map((c) => classOption(c, true))}
                 </optgroup>
               </>
@@ -348,7 +353,7 @@ function EnterResultsInner() {
             </SaveBar>
           ) : (
             <>
-              <p style={{ color: '#666' }}>This is a colleague's class in your department: you can delete a mistaken score here, but only its teacher can enter scores.</p>
+              <p style={{ color: '#666' }}>Only this class's teacher, its Head of Department or assessment staff can enter scores here.</p>
               <SaveBar status={status} />
             </>
           )}
