@@ -8,6 +8,7 @@ import { ParentPortalInner } from './parent-portal/page';
 import { findMyParentId } from '../lib/parentByEmail';
 import { useTileOrder, sortTiles } from '../lib/tileOrder';
 import StudentHome from './components/StudentHome';
+import TuckshopOrderingStatus from './components/TuckshopOrderingStatus';
 
 // Every chip is the same fixed-size box, whatever the length of its label, and
 // carries a one-line description that pops out on hover or keyboard focus.
@@ -543,6 +544,7 @@ export default function Home() {
               accent={t.accent}
               description={t.description}
               items={t.items({ hasAccess, staffRoles, isAdmin })}
+              extra={t.key === 'tuckshop' ? <TuckshopOrderingStatus /> : null}
             />
           ))}
         </div>
@@ -564,6 +566,7 @@ export default function Home() {
             description={t.description}
             items={t.items({ hasAccess, staffRoles, isAdmin })}
             extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts />
+              : t.key === 'tuckshop' ? <TuckshopOrderingStatus />
               : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].resource || CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} />
               : null}
           />
