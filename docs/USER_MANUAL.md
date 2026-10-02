@@ -724,7 +724,7 @@ What it fills in:
 
 - Every period the student has on each day: registration, lessons, their Other Half activity and Evening Prep.
 - Past days and today straight away; later days at 05:30 each morning.
-- Nothing outside term dates or on a day marked as a holiday on the calendar. A mid-term break is only one date on the calendar, so don't run an absence across a break: enter one absence before it and one after.
+- Nothing outside term dates or on a day marked as a holiday on the calendar. Every weekday of a mid-term break is a holiday on the calendar, so an absence that runs across a break skips those days.
 - It never overwrites a mark that is already in a register.
 
 Only authorised codes can be planned: I (illness), M (medical or dental appointment), H (authorised holiday), E (educational visit), C (other authorised absence) and **X (excluded from school)**.
