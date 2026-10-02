@@ -530,6 +530,7 @@ How it behaves:
 **Grade boundaries, aliases and key stages**
 - **Any member of staff can edit grade boundaries, subject aliases and subject key stages** (the school's decision, 27 Sept 2026). Boundary changes are not logged.
 - Boundaries are set per subject and per year group. Year 12's boundaries are also used as the WAEC boundaries for Years 10–11 on transcripts.
+- **Years 10–11 follow Cambridge IGCSE's June 2026 grade thresholds** (migration 322, the principal, 2 Oct 2026) in Mathematics, English, English Lit, Biology, Chemistry, Physics, Computing, Economics, French, Spanish, Chinese, Further Maths, Art, Food and Nutrition, PE, Geography and History: the time-zone variant 3, Extended route (sciences with the alternative to practical), English with coursework, each threshold turned into a percentage of the route's total. Below the lowest grade is **U**. Extended Maths and Further Maths (Additional Mathematics) go down to E only. Other subjects, Years 7–9 (90/80/70…) and Year 12 (WAEC) are unchanged.
 - A subject shows on the Term Test Scores PDF only if it is tagged for the student's key stage.
 
 **Target grades**
