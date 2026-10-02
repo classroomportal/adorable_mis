@@ -30,10 +30,17 @@ export default function BackupModeBanner() {
     }
 
     check();
-    // Frequent enough that staff are not left staring at a stale banner, rare
-    // enough to be invisible against normal page traffic.
-    const timer = setInterval(check, 15000);
-    return () => { cancelled = true; clearInterval(timer); };
+    // Once a minute, and only while the tab is on screen, plus straight away
+    // when it comes back. Every 15 s on every open tab, hidden or not, was
+    // 441,000 requests and part of the 08:00 overload on 2 Oct 2026.
+    const timer = setInterval(() => { if (!document.hidden) check(); }, 60000);
+    const onVisible = () => { if (!document.hidden) check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [session]);
 
   if (!mode) return null;

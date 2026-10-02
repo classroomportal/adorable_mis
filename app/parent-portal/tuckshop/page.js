@@ -4,7 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import { useAuth } from '../../../lib/AuthContext';
 import TuckshopPurchases from '../../components/TuckshopPurchases';
-import { findParentIdByEmail } from '../../../lib/parentByEmail';
+import { findMyParentId } from '../../../lib/parentByEmail';
 
 function ParentTuckshopInner() {
   const { profile, session } = useAuth();
@@ -18,7 +18,7 @@ function ParentTuckshopInner() {
   useEffect(() => {
     async function resolveParent() {
       if (profile?.parent_id) { setResolvedParentId(profile.parent_id); return; }
-      setResolvedParentId(await findParentIdByEmail(profile?.email || session?.user?.email));
+      setResolvedParentId(await findMyParentId());
     }
     resolveParent();
   }, [profile, session]);

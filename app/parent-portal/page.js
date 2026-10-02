@@ -7,7 +7,7 @@ import { useAuth } from '../../lib/AuthContext';
 import ResultsOverview from '../components/ResultsOverview';
 import { visibleTargets } from '../../lib/gradeCompare';
 import { formatUKDate } from '../../lib/formatDate';
-import { findParentIdByEmail } from '../../lib/parentByEmail';
+import { findMyParentId } from '../../lib/parentByEmail';
 import { generateInvoicePdfForStudent } from '../../lib/generateInvoicePdf';
 import { schoolToday, schoolWeekdayShort } from '../../lib/schoolTime';
 import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf';
@@ -82,7 +82,7 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
     async function resolveParent() {
       if (viewAsParentId) { setResolvedParentId(viewAsParentId); return; }
       if (profile?.parent_id) { setResolvedParentId(profile.parent_id); return; }
-      setResolvedParentId(await findParentIdByEmail(profile?.email || session?.user?.email));
+      setResolvedParentId(await findMyParentId());
     }
     resolveParent();
   }, [profile, session, viewAsParentId]);
