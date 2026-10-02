@@ -11,9 +11,9 @@
 -- * Extended tier; for the sciences, the Extended route with the alternative
 --   to practical (Paper 6). The school sits time-zone variant 3, so every route
 --   is the variant 3 one.
--- * Where a subject has more than one route, the most common one: exam only
---   for English, alternative to coursework for Geography and History, papers
---   1 + 2 for Literature.
+-- * Where a subject has more than one route: coursework for English (the
+--   school's route), alternative to coursework for Geography and History
+--   (the most common), papers 1 + 2 for Literature (the most common).
 -- * Each threshold is converted to a percentage of the route's maximum mark,
 --   rounded UP to 2 decimal places, so a band never starts below Cambridge's
 --   real threshold.
@@ -21,9 +21,10 @@
 --   band's min_score (scores are stored to 2 decimal places), so the
 --   min_score <= score <= max_score match on /results/enter always finds
 --   exactly one grade. The top band runs to 100.
--- * There is no U grade in Formwork, so the lowest grade the route offers
---   starts at 0, as before. Extended Maths (0580) and Additional Mathematics
---   (0606) stop at E, so they have no F or G bands.
+-- * Below Cambridge's lowest threshold is U (ungraded), from 0, so the
+--   lowest grade starts at Cambridge's real threshold. Extended Maths (0580)
+--   and Additional Mathematics (0606) stop at E, so they have no F or G
+--   bands: below E is U.
 -- * Further Maths (0606 Additional Mathematics) had no boundaries; it gets
 --   them here.
 -- * Graphics, Civics, Government, Religion, Igbo, Computer and GSM Repairs,
@@ -39,8 +40,8 @@
 -- * Mathematics (subject 1): 0580 Mathematics, Extended, papers 23 + 43, out of 200:
 --   A* 177, A 154, B 124, C 94, D 71, E 49
 --   https://www.cambridgeinternational.org/Images/762852-mathematics-without-coursework-0580-june-2026-grade-threshold-table.pdf
--- * English (subject 2): 0500 First Language English, papers 13 + 23 (exam only, no coursework), out of 160:
---   A* 108, A 97, B 86, C 75, D 64, E 53, F 41, G 29
+-- * English (subject 2): 0500 First Language English, components 03 (coursework) + 13, out of 160:
+--   A* 114, A 101, B 88, C 76, D 64, E 53, F 41, G 29
 --   https://www.cambridgeinternational.org/Images/762830-first-language-english-oral-endorsement-0500-june-2026-grade-threshold-table.pdf
 -- * English Lit (subject 299): 0475 Literature in English, papers 13 + 23, out of 100:
 --   A* 69, A 59, B 49, C 39, D 33, E 28, F 24, G 20
@@ -104,16 +105,18 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (1, 'B', 62.00, 76.99),
   (1, 'C', 47.00, 61.99),
   (1, 'D', 35.50, 46.99),
-  (1, 'E', 0.00, 35.49),
+  (1, 'E', 24.50, 35.49),
+  (1, 'U', 0.00, 24.49),
   -- English
-  (2, 'A*', 67.50, 100.00),
-  (2, 'A', 60.63, 67.49),
-  (2, 'B', 53.75, 60.62),
-  (2, 'C', 46.88, 53.74),
-  (2, 'D', 40.00, 46.87),
+  (2, 'A*', 71.25, 100.00),
+  (2, 'A', 63.13, 71.24),
+  (2, 'B', 55.00, 63.12),
+  (2, 'C', 47.50, 54.99),
+  (2, 'D', 40.00, 47.49),
   (2, 'E', 33.13, 39.99),
   (2, 'F', 25.63, 33.12),
-  (2, 'G', 0.00, 25.62),
+  (2, 'G', 18.13, 25.62),
+  (2, 'U', 0.00, 18.12),
   -- English Lit
   (299, 'A*', 69.00, 100.00),
   (299, 'A', 59.00, 68.99),
@@ -122,7 +125,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (299, 'D', 33.00, 38.99),
   (299, 'E', 28.00, 32.99),
   (299, 'F', 24.00, 27.99),
-  (299, 'G', 0.00, 23.99),
+  (299, 'G', 20.00, 23.99),
+  (299, 'U', 0.00, 19.99),
   -- Biology
   (89, 'A*', 84.50, 100.00),
   (89, 'A', 72.50, 84.49),
@@ -131,7 +135,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (89, 'D', 42.50, 48.49),
   (89, 'E', 36.50, 42.49),
   (89, 'F', 31.00, 36.49),
-  (89, 'G', 0.00, 30.99),
+  (89, 'G', 25.50, 30.99),
+  (89, 'U', 0.00, 25.49),
   -- Chemistry
   (92, 'A*', 86.00, 100.00),
   (92, 'A', 72.50, 85.99),
@@ -140,7 +145,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (92, 'D', 38.50, 44.99),
   (92, 'E', 32.50, 38.49),
   (92, 'F', 27.00, 32.49),
-  (92, 'G', 0.00, 26.99),
+  (92, 'G', 21.50, 26.99),
+  (92, 'U', 0.00, 21.49),
   -- Physics
   (123, 'A*', 78.00, 100.00),
   (123, 'A', 66.50, 77.99),
@@ -149,7 +155,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (123, 'D', 39.00, 43.49),
   (123, 'E', 34.50, 38.99),
   (123, 'F', 29.00, 34.49),
-  (123, 'G', 0.00, 28.99),
+  (123, 'G', 23.50, 28.99),
+  (123, 'U', 0.00, 23.49),
   -- Computing
   (94, 'A*', 76.67, 100.00),
   (94, 'A', 60.67, 76.66),
@@ -158,7 +165,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (94, 'D', 24.00, 28.66),
   (94, 'E', 20.00, 23.99),
   (94, 'F', 16.00, 19.99),
-  (94, 'G', 0.00, 15.99),
+  (94, 'G', 12.00, 15.99),
+  (94, 'U', 0.00, 11.99),
   -- Economics
   (97, 'A*', 81.34, 100.00),
   (97, 'A', 68.67, 81.33),
@@ -167,7 +175,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (97, 'D', 38.00, 43.99),
   (97, 'E', 32.67, 37.99),
   (97, 'F', 26.67, 32.66),
-  (97, 'G', 0.00, 26.66),
+  (97, 'G', 20.67, 26.66),
+  (97, 'U', 0.00, 20.66),
   -- French
   (104, 'A*', 84.00, 100.00),
   (104, 'A', 72.50, 83.99),
@@ -176,7 +185,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (104, 'D', 42.00, 49.99),
   (104, 'E', 34.50, 41.99),
   (104, 'F', 26.50, 34.49),
-  (104, 'G', 0.00, 26.49),
+  (104, 'G', 18.50, 26.49),
+  (104, 'U', 0.00, 18.49),
   -- Spanish
   (128, 'A*', 82.00, 100.00),
   (128, 'A', 71.00, 81.99),
@@ -185,7 +195,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (128, 'D', 41.50, 49.49),
   (128, 'E', 34.00, 41.49),
   (128, 'F', 27.00, 33.99),
-  (128, 'G', 0.00, 26.99),
+  (128, 'G', 20.00, 26.99),
+  (128, 'U', 0.00, 19.99),
   -- Chinese
   (298, 'A*', 81.00, 100.00),
   (298, 'A', 68.50, 80.99),
@@ -194,14 +205,16 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (298, 'D', 37.00, 43.99),
   (298, 'E', 30.00, 36.99),
   (298, 'F', 23.00, 29.99),
-  (298, 'G', 0.00, 22.99),
+  (298, 'G', 16.00, 22.99),
+  (298, 'U', 0.00, 15.99),
   -- Further Maths
   (309, 'A*', 86.25, 100.00),
   (309, 'A', 73.13, 86.24),
   (309, 'B', 55.00, 73.12),
   (309, 'C', 36.88, 54.99),
   (309, 'D', 28.75, 36.87),
-  (309, 'E', 0.00, 28.74),
+  (309, 'E', 20.63, 28.74),
+  (309, 'U', 0.00, 20.62),
   -- Art
   (88, 'A*', 77.00, 100.00),
   (88, 'A', 67.00, 76.99),
@@ -210,7 +223,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (88, 'D', 38.00, 46.99),
   (88, 'E', 29.00, 37.99),
   (88, 'F', 20.00, 28.99),
-  (88, 'G', 0.00, 19.99),
+  (88, 'G', 11.00, 19.99),
+  (88, 'U', 0.00, 10.99),
   -- Food and Nutrition
   (102, 'A*', 76.50, 100.00),
   (102, 'A', 67.50, 76.49),
@@ -219,7 +233,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (102, 'D', 43.50, 49.99),
   (102, 'E', 37.00, 43.49),
   (102, 'F', 29.50, 36.99),
-  (102, 'G', 0.00, 29.49),
+  (102, 'G', 22.00, 29.49),
+  (102, 'U', 0.00, 21.99),
   -- PE
   (122, 'A*', 72.50, 100.00),
   (122, 'A', 64.50, 72.49),
@@ -228,7 +243,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (122, 'D', 40.50, 48.99),
   (122, 'E', 32.50, 40.49),
   (122, 'F', 25.00, 32.49),
-  (122, 'G', 0.00, 24.99),
+  (122, 'G', 17.50, 24.99),
+  (122, 'U', 0.00, 17.49),
   -- Geography
   (105, 'A*', 82.73, 100.00),
   (105, 'A', 72.73, 82.72),
@@ -237,7 +253,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (105, 'D', 44.55, 52.72),
   (105, 'E', 36.37, 44.54),
   (105, 'F', 27.73, 36.36),
-  (105, 'G', 0.00, 27.72),
+  (105, 'G', 19.10, 27.72),
+  (105, 'U', 0.00, 19.09),
   -- History
   (112, 'A*', 64.00, 100.00),
   (112, 'A', 54.00, 63.99),
@@ -246,7 +263,8 @@ insert into igcse_june_2026 (subject_id, grade, min_score, max_score) values
   (112, 'D', 30.67, 34.66),
   (112, 'E', 27.34, 30.66),
   (112, 'F', 22.67, 27.33),
-  (112, 'G', 0.00, 22.66);
+  (112, 'G', 18.00, 22.66),
+  (112, 'U', 0.00, 17.99);
 
 delete from public.subject_grade_boundaries b
 where b.year_group in (10, 11)
