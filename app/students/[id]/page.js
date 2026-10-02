@@ -14,6 +14,8 @@ import PublishedDocuments from '../../components/PublishedDocuments';
 import MedicalRecordCard from '../../components/MedicalRecordCard';
 import StudentParentsEditor from '../../components/StudentParentsEditor';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
+import ReadingAgeHistory from '../../components/ReadingAgeHistory';
+import { loadReadingAgeHistory, formatGap } from '../../../lib/readingAge';
 import { useHashView, DashboardTile, DashboardBack } from '../../components/Dashboard';
 import { classifyGrade, STYLE, LABEL, visibleTargets } from '../../../lib/gradeCompare';
 import { groupResultSets } from '../../../lib/resultSets';
@@ -109,6 +111,7 @@ function StudentDetail() {
   const [photoStatus, setPhotoStatus] = useState(null);
   const [cat4, setCat4] = useState([]);
   const [ngrt, setNgrt] = useState([]);
+  const [readingAges, setReadingAges] = useState([]); // every reading age, oldest first (migration 323)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -181,6 +184,13 @@ function StudentDetail() {
     if (!pp.parents?.email) return 'No email';
     if (st.email_in_use) return 'Email used by another login';
     return <button className="secondary" onClick={() => createParentLogin(pp)}>Create login</button>;
+  }
+
+  // Staff only: the function refuses anyone else, and then the tile just
+  // shows nothing recorded.
+  async function loadReadingAges() {
+    const { byStudent } = await loadReadingAgeHistory([Number(id)]);
+    setReadingAges(byStudent[Number(id)] || []);
   }
 
   async function loadAll() {
@@ -289,6 +299,8 @@ function StudentDetail() {
 
     const { data: ng } = await supabase.from('ngrt_results').select('*').eq('student_id', id).order('test_date', { ascending: false });
     setNgrt(ng || []);
+
+    loadReadingAges();
 
     let byBlock = {};
     let compoundByBlock = {};
@@ -733,6 +745,7 @@ function StudentDetail() {
     { key: 'targets', label: 'Target Grades', icon: '🎯', sub: shownTargetCount === 0 ? 'No targets set' : `${plural(shownTargetCount, 'subject')} tracked` },
     { key: 'results', label: 'Results', icon: '⭐', sub: results.length === 0 ? 'No results yet' : plural(groupResultSets(results, resultSetEvents).length, 'result set') },
     { key: 'predictive', label: 'CAT4 / NGRT', icon: '🧠', sub: cat4.length + ngrt.length === 0 ? 'No data recorded' : plural(cat4.length + ngrt.length, 'sitting') },
+    { key: 'reading', label: 'Reading Age', icon: '📖', sub: readingAges.length === 0 ? 'Not tested yet' : `Gap ${formatGap(readingAges[readingAges.length - 1].gap_months)} (${formatUKDate(readingAges[readingAges.length - 1].tested_on)})` },
     { key: 'documents', label: 'Reports & Documents', icon: '📄', sub: 'Downloads' },
   ].filter(Boolean);
   // A hash for a section this user can't open (e.g. #medical) shows the tiles.
@@ -1379,6 +1392,23 @@ function StudentDetail() {
       </Section>
         );
       })()}
+
+      {activeView === 'reading' && (
+        <Section
+          title="Reading Age"
+          extra={hasAccess('/reading-ages') && <a href="/reading-ages">All reading ages</a>}
+        >
+          <ReadingAgeHistory
+            readings={readingAges}
+            canRecord={hasAccess('/reading-ages/record')}
+            onChanged={loadReadingAges}
+            noDob={!student.dob}
+          />
+          {hasAccess('/reading-ages/record') && (
+            <p style={{ fontSize: '0.85em' }}>To add a reading, use <a href="/reading-ages/record">Record a reading test</a>.</p>
+          )}
+        </Section>
+      )}
 
       {activeView === 'predictive' && (
       <Section

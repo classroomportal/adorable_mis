@@ -572,6 +572,14 @@ How it behaves:
 - **Reports** (291): while writing a subject comment, the teacher sees each student's homework this term in that subject (from any class): average, grade, how many were marked and how many weren't handed in. The Homework judgement is suggested from the average (80% and over Excellent, 60–79 Good, 40–59 Satisfactory, under 40 Needs Improvement); the teacher can change it. Checkers see the same figures. Every mark recorded for homework due that term counts, whether or not released to students; Not handed in is counted separately, not as zero. The printed report shows Homework as the grade of the average only (e.g. B), never the percentage; a subject with no homework marks shows the teacher's judgement. Transcripts, result sets and target grades still never use homework.
 - **No notifications:** setting homework or releasing marks sends no email or inbox message.
 
+**Reading ages** (323, 2 Oct 2026; `/reading-ages`)
+- A reading age is kept in years and months, with **the date it was tested**. The gap is the reading age minus the student's actual age on that day (from their date of birth): **negative means reading below their age**. The gap is worked out whenever it is shown, so correcting a date of birth corrects every gap.
+- **Where readings come from:** the paper test at the admissions interview (entered on the applicant's page; it appears in the student's history once the applicant is enrolled), the school's own tests (entered at `/reading-ages/record`) and NGRT (imported; none since January 2023, and only today's Year 11 and 12 have any).
+- **Recording a test** (`/reading-ages/record`): one date and test name for a year group or form, a reading age per student; students left blank are skipped. One reading per student, per date, per test; saving again updates it. A test can't be dated in the future. Assessment managers, Heads of Department, SMT and admins can record, correct and remove school tests. Interview and NGRT readings are corrected where they were entered.
+- **Seeing the tracking** (`/reading-ages`): teachers, Heads of Department, mentors, pastoral, assessment managers, SMT and admins. For the whole school, a year group or a form: how many are tested, the average latest gap, how many are reading below their age (in bands: 2+ years below, 1–2 years below, up to a year below, at or above), how many have closed the gap since their first reading, the average gap at each sitting (term, or school year for older readings), and each student's first and latest reading with the change. Each student's readings are also on their profile (Reading Age tile) as a chart of reading age against actual age.
+- All staff can read reading ages, as they can NGRT. Students and parents see none.
+- Every school test added, changed or removed is logged in Change History under "Reading ages", with who did it.
+
 **Certificates:** these are behaviour-points certificates. See the gap in [§14](#14-known-gaps-and-inconsistencies-found-while-writing-this).
 
 ---
@@ -670,6 +678,7 @@ How it behaves:
   - **email:** reply-to settings.
   - **groups:** student groups, who is in them and who runs them (284).
   - **students:** every student added, changed or deleted, with old and new values (286). The photo is left out of the log, though the log says it changed.
+  - **reading ages:** school reading tests added, changed or removed (323).
 - Changes made directly in the database show as "Principal (direct)".
 
 **Grade History** covers grades (see [§9](#9-assessment-results-and-reports)).

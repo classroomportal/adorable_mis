@@ -388,6 +388,7 @@ const TABS = [
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
       { href: '/assessments/import', label: 'Import CAT4/NGRT', desc: "Upload CAT4 and NGRT scores." },
+      { href: '/reading-ages', label: 'Reading Ages', desc: "Reading age against actual age, and how the gap changes over time." },
       { href: '/assessments/grade-history', label: 'Grade History', desc: "Every grade entered, changed or deleted, and who did it." },
     ].filter((it) => it && hasAccess(it.href)),
   },
