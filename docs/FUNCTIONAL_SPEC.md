@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 325). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 326). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -401,7 +401,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.19** The tracker (/reading-ages) is open to teachers, Heads of Department, mentors, pastoral staff, assessment managers, SMT and admins. For the whole school, a year group or a form it shows how many have a reading, the average latest gap, the share reading below their age, how many are in each band (2+ years below, 1–2 years below, up to a year below, at or above; the principal agreed these on 2 Oct 2026), and how many have closed the gap since their first reading. \[Page\]
 - **FR-7.20** Change over time: the average gap at each sitting, as a chart and a table, where a sitting is a term (or the school year, for readings before terms were recorded). Each student counts once per sitting, and the table shows how many were tested each time. \[Page\]
 - **FR-7.21** The student list puts those furthest behind first and shows the first and latest reading with the change since the first and since the last. A row opens a chart of reading age against actual age over time, and the list downloads as CSV. The same chart and history are on the student's profile (Reading Age tile). \[Page\]
-- **FR-7.22** Parents see their own children's readings, for children still at the school, on the parent portal's Reading Age tile, which appears only once the child has two readings (migration 325: one reading isn't yet a trend; before that the database returns parents nothing): the same dates, reading ages, ages, gaps and chart as staff (the principal, 2 Oct 2026). Students see none. Parents read them only through the database's reading-age function, never the table itself. \[DB\]
+- **FR-7.22** Parents see their own children's readings, for children still at the school, on the parent portal's Reading Age tile, which appears only once the child has two readings from the school's tests or the admissions interview (migrations 325–326: one reading isn't yet a trend, and old NGRT sittings don't count towards the two, though they are shown once the tile appears; before that the database returns parents nothing): the same dates, reading ages, ages, gaps and chart as staff (the principal, 2 Oct 2026). Students see none. Parents read them only through the database's reading-age function, never the table itself. \[DB\]
 - **FR-7.23** Every school test added, changed or removed is logged in Change History under Reading ages, with who did it. \[DB\]
 
 ## 11. FR-8 Reports, transcripts and documents
