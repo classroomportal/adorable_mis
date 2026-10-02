@@ -256,6 +256,21 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 - Next to each student, the register shows their other marks today as coloured badges (M, L1–L6, OH, EP).
 - A subject class's register can show each student's last grade in that subject, but only after the teacher presses **Show last grades**. It is hidden by default because the register is often on the classroom screen **(page only)**.
 
+**Planned absences** (`/attendance/planned-absences`, migration 318)
+
+One attendance code for a student over a run of whole days, entered once instead of in every register.
+- Open to school office, attendance officer, pastoral, SMT and admin (Pastoral card). All staff can see the list. The checks happen in the database.
+- Only authorised codes: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and **X, Excluded from school** (new in 318, counted as an authorised absence).
+- It fills in every period the student has on each day: their timetabled lessons (registration and Evening Prep included) and their Other Half activity. Days outside term dates and days with a holiday on the calendar are skipped.
+- Past days and today are filled in as soon as it is saved; later days at 05:30 each morning. The rule that no mark can be saved for a future date still holds.
+- **It never overwrites a mark that is already there** (the principal's decision).
+- The register shows the code already filled in, marked "planned". Once a teacher saves that register the mark is theirs, whether they keep the code or change it (the student turned up after all).
+- A student can't have two planned absences over the same days.
+- **End early** (the day the student is back) removes the marks it filled in from that day on; **Cancel** removes all of them. Marks a teacher has saved are left alone.
+- A planned-absence mark doesn't count as the register being taken, so Registers Not Done still lists the lesson until the teacher takes it.
+- The note is staff-only; parents see only the code on their child's attendance.
+- Planned absences, and the marks removed by ending or cancelling one, are logged in Change History under Registers.
+
 **Registers Not Done** (`/pastoral/registers-not-done`)
 
 A class lesson is listed when all of these are true:

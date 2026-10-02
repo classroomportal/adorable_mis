@@ -24,6 +24,7 @@ function AttendanceInner() {
   const [roster, setRoster] = useState([]);
   const [marks, setMarks] = useState({}); // student_id -> code
   const [lateMinutes, setLateMinutes] = useState({}); // student_id -> minutes late, as typed
+  const [planned, setPlanned] = useState({}); // student_id -> true when the mark came from a planned absence (318)
   const [slot, setSlot] = useState(null); // {start_time, end_time} of this class's slot in this period
   const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
   const [lastGrades, setLastGrades] = useState({}); // student_id -> {grade, week_start_date}, for this class's subject
@@ -69,22 +70,29 @@ function AttendanceInner() {
 
     const ids = studentList.map((s) => s.student_id);
     if (ids.length > 0) {
-      const { data: existing } = await supabase
+      const existingMarks = (cols) => supabase
         .from('attendance')
-        .select('student_id, code, minutes_late')
+        .select(cols)
         .eq('attend_date', date)
         .eq('period_number', periodNumber)
         .in('student_id', ids);
+      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id');
+      // Until migration 318 is run there's no planned_absence_id column; the
+      // register must still show the marks already taken.
+      if (existingError) ({ data: existing } = await existingMarks('student_id, code, minutes_late'));
       const prefill = {};
       const prefillMinutes = {};
+      const plannedIds = {};
       (existing || []).forEach((row) => {
         if (row.code) prefill[row.student_id] = row.code;
+        if (row.planned_absence_id) plannedIds[row.student_id] = true;
         if (row.minutes_late !== null && row.minutes_late !== undefined) {
           prefillMinutes[row.student_id] = String(row.minutes_late);
         }
       });
       setMarks(prefill);
       setLateMinutes(prefillMinutes);
+      setPlanned(plannedIds);
 
       const { data: today } = await supabase
         .from('attendance_today')
@@ -122,6 +130,7 @@ function AttendanceInner() {
     } else {
       setMarks({});
       setLateMinutes({});
+      setPlanned({});
       setTodaySoFar({});
       setLastGrades({});
     }
@@ -426,6 +435,12 @@ function AttendanceInner() {
                             <option key={c.code} value={c.code}>{c.code} — {c.description}</option>
                           ))}
                         </select>
+                        {/* Filled in by the office (migration 318); saving the register makes it the teacher's mark. */}
+                        {planned[s.student_id] && (
+                          <span title="Filled in from a planned absence entered by the office" style={{ marginLeft: '0.35rem', fontSize: '0.75em', color: '#475569' }}>
+                            planned
+                          </span>
+                        )}
                       </td>
                       <td>
                         {isLateCode(marks[s.student_id]) ? (
