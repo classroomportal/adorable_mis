@@ -8,6 +8,7 @@ import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday, minutesSinceSchoolTime } from '../../../lib/schoolTime';
+import SaveBar, { useSaveStatus } from '../../components/SaveBar';
 import { OH_DAY_NAMES, loadOtherHalfSlots, staffByActivity, staffNames } from '../../../lib/otherHalf';
 
 const WEEKDAY_INDEX = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
@@ -45,7 +46,7 @@ function RegisterInner() {
   const [marks, setMarks] = useState({});
   const [lateMinutes, setLateMinutes] = useState({});
   const [elsewhere, setElsewhere] = useState({}); // student_id -> activity name, when already marked in another activity
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useSaveStatus();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -224,6 +225,9 @@ function RegisterInner() {
           <p>No students have chosen this activity yet.</p>
         ) : (
           <>
+            <SaveBar status={status}>
+              <button type="submit" style={{ width: 'fit-content' }}>Save register</button>
+            </SaveBar>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
               <button type="button" className="secondary" onClick={markAllPresent}>Mark the rest present</button>
               <span style={{ color: '#666' }}>{roster.length} student{roster.length === 1 ? '' : 's'}{unmarked ? ` · ${unmarked} not marked yet` : ''}</span>
@@ -266,10 +270,8 @@ function RegisterInner() {
                 ))}
               </tbody>
             </table></div>
-            <button type="submit" style={{ marginTop: '1rem', width: 'fit-content' }}>Save register</button>
           </>
         )}
-        {status && <p>{status}</p>}
       </form>
     </div>
   );

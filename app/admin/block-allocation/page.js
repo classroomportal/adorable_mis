@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import RequireAuth from "../../RequireAuth";
 import RequireResource from "../../RequireResource";
 import { groupClassesByKey } from "../../../lib/blockGroups";
+import SaveBar, { useSaveStatus } from "../../components/SaveBar";
 
 const YEARS = [7, 8, 9, 10, 11, 12];
 
@@ -22,7 +23,8 @@ function BlockAllocationInner() {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(""); // loading problems
+  const [saveStatus, setSaveStatus] = useSaveStatus();
 
   // --- Load blocks when year changes ---
   useEffect(() => {
@@ -32,6 +34,7 @@ function BlockAllocationInner() {
     setStudents([]);
     setSelections({});
     setMessage("");
+    setSaveStatus(null);
     if (!year) {
       setBlocks([]);
       return;
@@ -51,11 +54,12 @@ function BlockAllocationInner() {
         setMessage(`No curriculum_blocks rows found for year_group = ${year}. (Query ran without error, just returned 0 rows.)`);
       }
     })();
-  }, [year]);
+  }, [year]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Load classes + students + existing allocations when block changes ---
   useEffect(() => {
     setMessage("");
+    setSaveStatus(null);
     if (!blockId) {
       setClasses([]);
       setStudents([]);
@@ -184,7 +188,7 @@ function BlockAllocationInner() {
 
   async function handleSave() {
     setSaving(true);
-    setMessage("");
+    setSaveStatus("Saving…");
 
     const toInsert = [];
     const toDelete = [];
@@ -206,7 +210,7 @@ function BlockAllocationInner() {
     }
 
     if (toInsert.length === 0 && toDelete.length === 0) {
-      setMessage("No changes to save.");
+      setSaveStatus("No changes to save.");
       setSaving(false);
       return;
     }
@@ -218,7 +222,7 @@ function BlockAllocationInner() {
         .eq("student_id", row.student_id)
         .eq("class_id", row.class_id);
       if (error) {
-        setMessage("Error removing allocation: " + error.message);
+        setSaveStatus("Error removing allocation: " + error.message);
         setSaving(false);
         return;
       }
@@ -229,14 +233,14 @@ function BlockAllocationInner() {
         .from("student_class")
         .upsert(toInsert, { onConflict: "student_id,class_id", ignoreDuplicates: true });
       if (error) {
-        setMessage("Error saving allocations: " + error.message);
+        setSaveStatus("Error saving allocations: " + error.message);
         setSaving(false);
         return;
       }
     }
 
     setInitialSelections(cloneSelections(selections));
-    setMessage(
+    setSaveStatus(
       `Saved. ${toInsert.length} added, ${toDelete.length} removed.`
     );
     setSaving(false);
@@ -316,6 +320,23 @@ function BlockAllocationInner() {
 
       {!loading && classes.length > 0 && students.length > 0 && (
         <>
+          <SaveBar status={saveStatus}>
+            <button
+              onClick={handleSave}
+              disabled={saving || changedCount === 0}
+              style={{
+                padding: "0.6rem 1.2rem",
+                background: changedCount === 0 ? "#ccc" : "#1a5fb4",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                fontSize: "0.9rem",
+                cursor: changedCount === 0 ? "default" : "pointer",
+              }}
+            >
+              {saving ? "Saving…" : `Save changes (${changedCount})`}
+            </button>
+          </SaveBar>
           <div style={{ overflowX: "auto", border: "1px solid #ddd", borderRadius: 6 }}>
             <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "0.85rem" }}>
               <thead>
@@ -389,24 +410,6 @@ function BlockAllocationInner() {
             </table>
           </div>
 
-          <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
-            <button
-              onClick={handleSave}
-              disabled={saving || changedCount === 0}
-              style={{
-                padding: "0.6rem 1.2rem",
-                background: changedCount === 0 ? "#ccc" : "#1a5fb4",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                fontSize: "0.9rem",
-                cursor: changedCount === 0 ? "default" : "pointer",
-              }}
-            >
-              {saving ? "Saving…" : `Save changes (${changedCount})`}
-            </button>
-            {message && <span style={{ fontSize: "0.85rem" }}>{message}</span>}
-          </div>
         </>
       )}
 

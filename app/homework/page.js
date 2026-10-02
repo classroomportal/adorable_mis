@@ -12,6 +12,7 @@ import { AttachmentList } from '../components/HomeworkAttachments';
 import HomeworkMarkSheet from '../components/HomeworkMarkSheet';
 import HomeworkStudentView from '../components/HomeworkStudentView';
 import { Instructions } from '../components/HomeworkChip';
+import SaveBar, { useSaveStatus } from '../components/SaveBar';
 import HomeworkForm, { btnSmall, schemeLabel, classLabel } from '../components/HomeworkForm';
 
 // Homework (migration 278, docs/homework-design.md): set homework for a class,
@@ -32,7 +33,7 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
   const [rows, setRows] = useState({});
   const [released, setReleased] = useState(hw.marks_released);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useSaveStatus();
   const [rowErrors, setRowErrors] = useState({});
   const [doneAt, setDoneAt] = useState({}); // student_id -> when they ticked it done
   const [boundaries, setBoundaries] = useState([]); // the subject's grade boundaries for this year group
@@ -146,7 +147,7 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
         dirty.forEach((s) => { if (errors[s.student_id]) next[s.student_id] = row(s.student_id); });
         return next;
       });
-      setStatus(`${dirty.length - failed} saved, ${failed} not saved: see the rows marked below.`);
+      setStatus(`${dirty.length - failed} saved, ${failed} not saved: see the rows marked below.`, 'error');
     } else {
       setStatus(dirty.length ? `Saved ${dirty.length} mark${dirty.length === 1 ? '' : 's'}.` : 'Nothing to save.');
     }
@@ -184,6 +185,11 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
         )}
       </div>
 
+      <SaveBar status={status}>
+        <button type="button" onClick={saveMarks} disabled={busy || dirty.length === 0 || withdrawn}>
+          {busy ? 'Saving…' : `Save ${dirty.length || ''} change${dirty.length === 1 ? '' : 's'}`}
+        </button>
+      </SaveBar>
       <div className="table-scroll"><table>
         <thead>
           <tr><th>Student</th><th>{scheme?.kind === 'mark' ? `Mark${max ? ` (out of ${max})` : ''}` : 'Grade'}</th><th>Comment for the student</th></tr>
@@ -241,12 +247,6 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
           })}
         </tbody>
       </table></div>
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-        <button type="button" onClick={saveMarks} disabled={busy || dirty.length === 0 || withdrawn}>
-          {busy ? 'Saving…' : `Save ${dirty.length || ''} change${dirty.length === 1 ? '' : 's'}`}
-        </button>
-        {status && <span>{status}</span>}
-      </div>
       <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
         The term&apos;s homework grades help with the Homework judgement when you write reports. Every change is recorded in the grade history.
       </p>

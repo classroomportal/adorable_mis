@@ -5,6 +5,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { loadResultSetScopes, scopeToReportPeriod, inReportPeriod } from '../../../lib/reportWriting';
+import SaveBar, { useSaveStatus } from '../../components/SaveBar';
 import ResultSetPicker, { currentYearSets, confirmResultSetDate, ResultSetDateNote, fieldStyle } from '../../components/ResultSetPicker';
 
 const RESULT_TYPES = [
@@ -48,7 +49,7 @@ function EnterResultsInner() {
   const [boundaries, setBoundaries] = useState([]); // grade boundaries for this class's subject
   const [rows, setRows] = useState({}); // student_id -> { score, grade, resultId }
   const [loadingRoster, setLoadingRoster] = useState(false);
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useSaveStatus();
 
   const selectedClass = classes.find((c) => String(c.class_id) === String(classId));
 
@@ -207,7 +208,8 @@ function EnterResultsInner() {
       setStatus(
         error.code === '42501' || /row-level security/i.test(error.message || '')
           ? "You can only enter results for classes you are the teacher of record for. If this is your class, ask an admin to check who it's assigned to."
-          : `Error: ${error.message}`
+          : `Error: ${error.message}`,
+        'error'
       );
     } else {
       setStatus(`Saved ${toSave.length} result(s).`);
@@ -248,7 +250,7 @@ function EnterResultsInner() {
     } else if (!data || data.length === 0) {
       // RLS hides rows you can't delete rather than raising, so nothing
       // coming back means it wasn't theirs to delete.
-      setStatus("That score couldn't be deleted — you can only delete scores for classes you teach (Heads of Department: any in their department).");
+      setStatus("That score couldn't be deleted — you can only delete scores for classes you teach (Heads of Department: any in their department).", 'error');
     } else {
       setStatus(`Deleted the score for ${student.first_name} ${student.last_name}.`);
       loadRosterAndExisting();
@@ -340,6 +342,16 @@ function EnterResultsInner() {
 
       {!loadingRoster && selectedClass && selectedResultSet && roster.length > 0 && (
         <>
+          {canWriteSelected ? (
+            <SaveBar status={status}>
+              <button type="button" onClick={handleSaveAll}>Save all</button>
+            </SaveBar>
+          ) : (
+            <>
+              <p style={{ color: '#666' }}>This is a colleague's class in your department: you can delete a mistaken score here, but only its teacher can enter scores.</p>
+              <SaveBar status={status} />
+            </>
+          )}
           <div className="table-scroll">
             <table>
               <thead>
@@ -375,14 +387,6 @@ function EnterResultsInner() {
             </table>
           </div>
 
-          {canWriteSelected ? (
-            <button type="button" onClick={handleSaveAll} style={{ marginTop: '1rem' }}>
-              Save all
-            </button>
-          ) : (
-            <p style={{ color: '#666' }}>This is a colleague's class in your department: you can delete a mistaken score here, but only its teacher can enter scores.</p>
-          )}
-          {status && <p>{status}</p>}
         </>
       )}
 
