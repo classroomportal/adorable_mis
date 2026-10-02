@@ -8,11 +8,11 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 312). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 314). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
-**Audience:** the principal, SMT, anyone taking over development, and auditors.
+**Audience:** the principal, SMT, anyone taking over development, and auditors. Staff, students and parents learning to use Formwork should read the [Formwork User Manual](https://claude.ai/code/artifact/419e765d-009a-414f-9da4-d81b2dd75894) instead: step-by-step guides for each role, with screenshots on invented data.
 
 **How requirements are written.** Each module has numbered requirements (FR-4.3 = module 4, requirement 3). Each is labelled with how it is enforced:
 
@@ -189,7 +189,7 @@ The timetable comes from Nova-T and is imported by admins; Formwork never invent
 
 **Nova-T timetable import (/admin/import-classes, admin only)**
 
-- **FR-3.7** A lesson's subject comes only from the subject code in the group name, with the set number removed (10LI/El → El = Literature). Subject codes are maintained in SQL, never guessed. \[Page\]
+- **FR-3.7** A lesson's subject comes only from the subject code in the group name, with the set number removed (10LI/El → El = Literature). Subject codes are maintained in SQL, never guessed. The "Electronics" subject, which the original import invented by guessing a code, was removed on 1 Oct 2026 along with its grade boundaries; nothing else used it (migration 314). \[Page\]
 - **FR-3.8** Groups coded Oh (Other Half) or Sa (Sports Academy) are skipped. \[Page\]
 - **FR-3.9** The file is treated as the complete list of each class's lessons: missing lessons are removed and new ones take the bell time. A class with nothing readable in the file is never emptied. \[Page\]
 - **FR-3.10** Every change is previewed before it is applied. Classes missing from the file are offered for deletion: empty ones pre-ticked, ones with students left for a person to decide. \[Page\]
@@ -379,7 +379,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 
 - **FR-7.13** Missing Grades lists, class by class, who has no mark in a set. A subject is expected only if someone in that year group has a mark for it. \[DB\]
 - **FR-7.14** Top 10 ranks students in a result set by average percentage, per year or overall, sharing tied ranks. \[Page\]
-- **FR-7.15** Review Results (subject overview) charts a student's or class's scores across result sets. Class Progress shows each class's average grade against its students' average target. Who sees which classes: SMT, admins, assessment, pastoral and boarding staff see every class; a Head of Department sees their department's (an SMT member who is also a Head of Department sees every class, migration 312); a teacher sees only the classes they teach, as class teacher or for any single lesson. This narrows the page only; results stay readable to staff elsewhere. \[Page\]
+- **FR-7.15** Review Results (subject overview) charts a student's or class's scores across result sets. Class Progress shows each class's average grade against its students' average target. Who sees which classes: SMT, admins, assessment, pastoral and boarding staff see every class; a Head of Department sees their department's (an SMT member who is also a Head of Department sees every class, migration 312); a teacher sees only the classes they teach, as class teacher or for any single lesson. This narrows the page only; results stay readable to staff elsewhere. The database picks one grade per current student and subject for the chosen result set, or the most recent, so the page loads about 4,300 grades rather than every result ever recorded (until migration 313 it downloaded all 59,000 and could stay on Loading on a tablet). \[Page\]
 
 ## 11. FR-8 Reports, transcripts and documents
 
@@ -803,7 +803,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 23. Known issues and open decisions
 
-28 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; one of them (6) has since been fixed. The first five stop something working today.
+29 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; one of them (6) has since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -835,6 +835,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 26 | Admissions | The deposit amount recorded isn't checked against the year's deposit | A wrong amount can be recorded | Open |
 | 27 | Fees | No year-group prices have been approved for locked items yet | Locked items can only be charged at an approved single price, if one exists | Open |
 | 28 | Registers | Missed Lessons for an earlier day names the lesson from today's classes and timetable | After a class change the wrong class can be shown; the marks themselves are right | Open |
+| 29 | Fees | Record a Payment, All Students (/bursar/fees-table) and Add Paid Top-Up are written with styling classes the app never loads | The pages work but show as plain, unstyled text and form fields; found while taking screenshots for the User Manual | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
