@@ -37,3 +37,7 @@ The Claude Docs connector must be on in the session (tools `mcp__Claude_Docs__*`
 ## Writing style for these docs
 
 Plain English for school leaders. Lead with the point, short sentences, numbers and names over adjectives. Use UK spelling and Lagos time. Name roles as the app does (smt, school_office…) in tables, and in words in prose.
+
+## The User Manual
+
+A third living doc, [Formwork — User Manual](https://claude.ai/code/artifact/419e765d-009a-414f-9da4-d81b2dd75894) (doc id `419e765d-009a-414f-9da4-d81b2dd75894`, tab `4d7fda9a-1cee`, body `a2dbea35-efc4`), explains each page step by step with screenshots. When a change alters how a page is used, update the matching chapter too. Its snapshot is `docs/USER_MANUAL.md`: export the tab as markdown as above, then replace each `&#91;image: …\]` placeholder, in order, with a link to its screenshot in `docs/manual-images/` (the export drops images). Screenshots must only ever show invented demonstration data, never real students, staff or parents.
