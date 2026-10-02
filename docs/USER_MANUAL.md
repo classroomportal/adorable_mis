@@ -23,7 +23,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
 | Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, planned absences | Teachers, office, pastoral |
 | Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers (Years 10–11), HoDs, SMT |
-| Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History | Teachers, HoDs, assessment staff |
+| Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
 | Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; HR |
 | Care and conduct | [8. The Other Half and student groups](#8-the-other-half-and-student-groups) | Activity registers, the programme, student choices, groups, building a group from a rule | All staff; SMT; pastoral |
@@ -48,6 +48,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
 | Set or mark homework | [Setting homework](#setting-homework) · [Marking](#marking-the-mark-book) |
 | Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
+| Record or track reading ages | [Reading ages](#reading-ages-reading-ages) |
 | Write or check report comments | [Reports and documents](#6-reports-and-documents) |
 | Update a student's or parent's details | [Editing a record](#editing-a-record) · [Parents and leavers](#parents-and-leavers) |
 | Add a new student | [Adding a student](#adding-a-student-school-office-only) |
@@ -331,6 +332,7 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 
 - **First sign-in**: use the email the school has and the password in your welcome letter (your oldest child's date of birth as DDMMYYYY), then choose your own password.
 - **Any time**: choose your child, then check **Attendance** (today lesson by lesson), **Conduct**, **Assessment** (grades against targets and reports) and **Timetable**.
+- **Reading Age**: once your child has two reading tests, this tile shows each reading age against their actual age on the day, with a chart.
 - **Each term**: when the school publishes fees, **Fees** shows the invoice, what has been paid and what is due, with a PDF.
 - **Once**: on **School Calendar**, press **Subscribe** so term dates and events appear in your phone's calendar and update by themselves.
 - **Messages** from the school arrive in your **Inbox** and by email.
@@ -609,6 +611,7 @@ A profile opens on a grid of tiles. Each tile opens one part of the record.
 | Behaviour | Every event, who logged it, appeals and detentions |
 | Target Grades / Results | Targets per subject and scores per result set |
 | CAT4 / NGRT | Imported test scores |
+| Reading Age | Every reading age, from the interview on, against the student's age, with a chart (see Reading ages in chapter 5) |
 | Reports & Documents | Published reports, transcripts and score sheets, and the transcript download |
 
 ![Core Data, with Full view and Edit](manual-images/05b-student-core.jpg)
@@ -891,6 +894,39 @@ Every score, target and transcript grade entered, changed or deleted, with the o
 
 ![Grade History](manual-images/34-grade-history.jpg)
 
+### Reading ages (/reading-ages)
+
+Literacy is one of the school's improvement targets, so every student's reading age is tracked against their actual age from the admissions interview onwards. The **gap** is the reading age minus the student's age on the day of the test: **−1 y 2 m** means reading 14 months below their age, **+8 m** means 8 months above. Formwork works out the age and the gap from the date of birth and the test date; nobody types them.
+
+Open **Reading Ages** from the Assessment card. Teachers, Heads of Department, mentors, pastoral staff, assessment managers and SMT can see it. Choose a **Year group** (and a **Form** if you want one).
+
+![Reading Ages for Year 8](manual-images/34b-reading-ages.jpg)
+
+- **Where they are now**: how many have a reading, the average gap at their latest test, how many are reading below their age, and how many have closed the gap since their first reading. The coloured buttons count students in each band (2+ years below, 1–2 years below, up to a year below, at or above their age); press one to list just those students.
+- **How it has changed**: the average gap at each sitting (a term, or a school year for older readings). Check the **Tested** column before comparing two sittings: different students may have sat each one.
+
+**Students** lists everyone in view, furthest behind first, with their first and latest reading and the change in the gap (▲ closed, ▼ widened). Press a row to see that student's chart and every reading; **Download CSV** saves the list. The same chart is on the student's profile, under the **Reading Age** tile.
+
+![A student's readings, opened from the list](manual-images/34c-reading-student.jpg)
+
+In the chart the blue line is the reading age and the dashed line is the student's actual age; the bar between them at each test is the gap (red below their age, green above). Purple dots are the admissions interview, blue dots the school's tests.
+
+**Recording a test** (Record a reading test, /reading-ages/record; teachers, Heads of Department, assessment managers and SMT):
+
+1. Type the **Test** name (for example *Entry test*) and the **Usual test date**, the day most students sat it.
+2. Choose the **Year group** and **Form**, or find one student by name.
+3. Type each reading age in years and months. Leave a student blank if they weren't tested.
+4. If a student sat it on another day (absent, a catch-up), change the **Date tested** on their row; it turns yellow.
+5. Check the **Gap** column, which fills in as you type, then press **Save**.
+
+![Recording an entry test for Year 7, one student tested on another day](manual-images/34d-reading-record.jpg)
+
+You can come back to the same test and date to add more students; readings already saved are filled in. A test can't be dated after today. To correct or remove a saved reading, open the student in Reading Ages (or the Reading Age tile on their profile) and press **Edit** or **Remove**. The interview reading is corrected on the applicant's page, and NGRT scores in the CAT4 / NGRT section. Every school test added, changed or removed is kept in Change History.
+
+**What parents see.** A parent sees their child's readings, with the chart, on the **Reading Age** tile in the parent portal, but only once the child has two readings from the school's tests or the interview. A single reading is not yet a trend, and old NGRT scores don't count towards the two. Students don't see reading ages.
+
+![The parent's Reading Age tile on a phone](manual-images/34e-reading-parent.jpg)
+
 ## 6. Reports and documents
 
 Written reports are built only from checked comments. Each report round is a report period with due dates; comments go from draft to submitted to checked, and the finished PDFs are published to the student and parent portals.
@@ -976,7 +1012,7 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 ![Behaviour alerts, last 7 days](manual-images/52-alerts.jpg)
 
-**Editing.** The teacher who logged an event, pastoral staff, houseparents, the head of boarding, SMT, the school office and admins can change its comment and category (a negative stays negative); detentions are recalculated. Only admins can delete an event. All changes are kept in Change History.
+**Editing.** The teacher who logged an event, pastoral staff, houseparents, the head of boarding, SMT, the school office and admins can change its comment and category (a negative stays negative); detentions are recalculated. Only SMT can delete an event, a merit included; the Delete button is shown only to them. All changes are kept in Change History.
 
 ### What parents see: Behaviour Review (/behaviour/review)
 
@@ -1000,7 +1036,7 @@ The rules below are the current settings; anyone with the Lookups page can chang
 | Weekly alert | −8 in a week | Emails cs@, copied to SMT and sro@; replies go to guardian.counselling@ |
 | Detention room and time | CG4, after lesson 7 | Shown on every detention notice |
 
-**Detentions** (/detention) lists this week's Friday detention with the events behind each one. Staff can't add or delete detentions by hand; they mark each as Scheduled, Attended, Missed or Cancelled, and can print the list. The student (not the parent) gets an email and inbox notice when it is booked and a reminder at 7:30pm on Thursday.
+**Detentions** (/detention) lists this week's Friday detention with the events behind each one. Staff can't add or delete detentions by hand; they mark each as Scheduled, Attended or Missed, and can print the list. Only SMT can mark a detention Cancelled; the option is shown only to them. The student (not the parent) gets an email and inbox notice when it is booked and a reminder at 7:30pm on Thursday.
 
 ![The Friday detention list](manual-images/54-detention.jpg)
 
@@ -1246,7 +1282,7 @@ Students pre-order from their portal within fixed weekly windows, with at most 2
 | Wednesday | Monday 5:00pm | Tuesday 9:00am |
 | Saturday | Wednesday 7:00pm | Thursday 11:00pm |
 
-Tuckshop, bursar and admin staff can change the schedule and close ordering (for a holiday or stock-take) at **Ordering On/Off** (/tuckshop/ordering). Closing doesn't clear existing orders; it reopens by itself at midnight on the date chosen. **Special pre-order sessions** add a one-off window (for example a public holiday) with their own items and limits.
+Tuckshop, bursar and admin staff can change the schedule and close ordering (for a holiday or stock-take) at **Ordering On/Off** (/tuckshop/ordering). Closing doesn't clear existing orders; it reopens by itself at midnight on the date chosen. **Special pre-order sessions** add a one-off window (for example a public holiday) with their own items and limits. To check at a glance whether students can order right now, look at the Tuckshop card on your home page: a green "Ordering open" or red "Ordering closed" badge, with when it next closes or opens.
 
 ![Ordering On/Off and the weekly schedule](manual-images/93-ordering.jpg)
 
@@ -1531,10 +1567,10 @@ A full database backup runs every night. Admins can also run one before anything
 | pastoral | Appeals, detentions, editing behaviour events, class allocation, messages, student groups |
 | houseparent | Their house's students by default; appeals, detentions, pastoral comments |
 | head\_of\_boarding | Houseparent powers across all houses; counts as pastoral |
-| teacher | Registers, results and homework for their classes, behaviour logging, subject comments |
+| teacher | Registers, results and homework for their classes, behaviour logging, subject comments, reading tests |
 | mentor | Their mentor group; mentor comments |
 | head\_of\_department | Class Progress and homework for their department; deleting their department's scores; class allocation |
-| assessment\_manager | Any result, target, CAT4/NGRT; transcript grades; Grade History; publishing documents |
+| assessment\_manager | Any result, target, CAT4/NGRT; transcript grades; recording reading tests; Grade History; publishing documents |
 | assessment\_user | Enter any result or target, but not delete |
 | bursar | Fees, invoices, payments, discounts, admission payments; tuckshop admin (not Hand Out) |
 | school\_office | Student records (all fields), adding students, parents and logins, welcome letters, register alerts, releasing −5 behaviour, messages, missed-lesson pop-ups |

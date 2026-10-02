@@ -8,7 +8,7 @@ Sep 30, 2026 · @Chris TERRY
 
 ## Summary
 
-Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 28 known issues still open, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
+Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 29 known issues still open, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
 
 **Where the data came from.** Adorable British College has about 260 students in Years 7–12, many of them boarders. Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
 
@@ -82,17 +82,17 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | Area | State | What it does | Open issues |
 | --- | --- | --- | --- |
 | Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out; parent welcome letters sent by admins or the school office, and resendable to reset a forgotten password | 1 |
-| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type; who added each student and every change to a student record are logged; names are tidied of stray spaces | 1 |
+| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type; who added each student and every change to a student record are logged; names are tidied of stray spaces | 2 |
 | Timetable and imports | Live | Nova-T import with preview; lesson-level teacher and room; the school office can save class allocations | 0 |
 | Registers | Live | Any staff marks any register; 15-minute not-done alerts; a Missed Lessons list of students in school who missed a lesson, and a pop-up on the office's and the new attendance officer's screens 15 minutes into a lesson when a student seen earlier is marked absent; planned absences give a student one code (illness, holiday, exclusion and so on) over a run of days, filled into every register without overwriting a teacher's mark | 2 |
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks; a student group can be placed in an activity by the school and locked, until unlocked or a date | 5 |
-| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile; pictures on positive events only; witnesses, others involved and targets recorded on serious events, staff only, their names kept from parents; release to parents only through the review | 4 |
-| Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017; assessment managers delete a wrong score from the student's profile; Class Progress is a top-row tile for Heads of Department (their department) and SMT (every class), and teachers see only their own classes in it; it loads quickly because the database picks one grade per student and subject | 3 |
-| Homework | Years 10–11 | Set from the register or /homework, with files and links; marks converted to grades that follow the student across classes; the term's homework suggests the report's Homework judgement and prints as a grade on the written report; a class mark sheet over any dates; a student view for staff; a Homework Monitor where SMT see a year group's or one student's week as students see it; late joiners don't inherit earlier homework; on students' timetables, where students tick it done; every Year 10 and 11 teaching group (not mentor groups or Prep), for their teachers, Heads of Department and SMT | 0 |
+| Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile; pictures on positive events only; witnesses, others involved and targets recorded on serious events, staff only, their names kept from parents; release to parents only through the review; only SMT can remove an event (a merit included) or cancel a detention | 4 |
+| Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017; assessment managers delete a wrong score from the student's profile; Class Progress is a top-row tile for Heads of Department (their department) and SMT (every class), and teachers see only their own classes in it; it loads quickly because the database picks one grade per student and subject; Heads of Department enter and change scores in their department's subjects; Years 10–11 graded on Cambridge IGCSE's June 2026 thresholds; reading ages recorded with each test's date and tracked against each student's age, by year group and form and over time, with parents seeing their own children's once there are two school or interview readings (literacy target) | 3 |
+| Homework | Years 10–11 | Set from the register or /homework, with files and links; marks converted to grades that follow the student across classes; the term's homework suggests the report's Homework judgement and prints as a grade on the written report; a class mark sheet over any dates; a student view for staff; a Homework Monitor where SMT see a year group's or one student's week as students see it, and how much of each past-due homework is marked; late joiners don't inherit earlier homework; on students' timetables, where students tick it done; every Year 10 and 11 teaching group (not mentor groups or Prep), for their teachers, Heads of Department and SMT | 0 |
 | Reports and transcripts | Live | Draft→checked comments with AI help; KS3 and KS4/5 transcripts | 2 |
-| Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists; the bursar adds paid top-ups from recorded payments | 3 |
+| Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists; the bursar adds paid top-ups from recorded payments; the staff Tuckshop card shows whether ordering is open and when it next opens or closes | 3 |
 | Fees | Live | Invoices, batches, discounts; two-person price approval; locked prices | 2 |
-| Clinic, pastoral, HR | Live | Nurse-only medical records; HR records | 0 |
+| Clinic, pastoral, HR | Live | Nurse-only medical records; HR records; an Unallocated Students list of students missing a boarding house, a room or a lesson their year group has | 0 |
 | Messages and email | Live | One queue; Reply-To per kind; parent pause switch; messages to the students or parents of any group of students, with parents emailed | 0 |
 | Student groups | Live | Groups for activities, prefects and messages, made by SMT, pastoral and the office; lists built from six rules (negative or positive behaviour, below target, below a grade or target in one subject, a term exam average, attendance) with every setting chosen each time; mark sheets for a group, kept outside reporting; a Groups tile on the student and parent portals for groups marked to be shown (no member lists or marks) | 0 |
 | Calendar and administration | Live | SMT calendar, which parents can subscribe to on their phones; editable rules on Lookups; one school-wide order for students' tiles and every row of the staff dashboard, with the student, staff and behaviour-alert numbers on their module cards, and pages with a big tile kept off the cards; a Student Numbers report of boys and girls by year, mentor group, boarding room, restaurant and class; backups | 1 |
@@ -101,7 +101,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 
 ## Requirements
 
-31 requirements in three priorities: P0 fixes what is broken or risky now, P1 completes admissions and the year rollover before next September, P2 tightens the rest. Priorities are proposed; the principal decides.
+32 requirements in three priorities: P0 fixes what is broken or risky now, P1 completes admissions and the year rollover before next September, P2 tightens the rest. Priorities are proposed; the principal decides.
 
 ### P0 — fix now
 
@@ -147,6 +147,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | P1-14 | First passwords are always changed, enforced by the database | Every new login is flagged, and a flagged login can't read data until changed | Not started |
 | P1-15 | A passed leaving date makes the student a leaver without anyone saving the record | A daily job applies it and locks the login | Not started |
 | P1-16 | Decimal scores always get a grade | 89.5 takes the lower band, as transcripts already do | Not started |
+| P1-17 | A parent sees every current child, even when the family has two parent records with the same email | No parent login is missing a child linked to another record with its email, and a new case is caught or prevented | Not started |
 
 ### P2 — tighten later
 
@@ -175,7 +176,7 @@ This phase has worked when September 2027 opens on the right classes with nobody
 
 | Phase | Measure | Target |
 | --- | --- | --- |
-| Fix | Known issues fixed or marked "keep" | 30 of 30 |
+| Fix | Known issues fixed or marked "keep" | 31 of 31 |
 | Fix | Rules shown on a page that the database doesn't enforce, for a change to data | 0 |
 | Admissions | Accepted applicants enrolled without retyping their details | 100% |
 | Admissions | Letters sent from Formwork rather than written by hand | All seven kinds |
