@@ -75,8 +75,11 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
   // Groups shown to parents (migration 300). The database returns the
   // parent's view for staff viewing as a parent too.
   const [groups, setGroups] = useState([]);
-  // Reading ages (migrations 323–324): the database returns only this
-  // parent's current children.
+  // Reading ages (migrations 323–325): the database returns only this
+  // parent's current children, and only once a child has two readings (the
+  // principal: one reading is not yet a trend). Staff who are parents, and
+  // staff viewing as a parent, read through the staff route, so the tile
+  // checks for two as well.
   const [readingAges, setReadingAges] = useState([]);
 
   // A parent login already has profile.parent_id set, and so do many staff
@@ -326,7 +329,7 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                   <span className="dashboard-tile-sub">{shownTargets.length === 0 ? 'No targets set' : `${shownTargets.length} subject${shownTargets.length === 1 ? '' : 's'} tracked`}</span>
                 </button>
 
-                {readingAges.length > 0 && (
+                {readingAges.length >= 2 && (
                   <button type="button" className="dashboard-tile" onClick={() => setActiveView('reading')}>
                     <span className="dashboard-tile-label">Reading Age</span>
                     <span className="dashboard-tile-icon">📖</span>
