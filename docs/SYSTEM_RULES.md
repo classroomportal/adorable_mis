@@ -595,6 +595,10 @@ How it behaves:
 - Shows the next 7 days of birthdays to admin, SMT, pastoral, houseparent and the school office.
 - Today's names are shown to staff and students after they sign in, never to parents.
 
+**Unallocated Students** (`/pastoral/unallocated`)
+- Lists active students with no boarding house, no boarding room, or a gap in their week. Admin, SMT, pastoral, houseparents, the head of boarding and the school office can see it.
+- A period only counts as a gap when others in the same year group have something then (a lesson, Evening Prep, or an Other Half activity open to their year this term), so free periods a whole year shares aren't listed.
+
 ---
 
 ## 11. Email and messages

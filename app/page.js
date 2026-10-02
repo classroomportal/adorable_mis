@@ -298,6 +298,7 @@ const TABS = [
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
       { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
       { href: '/attendance/planned-absences', label: 'Planned Absences', desc: "Give a student one attendance code for a run of days: illness, holiday, exclusion." },
+      { href: '/pastoral/unallocated', label: 'Unallocated Students', desc: "Students with no boarding house, no room, or gaps in their timetable." },
       { href: '/pastoral/birthdays', label: 'Birthdays', desc: "Staff and students with a birthday in the next 7 days." },
       { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
       { href: '/staff/mentor-groups', label: 'Mentor Groups', desc: "Assign staff to each mentor group." },
