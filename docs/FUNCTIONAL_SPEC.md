@@ -8,11 +8,11 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 1 October 2026 (database migrations up to 312). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 318). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
-**Audience:** the principal, SMT, anyone taking over development, and auditors.
+**Audience:** the principal, SMT, anyone taking over development, and auditors. Staff, students and parents learning to use Formwork should read the [Formwork User Manual](https://claude.ai/code/artifact/419e765d-009a-414f-9da4-d81b2dd75894) instead: step-by-step guides for each role, with screenshots on invented data.
 
 **How requirements are written.** Each module has numbered requirements (FR-4.3 = module 4, requirement 3). Each is labelled with how it is enforced:
 
@@ -69,8 +69,8 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | assessment\_manager | Data lead | Any result, target, CAT4/NGRT; transcript grades; Grade History; publishing documents. |
 | assessment\_user | Data assistants | Enter any result or target, but not delete. |
 | bursar | Bursar | Fees, invoices, payments, discounts; tuckshop admin (not Hand Out). |
-| school\_office | Office / SRO | Student records (all fields), parent records and logins, parent welcome letters, register alerts, releasing −5 behaviour to parents, messages. |
-| attendance\_officer | guardian.counselling@ (Osione ILOEJE), from 1 Oct 2026 (migration 310) | The missed-lesson pop-up and Missed Lessons (FR-4.14–4.20). |
+| school\_office | Office / SRO | Student records (all fields), parent records and logins, parent welcome letters, register alerts, releasing −5 behaviour to parents, messages, class allocation, planned absences. |
+| attendance\_officer | guardian.counselling@ (Osione ILOEJE), from 1 Oct 2026 (migration 310) | The missed-lesson pop-up and Missed Lessons (FR-4.14–4.20); planned absences (FR-4.21–4.28). |
 | admissions | Admissions | Admissions pages and student entry. |
 | tuckshop | Tuckshop staff | Tuckshop pages only, including Hand Out. |
 | tuckshop\_owner | cs@ (Uju MBA) | As tuckshop, plus the only role that can unlock a saved hand-out list. |
@@ -185,11 +185,11 @@ The timetable comes from Nova-T and is imported by admins; Formwork never invent
 
 **Who changes what**
 
-- **FR-3.6** Only admins change classes, lessons, staff commitments and bell times. Admins, Heads of Department and pastoral staff move students between classes, at /admin/block-allocation. \[DB\]
+- **FR-3.6** Only admins change classes, lessons, staff commitments and bell times. Admins, Heads of Department, pastoral staff and the school office move students between classes, at /admin/block-allocation, and edit next year's planned enrolments. The school office was added on 2 Oct 2026 (migration 317): it had the page, but every save was refused. \[DB\]
 
 **Nova-T timetable import (/admin/import-classes, admin only)**
 
-- **FR-3.7** A lesson's subject comes only from the subject code in the group name, with the set number removed (10LI/El → El = Literature). Subject codes are maintained in SQL, never guessed. \[Page\]
+- **FR-3.7** A lesson's subject comes only from the subject code in the group name, with the set number removed (10LI/El → El = Literature). Subject codes are maintained in SQL, never guessed. The "Electronics" subject, which the original import invented by guessing a code, was removed on 1 Oct 2026 along with its grade boundaries; nothing else used it (migration 314). \[Page\]
 - **FR-3.8** Groups coded Oh (Other Half) or Sa (Sports Academy) are skipped. \[Page\]
 - **FR-3.9** The file is treated as the complete list of each class's lessons: missing lessons are removed and new ones take the bell time. A class with nothing readable in the file is never emptied. \[Page\]
 - **FR-3.10** Every change is previewed before it is applied. Classes missing from the file are offered for deletion: empty ones pre-ticked, ones with students left for a person to decide. \[Page\]
@@ -220,7 +220,7 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 
 **Registers Not Done (/pastoral/registers-not-done)**
 
-- **FR-4.8** A lesson is listed when it is timetabled today inside term dates, more than 15 minutes past its start, has at least one enrolled student, and none of them has a mark for that period. It stays listed for the rest of the day. \[DB\]
+- **FR-4.8** A lesson is listed when it is timetabled today inside term dates, more than 15 minutes past its start, has at least one enrolled student, and none of them has a mark for that period, not counting marks filled in by a planned absence (FR-4.26). It stays listed for the rest of the day. \[DB\]
 - **FR-4.9** The row goes to the lesson's own teacher where Nova-T gives it one, otherwise to the class teacher. OH activities are listed the same way (FR-5.12). \[DB\]
 - **FR-4.10** Open to pastoral, houseparent, SMT and admin. Each teacher also sees a banner of their own overdue registers on their timetable. \[Page\]
 
@@ -245,6 +245,17 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.18** Each alert shows the student, their year, mentor group and house, the lesson, teacher and room they should be in, where they were last seen, and who marked them absent. \[Page\]
 - **FR-4.19** "Seen: dealing with it", with an optional note, clears the alert from every screen and records who saw it and when; only a live alert can be marked seen. A corrected mark (present, late or an authorised absence) clears the alert by itself. "Hide for 2 minutes" hides the current alerts on that screen only; a new alert still shows at once. \[DB; hiding is Page\]
 - **FR-4.20** It goes to anyone whose role is granted "Missed-lesson pop-ups" at /admin/permissions: school\_office and attendance\_officer to start with. Being admin is not enough. The page checks every minute, flashes the browser tab's title, and beeps on a new alert once someone has clicked on the page. \[DB\]
+
+**Planned absences** (/attendance/planned-absences, Pastoral card, migration 318, 2 Oct 2026)
+
+- **FR-4.21** School office, attendance officer, pastoral, SMT and admin can give a student one attendance code for a run of whole days, with an optional note. All staff can see the list. \[DB\]
+- **FR-4.22** Only authorised codes can be planned: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and X, Excluded from school. X was added by migration 318 and counts as an authorised absence, so it never shows in Missed Lessons or the pop-up. \[DB\]
+- **FR-4.23** Every period the student has on each day is filled in: their timetabled lessons (registration and Evening Prep included) and their Other Half activity. A class joined later counts only from the day they joined. Days outside term dates and days with a holiday on the calendar are skipped. \[DB\]
+- **FR-4.24** Past days and today are filled in as soon as the absence is saved; later days at 05:30 each morning, so FR-4.3 still holds. A mark already in a register is never overwritten (the principal's decision). \[DB\]
+- **FR-4.25** A student can't have two planned absences over the same days. \[DB\]
+- **FR-4.26** The register shows the code already filled in, tagged "planned". Once a teacher saves that register the mark is theirs, whether or not they change the code. A planned-absence mark doesn't count as the register being taken (FR-4.8). \[DB; the tag is Page\]
+- **FR-4.27** End early (the day the student is back) removes the marks it filled in from that day on; Cancel removes all of them. Marks a teacher has saved stay. \[DB\]
+- **FR-4.28** The note is staff-only; parents see only the code on their child's attendance. Planned absences, and marks removed by ending or cancelling one, are logged in Change History under Registers. \[DB\]
 
 ## 8. FR-5 The Other Half
 
@@ -379,7 +390,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 
 - **FR-7.13** Missing Grades lists, class by class, who has no mark in a set. A subject is expected only if someone in that year group has a mark for it. \[DB\]
 - **FR-7.14** Top 10 ranks students in a result set by average percentage, per year or overall, sharing tied ranks. \[Page\]
-- **FR-7.15** Review Results (subject overview) charts a student's or class's scores across result sets. Class Progress shows each class's average grade against its students' average target. Who sees which classes: SMT, admins, assessment, pastoral and boarding staff see every class; a Head of Department sees their department's (an SMT member who is also a Head of Department sees every class, migration 312); a teacher sees only the classes they teach, as class teacher or for any single lesson. This narrows the page only; results stay readable to staff elsewhere. \[Page\]
+- **FR-7.15** Review Results (subject overview) charts a student's or class's scores across result sets. Class Progress shows each class's average grade against its students' average target. Who sees which classes: SMT, admins, assessment, pastoral and boarding staff see every class; a Head of Department sees their department's (an SMT member who is also a Head of Department sees every class, migration 312); a teacher sees only the classes they teach, as class teacher or for any single lesson. This narrows the page only; results stay readable to staff elsewhere. The database picks one grade per current student and subject for the chosen result set, or the most recent, so the page loads about 4,300 grades rather than every result ever recorded (until migration 313 it downloaded all 59,000 and could stay on Loading on a tablet). \[Page\]
 
 ## 11. FR-8 Reports, transcripts and documents
 
@@ -670,7 +681,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
@@ -800,10 +811,11 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 - **NFR-9** Every page works on a phone; staff often use Formwork from phones. \[Page\]
 - **NFR-10** Sized for about 260 students, 60 staff and 1,000 parent logins. Email is sent at about 12 a minute. \[Design\]
+- **NFR-11** The reads every open page repeats are worked out in the database for the person asking: the overdue-register count on staff timetables, the dashboard card counts and the "is this member of staff also a parent" check. At 08:00 on 2 Oct 2026 they slowed every request to 20–90 seconds as staff signed in (migrations 315–316). \[DB\]
 
 ## 23. Known issues and open decisions
 
-28 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; one of them (6) has since been fixed. The first five stop something working today.
+30 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; one of them (6) has since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -835,6 +847,8 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 26 | Admissions | The deposit amount recorded isn't checked against the year's deposit | A wrong amount can be recorded | Open |
 | 27 | Fees | No year-group prices have been approved for locked items yet | Locked items can only be charged at an approved single price, if one exists | Open |
 | 28 | Registers | Missed Lessons for an earlier day names the lesson from today's classes and timetable | After a class change the wrong class can be shown; the marks themselves are right | Open |
+| 29 | Fees | Record a Payment, All Students (/bursar/fees-table) and Add Paid Top-Up are written with styling classes the app never loads | The pages work but show as plain, unstyled text and form fields; found while taking screenshots for the User Manual | Open |
+| 30 | Registers | Planned absences skip only days marked as a holiday on the calendar. Mid-term breaks are a single date there (24 Oct, 13 Feb, 22 May), so an absence spanning one fills in the break days too | Extra absence marks on days the school was closed | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
