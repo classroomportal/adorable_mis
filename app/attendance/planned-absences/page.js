@@ -187,7 +187,8 @@ function PlannedAbsencesInner() {
             </select>
           </label>
         </div>
-        <label>
+        {/* Labels grow to a 140px basis (globals.css); in this column form that left a gap. */}
+        <label style={{ flex: 'none' }}>
           Note (staff only, never shown to parents)
           <input type="text" value={notes} maxLength={500} onChange={(e) => setNotes(e.target.value)} />
         </label>
@@ -198,7 +199,7 @@ function PlannedAbsencesInner() {
       <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2 style={{ margin: 0 }}>{showPast ? 'Planned absences (last 60 days and upcoming)' : 'Current and upcoming'}</h2>
-          <label style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+          <label style={{ display: 'inline-flex', flexDirection: 'row', flex: 'none', gap: '0.4rem', alignItems: 'center' }}>
             <input type="checkbox" checked={showPast} onChange={(e) => setShowPast(e.target.checked)} /> Show recent past
           </label>
         </div>
