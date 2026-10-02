@@ -11,54 +11,59 @@ Oct 1, 2026 · @Chris TERRY
 
 ## Contents
 
-New to Formwork? Read **How each person uses Formwork** for your role first, then the chapters it points you to. To jump to a heading, use your browser's Find (Ctrl+F, or Cmd+F on a Mac) and type its name.
+New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-formwork) for your role first, then the chapters it points you to. Everyone should read [Safeguarding and keeping students safe](#safeguarding-and-keeping-students-safe). Click any section name below to go straight to it.
 
 | Part | Section | What it covers | Most useful for |
 | --- | --- | --- | --- |
-| Start here | About this manual | How the manual is organised; the screenshots use invented data | Everyone |
-| Start here | How each person uses Formwork | The school year at a glance, and what each role does each day, week and term | Everyone |
-| Everyday tasks | 1. Getting started | Signing in, the dashboard, roles, using a phone | Everyone |
-| Everyday tasks | 2. Students | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
-| Everyday tasks | 3. Timetables and registers | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up | Teachers, office, pastoral |
-| Everyday tasks | 4. Homework | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers (Years 10–11), HoDs, SMT |
-| Everyday tasks | 5. Assessment, results and targets | Result sets, entering scores, Class Progress, boundaries, targets, Grade History | Teachers, HoDs, assessment staff |
-| Everyday tasks | 6. Reports and documents | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
-| Care and conduct | 7. Behaviour, pastoral care and the clinic | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; HR |
-| Care and conduct | 8. The Other Half and student groups | Activity registers, the programme, student choices, groups, building a group from a rule | All staff; SMT; pastoral |
-| Care and conduct | 9. Calendar, messages and email | The calendar, sending messages, the inbox, where replies go | SMT, office, pastoral |
-| School business | 10. Fees and bills | Payments, charging, fee items, discounts, debtors, price approval, the SMT dashboard | Bursar, SMT, principal, college secretary |
-| School business | 11. Tuckshop | Ordering windows, order sheets, handing out, items, top-ups and balances | Tuckshop, bursar |
-| School business | 12. Admissions | Applicants, stages, test days, interviews, letters, next year's numbers | Admissions, bursar, SMT |
-| Families | 13. The student and parent portals | What students and parents see and do, and the rules that protect them | Everyone who talks to families |
-| Running the system | 14. Administration | Permissions, roles, lookups, timetable setup, next year, tiles, Change History, backups, imports | Admins, HR, SMT |
-| Reference | Appendix | A. Roles, B. Rules at a glance, C. Glossary, D. Getting help | Everyone |
+| Start here | [About this manual](#about-this-manual) | How the manual is organised; the screenshots use invented data | Everyone |
+| Start here | [How each person uses Formwork](#how-each-person-uses-formwork) | The school year at a glance, and what each role does each day, week and term | Everyone |
+| Start here | [Using Formwork to raise achievement](#using-formwork-to-raise-achievement) | The improvement cycle, warning signs, who acts on what, worked examples, limits of the data | Teachers, mentors, HoDs, SMT |
+| Start here | [Safeguarding and keeping students safe](#safeguarding-and-keeping-students-safe) | What Formwork is and isn't for, finding a missing student, patterns to raise, what not to write, personal data | Everyone |
+| Everyday tasks | [1. Getting started](#1-getting-started) | Signing in, the dashboard, roles, using a phone | Everyone |
+| Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
+| Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up | Teachers, office, pastoral |
+| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers (Years 10–11), HoDs, SMT |
+| Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History | Teachers, HoDs, assessment staff |
+| Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
+| Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; HR |
+| Care and conduct | [8. The Other Half and student groups](#8-the-other-half-and-student-groups) | Activity registers, the programme, student choices, groups, building a group from a rule | All staff; SMT; pastoral |
+| Care and conduct | [9. Calendar, messages and email](#9-calendar-messages-and-email) | The calendar, sending messages, the inbox, where replies go | SMT, office, pastoral |
+| School business | [10. Fees and bills](#10-fees-and-bills) | Payments, charging, fee items, discounts, debtors, price approval, the SMT dashboard | Bursar, SMT, principal, college secretary |
+| School business | [11. Tuckshop](#11-tuckshop) | Ordering windows, order sheets, handing out, items, top-ups and balances | Tuckshop, bursar |
+| School business | [12. Admissions](#12-admissions) | Applicants, stages, test days, interviews, letters, next year's numbers | Admissions, bursar, SMT |
+| Families | [13. The student and parent portals](#13-the-student-and-parent-portals) | What students and parents see and do, and the rules that protect them | Everyone who talks to families |
+| Running the system | [14. Administration](#14-administration) | Permissions, roles, lookups, timetable setup, next year, tiles, Change History, backups, imports | Admins, HR, SMT |
+| Reference | [Appendix](#appendix) | A. Roles, B. Rules at a glance, C. Glossary, D. Getting help | Everyone |
 
 ### Find a task
 
 | I want to… | Go to |
 | --- | --- |
-| Take a register | Chapter 3, Taking a register |
-| Log a positive or negative behaviour point | Chapter 7, Logging behaviour |
-| Set or mark homework | Chapter 4, Setting homework and Marking |
-| Enter test or exam marks | Chapter 5, Entering results |
-| Write or check report comments | Chapter 6 |
-| Find a missing student | Chapter 3, Missed Lessons and the pop-up |
-| Update a student's or parent's details | Chapter 2, Editing a record; Parents and leavers |
-| Add a new student | Chapter 2, Adding a student |
-| Send a message to parents | Chapter 9, Sending a message |
-| Record a fee payment | Chapter 10, Recording a payment |
-| Change a fee price | Chapter 10, Price approval |
-| Hand out tuckshop orders | Chapter 11, Handing out |
-| Move an applicant to the next stage | Chapter 12, Stages |
-| Give someone access to a page | Chapter 14, Who can open which page |
-| See who changed something | Chapter 14, Change History; Chapter 5, Grade History |
-| Help a parent who can't sign in | Students and parents, Questions staff are often asked |
+| See what my role does day to day | [Teachers](#teachers) · [Mentors and pastoral staff](#mentors-and-pastoral-staff) · [Leaders](#leaders-heads-of-department-assessment-staff-and-smt) · [Office, HR and administrators](#office-hr-and-administrators) · [Specialist roles](#specialist-roles) · [Students and parents](#students-and-parents) |
+| Take a register | [Taking a register](#taking-a-register-attendance) |
+| Find a student who is missing from a lesson | [Finding a missing student](#finding-a-missing-student) · [The missed-lesson pop-up](#the-missed-lesson-pop-up) |
+| Raise a worry about a student | [Safeguarding and keeping students safe](#safeguarding-and-keeping-students-safe) · [Who to tell](#who-to-tell) |
+| Spot students falling behind | [Signs to look for](#signs-to-look-for-and-where-to-see-them) · [Worked examples](#worked-examples) |
+| Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
+| Set or mark homework | [Setting homework](#setting-homework) · [Marking](#marking-the-mark-book) |
+| Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
+| Write or check report comments | [Reports and documents](#6-reports-and-documents) |
+| Update a student's or parent's details | [Editing a record](#editing-a-record) · [Parents and leavers](#parents-and-leavers) |
+| Add a new student | [Adding a student](#adding-a-student-school-office-only) |
+| Send a message to parents | [Sending a message](#sending-a-message-commscompose) |
+| Record a fee payment | [Recording a payment](#recording-a-payment-bursarpayments) |
+| Change a fee price | [Price approval](#price-approval-bursarfee-approvals) |
+| Hand out tuckshop orders | [Handing out](#handing-out-tuckshophand-out) |
+| Move an applicant to the next stage | [Stages](#stages) |
+| Give someone access to a page | [Who can open which page](#who-can-open-which-page-adminpermissions) |
+| See who changed something | [Change History](#change-history-adminchange-history-smt-and-admins) · [Grade History](#grade-history-assessmentsgrade-history) |
+| Help a parent who can't sign in | [Questions staff are often asked](#students-and-parents) |
 
 ## About this manual
 
 This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 1 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
 
-**How it is organised.** It starts with How each person uses Formwork: a guide for each role (teachers, mentors, leaders, the office, specialist roles, students and parents) to what they do each day, week and term. After that, each chapter covers one area of the school's work. It says who can use the pages, walks through the common tasks step by step, and lists the rules the system enforces so you know why something is refused. Where a page is only open to some roles, the chapter says so at the top.
+**How it is organised.** It starts with How each person uses Formwork: a guide for each role (teachers, mentors, leaders, the office, specialist roles, students and parents) to what they do each day, week and term. Two short sections follow it for everyone: Using Formwork to raise achievement, and Safeguarding and keeping students safe. After that, each chapter covers one area of the school's work. It says who can use the pages, walks through the common tasks step by step, and lists the rules the system enforces so you know why something is refused. Where a page is only open to some roles, the chapter says so at the top.
 
 **About the screenshots.** Every screenshot was taken from a copy of Formwork running on invented demonstration data. The students, staff and parents shown are not real, and no real pupil information appears in this manual. Your screen will show your own school's data and only the tiles your roles open, so it may look slightly different.
 
@@ -338,6 +343,182 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 | "My balance is negative." | Tuckshop orders are charged when handed out and there is no balance check. A top-up adds to the fee invoice |
 | "Why can't I see fees?" | SMT haven't published that term's fees yet |
 | "My child has left and I can't see them." | Parents only see children still at the school; contact the office for old records |
+
+## Using Formwork to raise achievement
+
+Formwork records every test score against the student's target, every register mark, every behaviour point and every homework mark. Used together and regularly, they show which students, classes and subjects are slipping early enough to do something about it. This section shows how to turn that information into action. Thresholds and who must act are the school's decisions; where this section suggests a starting value, treat it as a suggestion.
+
+### The improvement cycle
+
+The same four steps repeat after every assessment point: weekly short tests, Teacher Assessment week and end-of-term exams.
+
+| Step | What to do | Where in Formwork | When |
+| --- | --- | --- | --- |
+| 1. Assess | Enter every score against the right result set, and close the gaps | Enter Results; Missing Grades | Within a few days of the test |
+| 2. Review | Find students, classes and subjects below target, and look for the reasons (attendance, homework, behaviour) | Class Progress, Weekly Results, the student profile, the homework mark sheet | The week after |
+| 3. Act | Choose an action for each concern and tell the people who need to know | Student groups, Other Half placement, messages, mentor conversations, report comments | Straight after the review |
+| 4. Check | At the next assessment point, see whether the students acted on have moved | Class Progress for the new result set; the group's mark sheet | Next test |
+
+The cycle only works if the data is complete. A class with missing marks drops out of Class Progress comparisons, and a student without a target can't be compared at all, so step 1 matters as much as the rest.
+
+### Signs to look for, and where to see them
+
+| Sign | Where it shows | A starting point to consider |
+| --- | --- | --- |
+| A student below target in several subjects | Weekly Results (red "below target"); the student profile's Results and Target Grades tiles; **Build a group from a rule** → Below target | Below target in 3 or more subjects |
+| One subject or class falling behind | **Class Progress**: classes sorted worst first, with counts above / on / below target | A class where most students are below target |
+| A student below target in one subject | **Build a group from a rule** → A subject (below a grade, or below target) | Below target since the start of term |
+| A low or falling exam average | **Build a group from a rule** → Term exam average; **Review Results** (student against the cohort) | Below 50% average |
+| Homework not being done | The homework **mark sheet** (Not handed in count, average); the Homework Monitor for classes setting nothing | Two or more not handed in this term |
+| Poor attendance | Student profile, Attendance tile; **Build a group from a rule** → Attendance | Below 90% present or late |
+| Missing lessons in school | **Missed Lessons**; the missed-lesson pop-up | Any repeated pattern |
+| Behaviour getting in the way of learning | **Behaviour alerts**; **Build a group from a rule** → Negative behaviour | −10 or worse in a half-term |
+| Effort or presentation weak across subjects | Pastoral Comments shows each teacher's Effort, Presentation and Homework judgements side by side | Needs Improvement in several subjects |
+| Strong students who could go further | **Top 10**; **Build a group from a rule** → Positive behaviour or Term exam average (at or above) | Top 10 per year, or average above 80% |
+
+Look at signs together, not one at a time. A student below target whose attendance has dropped and who has stopped handing in homework needs a different conversation from one who is below target in a single subject.
+
+### What each person does with it
+
+| Who | Looks at | Acts by |
+| --- | --- | --- |
+| Teacher | Their classes on Weekly Results and Class Progress; **Show last grades** on the register; the homework mark sheet | Re-teaching topics a class got wrong; talking to individual students; chasing homework; telling the mentor about a student slipping in several ways; writing specific next steps in report comments |
+| Mentor | Each mentee's profile: Results against targets, Attendance, Behaviour; the subject judgements in Pastoral Comments | A regular one-to-one with students below target; agreeing one or two targets; contacting home through the office or SMT when needed |
+| Head of Department | Class Progress for the department, by result set; Missing Grades; homework in the department's classes | Comparing classes in the same year; supporting a teacher whose class is behind; moving a student to a better-suited set at Class Allocation; a department intervention group |
+| Pastoral lead and houseparent | Behaviour alerts, attendance, Missed Lessons, rule-built groups | Linking behaviour or attendance concerns to falling results; supervised study at Evening Prep; involving parents |
+| SMT | Class Progress across the school; Homework Monitor; rule-built groups by year; Top 10 | Deciding where intervention goes; placing a group in an Other Half study activity and locking it; messaging a year group's parents; following up at the next result set |
+| Parents | Grades against targets, attendance, released behaviour and reports in the parent portal | Supporting at home; raising questions at parents' evening |
+| Students | Their grades against targets, homework (overdue, due, graded) and reports in the student portal | Keeping on top of homework; knowing which subjects need most work |
+
+### Worked examples
+
+**1. Year 11 students below target in several subjects (SMT or pastoral lead)**
+
+1. After Teacher Assessment week, check Missing Grades and ask for any missing marks to be entered.
+2. Go to **Student Groups → Build a group from a rule**, choose **Below target**, set "at least 3 subjects", count results since the start of term, and tick Year 11.
+3. Press **Show students**. Read each reason and untick anyone who shouldn't be included. Save it as an intervention group, and name the staff who will run it.
+4. On the group's page, place the group in an Other Half study activity (for example a supervised study session, if the school runs one) and lock it until a chosen date. Students and parents see "Placed by the school".
+5. Press **Message this group** to write to the students' parents, explaining the support.
+6. Use a mark sheet on the group to record any quizzes in the sessions.
+7. After the end-of-term exam, check Class Progress for that result set and **Build again** to see who still matches.
+
+**2. A class falling behind (Head of Department)**
+
+1. Open **Class Progress**, pick the latest result set and filter to your department. Note any class with most students below target.
+2. Open the class on Weekly Results and see whether the gap is across one test or several.
+3. Check the class's homework mark sheet: is homework being set and handed in?
+4. Agree actions with the teacher, then compare the class again after the next result set.
+
+**3. One student slipping (mentor)**
+
+1. On the student's profile, look at Results and Target Grades together, then Attendance and Behaviour.
+2. In the next report round, read the subject teachers' Effort, Presentation and Homework judgements on Pastoral Comments.
+3. Talk to the student, agree one or two next steps, and tell the teachers concerned. Raise anything worrying beyond learning through the school's procedures (see Safeguarding and keeping students safe).
+
+### Limits of the data
+
+- Grades are compared only on the same scale: IGCSE (Years 7–11) with IGCSE, WAEC (Year 12) with WAEC.
+- A grade is worked out from the subject's boundaries when the score is entered. If boundaries change later, scores already saved keep their old grade.
+- A decimal score such as 89.5 can fall between grade bands and be saved without a grade. Enter whole numbers where possible.
+- A subject without its own target may borrow one from a related subject (for example Further Maths from Maths).
+- Homework marks inform the report's Homework judgement only. They never change results, targets or transcripts.
+- Class Progress leaves out classes with too few students who have both a grade and a target to compare.
+- Data shows patterns, not reasons. Talk to the student and their teachers before deciding what to do.
+
+## Safeguarding and keeping students safe
+
+Formwork helps keep students safe by showing where they are, raising alerts when one goes missing, and keeping personal information to the people who need it. **It is not the place to record or report a safeguarding concern.** If you are worried about a child, follow the school's safeguarding procedure and tell the designated safeguarding lead straight away, even if you have also logged something in Formwork.
+
+### What Formwork is and isn't for
+
+| Formwork is for | Formwork is not for |
+| --- | --- |
+| Knowing where a student should be and whether they are there | Recording a disclosure, a child protection concern or a referral |
+| Alerting the office the moment a student goes missing from a lesson | Replacing the safeguarding lead's own records |
+| Showing patterns in attendance, behaviour, sick-bay visits and results | Deciding whether something is a safeguarding matter: that is the safeguarding lead's job |
+| Recording conduct (behaviour events) and medical care (clinic) | Sharing sensitive information with colleagues who don't need it |
+
+Formwork has no safeguarding or concern record, so anything typed into it is not a safeguarding report and nobody is alerted to it as one.
+
+### Who to tell
+
+The school fills in these details.
+
+| Role | Name | How to reach them |
+| --- | --- | --- |
+| Designated safeguarding lead | To be added by the school | To be added by the school |
+| Deputy safeguarding lead | To be added by the school | To be added by the school |
+| Out of hours, for boarders | To be added by the school | To be added by the school |
+| Where the school's procedure is kept | To be added by the school |  |
+
+### Finding a missing student
+
+Formwork's quickest safety feature is the missed-lesson alert. It works only if registers are taken on time and correctly.
+
+1. **Teachers** take every register within the first 15 minutes, and mark a student who should be there but isn't as N (no reason yet). Never leave a register untaken because "everyone is here".
+2. **The alert.** Once a period has been running for 15 minutes, if a student who was marked present or late earlier today is now absent without a reason, a full-screen alert appears on the screens of the school office and the attendance officer. It shows the student's year, mentor group and house; the lesson, teacher and room they should be in; where they were last seen; and who marked them absent.
+3. **Find the student.** Go to where they were last seen and where they should be. Check the sick bay (Sick Bay Today), the boarding house, and with their mentor.
+4. **Record it.** Press **Seen: dealing with it** with a short note, such as "found in sick bay" or "with houseparent". This clears the alert from every screen and records who dealt with it and when. If the teacher corrects the mark, the alert clears by itself.
+5. **If they can't be found**, follow the school's missing-child procedure immediately and tell the safeguarding lead and SMT.
+
+Other places that help:
+
+- **Missed Lessons** lists every student who has missed a lesson today, with their marks all day. Look back at earlier days for a pattern.
+- **Registers Not Done** and **Register Alerts** show lessons where nobody has taken the register. A student can't be missed from a lesson that has no register.
+- **Other Half Absentees** lists students absent from their afternoon activity, with "find these first" for those who were in school earlier.
+- **Evening Prep registers** cover boarders in the evening.
+
+### Patterns worth raising with the safeguarding lead
+
+No single mark proves anything. These patterns, especially together, are worth passing on through the school's procedure.
+
+| Pattern | Where you might notice it |
+| --- | --- |
+| Repeatedly missing lessons while in school, or vanishing at the same time each week | Missed Lessons (look back over several days); the pop-up |
+| Attendance falling, or frequent unexplained absences | Student profile, Attendance tile; Attendance rule groups |
+| Frequent sick-bay visits, or the same complaint again and again | Sick Bay Log (nurse) |
+| A student often named as the target in serious behaviour events | The event's other students (target, witness, involved) on the Behaviour Log |
+| A sudden change in behaviour or results | Behaviour alerts; Class Progress; Weekly Results |
+| Missing the Other Half or Evening Prep | Other Half Absentees; EP registers |
+| Withdrawal or a change in effort noted by several teachers | Effort judgements in Pastoral Comments |
+
+### What not to write in Formwork, and where
+
+Many people can read most of Formwork, and some text reaches parents. Never record a disclosure, an allegation, details of abuse or a referral in any of these places:
+
+| Place | Who can read it |
+| --- | --- |
+| Behaviour event comments and explanations | All staff; the student; parents once released |
+| Report comments (subject and pastoral) | Teachers, checkers and SMT; students and parents once published |
+| The student record, including the general "medical notes" field | Every member of staff |
+| Messages and the inbox | The recipients, and parents by email |
+| Student group names and descriptions | All staff; students and parents if the group is shown to them |
+| Homework feedback | The student and their teachers |
+
+Medical details belong in the clinic record, which only the nurse and administrators can see. Safeguarding information belongs with the safeguarding lead, in the school's own records.
+
+Formwork already protects some of this. Parents never see which other students were linked to a behaviour event, and an explanation that names one is refused once parents can see the event. Pictures are allowed only on positive events. Negative events reach parents only after the office or SMT have checked them. Students and parents never see who else is in a group.
+
+### Looking after personal information
+
+- **Sign in only with your own account.** Never share a password. To see what a parent sees, use **View as Parent** instead of asking for their login.
+- **Lock or sign out** of a shared or classroom computer, and don't leave the register on a projected screen with grades showing (**Show last grades** is off by default for this reason).
+- **Downloads hold personal data.** CSV exports (debtors with parent phone numbers, class lists, mark sheets), printed timetables and backups belong only on school devices and in school storage, never on a personal phone, email or USB stick.
+- **Photos** of students are stored on their record. Behaviour pictures are allowed only on positive events and are checked by SMT before parents see them.
+- **When a student leaves**, the school office should mark them as left with a leaving date. Their login is locked and their parents stop seeing them. A leaving date that passes without anyone saving the record leaves the student active, so the office should mark leavers on their last day.
+- **Contact details:** the parent records in Formwork are the school's record of who to contact. Keep them up to date when families tell the office of a change.
+
+### The record of changes
+
+- **Change History** keeps every change to student records, parent links, register marks (after the first save), behaviour events, roles and permissions permanently, with who made it and when. SMT and admins can read it.
+- **Missed-lesson alerts** keep who pressed "Seen", when, and their note. There is no screen for this yet; it can be produced from the database if needed.
+- **What Formwork doesn't record:** who looked at or downloaded a record. Formwork logs changes, not viewing.
+
+### Known gaps to bear in mind
+
+- Registers Not Done checks term dates, not holidays within a term, and a single mark for any student clears a lesson from the list.
+- On the day itself, the missed-lesson pop-up relies on accurate registers. A student wrongly marked present won't trigger it.
+- Formwork can't tell you who is allowed to collect a student or any court orders. Keep these in the school's own records, and make sure the office knows where to find them.
 
 ## 1. Getting started
 
