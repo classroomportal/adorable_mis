@@ -2,11 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
-import { schoolDateOffset } from '../lib/schoolTime';
 import { canHandOut } from '../lib/tuckshopHandout';
 import SplashScreen from './components/SplashScreen';
 import { ParentPortalInner } from './parent-portal/page';
-import { findParentIdByEmail } from '../lib/parentByEmail';
+import { findMyParentId } from '../lib/parentByEmail';
 import { useTileOrder, sortTiles } from '../lib/tileOrder';
 import StudentHome from './components/StudentHome';
 
@@ -39,7 +38,7 @@ function useIsStaffParent() {
   const [isParent, setIsParent] = useState(false);
   useEffect(() => {
     if (profile?.parent_id) { setIsParent(true); return; }
-    findParentIdByEmail(profile?.email || session?.user?.email).then((id) => setIsParent(!!id));
+    findMyParentId().then((id) => setIsParent(!!id));
   }, [profile, session]);
   return isParent;
 }
@@ -185,32 +184,40 @@ function AdmissionsCounts() {
 // A number beside a module card's icon, linking to where it comes from, in
 // the same style as the Admissions counts. They moved off the dashboard's
 // second row at the principal's request (migrations 292–293).
+//
+// All three come from one call to dashboard_card_counts() (migration 316),
+// which counts without running every row through RLS: three separate counts
+// on every dashboard load were a large part of the 08:00 slowdown. A count is
+// null when the caller lacks the card's page, so the card shows none.
 const CARD_COUNTS = {
-  students: {
-    href: '/students', label: 'Active students', title: 'Find a student',
-    load: (demo) => supabase.from('students').select('student_id', { count: 'exact', head: true })
-      .eq('status', 'active').eq('is_demo', demo).then(({ count }) => count ?? 0),
-  },
-  staff: {
-    href: '/staff/roles', label: 'Staff', title: 'Staff and their roles',
-    load: (demo) => supabase.from('staff').select('staff_id', { count: 'exact', head: true })
-      .eq('is_demo', demo).then(({ count }) => count ?? 0),
-  },
+  students: { field: 'students', href: '/students', label: 'Active students', title: 'Find a student' },
+  staff: { field: 'staff', href: '/staff/roles', label: 'Staff', title: 'Staff and their roles' },
   pastoral: {
     // The alerts page opens with the /behaviour grant; no role holds a
     // '/behaviour/alerts' key, so checking the href hid the count from
     // everyone except admin logins (cs@ is admin by role, not login).
-    href: '/behaviour/alerts', resource: '/behaviour', label: 'Behaviour alerts (7 days)', title: 'Behaviour alerts',
-    load: (demo) => supabase.from('behaviour_events').select('event_id', { count: 'exact', head: true })
-      .eq('type', 'negative').lte('points', -3).is('voided_at', null).eq('is_demo', demo)
-      .gte('event_date', schoolDateOffset(-7)).then(({ count }) => count ?? 0),
+    field: 'behaviour_alerts', href: '/behaviour/alerts', resource: '/behaviour', label: 'Behaviour alerts (7 days)', title: 'Behaviour alerts',
   },
 };
 
-function CardCount({ cardKey, isDemoAccount }) {
+// The cards on one dashboard share a single request.
+let cardCountsPromise = null;
+function loadCardCounts() {
+  if (!cardCountsPromise) {
+    cardCountsPromise = supabase.rpc('dashboard_card_counts').then(({ data }) => data || {});
+    setTimeout(() => { cardCountsPromise = null; }, 30000);
+  }
+  return cardCountsPromise;
+}
+
+function CardCount({ cardKey }) {
   const spec = CARD_COUNTS[cardKey];
   const [count, setCount] = useState(null);
-  useEffect(() => { spec.load(!!isDemoAccount).then(setCount); }, [spec, isDemoAccount]);
+  useEffect(() => {
+    let cancelled = false;
+    loadCardCounts().then((counts) => { if (!cancelled) setCount(counts[spec.field] ?? null); });
+    return () => { cancelled = true; };
+  }, [spec]);
   if (count == null) return null;
   return (
     <a href={spec.href} style={{ textDecoration: 'none', color: 'inherit', textAlign: 'center', minWidth: '4.5rem' }} title={spec.title}>
@@ -555,7 +562,7 @@ export default function Home() {
             description={t.description}
             items={t.items({ hasAccess, staffRoles, isAdmin })}
             extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts />
-              : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].resource || CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} isDemoAccount={profile?.is_demo_account} />
+              : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].resource || CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} />
               : null}
           />
         ))}
