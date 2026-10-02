@@ -393,6 +393,7 @@ How it behaves:
 - "Reopen ordering now" undoes it early.
 - Closing does not clear orders already placed.
 - Special sessions aren't affected.
+- Staff can see whether ordering is open on the Tuckshop card of their home page: a green "Ordering open" or red "Ordering closed" badge with when it next closes or opens (2 Oct 2026) **(page only)**. It only reports; the database still decides.
 
 **Quantity limits** (171, 180, 242). These apply to staff as well as students.
 - **At most 2 of any one item.**
@@ -501,6 +502,7 @@ How it behaves:
 
 **Entering scores** (`/results/enter`)
 - A teacher can enter or change scores only for students in their own classes, in that class's subject (129).
+- A Head of Department can enter or change scores in their department's subjects, the same rule as deleting them (321, the principal, 2 Oct 2026). A subject with no department stays with its class teacher and the assessment staff.
 - Assessment managers and admins can enter or change any score. Assessment users can too, but can't delete.
 - Scores are percentages (0–100). The grade is worked out from the subject's boundaries for that year group when the score is typed, and saved with it. Changing boundaries later does **not** regrade saved scores.
 - Only the current school year's result sets can be picked for entry **(page only)**.
