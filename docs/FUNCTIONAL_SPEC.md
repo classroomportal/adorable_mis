@@ -815,7 +815,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 23. Known issues and open decisions
 
-30 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; one of them (6) has since been fixed. The first five stop something working today.
+30 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; two of them (6 and 30) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -848,7 +848,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 27 | Fees | No year-group prices have been approved for locked items yet | Locked items can only be charged at an approved single price, if one exists | Open |
 | 28 | Registers | Missed Lessons for an earlier day names the lesson from today's classes and timetable | After a class change the wrong class can be shown; the marks themselves are right | Open |
 | 29 | Fees | Record a Payment, All Students (/bursar/fees-table) and Add Paid Top-Up are written with styling classes the app never loads | The pages work but show as plain, unstyled text and form fields; found while taking screenshots for the User Manual | Open |
-| 30 | Registers | Planned absences skip only days marked as a holiday on the calendar. Mid-term breaks are a single date there (24 Oct, 13 Feb, 22 May), so an absence spanning one fills in the break days too | Extra absence marks on days the school was closed | Open |
+| 30 | Registers | Planned absences skip only days marked as a holiday on the calendar. Mid-term breaks are a single date there (24 Oct, 13 Feb, 22 May), so an absence spanning one filled in the break days too. Fixed for 2026/27 on 2 Oct 2026: every weekday of the three breaks (26–30 Oct, 15–19 Feb, 24–28 May) is now a holiday on the calendar; later years' breaks need the same | Extra absence marks on days the school was closed | Fixed |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 

@@ -8,7 +8,7 @@ Sep 30, 2026 · @Chris TERRY
 
 ## Summary
 
-Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 29 known issues still open, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
+Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 28 known issues still open, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
 
 **Where the data came from.** Adorable British College has about 260 students in Years 7–12, many of them boarders. Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
 
@@ -84,7 +84,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out; parent welcome letters sent by admins or the school office, and resendable to reset a forgotten password | 1 |
 | Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type; who added each student and every change to a student record are logged; names are tidied of stray spaces | 1 |
 | Timetable and imports | Live | Nova-T import with preview; lesson-level teacher and room; the school office can save class allocations | 0 |
-| Registers | Live | Any staff marks any register; 15-minute not-done alerts; a Missed Lessons list of students in school who missed a lesson, and a pop-up on the office's and the new attendance officer's screens 15 minutes into a lesson when a student seen earlier is marked absent; planned absences give a student one code (illness, holiday, exclusion and so on) over a run of days, filled into every register without overwriting a teacher's mark | 3 |
+| Registers | Live | Any staff marks any register; 15-minute not-done alerts; a Missed Lessons list of students in school who missed a lesson, and a pop-up on the office's and the new attendance officer's screens 15 minutes into a lesson when a student seen earlier is marked absent; planned absences give a student one code (illness, holiday, exclusion and so on) over a run of days, filled into every register without overwriting a teacher's mark | 2 |
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks; a student group can be placed in an activity by the school and locked, until unlocked or a date | 5 |
 | Behaviour and detentions | Live | Points from categories; automatic Friday detentions; parent release review; who logged each event shown everywhere, including a student's profile; pictures on positive events only; witnesses, others involved and targets recorded on serious events, staff only, their names kept from parents; release to parents only through the review | 4 |
 | Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017; assessment managers delete a wrong score from the student's profile; Class Progress is a top-row tile for Heads of Department (their department) and SMT (every class), and teachers see only their own classes in it; it loads quickly because the database picks one grade per student and subject | 3 |
