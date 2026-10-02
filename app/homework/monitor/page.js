@@ -21,6 +21,23 @@ import { WeekPicker, HomeworkCard } from '../../components/HomeworkWeek';
 // chosen student and returns nothing to anyone without this page.
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
+// How far a homework's marking has got, as SMT see it on a year group's week
+// (the principal, 2 Oct 2026): not the student's "Overdue", which only means
+// the due date has passed. A class's count is its active students who had
+// joined by the due date, plus any with a mark (migration 298's rule, as in
+// the mark book). A row in homework_marks, including Not handed in or
+// Excused, counts as marked.
+function markingStatus(hw, marked, size, today) {
+  const notReleased = marked > 0 && !hw.marks_released ? ', not released to students' : '';
+  const note = `${marked} of ${size} marked${notReleased}`;
+  if (size > 0 && marked >= size) {
+    return { key: 'graded', label: hw.marks_released ? 'Marked' : 'Marked · not released', note };
+  }
+  if (marked > 0) return { key: 'today', label: `Marked ${marked} of ${size}`, note };
+  if (hw.due_on < today) return { key: 'overdue', label: 'Not marked', note };
+  return null; // Not due yet and nothing marked: the usual Due / Due today.
+}
+
 function subjectOf(cls) {
   return cls?.subjects?.display_name || cls?.subjects?.subject_name || '';
 }
@@ -74,7 +91,7 @@ function YearWeek({ year, weekStart }) {
       setSelected(null);
       const [{ data: hw }, { data: schemes }, { data: years }] = await Promise.all([
         supabase.from('homework')
-          .select('homework_id, class_id, class_code, subject_id, title, instructions, set_on, due_on, due_slot_id, scheme_id, out_of, academic_year_id, subjects(subject_name, display_name), set_by:staff!homework_set_by_staff_id_fkey(first_name, last_name)')
+          .select('homework_id, class_id, class_code, subject_id, title, instructions, set_on, due_on, due_slot_id, scheme_id, out_of, academic_year_id, marks_released, subjects(subject_name, display_name), set_by:staff!homework_set_by_staff_id_fkey(first_name, last_name)')
           .eq('year_group', year).eq('status', 'set')
           .gte('due_on', weekStart).lte('due_on', addDays(weekStart, 6))
           .order('due_on').order('class_code'),
@@ -84,14 +101,31 @@ function YearWeek({ year, weekStart }) {
       const current = new Set((years || []).map((y) => y.academic_year_id));
       const rows = (hw || []).filter((h) => current.has(h.academic_year_id));
       const slotIds = [...new Set(rows.map((h) => h.due_slot_id).filter(Boolean))];
-      const { data: slots } = slotIds.length
-        ? await supabase.from('timetable_slots').select('slot_id, period_number').in('slot_id', slotIds)
-        : { data: [] };
+      const hwIds = rows.map((h) => h.homework_id);
+      const classIds = [...new Set(rows.map((h) => h.class_id))];
+      const [{ data: slots }, { data: marks }, { data: enrol }] = await Promise.all([
+        slotIds.length
+          ? supabase.from('timetable_slots').select('slot_id, period_number').in('slot_id', slotIds)
+          : { data: [] },
+        hwIds.length
+          ? supabase.from('homework_marks').select('homework_id, student_id').in('homework_id', hwIds)
+          : { data: [] },
+        classIds.length
+          ? supabase.from('student_class').select('class_id, student_id, joined_on, students(status)').in('class_id', classIds)
+          : { data: [] },
+      ]);
       if (cancelled) return;
       const periodOf = Object.fromEntries((slots || []).map((s) => [s.slot_id, s.period_number]));
+      const markedBy = {};
+      (marks || []).forEach((m) => { (markedBy[m.homework_id] ||= new Set()).add(m.student_id); });
+      const today = schoolToday();
       setHomework(rows.map((h) => {
         const scheme = (schemes || []).find((s) => s.scheme_id === h.scheme_id);
         const subj = subjectOf(h);
+        const marked = markedBy[h.homework_id] || new Set();
+        const size = (enrol || []).filter((e) => e.class_id === h.class_id && e.students?.status === 'active'
+          && (!e.joined_on || e.joined_on <= h.due_on || marked.has(e.student_id))).length;
+        const marking = markingStatus(h, marked.size, size, today);
         return {
           ...h,
           subject: subj,
@@ -104,6 +138,9 @@ function YearWeek({ year, weekStart }) {
           teacher_name: h.set_by ? `${h.set_by.first_name || ''} ${h.set_by.last_name || ''}`.trim() : null,
           marked: false,
           done: false,
+          status_override: marking ? { key: marking.key, label: marking.label } : null,
+          marking_note: marking?.note || `${marked.size} of ${size} marked`,
+          not_marked: !!marking && marked.size < size && h.due_on < today,
         };
       }));
     })();
@@ -124,10 +161,11 @@ function YearWeek({ year, weekStart }) {
     const bySubject = new Map();
     for (const c of classes) {
       const s = subjectOf(c) || 'No subject';
-      if (!bySubject.has(s)) bySubject.set(s, { subject: s, classes: [], set: 0, none: [] });
+      if (!bySubject.has(s)) bySubject.set(s, { subject: s, classes: [], set: 0, none: [], unmarked: [] });
       const row = bySubject.get(s);
       row.classes.push(c);
       if (withHw.has(c.class_id)) row.set += 1; else row.none.push(c.class_code);
+      if (homework.some((h) => h.class_id === c.class_id && h.not_marked)) row.unmarked.push(c.class_code);
     }
     return [...bySubject.values()]
       .filter((r) => !subject || r.subject === subject)
@@ -166,7 +204,7 @@ function YearWeek({ year, weekStart }) {
             <div style={{ overflowX: 'auto' }}>
               <table>
                 <thead>
-                  <tr><th>Subject</th><th>Classes</th><th>With homework due</th><th>Nothing due this week</th></tr>
+                  <tr><th>Subject</th><th>Classes</th><th>With homework due</th><th>Nothing due this week</th><th>Past due, not fully marked</th></tr>
                 </thead>
                 <tbody>
                   {summary.map((r) => (
@@ -176,6 +214,9 @@ function YearWeek({ year, weekStart }) {
                       <td>{r.set}</td>
                       <td style={{ color: r.none.length ? 'inherit' : 'var(--ink-soft)' }}>
                         {r.none.length ? r.none.sort().join(', ') : 'All set'}
+                      </td>
+                      <td style={{ color: r.unmarked.length ? '#7a1a1a' : 'var(--ink-soft)' }}>
+                        {r.unmarked.length ? r.unmarked.sort().join(', ') : '—'}
                       </td>
                     </tr>
                   ))}
@@ -342,7 +383,7 @@ function HomeworkMonitorInner() {
     <div className="card">
       <h2 style={{ margin: 0 }}>Homework Monitor</h2>
       <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
-        Homework as students see it. Choose a year group for every class&apos;s homework due in the week, or a student
+        Homework as students see it. Choose a year group for every class&apos;s homework due in the week, with how far its marking has got, or a student
         for their timetable and Homework page, with their own Done ticks and released grades.
       </p>
       {years.length === 0 ? <p>No classes have homework switched on yet.</p> : (

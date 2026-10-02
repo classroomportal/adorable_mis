@@ -69,6 +69,12 @@ export function HomeworkDetail({ hw, onClose, onToggleDone }) {
         <dd>{formatUKDate(hw.due_on, { weekday: true })}{hw.due_period != null ? ` · lesson ${hw.due_period}` : ' · end of day'}</dd>
         <dt>Set</dt>
         <dd>{formatUKDate(hw.set_on, { weekday: true })}{hw.teacher_name ? ` by ${hw.teacher_name}` : ''}</dd>
+        {hw.marking_note && (
+          <>
+            <dt>Marking</dt>
+            <dd>{hw.marking_note}</dd>
+          </>
+        )}
         <dt>Graded as</dt>
         <dd>{hw.scheme_kind === 'mark' && hw.scheme_name !== 'Percentage' ? `Mark out of ${Number(hw.out_of)}` : hw.scheme_name}</dd>
         {hw.mark_comment && (
