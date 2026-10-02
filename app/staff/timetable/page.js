@@ -152,13 +152,11 @@ function StaffTimetable() {
   useEffect(() => {
     async function loadMyMissing() {
       if (!isOwnTimetable) { setMyMissingCount(0); return; }
-      const { data } = await supabase
-        .from('registers_not_done')
-        .select('slot_id, other_half_activity_id')
-        // staff_ids, not staff_id: an Other Half activity can have several
-        // staff, and its row belongs to all of them (migration 157).
-        .contains('staff_ids', [profile.staff_id]);
-      setMyMissingCount((data || []).length);
+      // A count for the signed-in teacher only (migration 315). Reading the
+      // registers_not_done view here, once a minute on every open timetable,
+      // was the database's heaviest load and slowed every page at 08:00.
+      const { data } = await supabase.rpc('my_overdue_registers_count');
+      setMyMissingCount(data || 0);
     }
     loadMyMissing();
     const interval = setInterval(loadMyMissing, 60000);
