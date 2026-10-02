@@ -7,6 +7,53 @@
 
 Oct 1, 2026 · @Chris TERRY
 
+![Formwork User Manual, Adorable British College, Edition 1, October 2026](manual-images/00-cover.jpg)
+
+## Contents
+
+New to Formwork? Read **How each person uses Formwork** for your role first, then the chapters it points you to. To jump to a heading, use your browser's Find (Ctrl+F, or Cmd+F on a Mac) and type its name.
+
+| Part | Section | What it covers | Most useful for |
+| --- | --- | --- | --- |
+| Start here | About this manual | How the manual is organised; the screenshots use invented data | Everyone |
+| Start here | How each person uses Formwork | The school year at a glance, and what each role does each day, week and term | Everyone |
+| Everyday tasks | 1. Getting started | Signing in, the dashboard, roles, using a phone | Everyone |
+| Everyday tasks | 2. Students | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
+| Everyday tasks | 3. Timetables and registers | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up | Teachers, office, pastoral |
+| Everyday tasks | 4. Homework | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers (Years 10–11), HoDs, SMT |
+| Everyday tasks | 5. Assessment, results and targets | Result sets, entering scores, Class Progress, boundaries, targets, Grade History | Teachers, HoDs, assessment staff |
+| Everyday tasks | 6. Reports and documents | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
+| Care and conduct | 7. Behaviour, pastoral care and the clinic | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; HR |
+| Care and conduct | 8. The Other Half and student groups | Activity registers, the programme, student choices, groups, building a group from a rule | All staff; SMT; pastoral |
+| Care and conduct | 9. Calendar, messages and email | The calendar, sending messages, the inbox, where replies go | SMT, office, pastoral |
+| School business | 10. Fees and bills | Payments, charging, fee items, discounts, debtors, price approval, the SMT dashboard | Bursar, SMT, principal, college secretary |
+| School business | 11. Tuckshop | Ordering windows, order sheets, handing out, items, top-ups and balances | Tuckshop, bursar |
+| School business | 12. Admissions | Applicants, stages, test days, interviews, letters, next year's numbers | Admissions, bursar, SMT |
+| Families | 13. The student and parent portals | What students and parents see and do, and the rules that protect them | Everyone who talks to families |
+| Running the system | 14. Administration | Permissions, roles, lookups, timetable setup, next year, tiles, Change History, backups, imports | Admins, HR, SMT |
+| Reference | Appendix | A. Roles, B. Rules at a glance, C. Glossary, D. Getting help | Everyone |
+
+### Find a task
+
+| I want to… | Go to |
+| --- | --- |
+| Take a register | Chapter 3, Taking a register |
+| Log a positive or negative behaviour point | Chapter 7, Logging behaviour |
+| Set or mark homework | Chapter 4, Setting homework and Marking |
+| Enter test or exam marks | Chapter 5, Entering results |
+| Write or check report comments | Chapter 6 |
+| Find a missing student | Chapter 3, Missed Lessons and the pop-up |
+| Update a student's or parent's details | Chapter 2, Editing a record; Parents and leavers |
+| Add a new student | Chapter 2, Adding a student |
+| Send a message to parents | Chapter 9, Sending a message |
+| Record a fee payment | Chapter 10, Recording a payment |
+| Change a fee price | Chapter 10, Price approval |
+| Hand out tuckshop orders | Chapter 11, Handing out |
+| Move an applicant to the next stage | Chapter 12, Stages |
+| Give someone access to a page | Chapter 14, Who can open which page |
+| See who changed something | Chapter 14, Change History; Chapter 5, Grade History |
+| Help a parent who can't sign in | Students and parents, Questions staff are often asked |
+
 ## About this manual
 
 This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 1 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
