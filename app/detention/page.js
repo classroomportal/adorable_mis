@@ -7,6 +7,7 @@ import { schoolToday } from '../../lib/schoolTime';
 import { formatUKDate } from '../../lib/formatDate';
 import EventCommentEditor from '../components/EventCommentEditor';
 import { useBehaviourRules } from '../../lib/behaviourRules';
+import { useAuth } from '../../lib/AuthContext';
 
 const STATUS_OPTIONS = ['scheduled', 'attended', 'missed', 'cancelled'];
 const STATUS_LABELS = { scheduled: 'Scheduled', attended: 'Attended', missed: 'Missed', cancelled: 'Cancelled' };
@@ -33,6 +34,10 @@ function DetentionInner() {
   const [eventsError, setEventsError] = useState(null);
   const [openComments, setOpenComments] = useState({}); // event_id -> comment shown
   const rules = useBehaviourRules();
+  const { staffRoles } = useAuth();
+  // Only SMT can cancel a detention (migration 319); others keep Cancelled
+  // only as the current value, so a cancelled row still reads correctly.
+  const canCancel = (staffRoles || []).includes('smt');
 
   const baseSat = saturdayOf(new Date(`${schoolToday()}T00:00:00Z`));
   const start = addDays(baseSat, weekOffset * 7);
@@ -156,7 +161,9 @@ function DetentionInner() {
                       onChange={(e) => updateStatus(r.detentionIds, e.target.value)}
                       style={{ width: 'auto', minWidth: '9rem' }}
                     >
-                      {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                      {STATUS_OPTIONS
+                        .filter((s) => s !== 'cancelled' || canCancel || r.status === 'cancelled')
+                        .map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
                     </select>
                     <span className="print-only">{STATUS_LABELS[r.status] || r.status}</span>
                   </td>

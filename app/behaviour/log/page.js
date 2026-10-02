@@ -16,7 +16,9 @@ const LIMIT = 200;
 // A house-only houseparent (my_house_access().exclusive) sees their house
 // here. Logging on /behaviour is not limited to it.
 function BehaviourLogInner() {
-  const { profile } = useAuth();
+  const { profile, staffRoles } = useAuth();
+  // Removing a behaviour event (a merit included) is SMT only (migration 319).
+  const canDelete = (staffRoles || []).includes('smt');
   const canEdit = useCanEditEventComment();
 
   const [students, setStudents] = useState([]);
@@ -135,7 +137,7 @@ function BehaviourLogInner() {
           </p>
           <div className="table-scroll"><table>
             <thead>
-              <tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th><th></th>{profile?.role === 'admin' && <th></th>}</tr>
+              <tr><th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th><th></th>{canDelete && <th></th>}</tr>
             </thead>
             <tbody>
               {shown.map((ev) => (
@@ -157,13 +159,13 @@ function BehaviourLogInner() {
                         {open === ev.event_id ? 'Hide' : canEdit(ev) ? 'View / edit' : 'View'}
                       </button>
                     </td>
-                    {profile?.role === 'admin' && (
+                    {canDelete && (
                       <td><button type="button" className="secondary bl-small" onClick={(e) => { e.stopPropagation(); handleDelete(ev.event_id); }}>Delete</button></td>
                     )}
                   </tr>
                   {open === ev.event_id && (
                     <tr>
-                      <td colSpan={profile?.role === 'admin' ? 7 : 6} style={{ paddingLeft: '1.5rem' }}>
+                      <td colSpan={canDelete ? 7 : 6} style={{ paddingLeft: '1.5rem' }}>
                         <EventCommentEditor
                           event={ev}
                           onSaved={(changes) => setEvents((list) => list.map((x) => (x.event_id === ev.event_id ? { ...x, ...changes } : x)))}

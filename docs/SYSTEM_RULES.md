@@ -458,7 +458,7 @@ How it behaves:
 - Only the comment and the category can change, and the category must stay the same kind (negative stays negative).
 - Detentions are recalculated after an edit.
 - Events withdrawn on appeal can't be edited.
-- Only admins can delete an event.
+- Only SMT can delete an event, a merit included (migration 319, the principal, 2 Oct 2026). Holding the smt role is what counts; an admin login alone is not enough. Staff can't withdraw an event or move it to another student any other way; withdrawing is done only by an upheld appeal.
 - Changes and deletions are logged in Change History.
 
 **What parents see**
@@ -492,7 +492,7 @@ How it behaves:
   - the student's negative total for the week reaches **−10 or worse**. Positive points don't offset this.
 - Staff can't add or delete detentions by hand.
 - Detentions take place in CG4, after lesson 7.
-- Statuses are scheduled, attended, missed and cancelled. Whoever has the `/detention` page can update them (240).
+- Statuses are scheduled, attended, missed and cancelled. Whoever has the `/detention` page can mark them attended or missed (240), but **only SMT can cancel one** (319, the principal, 2 Oct 2026). The date and student can't be changed. Detentions still cancel automatically when an event's category is corrected below the thresholds or an appeal is upheld.
 - **The student** (not parents) gets an email and a Formwork inbox notice when a detention is booked, a reminder at **7:30pm on Thursday**, and a notice if it is cancelled. Replies go to SMT.
 
 ---
