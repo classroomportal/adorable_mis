@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/build-help.js",
     "dev": "next dev",
-    "prebuild": "node scripts/check-api-auth.js",
+    "prebuild": "node scripts/check-api-auth.js && node scripts/build-help.js",
     "build": "next build",
     "check:api-auth": "node scripts/check-api-auth.js",
     "start": "next start"

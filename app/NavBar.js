@@ -2,6 +2,7 @@
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import HelpButton from './components/HelpButton';
 
 export default function NavBar() {
   const { session, profile } = useAuth();
@@ -48,6 +49,7 @@ export default function NavBar() {
           <span style={{ color: 'var(--ink-soft)', fontSize: '0.8rem' }}>
             {profile?.role === 'admin' ? 'Admin' : profile?.role === 'student' ? 'Student' : profile?.role === 'parent' ? 'Parent' : 'Staff'} — {session.user.email}
           </span>
+          <HelpButton />
           <a href="/change-password">Change Password</a>
           <button onClick={handleSignOut}>Sign out</button>
         </>
