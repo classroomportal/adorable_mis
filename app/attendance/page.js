@@ -10,6 +10,7 @@ import { formatTimeRange } from '../../lib/formatTime';
 import { schoolToday, minutesSinceSchoolTime } from '../../lib/schoolTime';
 import { useAuth } from '../../lib/AuthContext';
 import RegisterHomework from '../components/RegisterHomework';
+import SaveBar, { useSaveStatus } from '../components/SaveBar';
 
 function AttendanceInner() {
   const searchParams = useSearchParams();
@@ -29,7 +30,7 @@ function AttendanceInner() {
   const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
   const [lastGrades, setLastGrades] = useState({}); // student_id -> {grade, week_start_date}, for this class's subject
   const [gradesShown, setGradesShown] = useState(false); // the Last grade column, off by default
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useSaveStatus();
   const [loadingRoster, setLoadingRoster] = useState(false);
 
   useEffect(() => {
@@ -361,6 +362,9 @@ function AttendanceInner() {
             <p>No students are linked to this class yet.</p>
           ) : (
             <>
+              <SaveBar status={status}>
+                <button type="submit" style={{ width: 'fit-content' }}>Save register</button>
+              </SaveBar>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'stretch' }}>
                 <button type="button" onClick={markAllPresent} className="secondary" style={{ width: 'fit-content' }}>
                   Mark all present
@@ -467,11 +471,8 @@ function AttendanceInner() {
                   ))}
                 </tbody>
               </table></div>
-
-              <button type="submit" style={{ marginTop: '1rem', width: 'fit-content' }}>Save register</button>
             </>
           )}
-          {status && <p>{status}</p>}
         </form>
       )}
     </div>
