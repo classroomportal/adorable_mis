@@ -145,7 +145,7 @@ export default function ReadingAgeHistory({ readings, canRecord, onChanged, noDo
       <div className="table-scroll" style={{ marginTop: '0.75rem' }}>
         <table>
           <thead>
-            <tr><th>Date</th><th>Test</th><th>Age then</th><th>Reading age</th><th>Gap</th><th>Since last</th>{canRecord && <th></th>}</tr>
+            <tr><th>Date</th><th>Reading age</th><th>Gap</th><th>Since last</th><th>Age then</th><th>Test</th>{canRecord && <th></th>}</tr>
           </thead>
           <tbody>
             {readings.map((r, i) => {
@@ -160,12 +160,6 @@ export default function ReadingAgeHistory({ readings, canRecord, onChanged, noDo
                       : formatUKDate(r.tested_on)}
                   </td>
                   <td>
-                    {editing
-                      ? <input type="text" value={draft.test_name} maxLength={80} style={{ width: '11rem' }} onChange={(e) => setDraft({ ...draft, test_name: e.target.value })} />
-                      : <>{r.test_name}{r.source !== 'school' && r.test_name !== SOURCE_LABEL[r.source] && <><br /><span style={{ color: '#666', fontSize: '0.85em' }}>{SOURCE_LABEL[r.source]}</span></>}</>}
-                  </td>
-                  <td>{formatMonths(r.age_months) || '—'}</td>
-                  <td>
                     {editing ? (
                       <span style={{ display: 'inline-flex', gap: '0.25rem', alignItems: 'center' }}>
                         <input type="number" min="3" max="20" style={{ width: '4rem' }} value={draft.years} onChange={(e) => setDraft({ ...draft, years: e.target.value })} /> y
@@ -175,6 +169,12 @@ export default function ReadingAgeHistory({ readings, canRecord, onChanged, noDo
                   </td>
                   <td><GapBadge gap={r.gap_months} /></td>
                   <td style={{ color: changeColour(since), whiteSpace: 'nowrap' }}>{prev ? formatChange(since) : 'First reading'}</td>
+                  <td>{formatMonths(r.age_months) || '—'}</td>
+                  <td>
+                    {editing
+                      ? <input type="text" value={draft.test_name} maxLength={80} style={{ width: '11rem' }} onChange={(e) => setDraft({ ...draft, test_name: e.target.value })} />
+                      : <>{r.test_name}{r.source !== 'school' && r.test_name !== SOURCE_LABEL[r.source] && <><br /><span style={{ color: '#666', fontSize: '0.85em' }}>{SOURCE_LABEL[r.source]}</span></>}</>}
+                  </td>
                   {canRecord && (
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {r.source === 'school' && (editing ? (

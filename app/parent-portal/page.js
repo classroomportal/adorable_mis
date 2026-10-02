@@ -14,6 +14,8 @@ import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf
 import ChildOtherHalf from '../components/ChildOtherHalf';
 import BehaviourPhoto from '../components/BehaviourPhoto';
 import PortalGroups from '../components/PortalGroups';
+import ReadingAgeHistory from '../components/ReadingAgeHistory';
+import { loadReadingAgeHistory, formatMonths } from '../../lib/readingAge';
 import { loadPortalGroups } from '../../lib/studentGroups';
 import {
   AttendanceScopeCards,
@@ -73,6 +75,9 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
   // Groups shown to parents (migration 300). The database returns the
   // parent's view for staff viewing as a parent too.
   const [groups, setGroups] = useState([]);
+  // Reading ages (migrations 323–324): the database returns only this
+  // parent's current children.
+  const [readingAges, setReadingAges] = useState([]);
 
   // A parent login already has profile.parent_id set, and so do many staff
   // who are also parents. For those that don't, fall back to matching their
@@ -122,6 +127,8 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
       setActiveView(null);
       setGroups([]);
       loadPortalGroups(selectedId).then(setGroups);
+      setReadingAges([]);
+      loadReadingAgeHistory([Number(selectedId)]).then(({ byStudent }) => setReadingAges(byStudent[Number(selectedId)] || []));
       const { data: r } = await supabase.from('results').select('*, subjects(subject_name, display_name)').eq('student_id', selectedId).order('week_start_date', { ascending: false });
       setResults(r || []);
       // Fetched together with the targets and set in the same tick: the target
@@ -319,6 +326,14 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                   <span className="dashboard-tile-sub">{shownTargets.length === 0 ? 'No targets set' : `${shownTargets.length} subject${shownTargets.length === 1 ? '' : 's'} tracked`}</span>
                 </button>
 
+                {readingAges.length > 0 && (
+                  <button type="button" className="dashboard-tile" onClick={() => setActiveView('reading')}>
+                    <span className="dashboard-tile-label">Reading Age</span>
+                    <span className="dashboard-tile-icon">📖</span>
+                    <span className="dashboard-tile-sub">{formatMonths(readingAges[readingAges.length - 1].reading_age_months)} on {formatUKDate(readingAges[readingAges.length - 1].tested_on)}</span>
+                  </button>
+                )}
+
                 <button type="button" className="dashboard-tile" onClick={() => setActiveView('conduct')}>
                   <span className="dashboard-tile-label">Conduct</span>
                   <span className="dashboard-tile-icon">📋</span>
@@ -435,6 +450,17 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                 gradePoints={gradePoints}
                 enrolledSubjectIds={enrolledSubjectIds}
               />
+            </div>
+          )}
+
+          {activeView === 'reading' && (
+            <div className="card">
+              <h2>Reading Age</h2>
+              <p>
+                {selectedChild?.first_name}&apos;s reading age each time it was tested, against their actual age on the day.
+                The gap is the difference: a minus means reading below their age, a plus means above it.
+              </p>
+              <ReadingAgeHistory readings={readingAges} canRecord={false} />
             </div>
           )}
 
