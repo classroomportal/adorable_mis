@@ -21,7 +21,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Start here | [Safeguarding and keeping students safe](#safeguarding-and-keeping-students-safe) | What Formwork is and isn't for, finding a missing student, patterns to raise, what not to write, personal data | Everyone |
 | Everyday tasks | [1. Getting started](#1-getting-started) | Signing in, the dashboard, roles, using a phone | Everyone |
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
-| Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up | Teachers, office, pastoral |
+| Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, planned absences | Teachers, office, pastoral |
 | Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers (Years 10–11), HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
@@ -42,6 +42,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | See what my role does day to day | [Teachers](#teachers) · [Mentors and pastoral staff](#mentors-and-pastoral-staff) · [Leaders](#leaders-heads-of-department-assessment-staff-and-smt) · [Office, HR and administrators](#office-hr-and-administrators) · [Specialist roles](#specialist-roles) · [Students and parents](#students-and-parents) |
 | Take a register | [Taking a register](#taking-a-register-attendance) |
 | Find a student who is missing from a lesson | [Finding a missing student](#finding-a-missing-student) · [The missed-lesson pop-up](#the-missed-lesson-pop-up) |
+| Record a student who will be away for several days, or is excluded | [Planned absences](#planned-absences-attendanceplanned-absences) |
 | Raise a worry about a student | [Safeguarding and keeping students safe](#safeguarding-and-keeping-students-safe) · [Who to tell](#who-to-tell) |
 | Spot students falling behind | [Signs to look for](#signs-to-look-for-and-where-to-see-them) · [Worked examples](#worked-examples) |
 | Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
@@ -61,7 +62,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 
 ## About this manual
 
-This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 1 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
+This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 2 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
 
 **How it is organised.** It starts with How each person uses Formwork: a guide for each role (teachers, mentors, leaders, the office, specialist roles, students and parents) to what they do each day, week and term. Two short sections follow it for everyone: Using Formwork to raise achievement, and Safeguarding and keeping students safe. After that, each chapter covers one area of the school's work. It says who can use the pages, walks through the common tasks step by step, and lists the rules the system enforces so you know why something is refused. Where a page is only open to some roles, the chapter says so at the top.
 
@@ -175,6 +176,7 @@ Pastoral work in Formwork is about noticing early: who is absent, who is collect
 2. Go and find the student, then press **Seen: dealing with it** with a short note. This clears the alert from every screen. If the teacher corrects the mark, it clears by itself.
 3. During the day, keep **Missed Lessons** open as a list of every student who has missed a lesson today.
 4. At the end of the day, check **Register Alerts** and follow up staff whose registers were late.
+5. When a parent says their child will be away for some days, or a student is excluded, enter it once at **Planned Absences** (chapter 3). Every register for those days is filled in for the teachers.
 
 ### Leaders: Heads of Department, assessment staff and SMT
 
@@ -231,6 +233,7 @@ The office keeps student and parent records right and is first to hear about mis
 1. Keep Formwork open: the missed-lesson pop-up appears for you as well as the attendance officer (see Mentors and pastoral staff).
 2. Check **Register Alerts** and resolve each once the teacher has been contacted.
 3. Release serious (−5) behaviour events without pictures to parents at **Behaviour Review**, after checking the text names no other student.
+4. Enter absences you know about in advance (illness, appointments, holidays the principal has agreed, exclusions) at **Planned Absences**, so teachers find the code already in their registers.
 
 *When a family's details change*
 
@@ -673,6 +676,7 @@ On the register:
 | I, M, C | Illness, medical appointment, other authorised | Authorised absence |
 | N | No reason yet | Unauthorised absence |
 | O | Unauthorised absence | Unauthorised absence |
+| H, E, X | Authorised holiday, educational visit, excluded from school | Authorised absence |
 
 **Rules.** Any member of staff can mark any register (the school's decision). You cannot save a register for a future date; past dates ask for confirmation. Taking a register is not logged, but every later change or deletion of a mark is kept permanently in Change History.
 
@@ -705,6 +709,33 @@ Staff whose role is granted **Missed-lesson pop-ups** (the school office and the
 - Correcting the mark (present, late or an authorised absence) clears the alert by itself.
 
 The browser tab flashes and, once you have clicked on the page, a beep sounds for each new alert.
+
+### Planned absences (/attendance/planned-absences)
+
+When a student will be away for several days, or has been excluded, enter it once here instead of marking every register. Open to the school office, the attendance officer, pastoral staff, SMT and admins, from the Pastoral card.
+
+1. Type part of the student's name (and pick a year if needed), then click the student.
+2. Choose the **First day** and **Last day** (whole days), the **Code**, and a **Note** if it helps. The note is for staff only; parents never see it.
+3. Press **Save planned absence**. The page says how many register marks it has filled in so far.
+
+![Adding a planned absence, with the current and upcoming list below](manual-images/16-planned.jpg)
+
+What it fills in:
+
+- Every period the student has on each day: registration, lessons, their Other Half activity and Evening Prep.
+- Past days and today straight away; later days at 05:30 each morning.
+- Nothing outside term dates or on a day marked as a holiday on the calendar. A mid-term break is only one date on the calendar, so don't run an absence across a break: enter one absence before it and one after.
+- It never overwrites a mark that is already in a register.
+
+Only authorised codes can be planned: I (illness), M (medical or dental appointment), H (authorised holiday), E (educational visit), C (other authorised absence) and **X (excluded from school)**.
+
+**On the register.** The teacher sees the code already filled in, marked "planned", and saves the register as usual. If the student turns up after all, the teacher changes the code to present or late and saves. Once a teacher has saved the register, the mark is theirs.
+
+![A register with a planned absence filled in and marked "planned"](manual-images/16b-register-planned.jpg)
+
+**Back early, or entered by mistake.** In the list, choose the **Back on** day and press **End early**: the marks from that day on are removed. **Cancel** removes the whole absence and all its marks. Marks a teacher has already saved are left as they are.
+
+A student can have only one planned absence on any day. Every planned absence, and every mark removed by ending or cancelling one, is kept in Change History.
 
 ### Attendance summaries
 
@@ -1507,7 +1538,7 @@ A full database backup runs every night. Admins can also run one before anything
 | assessment\_user | Enter any result or target, but not delete |
 | bursar | Fees, invoices, payments, discounts, admission payments; tuckshop admin (not Hand Out) |
 | school\_office | Student records (all fields), adding students, parents and logins, welcome letters, register alerts, releasing −5 behaviour, messages, missed-lesson pop-ups |
-| attendance\_officer | Missed Lessons and the missed-lesson pop-up |
+| attendance\_officer | Missed Lessons, the missed-lesson pop-up and Planned Absences |
 | admissions | Admissions pages |
 | tuckshop | Tuckshop pages, including Hand Out |
 | tuckshop\_owner | As tuckshop, plus unlocking a saved hand-out list |
