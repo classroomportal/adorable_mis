@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 326). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 328). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -111,6 +111,7 @@ Only Formwork creates logins; nobody can create their own account, by email or b
 
 - **FR-1.10** Every server route except the parents' calendar feed (FR-1.11) checks the caller's sign-in and page access before doing anything, and the build fails if one doesn't. Backup is admin-only whatever the permissions page says. \[DB + build check\]
 - **FR-1.11** One route works without sign-in: the parents' calendar feed (/api/calendar-feed/…), because calendar apps can't sign in. Each parent's secret link is the check instead, and the build check lists this route as its only exception. It returns only the events parents see on their calendar page, and nothing once none of the parent's children is still at the school. Agreed by the principal, 30 Sept 2026 (migration 274). \[DB + build check\]
+- **FR-1.12** /admin/permissions shows each role three ways (migration 327, 2 Oct 2026). **Pages**: which pages it opens, ticked by section. **What they can do**: for each kind of record, whether the role can view, add, edit and delete it: Yes (any record), Own only (records tied to the person, such as their classes) or No, with the rule names behind each answer. It is worked out live from the database's own rules for someone holding only that role, so it changes as soon as a page is ticked or a rule changes. Actions done through checked steps (fee approvals, admissions decisions, planned absences) show as View only, and checks made on saving aren't shown. **Compare roles**: every page against every role. Only admins can change page access and the student Core Data field grants; the database rules themselves can't be changed from the app. \[Page; rules read from DB\]
 
 ## 5. FR-2 Students, parents and portals
 
@@ -170,7 +171,7 @@ Every member of staff can read the whole student record; what each role can chan
 **Gender**
 
 - **FR-2.17** Every student's gender is required and is Male or Female, chosen from a list on the New Student page and the student record. It can't be blanked by an edit or a CSV re-import; the import converts Male/Female and refuses a new student without one. \[DB\]
-- **FR-2.18** Only the school office can add a new student, at /students/new or /students/import; holding admin is not enough. Admins can still see, correct and delete student records. Someone who holds both admin and school\_office adds students through their office role, so to stop a person adding students, remove their school\_office role (migration 275). \[DB\]
+- **FR-2.18** Only the school office can add a new student, at /students/new or /students/import; holding admin is not enough. Admins can still see, correct and delete student records. Someone who holds both admin and school\_office adds students through their office role, so to stop a person adding students, remove their school\_office role (migration 275). Until migration 328 any admin login could still add a student, because the rule's role check lets every admin through (known issue 32). \[DB\]
 
 ## 6. FR-3 Timetable, classes and Nova-T imports
 
@@ -829,7 +830,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 23. Known issues and open decisions
 
-31 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; two of them (6 and 30) have since been fixed. The first five stop something working today.
+32 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; two of them (6 and 30) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -864,6 +865,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 29 | Fees | Record a Payment, All Students (/bursar/fees-table) and Add Paid Top-Up are written with styling classes the app never loads | The pages work but show as plain, unstyled text and form fields; found while taking screenshots for the User Manual | Open |
 | 30 | Registers | Planned absences skip only days marked as a holiday on the calendar. Mid-term breaks are a single date there (24 Oct, 13 Feb, 22 May), so an absence spanning one filled in the break days too. Fixed for 2026/27 on 2 Oct 2026: every weekday of the three breaks (26–30 Oct, 15–19 Feb, 24–28 May) is now a holiday on the calendar; later years' breaks need the same | Extra absence marks on days the school was closed | Fixed |
 | 31 | Parents | Some families have two or more parent records with the same email (from separate imports). A parent login is tied to one record, so a child linked only to the other record doesn't appear in the portal. Found 2 Oct 2026 when a parent saw "No linked children"; the 7 logins affected then were fixed by hand (one Francis IYIOKU link left off until the office confirms his guardian). Nothing stops a new case | A parent sees some or none of their children | Open |
+| 32 | Students | Any admin login could still add a student. Migration 275 left the office's rule as the only way in, but that rule's role check lets every admin through. Found 2 Oct 2026 by the Permissions page's new "What they can do" view. Migration 328 makes the rule check the school\_office role alone; it is written and waiting to be run in the SQL editor | FR-2.18 not enforced: admin alone can add students | Fixing |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 

@@ -1471,9 +1471,15 @@ Admins own setup, imports, permissions and backups; HR assigns roles; SMT, HR an
 
 ### Who can open which page (/admin/permissions)
 
-Choose a role (the number shows how many pages it opens), then tick the pages it can open. Changes save instantly. At the bottom, each role can be given Read or Edit on each student field. Remember that page access only decides what is shown; what someone can actually read or change is enforced by the database.
+Choose a role from the list at the top. Beside it you see what the role is for, how many pages it opens, how many kinds of record it can change and how many student fields it can edit. Then use the three tabs:
 
-![Permissions for a role](manual-images/120-permissions.jpg)
+- **Pages**: tick the pages the role can open. Each section shows how many of its pages are ticked, and **Find a page** narrows the list. Changes save instantly. Admins open every page whatever is ticked.
+- **What they can do**: for each kind of record (registers, behaviour events, results, payments and so on), whether the role can **View**, **Add**, **Edit** and **Delete** it. **Yes** means any record, **Own only** means only records tied to the person (their own classes, events they logged), and **No** means not at all. Click a row to see the names of the database rules that allow it. This is read from the database itself, so it is always current: tick a page and any access that depends on it changes straight away. Below the table, give the role Read or Edit on each student Core Data field.
+- **Compare roles**: every page against every role in one grid, to check at a glance who can open what. Click a role's name to open it on the Pages tab.
+
+Only the Pages ticks and the student field settings can be changed here. The rules behind "What they can do" are set in the database; a few actions (approving fee prices, admissions decisions, planned absences) go through their own checked steps, so they show as View only even for the people who can do them.
+
+![Permissions: what the Teacher role can do](manual-images/120-permissions.png)
 
 ### Staff and roles (/staff/roles)
 
