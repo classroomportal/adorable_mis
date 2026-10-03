@@ -1,6 +1,6 @@
 # Tickable role abilities: design
 
-Status, 2 October 2026: **designed, not built.** Today `/admin/permissions`
+Status, 3 October 2026: **stage 1 built** (migration 329: Certificates, Sick bay, the BMI reference and grade boundaries); later stages not built. Today `/admin/permissions`
 shows what each role can view, add, edit and delete (migration 327), read
 from the database's rules, but only page access and student Core Data fields
 can be changed there. This design makes the rest tickable.
@@ -81,8 +81,13 @@ data up (migration 214 stopped bursar payments for 40 minutes).
    Admissions.
 5. Fees (prices stay locked; payments, invoices and discounts become tickable).
 
-## Open question
+## Decided (the principal, 3 Oct 2026)
 
-The school decided on 27 Sept 2026 that any member of staff can edit grade
-boundaries, subject aliases and subject key stages, and mark any register.
-Should those also be padlocked, or become ordinary ticks?
+- Grade boundaries, subject aliases, subject key stages and registers become
+  **ordinary ticks**, not padlocked.
+- **Only assessment managers edit grade boundaries.** Done in stage 1
+  (migration 329): until then any member of staff could. Viewing stays open
+  to everyone signed in, because students and parents see grades worked out
+  from them (that view is padlocked).
+- Subject aliases, key stages and registers keep today's access (all staff)
+  until their stage converts them.

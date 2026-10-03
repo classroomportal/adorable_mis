@@ -42,6 +42,28 @@ function AbilityBadge({ value }) {
   );
 }
 
+// One View/Add/Edit/Delete cell: a tick box where the table's abilities are
+// ticks, a padlock where the cell is fixed, otherwise the worked-out answer.
+function AbilityCell({ value, lock, tickable, ticked, saving, onToggle }) {
+  if (lock) {
+    return (
+      <span title={lock} style={{ whiteSpace: 'nowrap' }}>
+        <AbilityBadge value={value} /> <span aria-label={`Fixed: ${lock}`}>🔒</span>
+      </span>
+    );
+  }
+  if (!tickable) return <AbilityBadge value={value} />;
+  return (
+    <label
+      onClick={(e) => e.stopPropagation()}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: '0.35rem', color: 'var(--ink)', cursor: 'pointer', flex: 'none' }}
+    >
+      <input type="checkbox" checked={ticked} disabled={saving} onChange={(e) => onToggle(e.target.checked)} />
+      <AbilityBadge value={value} />
+    </label>
+  );
+}
+
 function TabButton({ active, onClick, children }) {
   return (
     <button
@@ -70,6 +92,10 @@ function PermissionsInner() {
   const [hideNone, setHideNone] = useState(true);
   const [openRow, setOpenRow] = useState(null);
   const [status, setStatus] = useState(null);
+  const [abilityTicks, setAbilityTicks] = useState({}); // role_name -> Set of 'table:action'
+  const [tickable, setTickable] = useState(new Set()); // tables whose abilities are ticks (migration 329)
+  const [locks, setLocks] = useState({}); // 'table:action' -> reason it can't be ticked
+  const [saving, setSaving] = useState(null);
 
   async function load() {
     const { data: r } = await supabase.from('roles').select('*').order('role_name');
@@ -99,6 +125,54 @@ function PermissionsInner() {
     if (polErr || tblErr) setRulesError((polErr || tblErr).message);
     setPolicies(pol || []);
     setTables(tbl || []);
+    await loadTicks();
+  }
+
+  async function loadTicks() {
+    const [{ data: ra }, { data: rat }, { data: rl }] = await Promise.all([
+      supabase.from('role_abilities').select('role_name, table_name, action'),
+      supabase.from('role_ability_tables').select('table_name'),
+      supabase.from('role_ability_locks').select('table_name, action, reason'),
+    ]);
+    const tickMap = {};
+    (ra || []).forEach((row) => {
+      (tickMap[row.role_name] = tickMap[row.role_name] || new Set()).add(`${row.table_name}:${row.action}`);
+    });
+    setAbilityTicks(tickMap);
+    setTickable(new Set((rat || []).map((row) => row.table_name)));
+    const lockMap = {};
+    (rl || []).forEach((row) => { lockMap[`${row.table_name}:${row.action}`] = row.reason; });
+    setLocks(lockMap);
+  }
+
+  // Tick or untick one ability. The database checks it's an admin, that the
+  // cell isn't locked and that admin isn't locking itself out; first we show
+  // who would gain or lose it and ask.
+  async function toggleAbility(table, label, action, on) {
+    const key = `${table}:${action}`;
+    setSaving(key);
+    const { data: people, error: previewError } = await supabase.rpc('role_ability_preview', {
+      p_role: selectedRole, p_table: table, p_action: action,
+    });
+    if (previewError) { setStatus(`Error: ${previewError.message}`); setSaving(null); return; }
+    const verb = on ? 'gain' : 'lose';
+    const names = (people || []).map((p) => `  • ${p.name || p.email}`).join('\n');
+    const message = `${on ? 'Give' : 'Take away from'} ${roleTitle(selectedRole)}: ${ACTION_TITLES[action]} ${label}?\n\n`
+      + ((people || []).length
+        ? `These people would ${verb} it:\n${names}`
+        : `Nobody's access changes now (no one holds only this role for it), but anyone given ${roleTitle(selectedRole)} later would ${verb} it.`);
+    if (!window.confirm(message)) { setSaving(null); return; }
+    const { error } = await supabase.rpc('set_role_ability', {
+      p_role: selectedRole, p_table: table, p_action: action, p_on: on,
+    });
+    setSaving(null);
+    if (error) { setStatus(`Error: ${error.message}`); return; }
+    setStatus(null);
+    setAbilityTicks((prev) => {
+      const set = new Set(prev[selectedRole] || []);
+      if (on) set.add(key); else set.delete(key);
+      return { ...prev, [selectedRole]: set };
+    });
   }
 
   useEffect(() => { load(); }, []);
@@ -141,6 +215,7 @@ function PermissionsInner() {
 
   const selectedGrants = grants[selectedRole] || new Set();
   const selectedFieldGrants = fieldGrants[selectedRole] || new Set();
+  const selectedTicks = abilityTicks[selectedRole] || new Set();
 
   // What the chosen role can do, grouped by area for display.
   const abilityAreas = useMemo(() => {
@@ -150,6 +225,7 @@ function PermissionsInner() {
       role: selectedRole,
       resources: selectedGrants,
       editableFieldCount: selectedFieldGrants.size,
+      ticks: selectedTicks,
       policies,
       tables: usable,
     });
@@ -162,7 +238,7 @@ function PermissionsInner() {
       area,
       rows: areas[area].sort((x, y) => x.label.localeCompare(y.label)),
     }));
-  }, [selectedRole, policies, tables, selectedGrants, selectedFieldGrants]);
+  }, [selectedRole, policies, tables, selectedGrants, selectedFieldGrants, selectedTicks]);
 
   if (!isAdmin) return <p>Only admin can manage permissions.</p>;
 
@@ -276,10 +352,14 @@ function PermissionsInner() {
               <span><AbilityBadge value="yes" /> any record</span>
               <span><AbilityBadge value="some" /> only records tied to them (their classes, events they logged…)</span>
               <span><AbilityBadge value="no" /> not at all</span>
+              <span><input type="checkbox" checked readOnly style={{ verticalAlign: 'middle' }} /> tick to change it</span>
+              <span>🔒 fixed: the principal&apos;s decision, or open to everyone</span>
             </div>
             <div style={{ color: 'var(--ink-soft)' }}>
               Worked out from the database&apos;s own rules for someone holding only this role, so it changes as soon
-              as a page is ticked above or a rule changes. Click a row to see which rules allow it. Some actions
+              as a page is ticked above or a rule changes. Click a row to see which rules allow it. Records with tick
+              boxes can be changed here: you are shown who gains or loses the ability before it saves, and every change
+              is kept in Change History. The rest become tickable area by area. Some actions
               (approving fee prices, admissions decisions, planned absences, …) go through checked steps of their own
               rather than direct editing, so they show as View only here even for the people who can do them; and some
               changes are refused by further checks on save (a locked fee price, a negative event released to parents
@@ -287,7 +367,7 @@ function PermissionsInner() {
             </div>
             <label style={{ flexDirection: 'row', alignItems: 'center', gap: '0.4rem', marginTop: '0.6rem', color: 'var(--ink)' }}>
               <input type="checkbox" checked={hideNone} onChange={(e) => setHideNone(e.target.checked)} />
-              Hide records this role can&apos;t see or change
+              Hide records this role can&apos;t see or change (tickable ones always show)
             </label>
           </div>
 
@@ -295,7 +375,8 @@ function PermissionsInner() {
           {!policies && !rulesError && <p>Reading the database rules…</p>}
 
           {abilityAreas.map(({ area, rows }) => {
-            const shown = hideNone ? rows.filter((r) => ACTIONS.some((a) => r[a] !== 'no')) : rows;
+            // Tickable records always show, so an ability can be given to a role that has none.
+            const shown = hideNone ? rows.filter((r) => tickable.has(r.table) || ACTIONS.some((a) => r[a] !== 'no')) : rows;
             if (shown.length === 0) return null;
             return (
               <div className="card" key={area}>
@@ -315,7 +396,18 @@ function PermissionsInner() {
                         return [
                           <tr key={key} onClick={() => setOpenRow(open ? null : key)} style={{ cursor: 'pointer' }}>
                             <td>{r.label}</td>
-                            {ACTIONS.map((a) => <td key={a}><AbilityBadge value={r[a]} /></td>)}
+                            {ACTIONS.map((a) => (
+                              <td key={a}>
+                                <AbilityCell
+                                  value={r[a]}
+                                  lock={locks[`${r.table}:${a}`]}
+                                  tickable={tickable.has(r.table)}
+                                  ticked={selectedTicks.has(`${r.table}:${a}`)}
+                                  saving={saving === `${r.table}:${a}`}
+                                  onToggle={(on) => toggleAbility(r.table, r.label, a, on)}
+                                />
+                              </td>
+                            ))}
                           </tr>,
                           open && (
                             <tr key={`${key}:rules`}>
