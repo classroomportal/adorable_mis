@@ -202,7 +202,7 @@ Leaders use Formwork to see what is happening across classes and the school, and
 **Daily**
 
 - **Missed Lessons** and **Registers Not Done**: who is out of lessons, and which registers haven't been taken.
-- **Behaviour Review**: release or decline events with pictures before parents see them.
+- **Behaviour Review**: check Stage 5 events, with or without pictures, before parents see them: send, decline, or return to the teacher.
 - **Inbox**: automatic behaviour alerts (a −5 event or a week at −8) arrive here and by email.
 
 **Weekly**
@@ -233,7 +233,7 @@ The office keeps student and parent records right and is first to hear about mis
 
 1. Keep Formwork open: the missed-lesson pop-up appears for you as well as the attendance officer (see Mentors and pastoral staff).
 2. Check **Register Alerts** and resolve each once the teacher has been contacted.
-3. Release serious (−5) behaviour events without pictures to parents at **Behaviour Review**, after checking the text names no other student.
+3. The principal's PA only: release serious (−5) behaviour events without pictures to parents at **Behaviour Review**, after checking the text names no other student.
 4. Enter absences you know about in advance (illness, appointments, holidays the principal has agreed, exclusions) at **Planned Absences**, so teachers find the code already in their registers.
 
 *When a family's details change*
@@ -1004,7 +1004,7 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 5. Positive events can have one picture. Negative events can't.
 6. Press **Log event**.
 
-**If your Stage 5 comes back.** The reviewer can return a Stage 5 that doesn't look serious enough. You get a message in your inbox with their reason, and the note shows on the event. Press **Edit** on the event: choose the right category if it isn't a Stage 5 (the detention is cancelled to match), or keep Stage 5 and improve the explanation, which sends it back for review.
+**If your Stage 5 comes back.** The reviewer can return a Stage 5 that doesn't look serious enough. You get a message in your inbox with their reason, and the note shows on the event. Its points stop counting straight away, and its detention is cancelled if it hasn't happened yet. Press **Edit** on the event: choose the right category if it isn't a Stage 5 (its points then count), or keep Stage 5 and improve the explanation, which brings back the −5 and its detention and sends it back for review. Every return is counted against the teacher who logged the event, and SMT can see the count.
 
 ![Logging a serious event](manual-images/50-log.jpg)
 
@@ -1020,10 +1020,10 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 - Positive events are always visible to parents.
 - Negative events are hidden until reviewed. −1 to −4 events without a picture never go to parents.
-- −5 events without a picture: the school office or an admin checks the text and sends it.
+- −5 events without a picture: the principal's PA or SMT (or an admin) checks the text and sends it.
 - Events with a picture: SMT or an admin sends the text with the picture, the text alone, or declines.
 
-The reviewer ticks the confirmation that the text follows protocol, names no other student and is in good English, then presses **Send text** (or **Don't send yet**). An explanation that names a linked student is refused, with the word to reword. If an event isn't really a Stage 5, press "Not Stage 5: return to teacher", say why, and press "Return to" the teacher. They get your note in their inbox and see it on the event. The event moves to "Returned to the teacher": if they change the category it leaves the page, and if they keep Stage 5 and edit the explanation it comes back to "Waiting for review". Keep the note factual, e.g. "This is Disruption in class, −2."
+The reviewer ticks the confirmation that the text follows protocol, names no other student and is in good English, then presses **Send text** (or **Don't send yet**). An explanation that names a linked student is refused, with the word to reword. If an event isn't really a Stage 5, press "Not Stage 5: return to teacher", say why, and press "Return to" the teacher. They get your note in their inbox and see it on the event. Its points stop counting at once and its detention is cancelled if it hasn't happened yet (the student is told). The event moves to "Returned to the teacher", where it can't be sent: if they change the category it leaves the page, and if they keep Stage 5 and edit the explanation it comes back to "Waiting for review". Keep the note factual, e.g. "This is Disruption in class, −2." SMT see "Stage 5s returned, by teacher" lower down the page: how many each teacher has had returned, to see who needs more training.
 
 ![Behaviour Review](manual-images/53-review.jpg)
 

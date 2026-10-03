@@ -121,7 +121,7 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
         )}
         {becomingSerious && (
           <div className="bl-serious">
-            <strong>Is this really a Stage 5?</strong> It gives a detention, is reviewed by the school office and is sent to parents.
+            <strong>Is this really a Stage 5?</strong> It gives a detention, and is reviewed and then sent to parents.
             <GuidanceText text={seriousGuidance} />
           </div>
         )}
@@ -171,8 +171,8 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
       {/* Sent back from Behaviour Review (migration 335); any edit clears it. */}
       {event.return_note && (
         <span className="bl-returned">
-          <strong>Returned by the reviewer:</strong> {event.return_note} Change the category if it isn&apos;t a
-          Stage 5, or edit the explanation to send it back for review.
+          <strong>Returned by the reviewer:</strong> {event.return_note} Its points don&apos;t count until you
+          change it. Choose the right category if it isn&apos;t a Stage 5, or edit the explanation to send it back for review.
         </span>
       )}
       {event.photo_id && <BehaviourPhoto photoId={event.photo_id} showStatus />}

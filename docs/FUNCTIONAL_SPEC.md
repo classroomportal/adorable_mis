@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 3 October 2026 (database migrations up to 335). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 3 October 2026 (database migrations up to 337). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -319,7 +319,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 **Release to parents (/behaviour/review)**
 
 - **FR-6.8** Positive events are always visible to parents. Negative events are hidden until reviewed. \[DB\]
-- **FR-6.9** Events with a picture: SMT or admin send the text with the picture, the text alone, or decline. −5 events without a picture: the school office or admin release the text. −1 to −4 events without a picture never go to parents. SMT get an inbox notice for each picture to check. \[DB\]
+- **FR-6.9** Events with a picture: SMT or admin send the text with the picture, the text alone, or decline. −5 events without a picture: the school office, SMT or admin release the text (SMT since migration 336; in practice the principal's PA and SMT, the only reviewers the principal wants). −1 to −4 events without a picture never go to parents. SMT get an inbox notice for each picture to check. \[DB\]
 
 **Alerts**
 
@@ -369,7 +369,8 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.24** When a serious category (−5 or worse) is picked on Log behaviour, a box asks "Is this really a Stage 5?" and shows the school's guidance on what is and isn't one. The guidance is one text, edited at /admin/lookups (Detentions and serious events → Stage 5 guidance) by anyone with that page. Its list covers violence of any kind, bullying, theft, cheating, leaving bounds, abuse of staff, deliberate damage, a phone outside Sunday after lunch and serious laptop misuse. It excludes lateness, uniform, low-level disruption and repeated minor behaviour, which reaches a detention through the weekly total. \[DB / Page\]
 - **FR-6.25** A serious event can't be saved until the member of staff ticks "I confirm this is a single serious incident … not low-level or repeated minor behaviour". The same box and tick appear when an existing event is edited up to Stage 5. The tick is a prompt on the page only and is not stored. \[Page\]
 - **FR-6.26** Each behaviour category can have a short description, edited at /admin/lookups and shown when the category is picked (when logging, and when changing an event's category). Stage 5, Bullying and Academic dishonesty were given one; the rest are for the school to write. \[DB / Page\]
-- **FR-6.27** At Behaviour Review, the reviewer (the school office; SMT or admin for an event with a picture) can mark a serious event "Not Stage 5: return to teacher", with a note saying why. Only before parents can see it, and not on a withdrawn event. The teacher who logged it gets the note in their Formwork inbox, and it shows on the event wherever they see it. The event waits under "Returned to the teacher". If the teacher changes the category, it leaves the review and detentions are recalculated (FR-6.6). If they keep Stage 5 and edit the explanation, it goes back to "Waiting for review". Staff can't mark or clear a return any other way; any real edit clears it. Returns are logged in Change History (behaviour). The school office still can't open Behaviour Review (known issue 5), so today only SMT and admins can use this. \[DB\]
+- **FR-6.27** At Behaviour Review, the reviewer (the school office or SMT; only SMT or admin for an event with a picture) can mark a serious event "Not Stage 5: return to teacher", with a note saying why. Only before parents can see it, and not on a withdrawn event. The teacher who logged it gets the note in their Formwork inbox, and it shows on the event wherever they see it. The event waits under "Returned to the teacher", where it can't be sent to parents. From the moment it is returned it counts 0 points (its category is kept), and its detention is cancelled if it hasn't happened yet, with the week's total detention if the week no longer reaches it; the student is told (migration 337). Detentions already attended stay. If the teacher changes the category, the new category's points count, it leaves the review and detentions are recalculated (FR-6.6). If they keep Stage 5 and edit the explanation, the −5 and its detention come back and it goes to "Waiting for review" again. Staff can't mark or clear a return any other way; any real edit clears it. Returns are logged in Change History (behaviour). Only the principal's PA (through school\_office) and SMT review Stage 5 (the principal, 3 Oct 2026). \[DB\]
+- **FR-6.28** Every return is kept permanently against the teacher who logged the event (behaviour\_event\_returns: the teacher, the reviewer, the note and the original category and points), even after the event is changed or deleted. Only SMT and admins can read it. Behaviour Review shows them "Stage 5s returned, by teacher": the number for each teacher and the latest date, to see who needs more training (migration 337, the principal, 3 Oct 2026). Only the return step writes to it. \[DB\]
 
 ## 10. FR-7 Assessment, results and targets
 
@@ -699,6 +700,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 - **FR-16.2** "Who" is always taken from the signed-in account, with that person's name as it was at the time, never from anything the page sends. Changes made directly in the database are labelled "Principal (direct)". \[DB\]
 - **FR-16.3** Each entry keeps the whole record before and after the change. Saves that change nothing are not logged. \[DB\]
 - **FR-16.4** "Created by", "recorded by" and "saved by" columns (payments, charge batches, tuckshop sales, hand-out locks, admission records, places allowed) are stamped from the signed-in account, overwriting whatever the page sent. \[DB\]
+- **FR-16.5** Stage 5 events returned to the teacher are also kept in their own record (FR-6.28): teacher, reviewer, time, note, and the category and points before the return. Only the return step can add to it, and the app can't change or delete it. SMT and admins read it as a count per teacher on Behaviour Review; the event's own changes are in Change History (behaviour). \[DB\]
 
 **What can be seen, where, and by whom**
 
@@ -846,7 +848,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 2 | Certificates | Levels now come from Lookups (Bronze 100, Silver 200, Gold 500), which fixed the old 200-point mismatch. Totals may still read only the first 1,000 events | Totals may be low for some students; needs checking | Open |
 | 3 | Subject settings | Assessment managers can open the page but only admins can save names, departments and target fallbacks | Saves by others change nothing, silently | Open |
 | 4 | Results | Decimal scores such as 89.5 can fall between whole-number grade bands | Saved with no grade | Open |
-| 5 | Behaviour | /behaviour/review page isn't granted to the school office, who release serious events without pictures | Office can't reach its review task | Open |
+| 5 | Behaviour | /behaviour/review page isn't granted to the school office, who release serious events without pictures | Office can't reach its review task. Decided 3 Oct 2026: only the principal's PA (who has the page) and SMT review Stage 5; migration 336 lets SMT release and return events without a picture | Decided: keep |
 | 6 | Behaviour | Any staff member can change an event's parent visibility with a direct request | Review can be bypassed | Fixed |
 | 7 | Behaviour | The weekly alert fires again on every further negative event that week | Repeat emails | Open |
 | 8 | Behaviour | Deleting an event that already booked a detention probably fails | SMT can't delete it | Open |

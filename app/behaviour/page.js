@@ -566,8 +566,8 @@ function BehaviourPageInner() {
         {isSerious && (
           <div className="bl-serious">
             <strong>Is this really a Stage 5?</strong>{' '}
-            A serious event ({seriousPoints} points or worse) gives a detention, is reviewed by the school
-            office and is sent to parents.
+            A serious event ({seriousPoints} points or worse) gives a detention, and is reviewed and
+            then sent to parents.
             <GuidanceText text={seriousGuidance} />
             <strong>If it is:</strong> explain what happened in your own words, following school protocol.
             Don&apos;t name any other student.
