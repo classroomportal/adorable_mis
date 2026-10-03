@@ -150,7 +150,7 @@ function FeeApprovalsInner() {
 
   return (
     <div>
-      <h1>Fee Approvals</h1>
+      <h1>2. Fee Approvals</h1>
       <p>
         Fees — admission forms, deposits and term fees — are <strong>set and approved by the principal and the
         college secretary together</strong>. A new price is proposed here and takes effect only once both have

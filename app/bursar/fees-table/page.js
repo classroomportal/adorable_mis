@@ -150,7 +150,7 @@ function FeesTableInner() {
     <div className="min-h-screen bg-[#FAF9F6] pb-24">
       <header className="bg-[#B23A2E] text-white px-5 pt-6 pb-5">
         <p className="text-sm text-white/70">Fees & Bills</p>
-        <h1 className="text-xl font-semibold mt-0.5">All students</h1>
+        <h1 className="text-xl font-semibold mt-0.5">6. All students</h1>
         <p className="text-sm text-white/80 mt-1">Fee position for every active student this term.</p>
       </header>
 

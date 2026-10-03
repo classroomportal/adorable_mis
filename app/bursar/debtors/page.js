@@ -129,7 +129,7 @@ function DebtorsInner() {
 
   return (
     <div>
-      <h1>Debtors List</h1>
+      <h1>7. Debtors List</h1>
 
       <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end' }}>
         <label>

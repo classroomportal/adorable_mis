@@ -138,7 +138,7 @@ function FeesDashboardInner() {
 
   return (
     <div>
-      <h1>Fees — SMT Dashboard</h1>
+      <h1>10. Fees — SMT Dashboard</h1>
 
       <div className="card">
         <label>

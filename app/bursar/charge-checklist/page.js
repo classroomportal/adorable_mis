@@ -39,9 +39,9 @@ function ChargeChecklistInner() {
       const byItem = {};
       (yp || []).forEach((r) => { (byItem[r.fee_item_id] ||= {})[r.year_group] = Number(r.amount); });
       setYearPrices(byItem);
-      const { data: items } = await supabase.from('fee_items').select('id, name, default_amount, price_locked').or('category.is.null,category.neq.Tuckshop').order('name');
+      const { data: items } = await supabase.from('fee_items').select('id, name, default_amount, price_locked, charge_term_ids').or('category.is.null,category.neq.Tuckshop').order('name');
       setFeeItems(items ?? []);
-      const { data: t } = await supabase.from('fee_terms').select('id, name, is_current').order('id', { ascending: false });
+      const { data: t } = await supabase.from('fee_terms').select('id, name, is_current, term_id').order('id', { ascending: false });
       setTerms(t ?? []);
       const current = (t ?? []).find((x) => x.is_current);
       if (current) setTermId(String(current.id));
@@ -172,7 +172,7 @@ function ChargeChecklistInner() {
 
   return (
     <div>
-      <h1>Charge Checklist</h1>
+      <h1>4. Charge Checklist</h1>
       <p style={{ color: '#666', fontSize: '0.9rem' }}>
         Pick one fee item and term, then tick students to charge. Anyone already charged for this
         item this term shows "Charged" and is skipped, so you can see at a glance who's left.
@@ -183,7 +183,9 @@ function ChargeChecklistInner() {
           Fee item
           <select value={feeItemId} onChange={(e) => setFeeItemId(e.target.value)}>
             <option value="">-- choose --</option>
-            {feeItems.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            {/* A fee charged only in some terms (migration 348) is offered only in those. */}
+            {feeItems.filter((f) => !(f.charge_term_ids || []).length || (f.charge_term_ids || []).includes(terms.find((t) => String(t.id) === String(termId))?.term_id))
+              .map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select>
         </label>
         <label>

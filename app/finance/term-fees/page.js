@@ -41,14 +41,15 @@ function TermFeesInner() {
 
   async function load() {
     const [it, yp, tp, pc] = await Promise.all([
-      supabase.from('fee_items').select('id, name, category, default_amount, price_locked').eq('price_locked', true).order('name'),
+      supabase.from('fee_items').select('id, name, category, default_amount, price_locked, charge_term_ids').eq('price_locked', true).order('name'),
       supabase.from('fee_item_year_prices').select('fee_item_id, year_group, amount'),
       supabase.from('fee_item_term_prices').select('fee_item_id, year_group, amount').eq('term_id', Number(termId)),
       supabase.from('fee_price_changes').select('fee_item_id').eq('kind', 'fee_item_term_prices').eq('term_id', Number(termId)).eq('status', 'pending'),
     ]);
     const err = it.error || yp.error || tp.error || pc.error;
     if (err) { setMsg({ error: true, text: errorText(err) }); return; }
-    setItems(it.data || []);
+    // A fee charged only in some terms (migration 348) is listed only in those.
+    setItems((it.data || []).filter((i) => !(i.charge_term_ids || []).length || i.charge_term_ids.includes(Number(termId))));
     const y = {}; (yp.data || []).forEach((r) => { (y[r.fee_item_id] ||= {})[r.year_group] = Number(r.amount); });
     const t = {}; (tp.data || []).forEach((r) => { (t[r.fee_item_id] ||= {})[r.year_group] = Number(r.amount); });
     const p = {}; (pc.data || []).forEach((r) => { p[r.fee_item_id] = true; });
@@ -169,7 +170,8 @@ function TermFeesInner() {
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem' }}>
         Shaded prices are set for {termName}; hover over a price to see where it comes from. Only fees locked to approved
-        prices are listed (tuition, activity, technology, medical and exam fees).
+        prices are listed (tuition, activity, technology, medical and exam fees), and only those charged in {termName}.
+        To add a fee, or choose which terms it is charged in, use <a href="/bursar/fee-items">Fees &amp; Bills → 1 Fees</a>.
       </p>
     </div>
   );

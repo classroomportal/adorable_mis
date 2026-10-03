@@ -84,7 +84,7 @@ function AuditInner() {
 
   return (
     <div>
-      <h1>Fees Audit</h1>
+      <h1>8. Fees Audit</h1>
       <p style={{ color: '#666', fontSize: '0.9rem' }}>Last 100 charge batches, most recent first.</p>
 
       {loading ? <p>Loading…</p> : (

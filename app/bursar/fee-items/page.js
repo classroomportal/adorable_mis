@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import AddFeeForm from '../../components/AddFeeForm';
 
 const YEARS = [7, 8, 9, 10, 11, 12];
 const naira = (v) => `₦${Number(v).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
@@ -13,12 +14,10 @@ function FeeItemsInner() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
 
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [defaultAmount, setDefaultAmount] = useState('');
-  const [isOptional, setIsOptional] = useState(false);
-  const [adding, setAdding] = useState(false);
   const [status, setStatus] = useState(null);
+  // Which terms each fee is charged in (migration 348); empty = every term.
+  const [terms, setTerms] = useState([]);
+  const [editingTerms, setEditingTerms] = useState(null); // { id, all, ids }
   // Prices change only when the principal and the college secretary have
   // both approved (migration 259). A new price is proposed here and approved
   // at /bursar/fee-approvals; the database refuses a direct change.
@@ -35,10 +34,12 @@ function FeeItemsInner() {
 
   async function load() {
     setLoading(true);
-    const [{ data }, { data: yp }] = await Promise.all([
-      supabase.from('fee_items').select('id, name, display_name, category, is_optional, default_amount, price_locked').order('name'),
+    const [{ data }, { data: yp }, { data: t }] = await Promise.all([
+      supabase.from('fee_items').select('id, name, display_name, category, is_optional, default_amount, price_locked, charge_term_ids').order('name'),
       supabase.from('fee_item_year_prices').select('fee_item_id, year_group, amount'),
+      supabase.from('terms').select('term_id, term_name, start_date').order('start_date'),
     ]);
+    setTerms(t ?? []);
     setItems(data ?? []);
     const byItem = {};
     (yp || []).forEach((r) => { (byItem[r.fee_item_id] ||= {})[r.year_group] = Number(r.amount); });
@@ -46,35 +47,22 @@ function FeeItemsInner() {
     setLoading(false);
   }
 
-  async function addItem(e) {
+  async function saveTerms(e) {
     e.preventDefault();
-    if (!name.trim()) return;
-    setAdding(true);
+    if (!editingTerms.all && editingTerms.ids.length === 0) { setStatus('Tick at least one term, or choose Every term.'); return; }
+    const { error } = await supabase.from('fee_items')
+      .update({ charge_term_ids: editingTerms.all ? null : editingTerms.ids })
+      .eq('id', editingTerms.id);
+    if (error) { setStatus(`Error: ${error.message}`); return; }
+    setEditingTerms(null);
     setStatus(null);
-    const { data: created, error } = await supabase.from('fee_items').insert({
-      name: name.trim(),
-      category: category.trim() || null,
-      is_optional: isOptional,
-    }).select('id').single();
-    if (error) {
-      setStatus(`Error: ${error.message}`);
-    } else {
-      if (defaultAmount) {
-        const { error: pErr } = await supabase.rpc('propose_fee_item_price', {
-          p_fee_item_id: created.id, p_amount: Number(defaultAmount), p_reason: 'New fee item',
-        });
-        setStatus(pErr
-          ? `Item added, but the price wasn't sent for approval: ${pErr.message}`
-          : 'Item added. Its price has been sent to the principal and the college secretary for approval.');
-      }
-      setName('');
-      setCategory('');
-      setDefaultAmount('');
-      setIsOptional(false);
-      setShowAdd(false);
-      await load();
-    }
-    setAdding(false);
+    await load();
+  }
+
+  function termsText(item) {
+    const ids = item.charge_term_ids || [];
+    if (ids.length === 0) return 'Every term';
+    return terms.filter((t) => ids.includes(t.term_id)).map((t) => t.term_name).join(', ');
   }
 
   function edit(id, field, value) {
@@ -140,11 +128,11 @@ function FeeItemsInner() {
 
   return (
     <div>
-      <h1>Fee Items</h1>
+      <p style={{ margin: 0 }}><a href="/">← Dashboard</a></p>
+      <h1>1. Fees</h1>
       <p style={{ color: '#666', fontSize: '0.9rem' }}>
-        These are the choices available on Charge Checklist and Add a Charge. Each has one price —
-        for students who need a different amount, use the Charge Checklist to type a different
-        amount for just them.
+        Step 1 of Fees &amp; Bills: the fees the school charges, which terms each is charged in and its price.
+        Then 2. Approve (the principal and the college secretary), 3. Discounts, 4. Charge, 5. Payments.
       </p>
       <p style={{ fontSize: '0.9rem' }}>
         <strong>Fees are set and approved by the principal and the college secretary together.</strong>{' '}
@@ -153,26 +141,16 @@ function FeeItemsInner() {
 
       <div className="card">
         <button type="button" onClick={() => setShowAdd((v) => !v)}>
-          {showAdd ? 'Cancel' : '+ Add a new fee item'}
+          {showAdd ? 'Cancel' : '+ Add a fee'}
         </button>
-        {showAdd && (
-          <form onSubmit={addItem} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: '0.6rem' }}>
-            <label>Name<br /><input value={name} onChange={(e) => setName(e.target.value)} required /></label>
-            <label>Category<br /><input value={category} onChange={(e) => setCategory(e.target.value)} style={{ width: '9rem' }} /></label>
-            <label>Price to propose (₦)<br /><input type="number" min="0" value={defaultAmount} onChange={(e) => setDefaultAmount(e.target.value)} style={{ width: '9rem' }} /></label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <input type="checkbox" checked={isOptional} onChange={(e) => setIsOptional(e.target.checked)} /> Optional
-            </label>
-            <button type="submit" disabled={adding}>{adding ? 'Adding…' : 'Add'}</button>
-          </form>
-        )}
+        {showAdd && <AddFeeForm onDone={(text) => { setShowAdd(false); setStatus(text); load(); }} />}
         {status && <p>{status}</p>}
       </div>
 
       {loading ? <p>Loading…</p> : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Name</th><th>Display name (shown to parents)</th><th>Category</th><th>Price</th><th>Optional</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Display name (shown to parents)</th><th>Category</th><th>Terms charged</th><th>Price</th><th>Optional</th><th></th></tr></thead>
             <tbody>
               {items.map((item) => {
                 const dirty = !!edits[item.id];
@@ -199,6 +177,26 @@ function FeeItemsInner() {
                         onChange={(e) => edit(item.id, 'category', e.target.value)}
                         style={{ width: '9rem' }}
                       />
+                    </td>
+                    <td style={{ fontSize: '0.85em' }}>
+                      {editingTerms?.id === item.id ? (
+                        <form onSubmit={saveTerms} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <label><input type="checkbox" checked={editingTerms.all} onChange={(e) => setEditingTerms({ ...editingTerms, all: e.target.checked })} /> Every term</label>
+                          {!editingTerms.all && terms.map((t) => (
+                            <label key={t.term_id}>
+                              <input type="checkbox" checked={editingTerms.ids.includes(t.term_id)}
+                                onChange={() => setEditingTerms({ ...editingTerms, ids: editingTerms.ids.includes(t.term_id) ? editingTerms.ids.filter((x) => x !== t.term_id) : [...editingTerms.ids, t.term_id] })} /> {t.term_name}
+                            </label>
+                          ))}
+                          <span><button type="submit">Save</button>{' '}<button type="button" className="secondary" onClick={() => setEditingTerms(null)}>Cancel</button></span>
+                        </form>
+                      ) : (
+                        <>
+                          {termsText(item)}{' '}
+                          <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
+                            onClick={() => setEditingTerms({ id: item.id, all: !(item.charge_term_ids || []).length, ids: item.charge_term_ids || [] })}>Change</button>
+                        </>
+                      )}
                     </td>
                     <td>
                       {item.price_locked ? (
