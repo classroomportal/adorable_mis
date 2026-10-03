@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 328). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 329). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -112,6 +112,7 @@ Only Formwork creates logins; nobody can create their own account, by email or b
 - **FR-1.10** Every server route except the parents' calendar feed (FR-1.11) checks the caller's sign-in and page access before doing anything, and the build fails if one doesn't. Backup is admin-only whatever the permissions page says. \[DB + build check\]
 - **FR-1.11** One route works without sign-in: the parents' calendar feed (/api/calendar-feed/…), because calendar apps can't sign in. Each parent's secret link is the check instead, and the build check lists this route as its only exception. It returns only the events parents see on their calendar page, and nothing once none of the parent's children is still at the school. Agreed by the principal, 30 Sept 2026 (migration 274). \[DB + build check\]
 - **FR-1.12** /admin/permissions shows each role three ways (migration 327, 2 Oct 2026). **Pages**: which pages it opens, ticked by section. **What they can do**: for each kind of record, whether the role can view, add, edit and delete it: Yes (any record), Own only (records tied to the person, such as their classes) or No, with the rule names behind each answer. It is worked out live from the database's own rules for someone holding only that role, so it changes as soon as a page is ticked or a rule changes. Actions done through checked steps (fee approvals, admissions decisions, planned absences) show as View only, and checks made on saving aren't shown. **Compare roles**: every page against every role. Only admins can change page access and the student Core Data field grants; the database rules themselves can't be changed from the app. \[Page; rules read from DB\]
+- **FR-1.13** Some abilities are tick boxes on "What they can do" (migration 329, 3 Oct 2026; stage 1 of docs/role-abilities-design.md): certificates and certificate levels, the seven sick-bay tables, the BMI reference table and grade boundaries. They start as each role's access before the change, except grade boundaries. Only admins can tick or untick. Before a change saves, the page names the people who would gain or lose it. Admin can't remove its own access to permissions, and every tick and untick is logged in Change History under access. Other areas become tickable stage by stage. Some cells have a padlock and can't be ticked by anyone, admin included; they change only by a database change the principal agrees: only the school office adds students; Grade History and Change History can't be edited, and who reads them is fixed; fee prices and price changes need the principal and the college secretary; certificate levels, the BMI table and grade boundaries are readable by everyone signed in. Parents never seeing homework marks or other students' names in behaviour events is not a staff tick at all. \[DB\]
 
 ## 5. FR-2 Students, parents and portals
 
@@ -382,7 +383,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 
 **Boundaries, subjects and targets**
 
-- **FR-7.8** Grade boundaries are set per subject and per year group (7–12). Any member of staff can edit boundaries, subject aliases and key-stage tags (school decision, 27 Sept 2026). Years 10 and 11 follow Cambridge IGCSE's June 2026 grade thresholds (migration 322, the principal, 2 Oct 2026) in 17 subjects, among them Maths, English, the sciences, Computing, Economics, the languages, Art, PE, Geography and History: time-zone variant 3, the Extended route, each threshold turned into a percentage of the route's total and rounded up. Below the lowest grade is U; Extended Maths and Further Maths stop at E. Years 7–9 keep 90/80/70…, Year 12 (WAEC) is unchanged, and saved results keep their grade. \[DB\]
+- **FR-7.8** Grade boundaries are set per subject and per year group (7–12). Only assessment managers can edit boundaries (the principal, 3 Oct 2026, migration 329; until then any member of staff could), as a tick admins can change (FR-1.13); everyone signed in can read them. Any member of staff can edit subject aliases and key-stage tags (school decision, 27 Sept 2026). Years 10 and 11 follow Cambridge IGCSE's June 2026 grade thresholds (migration 322, the principal, 2 Oct 2026) in 17 subjects, among them Maths, English, the sciences, Computing, Economics, the languages, Art, PE, Geography and History: time-zone variant 3, the Extended route, each threshold turned into a percentage of the route's total and rounded up. Below the lowest grade is U; Extended Maths and Further Maths stop at E. Years 7–9 keep 90/80/70…, Year 12 (WAEC) is unchanged, and saved results keep their grade. \[DB\]
 - **FR-7.9** One target grade per student per subject, on the IGCSE (A\*–U) or WAEC scale. Assessment managers and admins set and delete targets; assessment users set but can't delete. \[DB\]
 - **FR-7.10** A subject with no target of its own borrows one from a related subject (e.g. Further Maths from Maths). Portals show targets only for subjects the student takes. /target-grades/coverage lists students missing a target. \[DB / Page\]
 - **FR-7.11** Grades are compared with targets as above, on or below (green, amber, red). No comparison is made across IGCSE and WAEC. \[Page\]
@@ -583,7 +584,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /admin/class-lists | Print class rosters by year, subject or class | HR, school office, admin |
 | /admin/bell-times | Sessions and times for each weekday | Admin |
 | /admin/subject-settings | Subject display names, departments, key stages, aliases, target fallback | Assessment manager, admin |
-| /admin/grade-boundaries | Grade cut-offs per subject and year group | Assessment manager, admin (page); all staff (data) |
+| /admin/grade-boundaries | Grade cut-offs per subject and year group | Assessment manager, admin (page); assessment managers edit (data) |
 | /admin/email-replies | Reply-To for each kind of email | SMT, admin |
 | /admin/tile-order | Order of students' big tiles and of every row of the staff dashboard, school-wide | Admin (all signed-in users read it) |
 | /groups | Student groups: make, build from a rule, change, archive, message | SMT, pastoral, school office, admin (teachers look up only) |
@@ -696,7 +697,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
@@ -830,7 +831,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 23. Known issues and open decisions
 
-32 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; two of them (6 and 30) have since been fixed. The first five stop something working today.
+32 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; three of them (6, 30 and 32) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -865,7 +866,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 29 | Fees | Record a Payment, All Students (/bursar/fees-table) and Add Paid Top-Up are written with styling classes the app never loads | The pages work but show as plain, unstyled text and form fields; found while taking screenshots for the User Manual | Open |
 | 30 | Registers | Planned absences skip only days marked as a holiday on the calendar. Mid-term breaks are a single date there (24 Oct, 13 Feb, 22 May), so an absence spanning one filled in the break days too. Fixed for 2026/27 on 2 Oct 2026: every weekday of the three breaks (26–30 Oct, 15–19 Feb, 24–28 May) is now a holiday on the calendar; later years' breaks need the same | Extra absence marks on days the school was closed | Fixed |
 | 31 | Parents | Some families have two or more parent records with the same email (from separate imports). A parent login is tied to one record, so a child linked only to the other record doesn't appear in the portal. Found 2 Oct 2026 when a parent saw "No linked children"; the 7 logins affected then were fixed by hand (one Francis IYIOKU link left off until the office confirms his guardian). Nothing stops a new case | A parent sees some or none of their children | Open |
-| 32 | Students | Any admin login could still add a student. Migration 275 left the office's rule as the only way in, but that rule's role check lets every admin through. Found 2 Oct 2026 by the Permissions page's new "What they can do" view. Migration 328 makes the rule check the school\_office role alone; it is written and waiting to be run in the SQL editor | FR-2.18 not enforced: admin alone can add students | Fixing |
+| 32 | Students | Any admin login could still add a student. Migration 275 left the office's rule as the only way in, but that rule's role check lets every admin through. Found 2 Oct 2026 by the Permissions page's new "What they can do" view. Migration 328 makes the rule check the school\_office role alone; run in the SQL editor on 2 Oct 2026, and admin alone can no longer add a student | FR-2.18 not enforced: admin alone can add students | Fixed |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 

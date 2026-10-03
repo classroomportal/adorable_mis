@@ -878,7 +878,7 @@ Each class's average grade against the average target of the same students, sort
 
 ### Grade boundaries (/admin/grade-boundaries)
 
-Grade cut-offs are set per subject and per year group (7–12). Years 7–11 use IGCSE (A\*–U); Year 12 uses WAEC (A1–F9). Choose the subject and year, edit the minimum and maximum score for each grade, or **Remove** a band. Any member of staff can edit boundaries (the school's decision); changes are not logged.
+Grade cut-offs are set per subject and per year group (7–12). Years 7–11 use IGCSE (A\*–U); Year 12 uses WAEC (A1–F9). Choose the subject and year, edit the minimum and maximum score for each grade, or **Remove** a band. Only assessment managers can edit boundaries (the principal, 3 Oct 2026); everyone else can view them. Changes are not logged.
 
 ![Grade boundaries for one subject and year](manual-images/33-boundaries.jpg)
 
@@ -1477,9 +1477,13 @@ Choose a role from the list at the top. Beside it you see what the role is for, 
 - **What they can do**: for each kind of record (registers, behaviour events, results, payments and so on), whether the role can **View**, **Add**, **Edit** and **Delete** it. **Yes** means any record, **Own only** means only records tied to the person (their own classes, events they logged), and **No** means not at all. Click a row to see the names of the database rules that allow it. This is read from the database itself, so it is always current: tick a page and any access that depends on it changes straight away. Below the table, give the role Read or Edit on each student Core Data field.
 - **Compare roles**: every page against every role in one grid, to check at a glance who can open what. Click a role's name to open it on the Pages tab.
 
-Only the Pages ticks and the student field settings can be changed here. The rules behind "What they can do" are set in the database; a few actions (approving fee prices, admissions decisions, planned absences) go through their own checked steps, so they show as View only even for the people who can do them.
+**Changing what a role can do.** Some records have tick boxes beside View, Add, Edit and Delete: certificates, certificate levels, the sick-bay records, the BMI table and grade boundaries for now, with more areas to follow. Tick or untick a box and Formwork lists the people who would gain or lose that ability, by name, before it saves; press **OK** to go ahead. Every change is kept in Change History.
 
-![Permissions: what the Teacher role can do](manual-images/120-permissions.png)
+A padlock (🔒) means the cell can't be changed here by anyone, admin included. These are the principal's own decisions: only the school office adds students; Grade History and Change History can't be edited; fee prices need the principal and the college secretary. Some things everyone signed in can read also have a padlock. Hover over the padlock to see why.
+
+Records without tick boxes are still set in the database. A few actions (approving fee prices, admissions decisions, planned absences) go through their own checked steps, so they show as View only even for the people who can do them.
+
+![Permissions: an assessment manager's abilities, with tick boxes and padlocks](manual-images/120-permissions.png)
 
 ### Staff and roles (/staff/roles)
 
