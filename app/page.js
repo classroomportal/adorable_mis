@@ -121,12 +121,6 @@ function QuickLinks({ hasAccess, staffRoles, isAdmin }) {
       key: 'class_progress', href: '/classes/progress', label: 'Class Progress', icon: '📈', accent: 'school',
       sub: wholeSchool ? 'Every class against its targets' : "Your department's classes against their targets",
     },
-    // Budget (migration 338): the principal only while it is being built
-    // (the principal, 3 Oct 2026). Checked on the principal role itself,
-    // as can_view_budget() does, so being admin is not enough.
-    roles.includes('principal') && {
-      key: 'budget', href: '/finance/budget', label: 'Budget', icon: '💰', accent: 'family', sub: 'Fee income by fund',
-    },
   ].filter((l) => l && hasAccess(l.href)), order);
   return <TileRow tiles={tiles} className="quick-link-row" />;
 }
@@ -414,6 +408,19 @@ const TABS = [
       { href: '/bursar/admission-forms', label: 'Admission Payments', desc: "Admission form fees and deposits from applicants' families." },
       { href: '/smt/fees-dashboard', label: 'SMT Dashboard', desc: "Fee collection totals, and publishing fees to parents." },
     ].filter((it) => hasAccess(it.href)),
+  },
+  // Budget (migrations 338–339): a big tile, not a top-row button (the
+  // principal, 3 Oct 2026), with each part of the budget as a link. The
+  // principal only while it is being built, checked on the principal role
+  // itself as can_view_budget() does, so being admin is not enough.
+  {
+    key: 'budget', label: 'Budget', icon: '💰', accent: 'family',
+    description: 'Plan each term’s spending from the fees it brings in.',
+    items: ({ hasAccess, staffRoles }) => ((staffRoles || []).includes('principal') ? [
+      { href: '/finance/forecast', label: 'Term forecast', desc: "What each term's fees bring in, from the number of students in each year." },
+      { href: '/finance/budget', label: 'Fee income by fund', desc: 'Fees charged and collected, shared between the funds.' },
+      { href: '/finance/funds', label: 'Funds & cost centres', desc: 'Which fund each fee item pays into, and the cost centres.' },
+    ].filter((it) => hasAccess(it.href)) : []),
   },
   {
     key: 'tuckshop', label: 'Tuckshop', icon: '🍭', accent: 'family',

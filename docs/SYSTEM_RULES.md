@@ -675,6 +675,7 @@ How it behaves:
 - Only the principal or the college secretary can add, rename or archive cost centres, or choose which fund a fee item pays into. Once an item has been charged its fund can't change. Cost centres are never deleted: archiving records who did it and when.
 - **Fees are termly.** New fee items in the tuition, activity, technology, medical or exam categories are locked to their approved price, like the existing ones, so they can be given a different approved price for each year group (proposed at Fee Items, approved by the principal and the college secretary) and can't be charged at any other amount. The term forecast shows each year's price where they differ.
 - **Term forecast:** for each term the Budget page works out the amount available before anything is invoiced: for each fee and year group, the number of students paying × the approved price. The numbers start from the current number of active students in each year (compulsory fees: everyone; school fees: everyone on the full fee; optional activities: nobody), and the principal or the college secretary can change any of them for that term. Current discounts are taken off.
+- The budget has its own big **Budget** tile on the dashboard, with a link for each part: Term forecast, Fee income by fund, and Funds & cost centres.
 - While it is being built, only the principal can see the Budget page or its figures (being admin is not enough). Allocations, requisitions and spending come in later phases (design in `docs/finance-budget-design.md`).
 
 ---
