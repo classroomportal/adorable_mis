@@ -202,7 +202,8 @@ function ReviewInner() {
     const busy = busyKey === item.key;
     // Negative events are hidden until sent; positive ones are always shown.
     // A returned event can't be sent until the teacher has changed it.
-    const textWaiting = events.some((e) => e.type === 'negative' && !e.visible_to_parents && !e.returned_at);
+    const textHidden = events.some((e) => e.type === 'negative' && !e.visible_to_parents);
+    const textWaiting = textHidden && !events.some((e) => e.returned_at);
     const reviewedBefore = events.every((e) => e.protocol_reviewed_at);
     const photoWaiting = photo?.status === 'pending';
     const flagged = events.some((e) => mentionsAnotherStudent(e.description, e.student_id));
@@ -251,7 +252,7 @@ function ReviewInner() {
                 <div key={ev.event_id} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                   {events.length > 1 && <span style={{ fontSize: '0.85em', color: '#666' }}>{fullName(ev.students)}</span>}
                   {/* The picture is shown alongside, so the editor doesn't show it again. */}
-                  <EventCommentEditor event={{ ...ev, photo_id: null }} onSaved={(changes) => updateEvent(ev.event_id, changes)} />
+                  <EventCommentEditor event={{ ...ev, photo_id: null, return_note: null }} onSaved={(changes) => updateEvent(ev.event_id, changes)} />
                 </div>
               )) : (
                 <span style={{ whiteSpace: 'pre-wrap', color: first.description ? 'inherit' : '#666' }}>
@@ -261,7 +262,7 @@ function ReviewInner() {
                   </span>
                 </span>
               )}
-              {!textWaiting && (
+              {!textHidden && (
                 <span style={{ fontSize: '0.85em', color: '#666' }}>Parents can already see this text.</span>
               )}
               {flagged && (
@@ -309,6 +310,7 @@ function ReviewInner() {
               value={returning[item.key]}
               onChange={(e) => setReturning({ ...returning, [item.key]: e.target.value })}
               placeholder="e.g. Talking in class is Disruption in class (-2), not Stage 5."
+              style={{ font: 'inherit' }}
               autoFocus
             />
           </label>
