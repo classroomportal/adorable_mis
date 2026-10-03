@@ -162,6 +162,40 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | P2-7 | Old applicants' personal data is removed after a retention period; interests reach the OH coordinator | A retention rule is agreed and applied | Not started |
 | P2-8 | Record a Payment, All Students and Add Paid Top-Up are styled like the rest of Formwork (they use styling classes the app never loads) | The three bursar pages look like the other fee pages | Not started |
 
+## Finance budget planning (proposed)
+
+Formwork knows the school's income (fees charged and paid) but nothing about its spending. This proposal adds a yearly budget per area of the school, spending requests against it, and a budget-against-actual view, using the same two-person approval the principal and the college secretary already use for fee prices. It is a proposal: nothing here is built, scheduled or approved, and the principal decides its scope and priority.
+
+**What it builds on**
+
+- **Academic years** (2026/27 current, 2027/28 planning): each budget belongs to one year.
+- **Fee items, approved prices and Next Year's Numbers**: enough to forecast next year's fee income without retyping.
+- **Invoices and payments**: actual fee income, already recorded by the bursar.
+- **Roles**: bursar, principal and college\_secretary (two-person approval, migration 259), head\_of\_department for department budgets, smt.
+- **Change History**: every budget change logged like fees, with the bursar unable to edit the log.
+
+**Non-goals:** Formwork stays a planning and control tool, not the school's accounts. It does not replace accounting software, pay suppliers, run payroll or produce statutory accounts.
+
+| ID | Requirement | Done when | Status |
+| --- | --- | --- | --- |
+| B-1 | A budget for each academic year, split into areas (departments, boarding, restaurants, tuckshop, maintenance, transport, administration) and lines within each area | The bursar enters next year's budget in naira by area and line; it stays a draft until approved | Not started |
+| B-2 | The budget is approved by the principal and the college secretary together | Both approve before it applies; any change after approval is a revision that needs both again | Not started |
+| B-3 | Fee income is forecast from Formwork's own data | Expected income (approved prices × places per year group, less discounts) shows beside planned spending, with the surplus or deficit | Not started |
+| B-4 | Budget holders request spending against their area | A Head of Department or area holder raises a request, sees what is left on the line, and the bursar approves it; above a set amount the principal approves too | Not started |
+| B-5 | The bursar records actual spending | Each entry (date, supplier, amount, line, receipt) reduces what is left; it is logged in Change History | Not started |
+| B-6 | Budget against actual, by area, term and year | SMT and the principal see planned, committed, spent and left per line, with a CSV download | Not started |
+| B-7 | Each person sees only what they hold | A budget holder sees only their own area; the bursar, the principal, the college secretary and SMT see all | Not started |
+| B-8 | Money moves between lines only with approval | Moving money between lines or areas needs the same two approvals as the budget | Not started |
+
+**Open questions**
+
+- [ ] Which areas and lines should the budget use, and who holds each one?
+- [ ] Above what amount must the principal approve a spending request?
+- [ ] Does the school's financial year match the academic year (September to July)?
+- [ ] Are staff salaries in the budget? They are confidential, so they would need tighter access than the rest.
+- [ ] Which accounting software, if any, does the bursar use, and should Formwork export to it?
+- [ ] Where does it sit in the roadmap: after the year rollover, or alongside it?
+
 ## Roadmap
 
 Four phases in order, with two gates: nothing in admissions or rollover starts until the P0 fixes are done, and the switch runs only when the readiness check is clear. No dates are set yet except the switch, which follows the Term 1 2027/28 start date.
