@@ -121,6 +121,12 @@ function QuickLinks({ hasAccess, staffRoles, isAdmin }) {
       key: 'class_progress', href: '/classes/progress', label: 'Class Progress', icon: '📈', accent: 'school',
       sub: wholeSchool ? 'Every class against its targets' : "Your department's classes against their targets",
     },
+    // Budget (migration 338): the principal only while it is being built
+    // (the principal, 3 Oct 2026). Checked on the principal role itself,
+    // as can_view_budget() does, so being admin is not enough.
+    roles.includes('principal') && {
+      key: 'budget', href: '/finance/budget', label: 'Budget', icon: '💰', accent: 'family', sub: 'Fee income by fund',
+    },
   ].filter((l) => l && hasAccess(l.href)), order);
   return <TileRow tiles={tiles} className="quick-link-row" />;
 }

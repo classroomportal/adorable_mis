@@ -26,6 +26,7 @@ const AREAS = {
   groups: 'Student groups',
   students: 'Student records',
   reading_ages: 'Reading ages',
+  finance: 'Finance',
 };
 const ACTIONS = { INSERT: 'Added', UPDATE: 'Changed', DELETE: 'Removed' };
 const HIDDEN_FIELDS = new Set(['updated_at', 'updated_by', 'created_at', 'is_demo']);
