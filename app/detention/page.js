@@ -36,6 +36,7 @@ function DetentionInner() {
   const [error, setError] = useState(null);
   const [eventsError, setEventsError] = useState(null);
   const [openComments, setOpenComments] = useState({}); // event_id -> comment shown
+  const [openSections, setOpenSections] = useState({}); // status -> expanded (all collapsed to start)
   const rules = useBehaviourRules();
   const { staffRoles } = useAuth();
   // Only SMT can cancel a detention (migration 319); others keep Cancelled
@@ -160,13 +161,24 @@ function DetentionInner() {
               {(i === 0 || rows[i - 1].status !== r.status) && (
                 <tbody>
                   <tr>
-                    <td colSpan={4} style={{ background: 'var(--slate-100)', fontWeight: 600, paddingTop: '0.6rem' }}>
-                      {STATUS_LABELS[r.status] || r.status} ({rows.filter((x) => x.status === r.status).length})
+                    <td colSpan={4} style={{ background: 'var(--slate-100)', fontWeight: 600, padding: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenSections((o) => ({ ...o, [r.status]: !o[r.status] }))}
+                        aria-expanded={!!openSections[r.status]}
+                        style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: '0.6rem 0.75rem' }}
+                      >
+                        <span className="no-print" style={{ display: 'inline-block', width: '1.1rem' }}>{openSections[r.status] ? '▾' : '▸'}</span>
+                        {STATUS_LABELS[r.status] || r.status} ({rows.filter((x) => x.status === r.status).length})
+                      </button>
                     </td>
                   </tr>
                 </tbody>
               )}
-              <tbody style={{ borderTop: '2px solid var(--slate-200)' }}>
+              <tbody
+                className={openSections[r.status] ? undefined : 'collapsed-on-screen'}
+                style={{ borderTop: '2px solid var(--slate-200)' }}
+              >
                 <tr>
                   <td>
                     <strong>{r.student?.first_name} {r.student?.last_name}</strong>

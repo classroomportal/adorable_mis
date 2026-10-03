@@ -415,9 +415,12 @@ a.dashboard-tile { color: white; text-decoration: none; }
 .certificate-print { display: none; }
 .timetable-print { display: none; }
 .print-only { display: none; }
+/* A collapsed table section: hidden on screen, printed in full. */
+tbody.collapsed-on-screen { display: none; }
 @media print {
   .no-print { display: none !important; }
   .print-only { display: inline !important; }
+  tbody.collapsed-on-screen { display: table-row-group !important; }
   .certificate-print { display: block !important; }
   .timetable-print { display: block !important; }
   nav, .navbar, header { display: none !important; }
