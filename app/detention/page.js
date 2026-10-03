@@ -11,6 +11,9 @@ import { useAuth } from '../../lib/AuthContext';
 
 const STATUS_OPTIONS = ['scheduled', 'attended', 'missed', 'cancelled'];
 const STATUS_LABELS = { scheduled: 'Scheduled', attended: 'Attended', missed: 'Missed', cancelled: 'Cancelled' };
+// The list is shown in sections by status, still to be held first.
+const STATUS_ORDER = ['scheduled', 'missed', 'attended', 'cancelled'];
+const statusRank = (s) => { const i = STATUS_ORDER.indexOf(s); return i === -1 ? STATUS_ORDER.length : i; };
 
 // All week arithmetic is done on UTC-midnight dates built from the school's
 // own calendar day (schoolToday). Mixing local-midnight Dates with
@@ -103,7 +106,8 @@ function DetentionInner() {
     }
 
     const list = Object.values(grouped).sort((a, b) =>
-      (a.student?.last_name || '').localeCompare(b.student?.last_name || '')
+      statusRank(a.status) - statusRank(b.status)
+      || (a.student?.last_name || '').localeCompare(b.student?.last_name || '')
     );
     setRows(list);
     setLoading(false);
@@ -134,14 +138,35 @@ function DetentionInner() {
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2>{rows.length} student{rows.length === 1 ? '' : 's'} for detention</h2>
+          <div>
+            <h2 style={{ marginBottom: '0.2rem' }}>{rows.length} student{rows.length === 1 ? '' : 's'} for detention</h2>
+            {rows.length > 0 && (
+              <div style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+                {STATUS_ORDER
+                  .map((s) => [s, rows.filter((r) => r.status === s).length])
+                  .filter(([, n]) => n > 0)
+                  .map(([s, n]) => `${n} ${STATUS_LABELS[s].toLowerCase()}`)
+                  .join(' · ')}
+              </div>
+            )}
+          </div>
           <button className="no-print" onClick={() => window.print()}>Print list</button>
         </div>
         {loading ? <p>Loading...</p> : rows.length === 0 ? <p>Nobody has reached the threshold this week.</p> : (
           <div className="table-scroll"><table>
             <thead><tr><th>Student / event</th><th>Year</th><th>Form</th><th>Status</th></tr></thead>
-            {rows.map((r) => (
-              <tbody key={r.student_id} style={{ borderTop: '2px solid var(--slate-200)' }}>
+            {rows.map((r, i) => (
+              <Fragment key={r.student_id}>
+              {(i === 0 || rows[i - 1].status !== r.status) && (
+                <tbody>
+                  <tr>
+                    <td colSpan={4} style={{ background: 'var(--slate-100)', fontWeight: 600, paddingTop: '0.6rem' }}>
+                      {STATUS_LABELS[r.status] || r.status} ({rows.filter((x) => x.status === r.status).length})
+                    </td>
+                  </tr>
+                </tbody>
+              )}
+              <tbody style={{ borderTop: '2px solid var(--slate-200)' }}>
                 <tr>
                   <td>
                     <strong>{r.student?.first_name} {r.student?.last_name}</strong>
@@ -208,6 +233,7 @@ function DetentionInner() {
                   <tr><td colSpan={4} style={{ paddingLeft: '1.5rem', fontSize: '0.9rem', color: 'var(--ink-soft)' }}>No events found for this week.</td></tr>
                 )}
               </tbody>
+              </Fragment>
             ))}
           </table></div>
         )}
