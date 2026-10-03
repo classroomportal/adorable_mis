@@ -315,7 +315,7 @@ function DetentionRules() {
       </form>
       <p style={{ fontSize: '0.85em', color: '#666' }}>
         A single event at the detention level also sends the SMT email alert. Detentions already given are not changed.
-        A serious event must have a written explanation, and the school office (SMT when it has a picture) reviews it at
+        A serious event must have a written explanation, and the principal's PA or SMT (only SMT when it has a picture) review it at
         Behaviour Review before parents can see it.
       </p>
 

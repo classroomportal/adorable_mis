@@ -10,7 +10,8 @@ import EventCommentEditor from '../../components/EventCommentEditor';
 
 // What gets checked here before parents see it (migrations 238-239):
 //   - any event with a picture (migration 209): SMT and admin;
-//   - a -5 event without a picture: the school office and admin. Its text
+//   - a -5 event without a picture: the school office, SMT and admin
+//     (migration 336: the principal's PA and SMT review Stage 5). Its text
 //     can't be saved without an explanation, and stays hidden until someone
 //     here confirms it follows school protocol, names no other student, and
 //     reads clearly.
@@ -27,6 +28,9 @@ import EventCommentEditor from '../../components/EventCommentEditor';
 // who logged it, with a note (migration 335, return_behaviour_event_to_teacher()).
 // It waits under "Returned to the teacher" until they change it: a new
 // category takes it out of the review, a new explanation brings it back here.
+// While returned it counts 0 points and its future detention is cancelled,
+// and each return is tallied against the teacher (migration 337,
+// behaviour_event_returns, SMT and admin only).
 const EVENT_FIELDS = 'event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, visible_to_parents, protocol_reviewed_at, returned_at, return_note, returner:staff!behaviour_events_returned_by_fkey(first_name, last_name), students!behaviour_events_student_id_fkey(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)';
 
 const PICTURE_STATUS = { pending: 'Waiting', approved: 'Sent', rejected: 'Not sent' };
@@ -44,13 +48,14 @@ function ReviewInner() {
   const roles = staffRoles || [];
   const isAdmin = profile?.role === 'admin'; // as is_admin() decides it
   const reviewsPictures = isAdmin || roles.includes('smt');
-  const reviewsText = isAdmin || roles.includes('school_office');
+  const reviewsText = isAdmin || roles.includes('school_office') || roles.includes('smt');
   const canReview = reviewsPictures || reviewsText;
 
   const [students, setStudents] = useState([]);
   // Cards: { key, events: [...], photo: { photo_id, status, image_jpeg_base64, uploader } | null }
   const [items, setItems] = useState([]);
   const [history, setHistory] = useState([]);
+  const [returnTally, setReturnTally] = useState([]); // [{ name, count, last }]
   const [loading, setLoading] = useState(true);
   const [confirmed, setConfirmed] = useState({}); // item key -> boolean
   const [returning, setReturning] = useState({}); // item key -> note being written, when open
@@ -61,7 +66,7 @@ function ReviewInner() {
   async function load() {
     setLoading(true);
     const rules = await loadBehaviourRules();
-    const [{ data: s }, { data: photos }, { data: serious }, { data: h }] = await Promise.all([
+    const [{ data: s }, { data: photos }, { data: serious }, { data: h }, { data: rets }] = await Promise.all([
       supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active'),
       supabase
         .from('behaviour_photos')
@@ -72,7 +77,8 @@ function ReviewInner() {
         .from('behaviour_events')
         .select(`${EVENT_FIELDS}, photo:behaviour_photos(photo_id, status, image_jpeg_base64)`)
         .eq('type', 'negative')
-        .lte('points', rules.serious_event_points)
+        // A returned event counts 0 points until the teacher regrades it.
+        .or(`points.lte.${rules.serious_event_points},returned_at.not.is.null`)
         .eq('visible_to_parents', false)
         .is('voided_at', null)
         .order('event_date', { ascending: false }),
@@ -82,6 +88,11 @@ function ReviewInner() {
         .not('protocol_reviewed_at', 'is', null)
         .order('protocol_reviewed_at', { ascending: false })
         .limit(30),
+      // Read only by SMT and admins; others get no rows.
+      supabase
+        .from('behaviour_event_returns')
+        .select('returned_at, teacher:staff!behaviour_event_returns_teacher_staff_id_fkey(first_name, last_name)')
+        .order('returned_at', { ascending: false }),
     ]);
 
     const pendingPhotos = photos || [];
@@ -110,6 +121,14 @@ function ReviewInner() {
     // A card with a picture is SMT's; one without is the office's.
     setItems([...photoItems, ...seriousItems].filter((it) => (it.photo ? reviewsPictures : reviewsText)));
     setHistory(h || []);
+    const tally = new Map();
+    (rets || []).forEach((r) => {
+      const name = fullName(r.teacher);
+      const t = tally.get(name) || { name, count: 0, last: r.returned_at };
+      t.count += 1;
+      tally.set(name, t);
+    });
+    setReturnTally([...tally.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)));
     setLoading(false);
   }
 
@@ -170,9 +189,10 @@ function ReviewInner() {
       return;
     }
     setReturning((r) => { const { [item.key]: _, ...rest } = r; return rest; });
+    const cancelled = data?.detentions_cancelled ? ' Its detention has been cancelled.' : '';
     setStatus(data?.notified
-      ? `Returned to ${fullName(ev.staff)}. They have a message in their inbox.`
-      : `Returned, but ${fullName(ev.staff)} has no Formwork login to send the message to. Please tell them.`);
+      ? `Returned to ${fullName(ev.staff)}: its points no longer count.${cancelled} They have a message in their inbox.`
+      : `Returned: its points no longer count.${cancelled} ${fullName(ev.staff)} has no Formwork login to send the message to, so please tell them.`);
     load();
   }
 
@@ -181,15 +201,15 @@ function ReviewInner() {
     const first = events[0];
     const busy = busyKey === item.key;
     // Negative events are hidden until sent; positive ones are always shown.
-    const textWaiting = events.some((e) => e.type === 'negative' && !e.visible_to_parents);
+    // A returned event can't be sent until the teacher has changed it.
+    const textWaiting = events.some((e) => e.type === 'negative' && !e.visible_to_parents && !e.returned_at);
     const reviewedBefore = events.every((e) => e.protocol_reviewed_at);
     const photoWaiting = photo?.status === 'pending';
     const flagged = events.some((e) => mentionsAnotherStudent(e.description, e.student_id));
     const names = events.map((e) => fullName(e.students));
     const loggers = [...new Set(events.map((e) => fullName(e.staff)))];
     // One serious event, not yet with parents or already returned.
-    const canReturn = events.length === 1 && textWaiting && !first.returned_at
-      && first.points <= seriousPoints;
+    const canReturn = events.length === 1 && textWaiting && first.points <= seriousPoints;
 
     const updateEvent = (eventId, changes) => {
       setItems((list) => list.map((it) => (it.key === item.key
@@ -219,6 +239,7 @@ function ReviewInner() {
         {first?.returned_at && (
           <span className="bl-returned">
             <strong>Returned to the teacher</strong> by {fullName(first.returner)} on {formatUKDate(first.returned_at.slice(0, 10))}: {first.return_note}
+            {' '}It counts 0 points until they change it.
           </span>
         )}
 
@@ -372,8 +393,7 @@ function ReviewInner() {
     <div>
       <h1>Behaviour Review</h1>
       <p style={{ color: '#555' }}>
-        {reviewsPictures && reviewsText && `SMT review every event with a picture; the school office reviews ${seriousPoints} events without one. `}
-        {reviewsPictures && !reviewsText && 'Events with a picture are reviewed by SMT. '}
+        {reviewsPictures && `You review ${seriousPoints} events and every event with a picture. `}
         {reviewsText && !reviewsPictures && `You review ${seriousPoints} events without a picture. SMT review any event with a picture. `}
         Check each event before parents see it. The text and the picture are
         separate. You can send the text with the picture, send the text without
@@ -410,6 +430,21 @@ function ReviewInner() {
                 {seriousPoints} events reviewed but not yet sent to parents. Correct the text, then send it.
               </p>
               {keptHidden.map(renderItem)}
+            </>
+          )}
+
+          {returnTally.length > 0 && (
+            <>
+              <h2 style={{ marginTop: '1.5rem' }}>Stage 5s returned, by teacher</h2>
+              <p style={{ color: '#555', marginTop: 0 }}>Every return is counted here, even after the teacher has changed the event.</p>
+              <div className="table-scroll"><table>
+                <thead><tr><th>Teacher</th><th>Returned</th><th>Most recent</th></tr></thead>
+                <tbody>
+                  {returnTally.map((t) => (
+                    <tr key={t.name}><td>{t.name}</td><td>{t.count}</td><td>{formatUKDate(t.last.slice(0, 10))}</td></tr>
+                  ))}
+                </tbody>
+              </table></div>
             </>
           )}
 
