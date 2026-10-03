@@ -87,6 +87,8 @@ export default function BudgetTermForecast({ canEdit, centres }) {
   const sum = (list) => list.reduce((s, r) => s + Number(r.amount || 0), 0);
   const itemTotal = (it) => sum(Object.values(it.cells));
   const total = sum(rows);
+  // Every year group pays the same unless year-group prices are approved.
+  const samePrice = (it) => new Set(Object.values(it.cells).map((c) => Number(c.price))).size <= 1;
 
   return (
     <div className="card">
@@ -130,7 +132,9 @@ export default function BudgetTermForecast({ canEdit, centres }) {
                 {byFund[f].map((it) => (
                   <tr key={it.key}>
                     <td>{it.name}</td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{it.discount ? '' : money(it.price)}</td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {it.discount ? '' : samePrice(it) ? money(it.price) : <em>By year</em>}
+                    </td>
                     {YEARS.map((y) => {
                       const c = it.cells[y];
                       if (!c) return <td key={y} />;
@@ -152,6 +156,7 @@ export default function BudgetTermForecast({ canEdit, centres }) {
                           ) : (
                             <span>{c.students}</span>
                           )}
+                          {!it.discount && !samePrice(it) && <div style={{ fontSize: '0.75rem', color: '#555' }}>@ {money(c.price)}</div>}
                           <div style={{ fontSize: '0.75rem', color: Number(c.amount) < 0 ? '#a3232c' : '#555' }}>{money(c.amount)}</div>
                         </td>
                       );
@@ -167,7 +172,10 @@ export default function BudgetTermForecast({ canEdit, centres }) {
       <p style={{ color: '#666', fontSize: '0.85rem' }}>
         Shaded boxes were entered for this term; the rest follow the headcount, so they change as students join or leave.
         Discounts are every current open-ended discount, taken off the highest school fee. Once the term is invoiced,
-        the charged and collected figures below replace this forecast.
+        the charged and collected figures below replace this forecast. Fees are termly. Every year group pays the same
+        price unless prices by year group have been approved: propose them at{' '}
+        <a href="/bursar/fee-items">Fee Items</a> (Prices by year); they apply once you and the college secretary have
+        both approved them, and the grid then shows each year&apos;s price.
       </p>
     </div>
   );
