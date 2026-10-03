@@ -6,7 +6,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 function DiscountsInner() {

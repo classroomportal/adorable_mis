@@ -13,7 +13,7 @@ const STATUS_STYLES = {
 };
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 function toCsv(rows) {

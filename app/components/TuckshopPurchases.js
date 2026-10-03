@@ -11,7 +11,7 @@ import { formatUKDate } from '../../lib/formatDate';
 const PAGE = 15;
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 export default function TuckshopPurchases({ studentId }) {

@@ -19,7 +19,7 @@ import { canHandOut } from '../../../lib/tuckshopHandout';
 // the order itself keeps what the student asked for.
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 function longDate(iso) {

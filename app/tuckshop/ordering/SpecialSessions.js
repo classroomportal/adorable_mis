@@ -12,7 +12,7 @@ import { loadSpecialSessions, longDate, momentLabel } from '../../../lib/tucksho
 // Tuckshop, bursar and admin staff can edit; RLS backs that up.
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 function lagosToday() {

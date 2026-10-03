@@ -77,7 +77,7 @@ function ParentTuckshopInner() {
           <p>
             Balance:{' '}
             <span style={{ fontWeight: 700, color: (tuckshopBalance ?? 0) < 0 ? '#a3232c' : '#1a7a3d' }}>
-              {tuckshopBalance === null ? '…' : `₦${Number(tuckshopBalance).toLocaleString()}`}
+              {tuckshopBalance === null ? '…' : `₦${Number(tuckshopBalance).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`}
             </span>
           </p>
           <TuckshopPurchases studentId={selectedId} />

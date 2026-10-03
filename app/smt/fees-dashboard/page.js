@@ -7,7 +7,7 @@ import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 function FeesDashboardInner() {

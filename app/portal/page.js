@@ -371,7 +371,7 @@ function PortalInner() {
             { key: 'tuckshop', el: (
               <DashboardTile
                 key="tuckshop" label="Tuckshop" icon="🛒" href="/portal/tuckshop"
-                sub={tuckshopBalance === null ? 'Balance & orders' : `₦${Number(tuckshopBalance).toLocaleString()} balance`}
+                sub={tuckshopBalance === null ? 'Balance & orders' : `₦${Number(tuckshopBalance).toLocaleString('en-GB', { maximumFractionDigits: 0 })} balance`}
               />
             ) },
             { key: 'messages', el: <DashboardTile key="messages" label="Messages" icon="📬" sub="View inbox" href="/inbox" /> },
