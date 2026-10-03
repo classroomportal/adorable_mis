@@ -168,14 +168,14 @@ function CalendarInner() {
         <h2>Terms</h2>
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Term</th><th>Start</th><th>End</th>{canEdit && <th>Actions</th>}</tr></thead>
+            <thead><tr><th>Term</th><th>Start</th><th>End</th>{editingTermId && <th>Actions</th>}</tr></thead>
             <tbody>
               {shownTerms.map((t) => (
                 editingTermId === t.term_id ? (
                   <tr key={t.term_id}>
                     <td><input value={termDraft.term_name} onChange={(ev) => setTermDraft({ ...termDraft, term_name: ev.target.value })} /></td>
-                    <td><input type="date" value={termDraft.start_date} onChange={(ev) => setTermDraft({ ...termDraft, start_date: ev.target.value })} /></td>
-                    <td><input type="date" value={termDraft.end_date} onChange={(ev) => setTermDraft({ ...termDraft, end_date: ev.target.value })} /></td>
+                    <td><input type="date" value={termDraft.start_date} onChange={(ev) => setTermDraft({ ...termDraft, start_date: ev.target.value })} />{termDraft.start_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(termDraft.start_date)}</span>}</td>
+                    <td><input type="date" value={termDraft.end_date} onChange={(ev) => setTermDraft({ ...termDraft, end_date: ev.target.value })} />{termDraft.end_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(termDraft.end_date)}</span>}</td>
                     <td>
                       <button onClick={saveTerm}>Save</button>{' '}
                       <button className="secondary" onClick={() => setEditingTermId(null)}>Cancel</button>
@@ -183,10 +183,16 @@ function CalendarInner() {
                   </tr>
                 ) : (
                   <tr key={t.term_id}>
-                    <td>{t.term_name}</td><td>{t.start_date}</td><td>{t.end_date}</td>
-                    {canEdit && (
-                      <td><button className="secondary" onClick={() => { setEditingTermId(t.term_id); setTermDraft({ ...t }); }}>Edit</button></td>
-                    )}
+                    {/* Edit sits in the name cell so it's visible on a phone without scrolling the table sideways. */}
+                    <td>
+                      {t.term_name}
+                      {canEdit && (
+                        <>{' '}<button className="secondary" style={{ marginLeft: '0.5rem', padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => { setEditingTermId(t.term_id); setTermDraft({ ...t }); }}>Edit</button></>
+                      )}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatUKDate(t.start_date)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatUKDate(t.end_date)}</td>
+                    {editingTermId && <td />}
                   </tr>
                 )
               ))}
@@ -200,9 +206,11 @@ function CalendarInner() {
             </label>
             <label>Start
               <input type="date" value={newTerm.start_date} onChange={(e) => setNewTerm({ ...newTerm, start_date: e.target.value })} />
+              {newTerm.start_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(newTerm.start_date)}</span>}
             </label>
             <label>End
               <input type="date" value={newTerm.end_date} onChange={(e) => setNewTerm({ ...newTerm, end_date: e.target.value })} />
+              {newTerm.end_date && <span style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginTop: '0.2rem' }}>{formatUKDate(newTerm.end_date)}</span>}
             </label>
             <button type="submit">Add term</button>
           </form>
