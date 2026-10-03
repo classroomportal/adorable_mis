@@ -162,6 +162,45 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | P2-7 | Old applicants' personal data is removed after a retention period; interests reach the OH coordinator | A retention rule is agreed and applied | Not started |
 | P2-8 | Record a Payment, All Students and Add Paid Top-Up are styled like the rest of Formwork (they use styling classes the app never loads) | The three bursar pages look like the other fee pages | Not started |
 
+## Finance: budgets and requisitions (designed, not built)
+
+The principal asked on 2 Oct 2026 for fee income to be shared out in advance across cost centres, and for staff spending to go through signed and approved requisitions. The full design is in docs/finance-budget-design.md (pull request 364, not yet merged); nothing is built. It is a budget and spending-control system, not accounting software: no general ledger, bank reconciliation or statutory accounts.
+
+- **Budget:** fee income is shared out in advance across cost centres (Staffing, Power, Food, Maintenance and so on). Each cost centre shows allocated, committed, spent and remaining.
+- **Requisitions:** any member of staff raises one; the principal signs it; the college secretary costs and approves it, which commits the money; the goods are received; the bursar pays.
+
+**Decided (the principal, 2 Oct 2026)**
+
+- Tuition goes into a general fund, shared out in advance. Direct charges (swimming, sports, exam entry, ICT, medical) are ring-fenced: what is collected for a purpose is spent on it.
+- A part-payment is shared across the invoice's funds pro rata, in proportion to what each is still owed.
+- Each fund's unspent balance is carried forward to the next year.
+- No refund process. A rare exception goes through as a requisition against that fund.
+- Uniform is out of scope (bought from the tuck shop). Tuck shop money is the students' own and stays outside the budget.
+
+**Where it starts from:** only tuck shop has been invoiced so far; there is no exam-entry fee item yet; nothing exists for budgets, cost centres, requisitions or suppliers. Budgets and budget changes reuse the two-person approval already used for fee prices (the principal and the college secretary).
+
+| ID | Phase | Done when | Status |
+| --- | --- | --- | --- |
+| F-1 | Cost centres and income | Every fee item points at a cost centre; each payment is split pro rata across its invoice's funds when recorded (existing payments backfilled); a budget page shows charged and collected by fund | Not started |
+| F-2 | Budgets | Allocations per cost centre (optionally by term) and every change to them need the principal and the college secretary; moving money between centres goes the same way; remaining balances show | Not started |
+| F-3 | Requisitions to approval | Staff raise requisitions; the principal signs; the college secretary costs and approves, committing the money, refused if it would overspend; nobody approves their own; each step emails the next person | Not started |
+| F-4 | Supply and payment | Goods received item by item; the bursar pays, never more than the approved total; quotes, invoices and delivery notes attached; payroll and utility bills recorded directly on centres marked for it | Not started |
+| F-5 | Year end and exams | Balances carried forward at the year switch; an exam-entry fee item and a check of charged against entered; reports for the auditors | Not started |
+
+**Still to decide** (the design's proposed answer, which will be built unless the principal says otherwise)
+
+- [ ] Over budget: refused, unless the principal overrides with a written reason, logged and shown on the budget page.
+- [ ] Department budgets (e.g. Science within teaching materials): not at first; cost centres can be split later.
+- [ ] Petty cash for small purchases: none at first; everything goes through the full chain.
+- [ ] Who records payment: the bursar.
+- [ ] Allocations as fixed amounts or percentages of collections: fixed amounts, shown as percentages of expected income.
+- [ ] Ring-fenced spending against charged or collected: charged, so term 1 spending is possible before the term 2 collection, with a warning when commitments exceed collections.
+- [ ] Damages & Surcharge: Maintenance.
+- [ ] Discounts: reduce tuition (the general fund) only.
+- [ ] Sports: one Sports fund for Sports Academy and Taekwondo, Swimming separate.
+- [ ] Who receives goods: the requester, or a receiver the college secretary names.
+- [ ] Where it sits in the roadmap: after the year rollover, or alongside it.
+
 ## Roadmap
 
 Four phases in order, with two gates: nothing in admissions or rollover starts until the P0 fixes are done, and the switch runs only when the readiness check is clear. No dates are set yet except the switch, which follows the Term 1 2027/28 start date.
