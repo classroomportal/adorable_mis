@@ -669,6 +669,12 @@ How it behaves:
 - "Recorded by" on payments and "created by" on charge batches are always the signed-in person.
 - Fee changes are logged in Change History, which the bursar **cannot** read (deliberate: part of its purpose is checking fee changes).
 
+**Budget: where fee money belongs (being built; the principal only for now)**
+- Every fee item pays into one **fund** (cost centre). Tuition and discounts go to the **general fund**; damages to Maintenance; swimming, sports, medical, ICT and exam entries are **ring-fenced** for what they were charged for; tuck shop money is the students' own and stays outside the budget.
+- When a payment is recorded the system shares it between the funds on that invoice **in proportion to what each is still owed** (the principal's rule). A tuck shop top-up made from a payment is paid first. Anything paid beyond what the invoice owes is held as credit in the general fund and moves to the right fund when the charge is added. The share is stored, so later charges don't move money collected earlier.
+- Only the principal or the college secretary can add, rename or archive cost centres, or choose which fund a fee item pays into. Once an item has been charged its fund can't change. Cost centres are never deleted: archiving records who did it and when.
+- While it is being built, only the principal can see the Budget page or its figures (being admin is not enough). Allocations, requisitions and spending come in later phases (design in `docs/finance-budget-design.md`).
+
 ---
 
 ## 13. Audit logs, backups and safety

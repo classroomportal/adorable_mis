@@ -1,8 +1,10 @@
 # Budgets and requisitions: design
 
-Status, 3 October 2026: **design only, nothing built.** The principal's
-decisions (2 and 3 October) are under "Decided"; the proposed answers under
-"Still to decide" are what will be built unless the principal says otherwise.
+Status, 3 October 2026: **phase 1 built** (migration 338, `/finance/budget`):
+cost centres, each fee item's fund, the pro-rata payment split (backfilled for
+every existing payment) and fee income by fund. **Only the principal can see
+it while it is being built.** Phases 2 to 5 are not built. All the principal's
+decisions are under "Decided" and "Agreed".
 
 What was asked for (the principal, 2 October 2026): "We collect fees in term 2
 and can allocate them in advance to different cost centres including staffing,
@@ -37,6 +39,9 @@ not keep a general ledger, reconcile the bank or produce statutory accounts.
 | Overspending (3 Oct) | **Money must be released from contingency.** A cost centre can't go over; the extra has to be released to it from a Contingency fund first. |
 | Damages & Surcharge (3 Oct) | **Go to Maintenance.** |
 | Discounts (3 Oct) | **Reduce tuition only** (the general fund), never a ring-fenced charge. |
+| Nothing is deleted (3 Oct) | **"Deleting is not allowed: cancelling the effect, and recording who did it."** Requisitions, budget changes, releases, suppliers and cost centres are cancelled, rejected or archived, never deleted, and who did it and when are stamped by the database. |
+| While it is built (3 Oct) | **Only the principal sees the Budget** ("I want to be the only person seeing the Budget tile while we develop"). |
+| Proposals (3 Oct) | **All the proposed answers at the end were agreed.** |
 
 ## What exists today (checked against the live database, 2 Oct 2026)
 
@@ -74,11 +79,16 @@ fee item points at one. A cost centre is one of four kinds:
 | `ring_fenced` | Swimming, Sports (Sports Academy, Taekwondo), Medical, ICT, Exam entries | Its own fee items | Yes, up to its own income plus carry-forward |
 | `held` (exactly one: "Tuck shop, held for students") | | Tuck shop items | No. Outside the budget, shown only for completeness. |
 
-- `fee_items.cost_centre_id` is added and must be filled for every item. Changing
-  it changes where future money goes, so it is logged in `change_history`
-  ('fees'), and only `/admin/lookups` holders can change it.
-- Cost centres are listed and added at `/admin/lookups`. They are archived,
-  never deleted, once anything points at them.
+- `fee_items.cost_centre_id` is filled for every item (seeded by category in
+  migration 338). It is set only through `set_fee_item_cost_centre()` by the
+  principal or the college secretary, and **can't change once the item has
+  been charged** (add a new fee item instead): otherwise the item's charges
+  and the money already collected for it would be counted in different
+  funds. A new item has no fund until one is chosen; its money shows as "not
+  assigned" and moves to the fund when one is chosen. Logged under 'fees'.
+- Cost centres are listed, added, renamed and archived on the Budget page, by
+  the principal or the college secretary only (where money goes is theirs to
+  decide, so not Lookups). Never deleted; archiving stamps who and when.
 - **Damages & Surcharge** income goes to Maintenance, on top of its allocation.
 - **Discounts reduce tuition only.** A discount line, whatever it is attached
   to, counts against the general fund, never against a ring-fenced charge.
@@ -316,7 +326,7 @@ can't sign, approve or pay.
 5. **Year end and exams**: carry-forward at the year switch, exam-entry
    reconciliation, reports for the auditors.
 
-## Still to decide (proposed answer in bold)
+## Agreed (the principal accepted these proposals, 3 Oct 2026)
 
 1. **Who approves a release from contingency?** **The principal alone**, so a
    requisition isn't held up waiting for two signatures; the college
