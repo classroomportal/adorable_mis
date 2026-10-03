@@ -119,7 +119,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 1. Open **My Timetable** on the dashboard and click the lesson. The register opens with the class, period and date already chosen.
 2. Everyone starts as present. Change the code for anyone absent or late, adding minutes late. Press **Save** within the first 15 minutes; after that the lesson appears on Registers Not Done, and at 15-minute checks it becomes a register alert for HR and the office.
 3. If a student who was in an earlier lesson is missing, mark them N (no reason yet). The office gets a pop-up straight away and goes to find them. Don't wait to report it some other way.
-4. To praise or sanction during the lesson, press **Log behaviour for this class** on the register, pick the student(s) and the category, and save. A −5 event needs a written explanation of what happened, naming no other student.
+4. To praise or sanction during the lesson, press **Log behaviour for this class** on the register, pick the student(s) and the category, and save. A −5 event needs a written explanation of what happened, naming no other student, and a tick to confirm it really is a single serious incident; read the Stage 5 guidance shown first (chapter 7).
 5. For Year 10 and 11 classes, the **Homework** panel on the register shows what is due. Use **Set homework** there to set the next piece while you're with the class.
 
 **Every day**
@@ -1006,7 +1006,7 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 **If your Stage 5 comes back.** The reviewer can return a Stage 5 that doesn't look serious enough. You get a message in your inbox with their reason, and the note shows on the event. Its points stop counting straight away, and its detention is cancelled if it hasn't happened yet. Press **Edit** on the event: choose the right category if it isn't a Stage 5 (its points then count), or keep Stage 5 and improve the explanation, which brings back the −5 and its detention and sends it back for review. Every return is counted against the teacher who logged the event, and SMT can see the count.
 
-![Logging a serious event](manual-images/50-log.jpg)
+![Logging a serious event, with the Stage 5 guidance and the confirmation tick](manual-images/50-log.jpg)
 
 **Behaviour Log** (/behaviour/log) searches and filters past events by student, type, category and dates; **View / edit** opens an event. **Behaviour alerts** (/behaviour/alerts) lists events of −3 or worse in the last 7 days; houseparents see their own house.
 
@@ -1025,7 +1025,7 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 The reviewer ticks the confirmation that the text follows protocol, names no other student and is in good English, then presses **Send text** (or **Don't send yet**). An explanation that names a linked student is refused, with the word to reword. If an event isn't really a Stage 5, press "Not Stage 5: return to teacher", say why, and press "Return to" the teacher. They get your note in their inbox and see it on the event. Its points stop counting at once and its detention is cancelled if it hasn't happened yet (the student is told). The event moves to "Returned to the teacher", where it can't be sent: if they change the category it leaves the page, and if they keep Stage 5 and edit the explanation it comes back to "Waiting for review". Keep the note factual, e.g. "This is Disruption in class, −2." SMT see "Stage 5s returned, by teacher" lower down the page: how many each teacher has had returned, to see who needs more training.
 
-![Behaviour Review](manual-images/53-review.jpg)
+![Behaviour Review, with an event being returned to the teacher and the count by teacher](manual-images/53-review.jpg)
 
 ### Alerts and detentions
 
@@ -1496,7 +1496,7 @@ Add staff (name, code, email: a login is created automatically from the email) a
 
 ### Lookups (/admin/lookups)
 
-The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories and their points (admins only), the behaviour thresholds and detention room and time, certificate levels, academic years, and admission fee proposals. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
+The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, and admission fee proposals. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
 
 ![Lookups](manual-images/122-lookups.jpg)
 
@@ -1601,7 +1601,7 @@ A full database backup runs every night. Admins can also run one before anything
 | --- | --- |
 | Registers | Any staff can mark any register; no future dates; flagged 15 minutes after the start |
 | Missed lessons | Seen in school, then absent without a reason (N or O) in a later or earlier lesson |
-| Behaviour | Points come from the category; −5 needs an explanation; negative events reach parents only after review |
+| Behaviour | Points come from the category; −5 needs an explanation and a confirmation tick; negative events reach parents only after review by the principal's PA or SMT; a Stage 5 returned to the teacher counts 0 until they change it |
 | Detentions | Single event of −5, or a week (Sat–Fri) totalling −10; Friday in CG4 after lesson 7 |
 | Behaviour alert | −5, or a week at −8: email to cs@, SMT and sro@ |
 | Results | Percentages 0–100; grade from the subject's boundaries for the year; one score per set |
