@@ -70,6 +70,14 @@ function BehaviourCategories() {
     else { setStatus(null); load(); }
   }
 
+  // A short note on when to use the category, shown when it is picked on
+  // Log behaviour (migration 335).
+  async function updateDescription(category_id, description) {
+    const { error } = await supabase.from('behaviour_categories').update({ description: description.trim() || null }).eq('category_id', category_id);
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus(null); load(); }
+  }
+
   async function rename(category_id, name) {
     if (!name.trim()) return;
     const { error } = await supabase.from('behaviour_categories').update({ name: name.trim() }).eq('category_id', category_id);
@@ -97,11 +105,22 @@ function BehaviourCategories() {
   function CategoryRow({ c }) {
     const [name, setName] = useState(c.name);
     const [points, setPoints] = useState(c.default_points ?? '');
+    const [description, setDescription] = useState(c.description ?? '');
     return (
       <tr>
         <td><input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name !== c.name && rename(c.category_id, name)} /></td>
         <td style={{ width: '7rem' }}>
           <input type="number" value={points} onChange={(e) => setPoints(e.target.value)} onBlur={() => Number(points || 0) !== (c.default_points ?? 0) && updatePoints(c.category_id, points)} />
+        </td>
+        <td>
+          <textarea
+            rows={description.length > 80 ? 3 : 1}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={() => description.trim() !== (c.description ?? '') && updateDescription(c.category_id, description)}
+            placeholder="When to use it"
+            style={{ width: '100%', minWidth: '14rem', font: 'inherit' }}
+          />
         </td>
         <td><button className="secondary" onClick={() => remove(c.category_id)} style={{ fontSize: '0.8rem' }}>Remove</button></td>
       </tr>
@@ -116,18 +135,19 @@ function BehaviourCategories() {
       <h2>Behaviour categories</h2>
       <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
         Default points pre-fill the points field on the Behaviour Events page when a category is picked — staff can still override the number per event.
+        The description is shown to staff when they pick the category, to help them choose the right one.
       </p>
       {status && <p style={{ color: 'red' }}>{status}</p>}
 
       <h3 style={{ marginTop: '0.5rem' }}>Positive</h3>
       <div className="table-scroll"><table>
-        <thead><tr><th>Category</th><th>Default points</th><th></th></tr></thead>
+        <thead><tr><th>Category</th><th>Default points</th><th>Description</th><th></th></tr></thead>
         <tbody>{positive.map((c) => <CategoryRow key={c.category_id} c={c} />)}</tbody>
       </table></div>
 
       <h3 style={{ marginTop: '1rem' }}>Negative</h3>
       <div className="table-scroll"><table>
-        <thead><tr><th>Category</th><th>Default points</th><th></th></tr></thead>
+        <thead><tr><th>Category</th><th>Default points</th><th>Description</th><th></th></tr></thead>
         <tbody>{negative.map((c) => <CategoryRow key={c.category_id} c={c} />)}</tbody>
       </table></div>
 
@@ -248,6 +268,7 @@ function DetentionRules() {
       weekly: r?.detention_weekly_total_points ?? -10,
       alert: r?.alert_weekly_total_points ?? -8,
       serious: r?.serious_event_points ?? -5,
+      guidance: r?.serious_event_guidance ?? '',
       room: ss?.detention_room ?? '',
       time: ss?.detention_time ?? '',
     });
@@ -265,6 +286,12 @@ function DetentionRules() {
     });
     if (error) setStatus(`Error: ${error.message}`);
     else { setStatus('Saved. New behaviour events follow these rules from now on.'); load(); }
+  }
+
+  async function saveGuidance() {
+    const { error } = await supabase.rpc('set_serious_event_guidance', { p_text: d.guidance });
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus('Stage 5 guidance saved.'); load(); }
   }
 
   if (!d) return null;
@@ -291,6 +318,14 @@ function DetentionRules() {
         A serious event must have a written explanation, and the school office (SMT when it has a picture) reviews it at
         Behaviour Review before parents can see it.
       </p>
+
+      <h3 style={{ marginTop: '0.5rem' }}>Stage 5 guidance</h3>
+      <p style={{ marginTop: 0, fontSize: '0.85em', color: '#666' }}>
+        Shown to staff when they choose a serious category on Log behaviour, before they tick to confirm.
+        Start a line with • or - to make a list; a line ending with a colon is shown as a heading.
+      </p>
+      <textarea rows={14} {...field('guidance')} style={{ width: '100%', font: 'inherit' }} />
+      <button type="button" onClick={saveGuidance} style={{ width: 'fit-content', marginTop: '0.5rem' }}>Save guidance</button>
     </div>
   );
 }

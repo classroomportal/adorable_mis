@@ -1852,3 +1852,19 @@ nav button.help-button span {
 .help-note { color: var(--ink-soft); }
 .help-foot { margin: 0; padding: 0.5rem 1rem; border-top: 1px solid var(--slate-200); font-size: 0.72rem; color: var(--ink-soft); }
 @media print { .help-panel, .help-backdrop, .help-button { display: none !important; } }
+/* Stage 5 guidance and confirmation (migration 335). */
+.bl-guidance { margin: 0.4rem 0; }
+.bl-guidance p { margin: 0.3rem 0; }
+.bl-guidance ul { margin: 0.15rem 0 0.4rem; padding-left: 1.2rem; }
+.bl-guidance li { margin: 0.1rem 0; }
+.bl-serious .bl-guidance-heading { display: block; margin-top: 0.35rem; color: var(--ink); }
+.bl-confirm {
+  display: flex; flex-direction: row; align-items: flex-start; gap: 0.5rem;
+  font-size: 0.9rem; color: var(--ink);
+}
+.bl-confirm input { flex: 0 0 auto; width: auto; margin-top: 0.2rem; }
+.bl-returned {
+  border: 1px solid #b45309; background: #fff8eb; border-radius: 8px;
+  padding: 0.4rem 0.6rem; font-size: 0.85rem; color: var(--ink);
+}
+.bl-returned strong { color: #b45309; }

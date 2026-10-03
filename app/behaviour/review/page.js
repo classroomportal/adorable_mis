@@ -23,7 +23,11 @@ import EventCommentEditor from '../../components/EventCommentEditor';
 // on an event whose text they can see. A -5 event kept back stays under
 // "Kept hidden" until it's sent, rather than dropping into history with no way
 // back to it. review_behaviour_for_parents() enforces all of this.
-const EVENT_FIELDS = 'event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, visible_to_parents, protocol_reviewed_at, students!behaviour_events_student_id_fkey(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)';
+// A serious event that isn't really a Stage 5 can be returned to the teacher
+// who logged it, with a note (migration 335, return_behaviour_event_to_teacher()).
+// It waits under "Returned to the teacher" until they change it: a new
+// category takes it out of the review, a new explanation brings it back here.
+const EVENT_FIELDS = 'event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, visible_to_parents, protocol_reviewed_at, returned_at, return_note, returner:staff!behaviour_events_returned_by_fkey(first_name, last_name), students!behaviour_events_student_id_fkey(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)';
 
 const PICTURE_STATUS = { pending: 'Waiting', approved: 'Sent', rejected: 'Not sent' };
 
@@ -49,6 +53,7 @@ function ReviewInner() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmed, setConfirmed] = useState({}); // item key -> boolean
+  const [returning, setReturning] = useState({}); // item key -> note being written, when open
   const [busyKey, setBusyKey] = useState(null);
   const [status, setStatus] = useState(null);
   const { serious_event_points: seriousPoints } = useBehaviourRules();
@@ -149,6 +154,28 @@ function ReviewInner() {
     }
   }
 
+  async function returnToTeacher(item) {
+    const ev = item.events[0];
+    const note = (returning[item.key] || '').trim();
+    if (!note) {
+      setStatus('Say why it is being returned, so the teacher knows what to change.');
+      return;
+    }
+    setBusyKey(item.key);
+    setStatus(null);
+    const { data, error } = await supabase.rpc('return_behaviour_event_to_teacher', { p_event_id: ev.event_id, p_note: note });
+    setBusyKey(null);
+    if (error) {
+      setStatus(`Error: ${error.message}`);
+      return;
+    }
+    setReturning((r) => { const { [item.key]: _, ...rest } = r; return rest; });
+    setStatus(data?.notified
+      ? `Returned to ${fullName(ev.staff)}. They have a message in their inbox.`
+      : `Returned, but ${fullName(ev.staff)} has no Formwork login to send the message to. Please tell them.`);
+    load();
+  }
+
   function renderItem(item) {
     const { events, photo } = item;
     const first = events[0];
@@ -160,6 +187,9 @@ function ReviewInner() {
     const flagged = events.some((e) => mentionsAnotherStudent(e.description, e.student_id));
     const names = events.map((e) => fullName(e.students));
     const loggers = [...new Set(events.map((e) => fullName(e.staff)))];
+    // One serious event, not yet with parents or already returned.
+    const canReturn = events.length === 1 && textWaiting && !first.returned_at
+      && first.points <= seriousPoints;
 
     const updateEvent = (eventId, changes) => {
       setItems((list) => list.map((it) => (it.key === item.key
@@ -184,6 +214,11 @@ function ReviewInner() {
           <span style={{ fontSize: '0.85em', color: '#666', marginTop: '-0.5rem' }}>
             Logged by {loggers.join(', ')}
             {photo?.uploader && ` · picture added by ${fullName(photo.uploader)}`}
+          </span>
+        )}
+        {first?.returned_at && (
+          <span className="bl-returned">
+            <strong>Returned to the teacher</strong> by {fullName(first.returner)} on {formatUKDate(first.returned_at.slice(0, 10))}: {first.return_note}
           </span>
         )}
 
@@ -245,7 +280,39 @@ function ReviewInner() {
           </label>
         )}
 
+        {canReturn && returning[item.key] !== undefined && (
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            Why isn&apos;t this a Stage 5? The teacher gets this in their inbox.
+            <textarea
+              rows={2}
+              value={returning[item.key]}
+              onChange={(e) => setReturning({ ...returning, [item.key]: e.target.value })}
+              placeholder="e.g. Talking in class is Disruption in class (-2), not Stage 5."
+              autoFocus
+            />
+          </label>
+        )}
+
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {canReturn && (returning[item.key] === undefined ? (
+            <button className="secondary" disabled={busy} onClick={() => setReturning({ ...returning, [item.key]: '' })} style={{ width: 'fit-content' }}>
+              Not Stage 5: return to teacher
+            </button>
+          ) : (
+            <>
+              <button disabled={busy} onClick={() => returnToTeacher(item)} style={{ width: 'fit-content' }}>
+                Return to {fullName(first.staff)}
+              </button>
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={() => setReturning((r) => { const { [item.key]: _, ...rest } = r; return rest; })}
+                style={{ width: 'fit-content' }}
+              >
+                Cancel
+              </button>
+            </>
+          ))}
           {textWaiting && photo && (
             <>
               <button disabled={busy || !confirmed[item.key]} onClick={() => decide(item, true, true, 'Text and picture sent to parents.')} style={{ width: 'fit-content' }}>
@@ -295,8 +362,11 @@ function ReviewInner() {
     return <p>This page is for SMT, school office staff and admin only.</p>;
   }
 
-  const waiting = items.filter((it) => !it.events.length || !it.events.every((e) => e.protocol_reviewed_at) || it.photo?.status === 'pending');
-  const keptHidden = items.filter((it) => !waiting.includes(it));
+  const isReturned = (it) => it.events.length > 0 && it.events.every((e) => e.returned_at) && it.photo?.status !== 'pending';
+  const returned = items.filter(isReturned);
+  const waiting = items.filter((it) => !isReturned(it)
+    && (!it.events.length || !it.events.every((e) => e.protocol_reviewed_at) || it.photo?.status === 'pending'));
+  const keptHidden = items.filter((it) => !isReturned(it) && !waiting.includes(it));
 
   return (
     <div>
@@ -310,7 +380,9 @@ function ReviewInner() {
         it, or use Edit to correct the text first and then send it. Before
         sending text, check it follows school protocol, names no other student
         and is written in clear, good English. Check a picture shows only what
-        it should and no other student can be identified.
+        it should and no other student can be identified. If an event isn&apos;t
+        really a Stage 5, use <em>Not Stage 5: return to teacher</em> and say
+        why; the teacher gets a message asking them to change it.
       </p>
 
       {status && <p>{status}</p>}
@@ -319,6 +391,17 @@ function ReviewInner() {
         <>
           <h2>Waiting for review ({waiting.length})</h2>
           {waiting.length === 0 ? <p>Nothing waiting.</p> : waiting.map(renderItem)}
+
+          {returned.length > 0 && (
+            <>
+              <h2 style={{ marginTop: '1.5rem' }}>Returned to the teacher ({returned.length})</h2>
+              <p style={{ color: '#555', marginTop: 0 }}>
+                Waiting for the teacher. If they change the category it leaves this page; if they keep it as a
+                Stage 5 and edit the explanation, it comes back to Waiting for review.
+              </p>
+              {returned.map(renderItem)}
+            </>
+          )}
 
           {keptHidden.length > 0 && (
             <>
