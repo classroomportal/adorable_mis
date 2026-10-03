@@ -395,18 +395,20 @@ const TABS = [
   },
   {
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
-    description: 'Charges, payments, discounts and the debtors list.',
+    description: 'Set up fees, get them approved, charge students, record payments and chase what is owed.',
     items: ({ hasAccess }) => [
-      { href: '/bursar/fee-approvals', label: 'Fee Approvals', desc: "New fee prices, approved by the principal and the college secretary together." },
-      { href: '/bursar/charge-checklist', label: 'Charge Checklist', desc: "Charge a fee to a group of students." },
-      { href: '/bursar/fee-items', label: 'Fee Items', desc: "Fee items and their prices." },
-      { href: '/bursar/discounts', label: 'Discounts', desc: "Give students fee discounts." },
-      { href: '/bursar/payments', label: 'Record a Payment', desc: "Record a fee payment." },
-      { href: '/bursar/fees-table', label: 'All Students', desc: "Charged, paid and owed for every student." },
-      { href: '/bursar/debtors', label: 'Debtors List', desc: "Students who owe fees, with parent contacts." },
-      { href: '/bursar/audit', label: 'Audit', desc: "Recent fee charges, with undo." },
-      { href: '/bursar/admission-forms', label: 'Admission Payments', desc: "Admission form fees and deposits from applicants' families." },
-      { href: '/smt/fees-dashboard', label: 'SMT Dashboard', desc: "Fee collection totals, and publishing fees to parents." },
+      // Numbered in the order the work is done (the principal, 3 Oct 2026:
+      // "The fees and bills tile is not clear about use"; migration 348).
+      { href: '/bursar/fee-items', label: '1 Fees', desc: 'Add a fee (name, fund, terms, prices) or change one.' },
+      { href: '/bursar/fee-approvals', label: '2 Approve', desc: 'The principal and the college secretary approve new prices.' },
+      { href: '/bursar/discounts', label: '3 Discounts', desc: 'Bursaries, sibling and other discounts on tuition.' },
+      { href: '/bursar/charge-checklist', label: '4 Charge', desc: 'Charge a fee to the students who pay it this term.' },
+      { href: '/bursar/payments', label: '5 Payments', desc: 'Record money a family has paid.' },
+      { href: '/bursar/fees-table', label: '6 Accounts', desc: 'Charged, paid and owed for every student.' },
+      { href: '/bursar/debtors', label: '7 Debtors', desc: 'Who still owes, with parent contacts.' },
+      { href: '/bursar/audit', label: '8 Audit', desc: 'Recent charges, to check (and undo a mistake).' },
+      { href: '/bursar/admission-forms', label: '9 Admissions', desc: "Applicants' form fees and deposits." },
+      { href: '/smt/fees-dashboard', label: '10 Summary', desc: 'Collection totals for SMT; publish fees to parents.' },
     ].filter((it) => hasAccess(it.href)),
   },
   // Budget (migrations 338–339): a big tile, not a top-row button (the

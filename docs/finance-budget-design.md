@@ -276,6 +276,15 @@ in should match the money out.
    hasn't paid), the gap is released from contingency, as for any other
    overspend.
 
+### A fee charged in one term (migration 348)
+
+A fee can be limited to chosen terms (`fee_items.charge_term_ids`), so the
+WAEC or IGCSE exam entry fee is set up once, for the term it is billed in,
+with a price for the year groups that sit it (Year 12 only, say). It is
+added through the numbered **Add a fee** form at Fees & Bills → 1 Fees,
+which sends its fund, terms and prices together; it can't be charged in
+another term, and the forecast counts it only in its term.
+
 ## Data (new tables)
 
 All in `public`, with RLS enabled and explicit `grant`s to `authenticated` for

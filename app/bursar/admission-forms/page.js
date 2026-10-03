@@ -194,7 +194,7 @@ function AdmissionFormsInner() {
 
   return (
     <div>
-      <h1>Admission Payments</h1>
+      <h1>9. Admission Payments</h1>
       <p>
         Admission form fees and deposits for children applying to the school. Recording the form fee lets
         admissions book the child&apos;s test; recording the deposit confirms an accepted place.

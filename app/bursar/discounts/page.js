@@ -150,7 +150,7 @@ function DiscountsInner() {
 
   return (
     <div>
-      <h1>Discounts</h1>
+      <h1>3. Discounts</h1>
 
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <strong>Discount types</strong>
