@@ -420,6 +420,11 @@ const TABS = [
       { href: '/finance/forecast', label: 'Term forecast', desc: "What each term's fees bring in, from the number of students in each year." },
       { href: '/finance/budget', label: 'Fee income by fund', desc: 'Fees charged and collected, shared between the funds.' },
       { href: '/finance/funds', label: 'Funds & cost centres', desc: 'Which fund each fee item pays into, and the cost centres.' },
+      // Not built yet: each opens a page saying what it will do.
+      { href: '/finance/term-budget', label: 'Term budget', desc: "Share each term's money across the cost centres (coming next)." },
+      { href: '/finance/requisitions', label: 'Requisitions', desc: 'Raise a requisition and follow it through (coming next).' },
+      { href: '/finance/approvals', label: 'Requisition approvals', desc: 'Sign, cost, approve and pay requisitions (coming next).' },
+      { href: '/finance/suppliers', label: 'Approved suppliers', desc: 'The suppliers requisitions can use (coming next).' },
     ].filter((it) => hasAccess(it.href)) : []),
   },
   {
