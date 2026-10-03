@@ -1,8 +1,8 @@
 # Budgets and requisitions: design
 
-Status, 2 October 2026: **design only, nothing built.** The principal's
-decisions so far are under "Decided"; the proposed answers under "Still to
-decide" are what will be built unless the principal says otherwise.
+Status, 3 October 2026: **design only, nothing built.** The principal's
+decisions (2 and 3 October) are under "Decided"; the proposed answers under
+"Still to decide" are what will be built unless the principal says otherwise.
 
 What was asked for (the principal, 2 October 2026): "We collect fees in term 2
 and can allocate them in advance to different cost centres including staffing,
@@ -32,6 +32,11 @@ not keep a general ledger, reconcile the bank or produce statutory accounts.
 | Refunds | **Not generally allowed.** No refund process is built. A rare exception goes through as a requisition against that fund (paid to the parent), so it still needs the principal and the college secretary. |
 | Uniform | **Out of scope.** Uniform is bought from the tuck shop. |
 | Tuck shop money | **Outside the budget** (follows from the above). Tuck shop top-ups are the students' money held for them, not school income. |
+| Exam entries (3 Oct) | **Billed to parents, then paid out to the British Council.** A ring-fenced pass-through fund whose one supplier is the British Council. |
+| Suppliers (3 Oct) | **An approved suppliers list.** A requisition can only be costed and paid to a supplier on it. |
+| Overspending (3 Oct) | **Money must be released from contingency.** A cost centre can't go over; the extra has to be released to it from a Contingency fund first. |
+| Damages & Surcharge (3 Oct) | **Go to Maintenance.** |
+| Discounts (3 Oct) | **Reduce tuition only** (the general fund), never a ring-fenced charge. |
 
 ## What exists today (checked against the live database, 2 Oct 2026)
 
@@ -63,8 +68,9 @@ fee item points at one. A cost centre is one of four kinds:
 
 | Kind | Examples | Money in | Can be spent from? |
 | --- | --- | --- | --- |
-| `general_pool` (exactly one: "General fund") | | Tuition (and Damages, unless decided otherwise) | No. It is shared out by allocation. |
-| `allocated` | Staffing, Power, Food, Maintenance, … | Allocations from the general fund | Yes, up to its allocation |
+| `general_pool` (exactly one: "General fund") | | Tuition, less discounts | No. It is shared out by allocation. |
+| `contingency` (exactly one: "Contingency") | | An allocation from the general fund | No. Money is only *released* from it to another cost centre (below). |
+| `allocated` | Staffing, Power, Food, Maintenance, … | Allocations from the general fund (Maintenance also gets Damages & Surcharge) | Yes, up to its allocation plus anything released to it |
 | `ring_fenced` | Swimming, Sports (Sports Academy, Taekwondo), Medical, ICT, Exam entries | Its own fee items | Yes, up to its own income plus carry-forward |
 | `held` (exactly one: "Tuck shop, held for students") | | Tuck shop items | No. Outside the budget, shown only for completeness. |
 
@@ -73,8 +79,11 @@ fee item points at one. A cost centre is one of four kinds:
   ('fees'), and only `/admin/lookups` holders can change it.
 - Cost centres are listed and added at `/admin/lookups`. They are archived,
   never deleted, once anything points at them.
-- **Discounts** reduce the fund of the line they discount. A "Discount" line
-  with no clear target reduces the general fund (see the questions below).
+- **Damages & Surcharge** income goes to Maintenance, on top of its allocation.
+- **Discounts reduce tuition only.** A discount line, whatever it is attached
+  to, counts against the general fund, never against a ring-fenced charge.
+  So a discounted family still pays the full swimming, ICT, medical and exam
+  entry charges into those funds.
 
 ## Income: charged and collected
 
@@ -112,6 +121,11 @@ For each academic year (`academic_years`, which already exists):
   and one holder of `college_secretary` have both approved it (two different
   people). The app can't write allocations directly (a guard trigger, like
   `guard_fee_prices()`).
+- **Contingency**: the budget sets aside an amount in the Contingency cost
+  centre. Nothing is spent from it directly.
+- **Releasing from contingency** is how a cost centre gets more money (see
+  "Overspending" below). A release moves an amount from Contingency to one cost
+  centre, with a reason, and is linked to the requisition that needed it.
 - **Moving money between cost centres** (virement) is a budget change of the
   same kind. A move into or out of a ring-fenced fund is allowed only through
   this route, and shows as such.
@@ -140,8 +154,8 @@ cash.
 | --- | --- | --- | --- |
 | Raise | `submitted` (from `draft`) | Any staff member | Items, quantities, reason, date needed, suggested cost centre. No prices needed. |
 | Sign | `signed` / `rejected` | Principal (`holds_staff_role('principal')`) | Agrees the need, or rejects it with a reason. |
-| Cost | `costed` | College secretary | Unit prices, supplier and the final cost centre. Sees the cost centre's remaining balance next to the total. Quotes can be attached. |
-| Approve | `approved` / `rejected` | College secretary | **Commits** the total against the cost centre. Refused if it would take the cost centre below zero (see the override question below). |
+| Cost | `costed` | College secretary | Unit prices, an **approved supplier** and the final cost centre. Sees the cost centre's remaining balance next to the total. Quotes can be attached. |
+| Approve | `approved` / `rejected` / `awaiting_release` | College secretary | **Commits** the total against the cost centre. If it would take the cost centre below zero it can't be approved; it waits as `awaiting_release` until enough is released from contingency (below). |
 | Supplied | `part_received` / `received` | The requester, or a receiver named by the college secretary | Records what arrived, item by item, with any shortfall noted. A delivery note can be attached. |
 | Paid | `paid` | Bursar | Records the payment (amount, date, method, reference, the supplier's invoice). Can be in parts. Moves the amount from committed to spent. |
 
@@ -173,6 +187,44 @@ cash.
   `approved_by`, `received_by`, `recorded_by`) are stamped by `stamp_actor()` or
   inside the step functions, never taken from the request.
 
+## Overspending: release from contingency
+
+A cost centre never goes below zero. When a requisition costs more than its
+cost centre has left:
+
+1. The college secretary sees the shortfall ("Maintenance has ₦120,000 left;
+   this needs ₦300,000, short by ₦180,000") and asks for a **release from
+   contingency** for the shortfall (or more), with a reason. The requisition
+   waits as `awaiting_release`.
+2. The release is approved (who approves it is question 1 below). The amount
+   moves from Contingency to the cost centre, and the requisition can then be
+   approved as normal.
+3. If Contingency itself hasn't enough, the release can't be made. The money
+   has to come from another cost centre first, through an ordinary two-person
+   budget change (virement) into Contingency or straight into the cost centre.
+
+The same applies to ring-fenced funds: if, for example, swimming costs more
+than swimming income, the gap is released from contingency, and the budget page
+shows that general money went into that fund. Every release is listed on the
+budget page (date, amount, cost centre, reason, requisition, who approved it),
+so the year's use of contingency can be seen at a glance.
+
+## Approved suppliers
+
+- Requisitions can only be costed with, and paid to, a supplier on the
+  **approved list** (`suppliers.status = 'approved'`).
+- Anyone who can cost requisitions, or the bursar, can **propose** a supplier
+  (name, contact, what they supply, bank details).
+- A supplier becomes approved only by the approval set in question 2 below.
+  **Changing an approved supplier's bank details sends it back for approval**,
+  because that is the usual route for payment fraud.
+- A supplier can be **suspended** (no new requisitions; any already approved
+  can still be received and paid) or **removed** (archived, never deleted
+  once used).
+- The bank details are readable only by the bursar, the college secretary
+  and the principal; everyone else sees just the name.
+- The British Council is added as an approved supplier from the start.
+
 ## Spending without a requisition
 
 Payroll isn't requisitioned, and nor are some recurring bills (PHCN or diesel,
@@ -184,15 +236,22 @@ approved requisition.
 
 ## Exam entries
 
-Exam entry is pass-through money: charged per student, paid to the board per
-entry. Needed:
+Exam entries are **billed to parents and then paid out to the British
+Council** (the principal, 3 Oct 2026). So it is a pass-through fund: the money
+in should match the money out.
 
-1. An **Exam Entry** fee item (or one per board: IGCSE, WAEC) pointing at the
-   Exam entries cost centre. It may need a price per number of subjects
-   rather than one locked price. To decide with the bursar.
-2. Later: a list of entries per student and board, so the system can show
+1. An **Exam Entry** fee item, pointing at the Exam entries cost centre. Its
+   price probably depends on the number of subjects or papers entered rather
+   than being one locked price. To settle with the bursar and the exams officer.
+2. The payment to the British Council goes through as a requisition against
+   Exam entries, with the British Council as the supplier and its invoice
+   attached, so it is signed and approved like everything else.
+3. Later: a list of entries per student, so the system can show
    *charged but not entered*, *entered but not charged / not paid*, and the
-   board's invoice against what was collected.
+   British Council's invoice against what was collected.
+4. If the British Council's invoice is more than was collected (e.g. a parent
+   hasn't paid), the gap is released from contingency, as for any other
+   overspend.
 
 ## Data (new tables)
 
@@ -205,8 +264,11 @@ exactly the verbs the policies allow. No `anon`.
 - `budget_allocations`: academic year, cost centre, term (nullable), amount.
 - `budget_changes` and `budget_change_lines`: proposals and their two approvals.
 - `budget_opening_balances`: academic year, cost centre, amount.
-- `suppliers`: name, contact, phone, email, notes. Bank details only if wanted;
-  readable by the bursar and the college secretary only.
+- `suppliers`: name, contact, phone, email, what they supply, status
+  (`proposed` / `approved` / `suspended` / `archived`), approvals. Bank details
+  in a separate table readable by the bursar, the college secretary and the
+  principal only.
+- `contingency_releases`: amount, to cost centre, reason, requisition, approvals.
 - `requisitions`, `requisition_items`, `requisition_events`,
   `requisition_receipts`.
 - `expenditures`: cost centre, amount, date, method, reference, supplier,
@@ -248,7 +310,7 @@ can't sign, approve or pay.
    page showing charged and collected by fund. Nothing to approve yet.
 2. **Budgets**: allocations, two-person budget changes, remaining balances.
 3. **Requisitions to approval**: raise, sign, cost, approve, commitments and the
-   budget check, emails.
+   budget check, contingency releases, the approved suppliers list, emails.
 4. **Supply and payment**: receipts, payments, attachments, `direct_spend`
    entries for payroll and bills.
 5. **Year end and exams**: carry-forward at the year switch, exam-entry
@@ -256,28 +318,27 @@ can't sign, approve or pay.
 
 ## Still to decide (proposed answer in bold)
 
-1. **Over budget**: is a requisition that would overspend refused outright, or
-   can the principal override it with a written reason? **Refused, unless the
-   principal overrides with a reason, which is logged and shown on the budget
-   page.**
-2. **Department budgets** (e.g. Science inside Teaching materials): **not at
+1. **Who approves a release from contingency?** **The principal alone**, so a
+   requisition isn't held up waiting for two signatures; the college
+   secretary has already costed it and asked for the release, so two people
+   are involved anyway. (Alternative: both, like other budget changes.)
+2. **Who approves a supplier?** **The principal and the college secretary
+   together**, as with fee prices and budgets.
+3. **Department budgets** (e.g. Science inside Teaching materials): **not at
    first**; cost centres can be split later.
-3. **Small purchases / petty cash**: **none at first**; everything goes
+4. **Small purchases / petty cash**: **none at first**; everything goes
    through the full chain.
-4. **Who records payment**: **the bursar.**
-5. **Allocation**: fixed amounts, or percentages of general-fund collections?
+5. **Who records payment**: **the bursar.**
+6. **Allocation**: fixed amounts, or percentages of general-fund collections?
    **Fixed amounts**, with the page showing them as percentages of expected
    income.
-6. **Ring-fenced spending limit**: can a fund spend against what has been
+7. **Ring-fenced spending limit**: can a fund spend against what has been
    charged, or only what has been collected? **Charged**, so term 1 spending
    is possible before the term 2 collection, with a warning when committed
    spending is more than collected.
-7. **Damages & Surcharge**: general fund or Maintenance? **Maintenance**
-   (ring-fenced in effect).
-8. **Discounts**: does a discount reduce only tuition (the general fund), or
-   each line it applies to? **Only tuition**, since staff and sibling discounts
-   are on school fees.
-9. **Sports**: one Sports fund for Sports Academy and Taekwondo, with
+8. **Sports**: one Sports fund for Sports Academy and Taekwondo, with
    Swimming separate? **Yes.**
-10. **Who receives goods**: the requester, or a store keeper role? **The
-    requester, or a receiver the college secretary names.**
+9. **Who receives goods**: the requester, or a store keeper role? **The
+   requester, or a receiver the college secretary names.**
+10. **Unused contingency at year end**: carried forward in Contingency, like
+    every other surplus? **Yes.**
