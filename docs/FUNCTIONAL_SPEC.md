@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 329). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 330). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -112,7 +112,7 @@ Only Formwork creates logins; nobody can create their own account, by email or b
 - **FR-1.10** Every server route except the parents' calendar feed (FR-1.11) checks the caller's sign-in and page access before doing anything, and the build fails if one doesn't. Backup is admin-only whatever the permissions page says. \[DB + build check\]
 - **FR-1.11** One route works without sign-in: the parents' calendar feed (/api/calendar-feed/…), because calendar apps can't sign in. Each parent's secret link is the check instead, and the build check lists this route as its only exception. It returns only the events parents see on their calendar page, and nothing once none of the parent's children is still at the school. Agreed by the principal, 30 Sept 2026 (migration 274). \[DB + build check\]
 - **FR-1.12** /admin/permissions shows each role three ways (migration 327, 2 Oct 2026). **Pages**: which pages it opens, ticked by section. **What they can do**: for each kind of record, whether the role can view, add, edit and delete it: Yes (any record), Own only (records tied to the person, such as their classes) or No, with the rule names behind each answer. It is worked out live from the database's own rules for someone holding only that role, so it changes as soon as a page is ticked or a rule changes. Actions done through checked steps (fee approvals, admissions decisions, planned absences) show as View only, and checks made on saving aren't shown. **Compare roles**: every page against every role. Only admins can change page access and the student Core Data field grants; the database rules themselves can't be changed from the app. \[Page; rules read from DB\]
-- **FR-1.13** Some abilities are tick boxes on "What they can do" (migration 329, 3 Oct 2026; stage 1 of docs/role-abilities-design.md): certificates and certificate levels, the seven sick-bay tables, the BMI reference table and grade boundaries. They start as each role's access before the change, except grade boundaries. Only admins can tick or untick. Before a change saves, the page names the people who would gain or lose it. Admin can't remove its own access to permissions, and every tick and untick is logged in Change History under access. Other areas become tickable stage by stage. Some cells have a padlock and can't be ticked by anyone, admin included; they change only by a database change the principal agrees: only the school office adds students; Grade History and Change History can't be edited, and who reads them is fixed; fee prices and price changes need the principal and the college secretary; certificate levels, the BMI table and grade boundaries are readable by everyone signed in. Parents never seeing homework marks or other students' names in behaviour events is not a staff tick at all. \[DB\]
+- **FR-1.13** Some abilities are tick boxes on "What they can do" (migration 329, 3 Oct 2026; stage 1 of docs/role-abilities-design.md): certificates and certificate levels, the seven sick-bay tables, the BMI reference table and grade boundaries. They start as each role's access before the change, except grade boundaries. Only admins can tick or untick. Before a change saves, the page names the people who would gain or lose it. Admin can't remove its own access to permissions, and every tick and untick is logged in Change History under access. Stage 2 (migration 330, 3 Oct 2026) added behaviour (events, involved students, photos, appeals, categories, detentions), attendance (registers, codes, planned absences, register alerts) and reports (periods, checkers, subject and pastoral comments), each with the access it had before. Rules tied to particular records stay fixed: a teacher's own report comments, a checker's report period, students' and parents' own records, and whoever can edit an event writes its involved students. Actions the app never allowed (deleting register marks, creating detentions by hand) are padlocked with the reason. Other areas follow stage by stage. Some cells have a padlock and can't be ticked by anyone, admin included; they change only by a database change the principal agrees: only the school office adds students; Grade History and Change History can't be edited, and who reads them is fixed; fee prices and price changes need the principal and the college secretary; certificate levels, the BMI table and grade boundaries are readable by everyone signed in. Parents never seeing homework marks or other students' names in behaviour events is not a staff tick at all. \[DB\]
 
 ## 5. FR-2 Students, parents and portals
 
@@ -213,7 +213,7 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 
 **Taking registers (/attendance)**
 
-- **FR-4.1** Any member of staff can mark any register, for any class or activity. This is the school's decision (27 Sept 2026). \[DB\]
+- **FR-4.1** Any member of staff can mark any register, for any class or activity. This is the school's decision (27 Sept 2026); since migration 330 it is a tick on /admin/permissions, set for every role. \[DB\]
 - **FR-4.2** One mark per student, per date, per period: present, late, absent or authorised absence. Saving again overwrites. \[DB\]
 - **FR-4.3** No register can be saved for a future date (Lagos time). Past dates are allowed after a confirmation. \[DB / Page\]
 - **FR-4.4** A late mark needs the minutes late (0–600). While the lesson is running, the box suggests the minutes since it started. \[DB range; Page requires it\]
@@ -314,7 +314,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 **Editing and deleting**
 
 - **FR-6.6** The teacher who logged it, pastoral, houseparent, head of boarding, SMT, school office and admin can change an event's comment and category (negative stays negative). Detentions are recalculated. Events withdrawn on appeal can't be edited. \[DB\]
-- **FR-6.7** Only SMT can delete an event, a merit included; holding the smt role is what counts, and admin alone is not enough (migration 319, the principal, 2 Oct 2026). Staff can't withdraw an event or move it to another student any other way; only an upheld appeal withdraws one. Changes and deletions are logged in Change History. \[DB\]
+- **FR-6.7** Only SMT can delete an event, a merit included; holding the smt role is what counts, and admin alone is not enough (migration 319, the principal, 2 Oct 2026; live only from 3 Oct 2026, through migration 330, see known issue 33). Staff can't withdraw an event or move it to another student any other way; only an upheld appeal withdraws one. Changes and deletions are logged in Change History. \[DB\]
 
 **Release to parents (/behaviour/review)**
 
@@ -334,7 +334,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 **Detentions (/detention)**
 
 - **FR-6.14** A detention is booked automatically for the Friday of the Saturday–Friday week when a −5 event is logged, or when the week's negative total reaches −10 (positive points don't offset). Staff can't add or delete detentions by hand. \[DB\]
-- **FR-6.15** Detentions are in CG4 after lesson 7. Statuses are scheduled, attended, missed and cancelled. Whoever has the /detention page marks them attended or missed, but only SMT can cancel one (migration 319, the principal, 2 Oct 2026); the Cancelled option is shown only to SMT. A detention's date and student can't be changed. Detentions still cancel automatically when an event's category is corrected below the thresholds or an appeal is upheld. \[DB\]
+- **FR-6.15** Detentions are in CG4 after lesson 7. Statuses are scheduled, attended, missed and cancelled. Whoever has the /detention page marks them attended or missed, but only SMT can cancel one (migration 319, the principal, 2 Oct 2026; live from 3 Oct 2026, migration 330); the Cancelled option is shown only to SMT. A detention's date and student can't be changed. Detentions still cancel automatically when an event's category is corrected below the thresholds or an appeal is upheld. \[DB\]
 - **FR-6.16** The student (not parents) gets an email and inbox notice when a detention is booked, a reminder at 7:30pm on Thursday, and a notice if it is cancelled. Replies go to SMT. \[DB\]
 
 **Certificates**
@@ -831,7 +831,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 23. Known issues and open decisions
 
-32 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; three of them (6, 30 and 32) have since been fixed. The first five stop something working today.
+33 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; four of them (6, 30, 32 and 33) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -867,6 +867,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 30 | Registers | Planned absences skip only days marked as a holiday on the calendar. Mid-term breaks are a single date there (24 Oct, 13 Feb, 22 May), so an absence spanning one filled in the break days too. Fixed for 2026/27 on 2 Oct 2026: every weekday of the three breaks (26–30 Oct, 15–19 Feb, 24–28 May) is now a holiday on the calendar; later years' breaks need the same | Extra absence marks on days the school was closed | Fixed |
 | 31 | Parents | Some families have two or more parent records with the same email (from separate imports). A parent login is tied to one record, so a child linked only to the other record doesn't appear in the portal. Found 2 Oct 2026 when a parent saw "No linked children"; the 7 logins affected then were fixed by hand (one Francis IYIOKU link left off until the office confirms his guardian). Nothing stops a new case | A parent sees some or none of their children | Open |
 | 32 | Students | Any admin login could still add a student. Migration 275 left the office's rule as the only way in, but that rule's role check lets every admin through. Found 2 Oct 2026 by the Permissions page's new "What they can do" view. Migration 328 makes the rule check the school\_office role alone; run in the SQL editor on 2 Oct 2026, and admin alone can no longer add a student | FR-2.18 not enforced: admin alone can add students | Fixed |
+| 33 | Behaviour | Migration 319 (only SMT remove a merit or cancel a detention; events can't be withdrawn or moved from the app) was written on 2 Oct 2026 but never reached the live database. Found 3 Oct 2026 while preparing stage 2 of the tickable abilities; applied by migration 330 the same day. Every other migration since 300 was checked and is live | Until 3 Oct any admin could delete events, and anyone with Detention could cancel or re-date a detention | Fixed |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
