@@ -6,7 +6,7 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 
 const YEARS = [7, 8, 9, 10, 11, 12];
-const naira = (v) => `₦${Number(v).toLocaleString('en-GB')}`;
+const naira = (v) => `₦${Number(v).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 
 function FeeItemsInner() {
   const [items, setItems] = useState([]);
@@ -249,7 +249,7 @@ function FeeItemsInner() {
                         </form>
                       ) : (
                         <>
-                          {item.default_amount != null ? `₦${Number(item.default_amount).toLocaleString('en-GB')}` : <span style={{ color: '#999' }}>Not set</span>}{' '}
+                          {item.default_amount != null ? `₦${Number(item.default_amount).toLocaleString('en-GB', { maximumFractionDigits: 0 })}` : <span style={{ color: '#999' }}>Not set</span>}{' '}
                           <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
                             onClick={() => { setProposing({ id: item.id, amount: item.default_amount ?? '', reason: '' }); setProposeStatus(null); }}>
                             Propose new price

@@ -15,7 +15,7 @@ import { closedByClosure, isLocked as lockedBySchedule, loadClosure, loadSchedul
 // before then shows a warning that it can still change.
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 function longDate(iso) {

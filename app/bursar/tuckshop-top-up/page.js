@@ -12,7 +12,7 @@ import RequireResource from '../../RequireResource';
 // (migration 273). A payment can't be added for more than it was.
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 const METHODS = {

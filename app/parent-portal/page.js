@@ -357,7 +357,7 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                   <button type="button" className="dashboard-tile" onClick={() => setActiveView('fees')}>
                     <span className="dashboard-tile-label">Fees</span>
                     <span className="dashboard-tile-icon">💰</span>
-                    <span className="dashboard-tile-sub">{feeLineItems.length === 0 ? 'No invoice yet' : feeStatus === 'paid' ? 'Paid in full' : `₦${nowDue.toLocaleString()} due`}</span>
+                    <span className="dashboard-tile-sub">{feeLineItems.length === 0 ? 'No invoice yet' : feeStatus === 'paid' ? 'Paid in full' : `₦${nowDue.toLocaleString('en-GB', { maximumFractionDigits: 0 })} due`}</span>
                   </button>
                 )}
 
@@ -383,7 +383,7 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                 <a href={viewingAs ? undefined : '/parent-portal/tuckshop'} className="dashboard-tile" style={{ textDecoration: 'none', cursor: viewingAs ? 'default' : undefined }}>
                   <span className="dashboard-tile-label">Tuckshop</span>
                   <span className="dashboard-tile-icon">🛒</span>
-                  <span className="dashboard-tile-sub">{tuckshopBalance === null ? 'No data yet' : `₦${Number(tuckshopBalance).toLocaleString()} balance`}</span>
+                  <span className="dashboard-tile-sub">{tuckshopBalance === null ? 'No data yet' : `₦${Number(tuckshopBalance).toLocaleString('en-GB', { maximumFractionDigits: 0 })} balance`}</span>
                 </a>
 
                 <a href={viewingAs ? undefined : '/inbox'} className="dashboard-tile" style={{ textDecoration: 'none', cursor: viewingAs ? 'default' : undefined }}>
@@ -555,7 +555,7 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                         {feeLineItems.map((li) => (
                           <tr key={li.id}>
                             <td>{li.description || li.fee_items?.display_name || li.fee_items?.name}</td>
-                            <td>₦{Number(li.amount).toLocaleString()}</td>
+                            <td>₦{Number(li.amount).toLocaleString('en-GB', { maximumFractionDigits: 0 })}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -565,15 +565,15 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                   <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>Total</span>
-                      <span>₦{totalDue.toLocaleString()}</span>
+                      <span>₦{totalDue.toLocaleString('en-GB', { maximumFractionDigits: 0 })}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>Paid</span>
-                      <span>₦{totalPaid.toLocaleString()}</span>
+                      <span>₦{totalPaid.toLocaleString('en-GB', { maximumFractionDigits: 0 })}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                       <span>Now due</span>
-                      <span>₦{nowDue.toLocaleString()}</span>
+                      <span>₦{nowDue.toLocaleString('en-GB', { maximumFractionDigits: 0 })}</span>
                     </div>
                   </div>
 
@@ -587,7 +587,7 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                             {feePayments.map((p) => (
                               <tr key={p.id}>
                                 <td>{p.paid_date}</td>
-                                <td>₦{Number(p.amount).toLocaleString()}</td>
+                                <td>₦{Number(p.amount).toLocaleString('en-GB', { maximumFractionDigits: 0 })}</td>
                                 <td>{p.method}</td>
                               </tr>
                             ))}

@@ -7,7 +7,7 @@ import TuckshopPurchases from '../../components/TuckshopPurchases';
 import { closingWarning, loadSpecialSessions, longDate, momentLabel } from '../../../lib/tuckshopSchedule';
 
 function naira(n) {
-  return `₦${Number(n || 0).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 }
 
 // Limits per tuckshop day, enforced in save_tuckshop_order() (migrations
