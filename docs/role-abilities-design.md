@@ -1,6 +1,6 @@
 # Tickable role abilities: design
 
-Status, 3 October 2026: **all five stages built** (migration 329: Certificates, Sick bay, the BMI reference and grade boundaries; migration 330: Behaviour, Attendance, Reports, plus migration 319's safeguards, which had not reached the live database; migration 331: Results and Homework; migration 332: Students and families, Staff and HR, Tuckshop, The Other Half, Student groups, Admissions; migration 333: Fees); later stages not built. Today `/admin/permissions`
+Status, 3 October 2026: **all five stages built, plus a sixth** (migration 329: Certificates, Sick bay, the BMI reference and grade boundaries; migration 330: Behaviour, Attendance, Reports, plus migration 319's safeguards, which had not reached the live database; migration 331: Results and Homework; migration 332: Students and families, Staff and HR, Tuckshop, The Other Half, Student groups, Admissions; migration 333: Fees; migration 334: Timetable, calendar and next year); later stages not built. Today `/admin/permissions`
 shows what each role can view, add, edit and delete (migration 327), read
 from the database's rules, but only page access and student Core Data fields
 can be changed there. This design makes the rest tickable.
