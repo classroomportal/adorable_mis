@@ -417,15 +417,15 @@ const TABS = [
     key: 'budget', label: 'Budget', icon: '💰', accent: 'family',
     description: 'Plan each term’s spending from the fees it brings in.',
     items: ({ hasAccess, staffRoles }) => ((staffRoles || []).includes('principal') ? [
-      { href: '/finance/term-fees', label: 'Fees by year & term', desc: 'The termly price of each fee for each year group, approved by you and the college secretary.' },
-      { href: '/finance/forecast', label: 'Term forecast', desc: "What each term's fees bring in, from the number of students in each year." },
-      { href: '/finance/budget', label: 'Fee income by fund', desc: 'Fees charged and collected, shared between the funds.' },
-      { href: '/finance/funds', label: 'Funds & cost centres', desc: 'Which fund each fee item pays into, and the cost centres.' },
-      // Not built yet: each opens a page saying what it will do.
-      { href: '/finance/term-budget', label: 'Term budget', desc: "Share each term's money across the cost centres (coming next)." },
-      { href: '/finance/requisitions', label: 'Requisitions', desc: 'Raise a requisition and follow it through (coming next).' },
-      { href: '/finance/approvals', label: 'Requisition approvals', desc: 'Sign, cost, approve and pay requisitions (coming next).' },
-      { href: '/finance/suppliers', label: 'Approved suppliers', desc: 'The suppliers requisitions can use (coming next).' },
+      // Numbered in the order the process runs (the principal, 3 Oct 2026).
+      { href: '/finance/funds', label: '1 Funds', desc: 'The cost centres, and which fund each fee pays into.' },
+      { href: '/finance/term-fees', label: '2 Fees', desc: 'The termly price of each fee for each year group, approved by you and the college secretary.' },
+      { href: '/finance/forecast', label: '3 Forecast', desc: "What each term's fees bring in, from the number of students in each year." },
+      { href: '/finance/budget', label: '4 Income', desc: 'Fees charged and collected, shared between the funds.' },
+      { href: '/finance/term-budget', label: '5 Budget', desc: "Share each term's money across the cost centres; contingency releases." },
+      { href: '/finance/suppliers', label: '6 Suppliers', desc: 'The approved suppliers requisitions must use.' },
+      { href: '/finance/requisitions', label: '7 Requests', desc: 'Raise a requisition and follow it through; record deliveries.' },
+      { href: '/finance/approvals', label: '8 Approvals', desc: 'Sign, cost, approve, release contingency and pay.' },
     ].filter((it) => hasAccess(it.href)) : []),
   },
   {

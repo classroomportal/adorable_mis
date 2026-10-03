@@ -41,9 +41,9 @@ function pct(collected, charged) {
 }
 
 const TITLES = {
-  forecast: 'Term forecast',
-  income: 'Fee income by fund',
-  funds: 'Funds & cost centres',
+  forecast: '3. Forecast',
+  income: '4. Income',
+  funds: '1. Funds',
 };
 
 function BudgetInner({ view }) {
