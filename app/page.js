@@ -417,6 +417,7 @@ const TABS = [
     key: 'budget', label: 'Budget', icon: '💰', accent: 'family',
     description: 'Plan each term’s spending from the fees it brings in.',
     items: ({ hasAccess, staffRoles }) => ((staffRoles || []).includes('principal') ? [
+      { href: '/finance/term-fees', label: 'Fees by year & term', desc: 'The termly price of each fee for each year group, approved by you and the college secretary.' },
       { href: '/finance/forecast', label: 'Term forecast', desc: "What each term's fees bring in, from the number of students in each year." },
       { href: '/finance/budget', label: 'Fee income by fund', desc: 'Fees charged and collected, shared between the funds.' },
       { href: '/finance/funds', label: 'Funds & cost centres', desc: 'Which fund each fee item pays into, and the cost centres.' },
