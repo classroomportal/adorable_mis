@@ -175,9 +175,9 @@ export default function BudgetTermForecast({ canEdit, centres }) {
         Shaded boxes were entered for this term; the rest follow the headcount, so they change as students join or leave.
         Each discount or bursary line counts the students flagged with it in that year (at Discounts) and takes it off
         that term&apos;s full school fee for their year, so a percentage bursary follows a term&apos;s price (Year 12&apos;s double
-        Term 2). Prices are termly and come from <a href="/finance/term-fees">Fees by year &amp; term</a>, where you set
+        Term 2). Prices are termly and come from <a href="/finance/term-fees">2. Fees</a>, where you set
         a fee&apos;s price for each year in each term (approved by you and the college secretary). Once the term is
-        invoiced, Fee income by fund shows what was actually charged and collected.
+        invoiced, 4. Income shows what was actually charged and collected.
       </p>
     </div>
   );

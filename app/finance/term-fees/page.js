@@ -96,7 +96,8 @@ function TermFeesInner() {
   return (
     <div>
       <p style={{ margin: 0 }}><a href="/">← Dashboard</a></p>
-      <h1>Fees by year &amp; term</h1>
+      <h1>2. Fees</h1>
+      <p style={{ color: '#666', margin: '0 0 0.5rem' }}>Fees by year and term</p>
       <p style={{ fontSize: '0.85rem', background: '#fff1cc', padding: '0.4rem 0.6rem', borderRadius: 4 }}>
         Only you can see the Budget while it is being built.
       </p>
