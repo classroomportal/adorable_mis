@@ -18,6 +18,7 @@ function FeeItemsInner() {
   // Which terms each fee is charged in (migration 348); empty = every term.
   const [terms, setTerms] = useState([]);
   const [editingTerms, setEditingTerms] = useState(null); // { id, all, ids }
+  const [detailsOpen, setDetailsOpen] = useState(null); // fee id whose name is being edited
   // Prices change only when the principal and the college secretary have
   // both approved (migration 259). A new price is proposed here and approved
   // at /bursar/fee-approvals; the database refuses a direct change.
@@ -57,6 +58,20 @@ function FeeItemsInner() {
     setEditingTerms(null);
     setStatus(null);
     await load();
+  }
+
+  // Discount (the line apply_student_discount() writes discounts under, found
+  // by its name) and the tuck shop top-up lines aren't fees anyone charges,
+  // so they are listed apart and can't be renamed here.
+  function isSystemItem(item) {
+    return ['discount', 'tuckshop'].includes(String(item.category || '').trim().toLowerCase());
+  }
+
+  function yearPriceText(item) {
+    const v = YEARS.map((yg) => yearPrices[item.id]?.[yg] ?? item.default_amount ?? null);
+    if (v.every((x) => x == null)) return <span style={{ color: '#999' }}>Not approved yet</span>;
+    if (v.every((x) => x === v[0])) return `${naira(v[0])} (every year)`;
+    return YEARS.map((yg, i) => `Y${yg} ${v[i] != null ? naira(v[i]) : '–'}`).join(' · ');
   }
 
   function termsText(item) {
@@ -148,133 +163,130 @@ function FeeItemsInner() {
       </div>
 
       {loading ? <p>Loading…</p> : (
-        <div className="table-scroll">
-          <table>
-            <thead><tr><th>Name</th><th>Display name (shown to parents)</th><th>Category</th><th>Terms charged</th><th>Price</th><th>Optional</th><th></th></tr></thead>
-            <tbody>
-              {items.map((item) => {
-                const dirty = !!edits[item.id];
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <input
-                        value={currentValue(item, 'name') || ''}
-                        onChange={(e) => edit(item.id, 'name', e.target.value)}
-                        style={{ width: '10rem' }}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        value={currentValue(item, 'display_name') || ''}
-                        onChange={(e) => edit(item.id, 'display_name', e.target.value)}
-                        placeholder={item.name}
-                        style={{ width: '10rem' }}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        value={currentValue(item, 'category') || ''}
-                        onChange={(e) => edit(item.id, 'category', e.target.value)}
-                        style={{ width: '9rem' }}
-                      />
-                    </td>
-                    <td style={{ fontSize: '0.85em' }}>
-                      {editingTerms?.id === item.id ? (
-                        <form onSubmit={saveTerms} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                          <label><input type="checkbox" checked={editingTerms.all} onChange={(e) => setEditingTerms({ ...editingTerms, all: e.target.checked })} /> Every term</label>
-                          {!editingTerms.all && terms.map((t) => (
-                            <label key={t.term_id}>
-                              <input type="checkbox" checked={editingTerms.ids.includes(t.term_id)}
-                                onChange={() => setEditingTerms({ ...editingTerms, ids: editingTerms.ids.includes(t.term_id) ? editingTerms.ids.filter((x) => x !== t.term_id) : [...editingTerms.ids, t.term_id] })} /> {t.term_name}
-                            </label>
-                          ))}
-                          <span><button type="submit">Save</button>{' '}<button type="button" className="secondary" onClick={() => setEditingTerms(null)}>Cancel</button></span>
-                        </form>
-                      ) : (
-                        <>
-                          {termsText(item)}{' '}
-                          <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
-                            onClick={() => setEditingTerms({ id: item.id, all: !(item.charge_term_ids || []).length, ids: item.charge_term_ids || [] })}>Change</button>
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      {item.price_locked ? (
-                        proposingYears?.id === item.id ? (
-                          <form onSubmit={sendYearProposal} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                            {YEARS.map((yg) => (
-                              <label key={yg} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', margin: 0 }}>
-                                Y{yg}
-                                <input type="number" min="0" value={proposingYears.prices[yg] ?? ''} placeholder="Not set" style={{ width: '8rem' }}
-                                  onChange={(e) => setProposingYears({ ...proposingYears, prices: { ...proposingYears.prices, [yg]: e.target.value } })} />
-                              </label>
-                            ))}
-                            <input value={proposingYears.reason} onChange={(e) => setProposingYears({ ...proposingYears, reason: e.target.value })} placeholder="Reason" style={{ width: '10rem' }} />
-                            <span>
-                              <button type="submit">Send</button>{' '}
-                              <button type="button" className="secondary" onClick={() => { setProposingYears(null); setProposeStatus(null); }}>Cancel</button>
-                            </span>
-                            {proposeStatus && <span style={{ color: '#a3232c', fontSize: '0.85em' }}>{proposeStatus}</span>}
-                          </form>
-                        ) : (
-                          <>
-                            <span className="badge" style={{ background: '#e6eefb', color: '#1d4a8f' }} title="Charged only at the approved price for the student's year group">Locked</span>
-                            <div style={{ fontSize: '0.85em', margin: '0.25rem 0' }}>
-                              {YEARS.map((yg) => {
-                                const v = yearPrices[item.id]?.[yg] ?? item.default_amount;
-                                return <div key={yg}>Y{yg}: {v != null ? naira(v) : <span style={{ color: '#999' }}>not approved</span>}</div>;
-                              })}
-                            </div>
-                            <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
-                              onClick={() => {
-                                const cur = {};
-                                YEARS.forEach((yg) => { const v = yearPrices[item.id]?.[yg]; cur[yg] = v != null ? String(v) : ''; });
-                                setProposingYears({ id: item.id, prices: cur, reason: '' }); setProposeStatus(null);
-                              }}>
-                              Propose year prices
-                            </button>
-                          </>
-                        )
-                      ) : proposing?.id === item.id ? (
-                        <form onSubmit={sendProposal} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                          <input type="number" min="0" value={proposing.amount} onChange={(e) => setProposing({ ...proposing, amount: e.target.value })} placeholder="New price" style={{ width: '8rem' }} autoFocus />
-                          <input value={proposing.reason} onChange={(e) => setProposing({ ...proposing, reason: e.target.value })} placeholder="Reason" style={{ width: '8rem' }} />
-                          <span>
-                            <button type="submit">Send</button>{' '}
-                            <button type="button" className="secondary" onClick={() => { setProposing(null); setProposeStatus(null); }}>Cancel</button>
-                          </span>
-                          {proposeStatus && <span style={{ color: '#a3232c', fontSize: '0.85em' }}>{proposeStatus}</span>}
-                        </form>
-                      ) : (
-                        <>
-                          {item.default_amount != null ? `₦${Number(item.default_amount).toLocaleString('en-GB', { maximumFractionDigits: 0 })}` : <span style={{ color: '#999' }}>Not set</span>}{' '}
-                          <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
-                            onClick={() => { setProposing({ id: item.id, amount: item.default_amount ?? '', reason: '' }); setProposeStatus(null); }}>
-                            Propose new price
-                          </button>
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={!!currentValue(item, 'is_optional')}
-                        onChange={(e) => edit(item.id, 'is_optional', e.target.checked)}
-                      />
-                    </td>
-                    <td>
-                      {dirty && (
-                        <button onClick={() => saveItem(item)} disabled={savingId === item.id}>
-                          {savingId === item.id ? 'Saving…' : 'Save'}
+        <>
+          <h2 style={{ marginBottom: '0.3rem' }}>Fees the school charges</h2>
+          {items.filter((it) => !isSystemItem(it)).map((item) => {
+            const dirty = !!edits[item.id];
+            const open = detailsOpen === item.id;
+            return (
+              <div key={item.id} className="card" style={{ padding: '0.75rem 0.9rem', margin: '0.6rem 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'baseline' }}>
+                  <div>
+                    <strong style={{ fontSize: '1.05rem' }}>{item.display_name || item.name}</strong>
+                    {item.display_name && item.display_name !== item.name && <span style={{ color: '#666', fontSize: '0.85rem' }}> ({item.name})</span>}
+                    <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                      {item.category || 'No category'}{item.is_optional ? ' · Optional' : ''}
+                      {item.price_locked && <span className="badge" style={{ background: '#e6eefb', color: '#1d4a8f', marginLeft: '0.4rem' }} title="Charged only at the approved price for the student's year group">Approved price only</span>}
+                    </div>
+                  </div>
+                  <button type="button" className="secondary" style={{ fontSize: '0.8rem' }} onClick={() => setDetailsOpen(open ? null : item.id)}>
+                    {open ? 'Close' : 'Edit name'}
+                  </button>
+                </div>
+
+                {open && (
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end', margin: '0.5rem 0' }}>
+                    <label>Name<br /><input value={currentValue(item, 'name') || ''} onChange={(e) => edit(item.id, 'name', e.target.value)} style={{ width: '12rem' }} /></label>
+                    <label>Shown to parents as<br /><input value={currentValue(item, 'display_name') || ''} onChange={(e) => edit(item.id, 'display_name', e.target.value)} placeholder={item.name} style={{ width: '12rem' }} /></label>
+                    <label>Category<br /><input value={currentValue(item, 'category') || ''} onChange={(e) => edit(item.id, 'category', e.target.value)} style={{ width: '9rem' }} /></label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <input type="checkbox" checked={!!currentValue(item, 'is_optional')} onChange={(e) => edit(item.id, 'is_optional', e.target.checked)} /> Optional
+                    </label>
+                    {dirty && (
+                      <button type="button" onClick={() => saveItem(item)} disabled={savingId === item.id}>
+                        {savingId === item.id ? 'Saving…' : 'Save'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ marginTop: '0.5rem' }}>
+                  <span style={{ fontWeight: 600 }}>Charged in: </span>
+                  {editingTerms?.id === item.id ? (
+                    <form onSubmit={saveTerms} style={{ marginTop: '0.3rem' }}>
+                      <label style={{ display: 'block' }}><input type="radio" checked={editingTerms.all} onChange={() => setEditingTerms({ ...editingTerms, all: true })} /> Every term</label>
+                      <label style={{ display: 'block' }}><input type="radio" checked={!editingTerms.all} onChange={() => setEditingTerms({ ...editingTerms, all: false })} /> Only in the terms I tick:</label>
+                      <div style={{ paddingLeft: '1.5rem', opacity: editingTerms.all ? 0.45 : 1 }}>
+                        {terms.map((t) => (
+                          <label key={t.term_id} style={{ display: 'block' }}>
+                            <input type="checkbox" disabled={editingTerms.all} checked={editingTerms.ids.includes(t.term_id)}
+                              onChange={() => setEditingTerms({ ...editingTerms, ids: editingTerms.ids.includes(t.term_id) ? editingTerms.ids.filter((x) => x !== t.term_id) : [...editingTerms.ids, t.term_id] })} /> {t.term_name}
+                          </label>
+                        ))}
+                      </div>
+                      <button type="submit">Save</button>{' '}
+                      <button type="button" className="secondary" onClick={() => setEditingTerms(null)}>Cancel</button>
+                    </form>
+                  ) : (
+                    <>
+                      {termsText(item)}{' '}
+                      <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
+                        onClick={() => setEditingTerms({ id: item.id, all: !(item.charge_term_ids || []).length, ids: item.charge_term_ids || [] })}>Change terms</button>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ marginTop: '0.5rem' }}>
+                  <span style={{ fontWeight: 600 }}>Price: </span>
+                  {item.price_locked ? (
+                    proposingYears?.id === item.id ? (
+                      <form onSubmit={sendYearProposal} style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: '0.3rem' }}>
+                        {YEARS.map((yg) => (
+                          <label key={yg} style={{ margin: 0 }}>Y{yg}<br />
+                            <input type="number" min="0" value={proposingYears.prices[yg] ?? ''} placeholder="Not charged" style={{ width: '7.5rem' }}
+                              onChange={(e) => setProposingYears({ ...proposingYears, prices: { ...proposingYears.prices, [yg]: e.target.value } })} />
+                          </label>
+                        ))}
+                        <label style={{ margin: 0 }}>Reason<br /><input value={proposingYears.reason} onChange={(e) => setProposingYears({ ...proposingYears, reason: e.target.value })} style={{ width: '10rem' }} /></label>
+                        <button type="submit">Send for approval</button>
+                        <button type="button" className="secondary" onClick={() => { setProposingYears(null); setProposeStatus(null); }}>Cancel</button>
+                        {proposeStatus && <span style={{ color: '#a3232c', fontSize: '0.85em', width: '100%' }}>{proposeStatus}</span>}
+                      </form>
+                    ) : (
+                      <>
+                        {yearPriceText(item)}{' '}
+                        <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
+                          onClick={() => {
+                            const cur = {};
+                            YEARS.forEach((yg) => { const v = yearPrices[item.id]?.[yg]; cur[yg] = v != null ? String(v) : ''; });
+                            setProposingYears({ id: item.id, prices: cur, reason: '' }); setProposeStatus(null);
+                          }}>
+                          Change prices
                         </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </>
+                    )
+                  ) : proposing?.id === item.id ? (
+                    <form onSubmit={sendProposal} style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: '0.3rem' }}>
+                      <label style={{ margin: 0 }}>New price (₦)<br /><input type="number" min="0" value={proposing.amount} onChange={(e) => setProposing({ ...proposing, amount: e.target.value })} style={{ width: '8rem' }} autoFocus /></label>
+                      <label style={{ margin: 0 }}>Reason<br /><input value={proposing.reason} onChange={(e) => setProposing({ ...proposing, reason: e.target.value })} style={{ width: '10rem' }} /></label>
+                      <button type="submit">Send for approval</button>
+                      <button type="button" className="secondary" onClick={() => { setProposing(null); setProposeStatus(null); }}>Cancel</button>
+                      {proposeStatus && <span style={{ color: '#a3232c', fontSize: '0.85em', width: '100%' }}>{proposeStatus}</span>}
+                    </form>
+                  ) : (
+                    <>
+                      {item.default_amount != null ? naira(item.default_amount) : <span style={{ color: '#999' }}>Typed when charging</span>}{' '}
+                      <button type="button" className="secondary" style={{ fontSize: '0.8rem' }}
+                        onClick={() => { setProposing({ id: item.id, amount: item.default_amount ?? '', reason: '' }); setProposeStatus(null); }}>
+                        Change price
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          <h2 style={{ marginBottom: '0.3rem' }}>Used by the system</h2>
+          <p style={{ color: '#666', fontSize: '0.9rem', marginTop: 0 }}>
+            These aren&apos;t fees you charge, so they can&apos;t be changed here. <strong>Discount</strong> is the line a
+            discount or bursary given at <a href="/bursar/discounts">3. Discounts</a> appears under on a bill, as a minus
+            amount. The <strong>Tuck Shop</strong> lines record money put on a student&apos;s tuck shop balance.
+          </p>
+          <ul style={{ marginTop: 0 }}>
+            {items.filter(isSystemItem).map((item) => <li key={item.id}>{item.display_name || item.name}</li>)}
+          </ul>
+        </>
       )}
     </div>
   );
