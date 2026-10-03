@@ -18,6 +18,11 @@ function DiscountsInner() {
   const [calcType, setCalcType] = useState('percentage');
   const [value, setValue] = useState('');
   const [appliesTo, setAppliesTo] = useState('tuition');
+  const [fromChild, setFromChild] = useState('');
+  // Students who look like a 3rd (or later) child from their siblings
+  // (migration 343); confirming one gives them the sibling discount.
+  const [suggestions, setSuggestions] = useState(null);
+  const [suggestStatus, setSuggestStatus] = useState(null);
   const [addingType, setAddingType] = useState(false);
 
   const [studentQuery, setStudentQuery] = useState('');
@@ -30,6 +35,7 @@ function DiscountsInner() {
 
   useEffect(() => {
     loadTypes();
+    loadSuggestions();
     (async () => {
       const { data } = await supabase.from('fee_terms').select('id, name, is_current').order('id', { ascending: false });
       setTerms(data ?? []);
@@ -39,8 +45,25 @@ function DiscountsInner() {
   }, []);
 
   async function loadTypes() {
-    const { data } = await supabase.from('fee_discount_types').select('id, name, calc_type, value, applies_to').order('name');
+    const { data } = await supabase.from('fee_discount_types').select('id, name, calc_type, value, applies_to, from_child_number').order('name');
     setDiscountTypes(data ?? []);
+  }
+
+  async function loadSuggestions() {
+    const { data, error } = await supabase.rpc('sibling_discount_suggestions');
+    setSuggestions(error ? [] : (data ?? []));
+  }
+
+  async function confirmSuggestion(sg) {
+    setSuggestStatus(null);
+    const { error } = await supabase.from('student_discounts').insert({
+      student_id: sg.student_id,
+      discount_type_id: sg.discount_type_id,
+      notes: `Child ${sg.child_number}; older siblings here: ${sg.older_siblings}`,
+    });
+    if (error) { setSuggestStatus(`Error: ${error.message}`); return; }
+    setSuggestStatus(`${sg.first_name} ${sg.last_name} now has ${sg.discount_name}.`);
+    await loadSuggestions();
   }
 
   async function addType(e) {
@@ -52,10 +75,12 @@ function DiscountsInner() {
       calc_type: calcType,
       value: Number(value),
       applies_to: appliesTo,
+      from_child_number: fromChild ? Number(fromChild) : null,
     });
     if (!error) {
       setTypeName('');
       setValue('');
+      setFromChild('');
       await loadTypes();
     }
     setAddingType(false);
@@ -131,7 +156,7 @@ function DiscountsInner() {
         <strong>Discount types</strong>
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Name</th><th>Type</th><th>Value</th><th>Applies to</th></tr></thead>
+            <thead><tr><th>Name</th><th>Type</th><th>Value</th><th>Applies to</th><th>Sibling discount</th></tr></thead>
             <tbody>
               {discountTypes.map((t) => (
                 <tr key={t.id}>
@@ -139,6 +164,7 @@ function DiscountsInner() {
                   <td>{t.calc_type}</td>
                   <td>{t.calc_type === 'percentage' ? `${t.value}%` : naira(t.value)}</td>
                   <td>{t.applies_to}</td>
+                  <td>{t.from_child_number ? `Child ${t.from_child_number} onward` : ''}</td>
                 </tr>
               ))}
             </tbody>
@@ -153,11 +179,51 @@ function DiscountsInner() {
               <option value="fixed">Fixed amount</option>
             </select>
           </label>
-          <label>Value<br /><input type="number" min="0" value={value} onChange={(e) => setValue(e.target.value)} style={{ width: '7rem' }} /></label>
+          <label>Value<br /><input type="number" min="0" step="any" value={value} onChange={(e) => setValue(e.target.value)} style={{ width: '9rem' }} /></label>
           <label>Applies to<br /><input value={appliesTo} onChange={(e) => setAppliesTo(e.target.value)} style={{ width: '8rem' }} placeholder="tuition" /></label>
+          <label>Sibling discount<br />
+            <select value={fromChild} onChange={(e) => setFromChild(e.target.value)}>
+              <option value="">No</option>
+              <option value="2">2nd child onward</option>
+              <option value="3">3rd child onward</option>
+              <option value="4">4th child onward</option>
+            </select>
+          </label>
           <button type="submit" disabled={addingType}>Add type</button>
         </form>
+        <p style={{ fontSize: '0.85rem', color: '#666', margin: 0 }}>
+          A bursary is a percentage off tuition, flagged once on the student, and the term forecast counts it in their
+          year. For &ldquo;pays ₦500,000 of ₦1,500,000&rdquo; enter 66.6666667 (up to seven decimals, so it comes to the exact naira).
+        </p>
       </div>
+
+      {suggestions && suggestions.length > 0 && (
+        <div className="card">
+          <strong>Suggested from siblings</strong>
+          <p style={{ fontSize: '0.85rem', color: '#666', margin: '0.3rem 0' }}>
+            Students who look like a later child of a family at the school (siblings found through shared parents, oldest
+            first by date of birth) and don&apos;t have the sibling discount yet. Check each one and confirm it.
+          </p>
+          {suggestStatus && <p>{suggestStatus}</p>}
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Student</th><th>Year</th><th>Child</th><th>Older siblings at the school</th><th>Discount</th><th></th></tr></thead>
+              <tbody>
+                {suggestions.map((sg) => (
+                  <tr key={`${sg.student_id}-${sg.discount_type_id}`}>
+                    <td>{sg.first_name} {sg.last_name}</td>
+                    <td>{sg.year_group} {sg.form_class}</td>
+                    <td>{sg.child_number}</td>
+                    <td style={{ fontSize: '0.85rem' }}>{sg.older_siblings}</td>
+                    <td>{sg.discount_name}</td>
+                    <td><button type="button" onClick={() => confirmSuggestion(sg)}>Confirm</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <strong>Assign a discount to a student</strong>

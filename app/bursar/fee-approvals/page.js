@@ -30,6 +30,13 @@ function describe(c) {
     if (c.old_values.deposit !== c.new_values.deposit) parts.push(`Deposit: ${money(c.old_values.deposit)} → ${money(c.new_values.deposit)}`);
     return { what: `Admission fees, ${c.year_label} entry`, change: parts.join('; ') };
   }
+  // Migration 343: a fee's prices for one school term, by year group.
+  if (c.kind === 'fee_item_term_prices') {
+    const parts = [7, 8, 9, 10, 11, 12]
+      .filter((yg) => (c.old_values[yg] ?? null) !== (c.new_values[yg] ?? null))
+      .map((yg) => `Y${yg}: ${c.old_values[yg] == null ? 'year price' : money(c.old_values[yg])} → ${c.new_values[yg] == null ? 'year price' : money(c.new_values[yg])}`);
+    return { what: `${c.fee_item_name}, ${c.term_name || 'a term'}`, change: parts.join('; ') };
+  }
   if (c.kind === 'fee_item_prices') {
     const parts = [7, 8, 9, 10, 11, 12]
       .filter((yg) => (c.old_values[yg] ?? null) !== (c.new_values[yg] ?? null))
@@ -58,8 +65,14 @@ function FeeApprovalsInner() {
   const [itemForm, setItemForm] = useState({ id: '', amount: '', reason: '' });
 
   async function load() {
-    const { data, error } = await supabase.rpc('fee_price_change_list');
+    const [{ data, error }, { data: termRows }] = await Promise.all([
+      supabase.rpc('fee_price_change_list'),
+      // Which term a term price list is for (migration 343).
+      supabase.from('fee_price_changes').select('id, terms(term_name)').not('term_id', 'is', null),
+    ]);
     if (error) { setLoadError(errorText(error)); setRows([]); return; }
+    const termName = Object.fromEntries((termRows || []).map((r) => [r.id, r.terms?.term_name]));
+    (data || []).forEach((c) => { c.term_name = termName[c.id]; });
     setLoadError(null);
     setRows(data || []);
   }

@@ -75,11 +75,13 @@ export default function BudgetTermForecast({ canEdit, centres }) {
   const headcount = {};
   rows.forEach((r) => { headcount[r.year_group] = r.headcount; });
 
-  // Rows: one per fee item (the discount line separately), cells per year.
+  // Rows: one per fee item, and one per discount or bursary type (migration
+  // 343: the students flagged with it in each year, and what it takes off).
   const items = {};
   rows.forEach((r) => {
-    const k = r.name === 'Discounts (forecast)' ? 'discount' : String(r.fee_item_id);
-    (items[k] ||= { key: k, name: r.name, cc: r.cost_centre_id, price: r.price, discount: k === 'discount', cells: {} }).cells[r.year_group] = r;
+    const isDiscount = String(r.category || '').trim().toLowerCase() === 'discount';
+    const k = isDiscount ? `discount-${r.name}` : String(r.fee_item_id);
+    (items[k] ||= { key: k, name: isDiscount ? `${r.name} (discount)` : r.name, cc: r.cost_centre_id, price: r.price, discount: isDiscount, cells: {} }).cells[r.year_group] = r;
   });
   const byFund = {};
   Object.values(items).forEach((it) => { (byFund[it.cc ?? 'none'] ||= []).push(it); });
@@ -171,11 +173,11 @@ export default function BudgetTermForecast({ canEdit, centres }) {
       </div>
       <p style={{ color: '#666', fontSize: '0.85rem' }}>
         Shaded boxes were entered for this term; the rest follow the headcount, so they change as students join or leave.
-        Discounts are every current open-ended discount, taken off the highest school fee. Once the term is invoiced,
-        the charged and collected figures below replace this forecast. Fees are termly. Every year group pays the same
-        price unless prices by year group have been approved: propose them at{' '}
-        <a href="/bursar/fee-items">Fee Items</a> (Prices by year); they apply once you and the college secretary have
-        both approved them, and the grid then shows each year&apos;s price.
+        Each discount or bursary line counts the students flagged with it in that year (at Discounts) and takes it off
+        that term&apos;s full school fee for their year, so a percentage bursary follows a term&apos;s price (Year 12&apos;s double
+        Term 2). Prices are termly and come from <a href="/finance/term-fees">Fees by year &amp; term</a>, where you set
+        a fee&apos;s price for each year in each term (approved by you and the college secretary). Once the term is
+        invoiced, Fee income by fund shows what was actually charged and collected.
       </p>
     </div>
   );
