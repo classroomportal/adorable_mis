@@ -23,7 +23,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
 | Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, planned absences | Teachers, office, pastoral |
 | Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers (Years 10–11), HoDs, SMT |
-| Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History | Teachers, HoDs, assessment staff |
+| Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
 | Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; HR |
 | Care and conduct | [8. The Other Half and student groups](#8-the-other-half-and-student-groups) | Activity registers, the programme, student choices, groups, building a group from a rule | All staff; SMT; pastoral |
@@ -48,6 +48,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
 | Set or mark homework | [Setting homework](#setting-homework) · [Marking](#marking-the-mark-book) |
 | Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
+| Record or track reading ages | [Reading ages](#reading-ages-reading-ages) |
 | Write or check report comments | [Reports and documents](#6-reports-and-documents) |
 | Update a student's or parent's details | [Editing a record](#editing-a-record) · [Parents and leavers](#parents-and-leavers) |
 | Add a new student | [Adding a student](#adding-a-student-school-office-only) |
@@ -118,7 +119,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 1. Open **My Timetable** on the dashboard and click the lesson. The register opens with the class, period and date already chosen.
 2. Everyone starts as present. Change the code for anyone absent or late, adding minutes late. Press **Save** within the first 15 minutes; after that the lesson appears on Registers Not Done, and at 15-minute checks it becomes a register alert for HR and the office.
 3. If a student who was in an earlier lesson is missing, mark them N (no reason yet). The office gets a pop-up straight away and goes to find them. Don't wait to report it some other way.
-4. To praise or sanction during the lesson, press **Log behaviour for this class** on the register, pick the student(s) and the category, and save. A −5 event needs a written explanation of what happened, naming no other student.
+4. To praise or sanction during the lesson, press **Log behaviour for this class** on the register, pick the student(s) and the category, and save. A −5 event needs a written explanation of what happened, naming no other student, and a tick to confirm it really is a single serious incident; read the Stage 5 guidance shown first (chapter 7).
 5. For Year 10 and 11 classes, the **Homework** panel on the register shows what is due. Use **Set homework** there to set the next piece while you're with the class.
 
 **Every day**
@@ -201,7 +202,7 @@ Leaders use Formwork to see what is happening across classes and the school, and
 **Daily**
 
 - **Missed Lessons** and **Registers Not Done**: who is out of lessons, and which registers haven't been taken.
-- **Behaviour Review**: release or decline events with pictures before parents see them.
+- **Behaviour Review**: check Stage 5 events, with or without pictures, before parents see them: send, decline, or return to the teacher.
 - **Inbox**: automatic behaviour alerts (a −5 event or a week at −8) arrive here and by email.
 
 **Weekly**
@@ -232,7 +233,7 @@ The office keeps student and parent records right and is first to hear about mis
 
 1. Keep Formwork open: the missed-lesson pop-up appears for you as well as the attendance officer (see Mentors and pastoral staff).
 2. Check **Register Alerts** and resolve each once the teacher has been contacted.
-3. Release serious (−5) behaviour events without pictures to parents at **Behaviour Review**, after checking the text names no other student.
+3. The principal's PA only: release serious (−5) behaviour events without pictures to parents at **Behaviour Review**, after checking the text names no other student.
 4. Enter absences you know about in advance (illness, appointments, holidays the principal has agreed, exclusions) at **Planned Absences**, so teachers find the code already in their registers.
 
 *When a family's details change*
@@ -331,6 +332,7 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 
 - **First sign-in**: use the email the school has and the password in your welcome letter (your oldest child's date of birth as DDMMYYYY), then choose your own password.
 - **Any time**: choose your child, then check **Attendance** (today lesson by lesson), **Conduct**, **Assessment** (grades against targets and reports) and **Timetable**.
+- **Reading Age**: once your child has two reading tests, this tile shows each reading age against their actual age on the day, with a chart.
 - **Each term**: when the school publishes fees, **Fees** shows the invoice, what has been paid and what is due, with a PDF.
 - **Once**: on **School Calendar**, press **Subscribe** so term dates and events appear in your phone's calendar and update by themselves.
 - **Messages** from the school arrive in your **Inbox** and by email.
@@ -609,6 +611,7 @@ A profile opens on a grid of tiles. Each tile opens one part of the record.
 | Behaviour | Every event, who logged it, appeals and detentions |
 | Target Grades / Results | Targets per subject and scores per result set |
 | CAT4 / NGRT | Imported test scores |
+| Reading Age | Every reading age, from the interview on, against the student's age, with a chart (see Reading ages in chapter 5) |
 | Reports & Documents | Published reports, transcripts and score sheets, and the transcript download |
 
 ![Core Data, with Full view and Edit](manual-images/05b-student-core.jpg)
@@ -875,7 +878,7 @@ Each class's average grade against the average target of the same students, sort
 
 ### Grade boundaries (/admin/grade-boundaries)
 
-Grade cut-offs are set per subject and per year group (7–12). Years 7–11 use IGCSE (A\*–U); Year 12 uses WAEC (A1–F9). Choose the subject and year, edit the minimum and maximum score for each grade, or **Remove** a band. Any member of staff can edit boundaries (the school's decision); changes are not logged.
+Grade cut-offs are set per subject and per year group (7–12). Years 7–11 use IGCSE (A\*–U); Year 12 uses WAEC (A1–F9). Choose the subject and year, edit the minimum and maximum score for each grade, or **Remove** a band. Only assessment managers can edit boundaries (the principal, 3 Oct 2026); everyone else can view them. Changes are not logged.
 
 ![Grade boundaries for one subject and year](manual-images/33-boundaries.jpg)
 
@@ -890,6 +893,39 @@ Grade cut-offs are set per subject and per year group (7–12). Years 7–11 use
 Every score, target and transcript grade entered, changed or deleted, with the old and new grade and who did it, taken from the sign-in, never from the page. Nobody can edit or delete the log. Filter by dates, student, person, grade type and action, and download as CSV. SMT, assessment managers and admins can read it; homework and group marks are hidden unless chosen, and only SMT and admins can see those.
 
 ![Grade History](manual-images/34-grade-history.jpg)
+
+### Reading ages (/reading-ages)
+
+Literacy is one of the school's improvement targets, so every student's reading age is tracked against their actual age from the admissions interview onwards. The **gap** is the reading age minus the student's age on the day of the test: **−1 y 2 m** means reading 14 months below their age, **+8 m** means 8 months above. Formwork works out the age and the gap from the date of birth and the test date; nobody types them.
+
+Open **Reading Ages** from the Assessment card. Teachers, Heads of Department, mentors, pastoral staff, assessment managers and SMT can see it. Choose a **Year group** (and a **Form** if you want one).
+
+![Reading Ages for Year 8](manual-images/34b-reading-ages.jpg)
+
+- **Where they are now**: how many have a reading, the average gap at their latest test, how many are reading below their age, and how many have closed the gap since their first reading. The coloured buttons count students in each band (2+ years below, 1–2 years below, up to a year below, at or above their age); press one to list just those students.
+- **How it has changed**: the average gap at each sitting (a term, or a school year for older readings). Check the **Tested** column before comparing two sittings: different students may have sat each one.
+
+**Students** lists everyone in view, furthest behind first, with their first and latest reading and the change in the gap (▲ closed, ▼ widened). Press a row to see that student's chart and every reading; **Download CSV** saves the list. The same chart is on the student's profile, under the **Reading Age** tile.
+
+![A student's readings, opened from the list](manual-images/34c-reading-student.jpg)
+
+In the chart the blue line is the reading age and the dashed line is the student's actual age; the bar between them at each test is the gap (red below their age, green above). Purple dots are the admissions interview, blue dots the school's tests.
+
+**Recording a test** (Record a reading test, /reading-ages/record; teachers, Heads of Department, assessment managers and SMT):
+
+1. Type the **Test** name (for example *Entry test*) and the **Usual test date**, the day most students sat it.
+2. Choose the **Year group** and **Form**, or find one student by name.
+3. Type each reading age in years and months. Leave a student blank if they weren't tested.
+4. If a student sat it on another day (absent, a catch-up), change the **Date tested** on their row; it turns yellow.
+5. Check the **Gap** column, which fills in as you type, then press **Save**.
+
+![Recording an entry test for Year 7, one student tested on another day](manual-images/34d-reading-record.jpg)
+
+You can come back to the same test and date to add more students; readings already saved are filled in. A test can't be dated after today. To correct or remove a saved reading, open the student in Reading Ages (or the Reading Age tile on their profile) and press **Edit** or **Remove**. The interview reading is corrected on the applicant's page, and NGRT scores in the CAT4 / NGRT section. Every school test added, changed or removed is kept in Change History.
+
+**What parents see.** A parent sees their child's readings, with the chart, on the **Reading Age** tile in the parent portal, but only once the child has two readings from the school's tests or the interview. A single reading is not yet a trend, and old NGRT scores don't count towards the two. Students don't see reading ages.
+
+![The parent's Reading Age tile on a phone](manual-images/34e-reading-parent.jpg)
 
 ## 6. Reports and documents
 
@@ -962,13 +998,15 @@ Any member of staff can log behaviour. Points come only from the category, serio
 Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this class** on a register.
 
 1. **Log for**: one student, or a group chosen by class, house, room, restaurant or year.
-2. Choose the **Date**, **Positive** or **Negative**, and the **Category**. Points come from the category (−1 to −5, +1 to +5); you can't type them.
-3. Add a comment. For a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty) an **Explanation** is required: say what happened in your own words and don't name any other student.
+2. Choose the **Date**, **Positive** or **Negative**, and the **Category**. Points come from the category (−1 to −5, +1 to +5); you can't type them. Some categories show a line underneath saying when to use them.
+3. Add a comment. For a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty) an **Explanation** is required: say what happened in your own words and don't name any other student. First, a box asks "Is this really a Stage 5?" and lists what the school counts as one. If the incident isn't on that list, choose a lower category: repeated minor behaviour reaches a detention through the weekly total anyway. To save a Stage 5 you must tick "I confirm this is a single serious incident"; the button stays greyed out until you do. The same box and tick appear if you edit an event up to Stage 5 later.
 4. On a serious event you can **+ Add a witness, someone involved or a target**, found by name, year and house. These links are staff-only and carry no points.
 5. Positive events can have one picture. Negative events can't.
 6. Press **Log event**.
 
-![Logging a serious event](manual-images/50-log.jpg)
+**If your Stage 5 comes back.** The reviewer can return a Stage 5 that doesn't look serious enough. You get a message in your inbox with their reason, and the note shows on the event. Its points stop counting straight away, and its detention is cancelled if it hasn't happened yet. Press **Edit** on the event: choose the right category if it isn't a Stage 5 (its points then count), or keep Stage 5 and improve the explanation, which brings back the −5 and its detention and sends it back for review. Every return is counted against the teacher who logged the event, and SMT can see the count.
+
+![Logging a serious event, with the Stage 5 guidance and the confirmation tick](manual-images/50-log.jpg)
 
 **Behaviour Log** (/behaviour/log) searches and filters past events by student, type, category and dates; **View / edit** opens an event. **Behaviour alerts** (/behaviour/alerts) lists events of −3 or worse in the last 7 days; houseparents see their own house.
 
@@ -976,18 +1014,18 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 ![Behaviour alerts, last 7 days](manual-images/52-alerts.jpg)
 
-**Editing.** The teacher who logged an event, pastoral staff, houseparents, the head of boarding, SMT, the school office and admins can change its comment and category (a negative stays negative); detentions are recalculated. Only admins can delete an event. All changes are kept in Change History.
+**Editing.** The teacher who logged an event, pastoral staff, houseparents, the head of boarding, SMT, the school office and admins can change its comment and category (a negative stays negative); detentions are recalculated. Only SMT can delete an event, a merit included; the Delete button is shown only to them. All changes are kept in Change History.
 
 ### What parents see: Behaviour Review (/behaviour/review)
 
 - Positive events are always visible to parents.
 - Negative events are hidden until reviewed. −1 to −4 events without a picture never go to parents.
-- −5 events without a picture: the school office or an admin checks the text and sends it.
+- −5 events without a picture: the principal's PA or SMT (or an admin) checks the text and sends it.
 - Events with a picture: SMT or an admin sends the text with the picture, the text alone, or declines.
 
-The reviewer ticks the confirmation that the text follows protocol, names no other student and is in good English, then presses **Send text** (or **Don't send yet**). An explanation that names a linked student is refused, with the word to reword.
+The reviewer ticks the confirmation that the text follows protocol, names no other student and is in good English, then presses **Send text** (or **Don't send yet**). An explanation that names a linked student is refused, with the word to reword. If an event isn't really a Stage 5, press "Not Stage 5: return to teacher", say why, and press "Return to" the teacher. They get your note in their inbox and see it on the event. Its points stop counting at once and its detention is cancelled if it hasn't happened yet (the student is told). The event moves to "Returned to the teacher", where it can't be sent: if they change the category it leaves the page, and if they keep Stage 5 and edit the explanation it comes back to "Waiting for review". Keep the note factual, e.g. "This is Disruption in class, −2." SMT see "Stage 5s returned, by teacher" lower down the page: how many each teacher has had returned, to see who needs more training.
 
-![Behaviour Review](manual-images/53-review.jpg)
+![Behaviour Review, with an event being returned to the teacher and the count by teacher](manual-images/53-review.jpg)
 
 ### Alerts and detentions
 
@@ -999,8 +1037,9 @@ The rules below are the current settings; anyone with the Lookups page can chang
 | Weekly detention | −10 in a Saturday–Friday week | Books one detention for that Friday (positive points don't offset) |
 | Weekly alert | −8 in a week | Emails cs@, copied to SMT and sro@; replies go to guardian.counselling@ |
 | Detention room and time | CG4, after lesson 7 | Shown on every detention notice |
+| Stage 5 guidance | The school's list of what is and isn't a Stage 5 | Shown when staff choose a Stage 5 category, before they tick to confirm. Each behaviour category can also have a description, shown when it is picked |
 
-**Detentions** (/detention) lists this week's Friday detention with the events behind each one. Staff can't add or delete detentions by hand; they mark each as Scheduled, Attended, Missed or Cancelled, and can print the list. The student (not the parent) gets an email and inbox notice when it is booked and a reminder at 7:30pm on Thursday.
+**Detentions** (/detention) lists this week's Friday detention with the events behind each one. Staff can't add or delete detentions by hand; they mark each as Scheduled, Attended or Missed, and can print the list. Only SMT can mark a detention Cancelled; the option is shown only to them. The student (not the parent) gets an email and inbox notice when it is booked and a reminder at 7:30pm on Thursday.
 
 ![The Friday detention list](manual-images/54-detention.jpg)
 
@@ -1246,7 +1285,7 @@ Students pre-order from their portal within fixed weekly windows, with at most 2
 | Wednesday | Monday 5:00pm | Tuesday 9:00am |
 | Saturday | Wednesday 7:00pm | Thursday 11:00pm |
 
-Tuckshop, bursar and admin staff can change the schedule and close ordering (for a holiday or stock-take) at **Ordering On/Off** (/tuckshop/ordering). Closing doesn't clear existing orders; it reopens by itself at midnight on the date chosen. **Special pre-order sessions** add a one-off window (for example a public holiday) with their own items and limits.
+Tuckshop, bursar and admin staff can change the schedule and close ordering (for a holiday or stock-take) at **Ordering On/Off** (/tuckshop/ordering). Closing doesn't clear existing orders; it reopens by itself at midnight on the date chosen. **Special pre-order sessions** add a one-off window (for example a public holiday) with their own items and limits. To check at a glance whether students can order right now, look at the Tuckshop card on your home page: a green "Ordering open" or red "Ordering closed" badge, with when it next closes or opens.
 
 ![Ordering On/Off and the weekly schedule](manual-images/93-ordering.jpg)
 
@@ -1435,9 +1474,19 @@ Admins own setup, imports, permissions and backups; HR assigns roles; SMT, HR an
 
 ### Who can open which page (/admin/permissions)
 
-Choose a role (the number shows how many pages it opens), then tick the pages it can open. Changes save instantly. At the bottom, each role can be given Read or Edit on each student field. Remember that page access only decides what is shown; what someone can actually read or change is enforced by the database.
+Choose a role from the list at the top. Beside it you see what the role is for, how many pages it opens, how many kinds of record it can change and how many student fields it can edit. Then use the three tabs:
 
-![Permissions for a role](manual-images/120-permissions.jpg)
+- **Pages**: tick the pages the role can open. Each section shows how many of its pages are ticked, and **Find a page** narrows the list. Changes save instantly. Admins open every page whatever is ticked.
+- **What they can do**: for each kind of record (registers, behaviour events, results, payments and so on), whether the role can **View**, **Add**, **Edit** and **Delete** it. **Yes** means any record, **Own only** means only records tied to the person (their own classes, events they logged), and **No** means not at all. Click a row to see the names of the database rules that allow it. This is read from the database itself, so it is always current: tick a page and any access that depends on it changes straight away. Below the table, give the role Read or Edit on each student Core Data field.
+- **Compare roles**: every page against every role in one grid, to check at a glance who can open what. Click a role's name to open it on the Pages tab.
+
+**Changing what a role can do.** Some records have tick boxes beside View, Add, Edit and Delete: certificates, certificate levels, the sick-bay records, the BMI table and grade boundaries, and (since 3 Oct 2026) behaviour, attendance, reports, results, homework, students and families, staff and HR, the tuckshop, The Other Half, student groups, admissions, fees (fee prices stay with the two approvers), the timetable, the calendar and next year's plan. Staff roles, page permissions and logins have no tick boxes, so a tick can never hand out admin powers. A record whose rows belong to someone (a teacher's own report comments, a checker's report period) keeps that rule whatever is ticked: the tick decides who sees or changes everyone's. Tick or untick a box and Formwork lists the people who would gain or lose that ability, by name, before it saves; press **OK** to go ahead. Every change is kept in Change History.
+
+A padlock (🔒) means the cell can't be changed here by anyone, admin included. These are the principal's own decisions: only the school office adds students; Grade History and Change History can't be edited; fee prices need the principal and the college secretary. Some things everyone signed in can read also have a padlock. Hover over the padlock to see why.
+
+Records without tick boxes are still set in the database. A few actions (approving fee prices, admissions decisions, planned absences) go through their own checked steps, so they show as View only even for the people who can do them.
+
+![Permissions: an assessment manager's abilities, with tick boxes and padlocks](manual-images/120-permissions.png)
 
 ### Staff and roles (/staff/roles)
 
@@ -1447,7 +1496,7 @@ Add staff (name, code, email: a login is created automatically from the email) a
 
 ### Lookups (/admin/lookups)
 
-The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories and their points (admins only), the behaviour thresholds and detention room and time, certificate levels, academic years, and admission fee proposals. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
+The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, and admission fee proposals. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
 
 ![Lookups](manual-images/122-lookups.jpg)
 
@@ -1531,10 +1580,10 @@ A full database backup runs every night. Admins can also run one before anything
 | pastoral | Appeals, detentions, editing behaviour events, class allocation, messages, student groups |
 | houseparent | Their house's students by default; appeals, detentions, pastoral comments |
 | head\_of\_boarding | Houseparent powers across all houses; counts as pastoral |
-| teacher | Registers, results and homework for their classes, behaviour logging, subject comments |
+| teacher | Registers, results and homework for their classes, behaviour logging, subject comments, reading tests |
 | mentor | Their mentor group; mentor comments |
 | head\_of\_department | Class Progress and homework for their department; deleting their department's scores; class allocation |
-| assessment\_manager | Any result, target, CAT4/NGRT; transcript grades; Grade History; publishing documents |
+| assessment\_manager | Any result, target, CAT4/NGRT; transcript grades; recording reading tests; Grade History; publishing documents |
 | assessment\_user | Enter any result or target, but not delete |
 | bursar | Fees, invoices, payments, discounts, admission payments; tuckshop admin (not Hand Out) |
 | school\_office | Student records (all fields), adding students, parents and logins, welcome letters, register alerts, releasing −5 behaviour, messages, missed-lesson pop-ups |
@@ -1552,7 +1601,7 @@ A full database backup runs every night. Admins can also run one before anything
 | --- | --- |
 | Registers | Any staff can mark any register; no future dates; flagged 15 minutes after the start |
 | Missed lessons | Seen in school, then absent without a reason (N or O) in a later or earlier lesson |
-| Behaviour | Points come from the category; −5 needs an explanation; negative events reach parents only after review |
+| Behaviour | Points come from the category; −5 needs an explanation and a confirmation tick; negative events reach parents only after review by the principal's PA or SMT; a Stage 5 returned to the teacher counts 0 until they change it |
 | Detentions | Single event of −5, or a week (Sat–Fri) totalling −10; Friday in CG4 after lesson 7 |
 | Behaviour alert | −5, or a week at −8: email to cs@, SMT and sro@ |
 | Results | Percentages 0–100; grade from the subject's boundaries for the year; one score per set |

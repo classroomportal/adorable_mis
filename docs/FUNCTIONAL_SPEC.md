@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 2 October 2026 (database migrations up to 318). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 3 October 2026 (database migrations up to 337). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -63,7 +63,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | pastoral | Pastoral staff | Appeals, detentions, editing behaviour events, class allocation, sending messages. |
 | houseparent | Boarding houseparents | Their house's students by default; appeals, detentions, pastoral comments. |
 | head\_of\_boarding | Head of boarding | Houseparent powers across all houses; counts as pastoral. |
-| teacher | Teaching staff | Registers, results for their own classes, behaviour logging, subject comments. |
+| teacher | Teaching staff | Registers, results for their own classes, behaviour logging, subject comments, recording reading tests. |
 | mentor | Form tutors | Their mentor group; mentor comments. |
 | head\_of\_department | HoDs | Class Progress for their department; deleting their department's scores; class allocation. |
 | assessment\_manager | Data lead | Any result, target, CAT4/NGRT; transcript grades; Grade History; publishing documents. |
@@ -111,6 +111,8 @@ Only Formwork creates logins; nobody can create their own account, by email or b
 
 - **FR-1.10** Every server route except the parents' calendar feed (FR-1.11) checks the caller's sign-in and page access before doing anything, and the build fails if one doesn't. Backup is admin-only whatever the permissions page says. \[DB + build check\]
 - **FR-1.11** One route works without sign-in: the parents' calendar feed (/api/calendar-feed/…), because calendar apps can't sign in. Each parent's secret link is the check instead, and the build check lists this route as its only exception. It returns only the events parents see on their calendar page, and nothing once none of the parent's children is still at the school. Agreed by the principal, 30 Sept 2026 (migration 274). \[DB + build check\]
+- **FR-1.12** /admin/permissions shows each role three ways (migration 327, 2 Oct 2026). **Pages**: which pages it opens, ticked by section. **What they can do**: for each kind of record, whether the role can view, add, edit and delete it: Yes (any record), Own only (records tied to the person, such as their classes) or No, with the rule names behind each answer. It is worked out live from the database's own rules for someone holding only that role, so it changes as soon as a page is ticked or a rule changes. Actions done through checked steps (fee approvals, admissions decisions, planned absences) show as View only, and checks made on saving aren't shown. **Compare roles**: every page against every role. Only admins can change page access and the student Core Data field grants; the database rules themselves can't be changed from the app. \[Page; rules read from DB\]
+- **FR-1.13** Some abilities are tick boxes on "What they can do" (migration 329, 3 Oct 2026; stage 1 of docs/role-abilities-design.md): certificates and certificate levels, the seven sick-bay tables, the BMI reference table and grade boundaries. They start as each role's access before the change, except grade boundaries. Only admins can tick or untick. Before a change saves, the page names the people who would gain or lose it. Admin can't remove its own access to permissions, and every tick and untick is logged in Change History under access. Stage 2 (migration 330, 3 Oct 2026) added behaviour (events, involved students, photos, appeals, categories, detentions), attendance (registers, codes, planned absences, register alerts) and reports (periods, checkers, subject and pastoral comments), each with the access it had before. Rules tied to particular records stay fixed: a teacher's own report comments, a checker's report period, students' and parents' own records, and whoever can edit an event writes its involved students. Actions the app never allowed (deleting register marks, creating detentions by hand) are padlocked with the reason. Stage 3 (migration 331, 3 Oct 2026) added results, target and transcript grades, CAT4, NGRT, reading tests, subjects, departments, the grade scale, subject aliases and key stages, homework (viewing), which classes use homework, and marking schemes, again with the access each had. Teachers' scores for students they teach, Heads of Department's for their department, who can delete a score, and every rule for setting, marking and attaching homework and students' done ticks stay fixed and padlocked. Stage 4 (migration 332, 3 Oct 2026) added 41 tables: students and families, staff and HR, the tuckshop, The Other Half, student groups and admissions. An action became a tick only where every rule granting it names just roles or pages; where a rule also looks at the record or the person, or lets parents or students in, it stays and is padlocked with the reason (for example, a new applicant always starts as an enquiry, only unpaid enquiries are deleted, group marks belong to the group's own staff, each family sees its own tuckshop orders). Editing a student stays field by field. Stage 5 (migration 333, 3 Oct 2026), the last, added the 12 fee tables: discounts, payment plans, charge batches, and adding invoices, charges, payments and fee items became ticks; who sees invoices, charges, payments, fee items and terms (parents included, once a term is published) and everything about prices stay padlocked, and fee prices still can't be written from the app whatever is ticked. Stage 6 (migration 334, 3 Oct 2026) added the timetable, calendar and next year: classes, class lists, lessons, blocks, periods, bell times, mentor groups, staff commitments, terms, academic years, calendar events and next year's plan; changing them became ticks, while reading the timetable, calendar and term dates stays open to everyone signed in. 110 tables are now tickable. Staff roles, page permissions, logins, the tick tables themselves and system settings are deliberately not tickable, so a tick can never hand out admin powers. Some cells have a padlock and can't be ticked by anyone, admin included; they change only by a database change the principal agrees: only the school office adds students; Grade History and Change History can't be edited, and who reads them is fixed; fee prices and price changes need the principal and the college secretary; certificate levels, the BMI table and grade boundaries are readable by everyone signed in. Parents never seeing homework marks or other students' names in behaviour events is not a staff tick at all. \[DB\]
 
 ## 5. FR-2 Students, parents and portals
 
@@ -148,6 +150,7 @@ Every member of staff can read the whole student record; what each role can chan
 | Behaviour | Own events (not voided); can appeal negatives | Only events released to parents |
 | Attendance | No | Yes, including today lesson by lesson |
 | CAT4 / NGRT scores | No | Yes |
+| Reading ages | No | Yes, once there are two readings: each with the age on the day, the gap and a chart (FR-7.22) |
 | Fees | No | Only for terms SMT has published |
 | Tuckshop | Order, see balance and purchases | See balance and purchases; cannot order |
 | Other Half | Choose activities during Evening Prep | See the chosen activity |
@@ -169,7 +172,7 @@ Every member of staff can read the whole student record; what each role can chan
 **Gender**
 
 - **FR-2.17** Every student's gender is required and is Male or Female, chosen from a list on the New Student page and the student record. It can't be blanked by an edit or a CSV re-import; the import converts Male/Female and refuses a new student without one. \[DB\]
-- **FR-2.18** Only the school office can add a new student, at /students/new or /students/import; holding admin is not enough. Admins can still see, correct and delete student records. Someone who holds both admin and school\_office adds students through their office role, so to stop a person adding students, remove their school\_office role (migration 275). \[DB\]
+- **FR-2.18** Only the school office can add a new student, at /students/new or /students/import; holding admin is not enough. Admins can still see, correct and delete student records. Someone who holds both admin and school\_office adds students through their office role, so to stop a person adding students, remove their school\_office role (migration 275). Until migration 328 any admin login could still add a student, because the rule's role check lets every admin through (known issue 32). \[DB\]
 
 ## 6. FR-3 Timetable, classes and Nova-T imports
 
@@ -210,7 +213,7 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 
 **Taking registers (/attendance)**
 
-- **FR-4.1** Any member of staff can mark any register, for any class or activity. This is the school's decision (27 Sept 2026). \[DB\]
+- **FR-4.1** Any member of staff can mark any register, for any class or activity. This is the school's decision (27 Sept 2026); since migration 330 it is a tick on /admin/permissions, set for every role. \[DB\]
 - **FR-4.2** One mark per student, per date, per period: present, late, absent or authorised absence. Saving again overwrites. \[DB\]
 - **FR-4.3** No register can be saved for a future date (Lagos time). Past dates are allowed after a confirmation. \[DB / Page\]
 - **FR-4.4** A late mark needs the minutes late (0–600). While the lesson is running, the box suggests the minutes since it started. \[DB range; Page requires it\]
@@ -311,12 +314,12 @@ Staff log behaviour by category, points come only from the category, and a −5 
 **Editing and deleting**
 
 - **FR-6.6** The teacher who logged it, pastoral, houseparent, head of boarding, SMT, school office and admin can change an event's comment and category (negative stays negative). Detentions are recalculated. Events withdrawn on appeal can't be edited. \[DB\]
-- **FR-6.7** Only admins can delete an event. Changes and deletions are logged in Change History. \[DB\]
+- **FR-6.7** Only SMT can delete an event, a merit included; holding the smt role is what counts, and admin alone is not enough (migration 319, the principal, 2 Oct 2026; live only from 3 Oct 2026, through migration 330, see known issue 33). Staff can't withdraw an event or move it to another student any other way; only an upheld appeal withdraws one. Changes and deletions are logged in Change History. \[DB\]
 
 **Release to parents (/behaviour/review)**
 
 - **FR-6.8** Positive events are always visible to parents. Negative events are hidden until reviewed. \[DB\]
-- **FR-6.9** Events with a picture: SMT or admin send the text with the picture, the text alone, or decline. −5 events without a picture: the school office or admin release the text. −1 to −4 events without a picture never go to parents. SMT get an inbox notice for each picture to check. \[DB\]
+- **FR-6.9** Events with a picture: SMT or admin send the text with the picture, the text alone, or decline. −5 events without a picture: the school office, SMT or admin release the text (SMT since migration 336; in practice the principal's PA and SMT, the only reviewers the principal wants). −1 to −4 events without a picture never go to parents. SMT get an inbox notice for each picture to check. \[DB\]
 
 **Alerts**
 
@@ -331,7 +334,7 @@ Staff log behaviour by category, points come only from the category, and a −5 
 **Detentions (/detention)**
 
 - **FR-6.14** A detention is booked automatically for the Friday of the Saturday–Friday week when a −5 event is logged, or when the week's negative total reaches −10 (positive points don't offset). Staff can't add or delete detentions by hand. \[DB\]
-- **FR-6.15** Detentions are in CG4 after lesson 7. Statuses are scheduled, attended, missed and cancelled; whoever has the /detention page updates them. \[DB\]
+- **FR-6.15** Detentions are in CG4 after lesson 7. Statuses are scheduled, attended, missed and cancelled. Whoever has the /detention page marks them attended or missed, but only SMT can cancel one (migration 319, the principal, 2 Oct 2026; live from 3 Oct 2026, migration 330); the Cancelled option is shown only to SMT. A detention's date and student can't be changed. Detentions still cancel automatically when an event's category is corrected below the thresholds or an appeal is upheld. \[DB\]
 - **FR-6.16** The student (not parents) gets an email and inbox notice when a detention is booked, a reminder at 7:30pm on Thursday, and a notice if it is cancelled. Replies go to SMT. \[DB\]
 
 **Certificates**
@@ -361,6 +364,14 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.22** Students and parents never see these links, on any portal. Once parents can see an event, its explanation can't name any of the other students (first, last, preferred or legal names, as whole words; a name the event's own student shares, such as a sibling's surname, doesn't count). Releasing the event, editing its text, or adding a student its text already names is refused, with the word to reword. \[DB\]
 - **FR-6.23** A negative event reaches parents only through the review (FR-6.9). Staff can't make an event visible to parents, mark it reviewed or change its type directly, and a new negative event always starts hidden. \[DB\]
 
+**Choosing Stage 5** (migration 335, the principal, 3 Oct 2026, because some staff were logging Stage 5 for minor offences)
+
+- **FR-6.24** When a serious category (−5 or worse) is picked on Log behaviour, a box asks "Is this really a Stage 5?" and shows the school's guidance on what is and isn't one. The guidance is one text, edited at /admin/lookups (Detentions and serious events → Stage 5 guidance) by anyone with that page. Its list covers violence of any kind, bullying, theft, cheating, leaving bounds, abuse of staff, deliberate damage, a phone outside Sunday after lunch and serious laptop misuse. It excludes lateness, uniform, low-level disruption and repeated minor behaviour, which reaches a detention through the weekly total. \[DB / Page\]
+- **FR-6.25** A serious event can't be saved until the member of staff ticks "I confirm this is a single serious incident … not low-level or repeated minor behaviour". The same box and tick appear when an existing event is edited up to Stage 5. The tick is a prompt on the page only and is not stored. \[Page\]
+- **FR-6.26** Each behaviour category can have a short description, edited at /admin/lookups and shown when the category is picked (when logging, and when changing an event's category). Stage 5, Bullying and Academic dishonesty were given one; the rest are for the school to write. \[DB / Page\]
+- **FR-6.27** At Behaviour Review, the reviewer (the school office or SMT; only SMT or admin for an event with a picture) can mark a serious event "Not Stage 5: return to teacher", with a note saying why. Only before parents can see it, and not on a withdrawn event. The teacher who logged it gets the note in their Formwork inbox, and it shows on the event wherever they see it. The event waits under "Returned to the teacher", where it can't be sent to parents. From the moment it is returned it counts 0 points (its category is kept), and its detention is cancelled if it hasn't happened yet, with the week's total detention if the week no longer reaches it; the student is told (migration 337). Detentions already attended stay. If the teacher changes the category, the new category's points count, it leaves the review and detentions are recalculated (FR-6.6). If they keep Stage 5 and edit the explanation, the −5 and its detention come back and it goes to "Waiting for review" again. Staff can't mark or clear a return any other way; any real edit clears it. Returns are logged in Change History (behaviour). Only the principal's PA (through school\_office) and SMT review Stage 5 (the principal, 3 Oct 2026). \[DB\]
+- **FR-6.28** Every return is kept permanently against the teacher who logged the event (behaviour\_event\_returns: the teacher, the reviewer, the note and the original category and points), even after the event is changed or deleted. Only SMT and admins can read it. Behaviour Review shows them "Stage 5s returned, by teacher": the number for each teacher and the latest date, to see who needs more training (migration 337, the principal, 3 Oct 2026). Only the return step writes to it. The first four returns (3 Oct 2026, made before the points rule existed) were brought into line: points 0, recorded in the tally, and the one detention not yet held (dated 2 Oct, still "scheduled") cancelled; the other three had been attended and stay. \[DB\]
+
 ## 10. FR-7 Assessment, results and targets
 
 Teachers enter percentage scores for their own classes against result sets; each score is graded from the subject's boundaries and compared with the student's target.
@@ -372,7 +383,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 
 **Entering and deleting scores (/results/enter)**
 
-- **FR-7.3** A teacher enters or changes scores only for students in their own classes, in that class's subject. Assessment managers, assessment users and admins can enter any score. \[DB\]
+- **FR-7.3** A teacher enters or changes scores only for students in their own classes, in that class's subject. A Head of Department can also enter and change scores in their department's subjects, the same department rule as deleting them in FR-7.6 (migration 321, 2 Oct 2026); a subject with no department stays with its class teacher. Assessment managers, assessment users and admins can enter any score. \[DB\]
 - **FR-7.4** Scores are percentages (0–100). The grade is worked out from the subject's boundaries for that year group when the score is typed, and saved with it; later boundary changes don't regrade saved scores. \[Page\]
 - **FR-7.5** One score per student, per subject, per result set. Types: short test, teacher assessment, exam grade (plus imported term exams). \[DB\]
 - **FR-7.6** The class teacher, a Head of Department for their department's subjects, and assessment managers and admins can delete a score. Assessment users can't. Scores are deleted on Enter Results, or by assessment managers and admins with the Delete button beside each score on a student's profile (Results tab), with a confirmation. \[DB / Page\]
@@ -380,7 +391,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 
 **Boundaries, subjects and targets**
 
-- **FR-7.8** Grade boundaries are set per subject and per year group (7–12). Any member of staff can edit boundaries, subject aliases and key-stage tags (school decision, 27 Sept 2026). \[DB\]
+- **FR-7.8** Grade boundaries are set per subject and per year group (7–12). Only assessment managers can edit boundaries (the principal, 3 Oct 2026, migration 329; until then any member of staff could), as a tick admins can change (FR-1.13); everyone signed in can read them. Any member of staff can edit subject aliases and key-stage tags (school decision, 27 Sept 2026; since migration 331 an ordinary tick, set for every role). Years 10 and 11 follow Cambridge IGCSE's June 2026 grade thresholds (migration 322, the principal, 2 Oct 2026) in 17 subjects, among them Maths, English, the sciences, Computing, Economics, the languages, Art, PE, Geography and History: time-zone variant 3, the Extended route, each threshold turned into a percentage of the route's total and rounded up. Below the lowest grade is U; Extended Maths and Further Maths stop at E. Years 7–9 keep 90/80/70…, Year 12 (WAEC) is unchanged, and saved results keep their grade. \[DB\]
 - **FR-7.9** One target grade per student per subject, on the IGCSE (A\*–U) or WAEC scale. Assessment managers and admins set and delete targets; assessment users set but can't delete. \[DB\]
 - **FR-7.10** A subject with no target of its own borrows one from a related subject (e.g. Further Maths from Maths). Portals show targets only for subjects the student takes. /target-grades/coverage lists students missing a target. \[DB / Page\]
 - **FR-7.11** Grades are compared with targets as above, on or below (green, amber, red). No comparison is made across IGCSE and WAEC. \[Page\]
@@ -391,6 +402,17 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.13** Missing Grades lists, class by class, who has no mark in a set. A subject is expected only if someone in that year group has a mark for it. \[DB\]
 - **FR-7.14** Top 10 ranks students in a result set by average percentage, per year or overall, sharing tied ranks. \[Page\]
 - **FR-7.15** Review Results (subject overview) charts a student's or class's scores across result sets. Class Progress shows each class's average grade against its students' average target. Who sees which classes: SMT, admins, assessment, pastoral and boarding staff see every class; a Head of Department sees their department's (an SMT member who is also a Head of Department sees every class, migration 312); a teacher sees only the classes they teach, as class teacher or for any single lesson. This narrows the page only; results stay readable to staff elsewhere. The database picks one grade per current student and subject for the chosen result set, or the most recent, so the page loads about 4,300 grades rather than every result ever recorded (until migration 313 it downloaded all 59,000 and could stay on Loading on a tablet). \[Page\]
+
+**Reading ages** (/reading-ages and /reading-ages/record, Assessment card, migrations 323–324, 2 Oct 2026; literacy is a school improvement target)
+
+- **FR-7.16** A reading age is kept in years and months with the date it was tested. The gap is the reading age minus the student's age on that day, from their date of birth; a minus means reading below their age. The age and gap are worked out each time they are read, never stored, so correcting a date of birth corrects every gap. \[DB\]
+- **FR-7.17** A student's readings come from three places, shown together: the paper test at the admissions interview (once the applicant is enrolled; only the reading, its date and the test name pass across, the rest of the interview stays with admissions), the school's own tests, and NGRT imports (59 students, today's Years 11 and 12, tested 2021–2023). \[DB\]
+- **FR-7.18** Recording a test (/reading-ages/record): a test name and the usual date for a year group, form or named student, then a reading age per student; blanks are skipped. A student who sat it on another day gets their own date on their row. One reading per student, date and test; saving again updates it. A test can't be dated after today. Teachers, Heads of Department, assessment managers, SMT and admins can record, correct and remove school tests. Interview and NGRT readings are corrected where they were entered. \[DB / Page\]
+- **FR-7.19** The tracker (/reading-ages) is open to teachers, Heads of Department, mentors, pastoral staff, assessment managers, SMT and admins. For the whole school, a year group or a form it shows how many have a reading, the average latest gap, the share reading below their age, how many are in each band (2+ years below, 1–2 years below, up to a year below, at or above; the principal agreed these on 2 Oct 2026), and how many have closed the gap since their first reading. \[Page\]
+- **FR-7.20** Change over time: the average gap at each sitting, as a chart and a table, where a sitting is a term (or the school year, for readings before terms were recorded). Each student counts once per sitting, and the table shows how many were tested each time. \[Page\]
+- **FR-7.21** The student list puts those furthest behind first and shows the first and latest reading with the change since the first and since the last. A row opens a chart of reading age against actual age over time, and the list downloads as CSV. The same chart and history are on the student's profile (Reading Age tile). \[Page\]
+- **FR-7.22** Parents see their own children's readings, for children still at the school, on the parent portal's Reading Age tile, which appears only once the child has two readings from the school's tests or the admissions interview (migrations 325–326: one reading isn't yet a trend, and old NGRT sittings don't count towards the two, though they are shown once the tile appears; before that the database returns parents nothing): the same dates, reading ages, ages, gaps and chart as staff (the principal, 2 Oct 2026). Students see none. Parents read them only through the database's reading-age function, never the table itself. \[DB\]
+- **FR-7.23** Every school test added, changed or removed is logged in Change History under Reading ages, with who did it. \[DB\]
 
 ## 11. FR-8 Reports, transcripts and documents
 
@@ -427,6 +449,7 @@ Students pre-order within fixed weekly windows, with at most 2 food items per tu
 | Saturday | Wednesday 7:00pm | Thursday 11:00pm |
 
 - **FR-9.4** Tuckshop, bursar and admin edit the schedule at /tuckshop/ordering, and can close student ordering until a future date (it reopens at midnight on that date). Closing doesn't clear existing orders. \[DB\]
+- **FR-9.16** The Tuckshop card on the staff dashboard (and the bursar's home page) shows a green "Ordering open" or red "Ordering closed" badge, with when the window closes or the next one opens, e.g. "Wednesday 7 October orders open 7pm on Monday 5 October". It follows the weekly rota, special sessions and the manual closure, and rechecks every minute; it links to /tuckshop/ordering. It only reports: the database still decides whether an order is accepted (2 Oct 2026). \[Page\]
 
 **Limits**
 
@@ -500,6 +523,7 @@ Medical records are visible only to the nurse and admins; HR records only to HR 
 - **FR-11.2** The head of boarding has houseparent powers across all houses and counts as pastoral for detentions, appeals and editing events. \[DB\]
 - **FR-11.3** A mentor's students are the students in their mentor-group class. \[DB\]
 - **FR-11.4** /pastoral/birthdays shows the next 7 days of birthdays (up to 31) to admin, SMT, pastoral, houseparent and school office. Today's names are shown to staff and students after sign-in, never to parents. Leavers are excluded. \[Page\]
+- **FR-11.8** Unallocated Students (/pastoral/unallocated, migration 320, 2 Oct 2026) lists active students with no boarding house, no boarding room, or a gap in their week. A period counts as a gap only if another active student in the same year group has a lesson then (for The Other Half, if the current OH term has an activity open to that year that day), so a year group's free periods aren't reported. A lesson of any of the student's classes, or an OH choice, fills the slot. It shows names, year, form, house and room only, and returns nothing to anyone without the page. When built, 2 of 278 active students had no house, 13 no room, and 43 Year 7s were in neither Evening Prep group. \[DB / Page\]
 
 **Clinic**
 
@@ -568,7 +592,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /admin/class-lists | Print class rosters by year, subject or class | HR, school office, admin |
 | /admin/bell-times | Sessions and times for each weekday | Admin |
 | /admin/subject-settings | Subject display names, departments, key stages, aliases, target fallback | Assessment manager, admin |
-| /admin/grade-boundaries | Grade cut-offs per subject and year group | Assessment manager, admin (page); all staff (data) |
+| /admin/grade-boundaries | Grade cut-offs per subject and year group | Assessment manager, admin (page); assessment managers edit (data) |
 | /admin/email-replies | Reply-To for each kind of email | SMT, admin |
 | /admin/tile-order | Order of students' big tiles and of every row of the staff dashboard, school-wide | Admin (all signed-in users read it) |
 | /groups | Student groups: make, build from a rule, change, archive, message | SMT, pastoral, school office, admin (teachers look up only) |
@@ -646,7 +670,7 @@ Admissions tracks each applicant from enquiry to deposit paid through fixed stag
   - **Total:** next year's confirmed and predicted roll. \[Page\]
 - **FR-14.21** Predictions count 100% of offers and 50% of applicants still in process by default; staff can change both percentages on the page. Places over the limit show in red. \[Page\]
 
-**Designed, not built yet:** enrolling an accepted applicant as a student (admission number, UPN, login, parent records, CAT4), removing old applicants' personal data, and showing interests to the Other Half coordinator.
+**Designed, not built yet:** enrolling an accepted applicant as a student (admission number, UPN, login, parent records, CAT4), removing old applicants' personal data, and showing interests to the Other Half coordinator. Until enrolment is built, an applicant's interview reading age doesn't reach their reading-age history as a student (FR-7.17).
 
 ## 18. FR-15 Academic years and next year setup
 
@@ -676,12 +700,13 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 - **FR-16.2** "Who" is always taken from the signed-in account, with that person's name as it was at the time, never from anything the page sends. Changes made directly in the database are labelled "Principal (direct)". \[DB\]
 - **FR-16.3** Each entry keeps the whole record before and after the change. Saves that change nothing are not logged. \[DB\]
 - **FR-16.4** "Created by", "recorded by" and "saved by" columns (payments, charge batches, tuckshop sales, hand-out locks, admission records, places allowed) are stamped from the signed-in account, overwriting whatever the page sent. \[DB\]
+- **FR-16.5** Stage 5 events returned to the teacher are also kept in their own record (FR-6.28): teacher, reviewer, time, note, and the category and points before the return. Only the return step can add to it, and the app can't change or delete it. SMT and admins read it as a count per teacher on Behaviour Review; the event's own changes are in Change History (behaviour). \[DB\]
 
 **What can be seen, where, and by whom**
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
@@ -742,7 +767,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 - **FR-17.16** Marks follow the student. If a student changes class or teacher, whoever teaches them in that subject now can read all their homework marks in it for the current school year, from any class. The teacher who gave the marks, the Head of Department, SMT and admins still see them, and the student still sees their own released marks. (Migration 291.) \[DB\]
 - **FR-17.17** Student view: on /homework, staff can open any class shown there in "Student view", which draws that class's week of homework exactly as its students see it on their Homework page (week picker, coloured cards, detail panel with instructions and files), as a student who hasn't ticked anything or been graded. No student's ticks or grades are shown and nothing can be changed. \[Page\]
 - **FR-17.18** Late joiners: Formwork records the day each student joins a class. Homework due before that day isn't shown to the student, and they are left out of its mark book, the list's marked count and the mark sheet (shown as ·), unless they already have a mark for it. Students already in a class on 1 October 2026 count as joining on 1 September 2026. (Migration 298.) \[DB / Page\]
-- **FR-17.19** Homework Monitor (migration 311, /homework/monitor, a tile in the staff dashboard's second row; SMT and admins): homework as students see it, for a chosen week. For a year group it shows every class's homework due that week on the students' cards, each labelled with its class code, with a subject filter and a table of each subject's switched-on classes and which have nothing due that week. For one student in that year it shows their timetable with homework on the lesson it's due in and their Homework cards, with their own Done ticks and their grades once released. The student view comes from the database under the same rules as the student's own page (current school year, released marks only, homework due before they joined the class left out), and returns nothing to anyone without the page. Nothing can be changed from it. \[DB / Page\]
+- **FR-17.19** Homework Monitor (migration 311, /homework/monitor, a tile in the staff dashboard's second row; SMT and admins): homework as students see it, for a chosen week. For a year group it shows every class's homework due that week on the students' cards, each labelled with its class code, with a subject filter and a table of each subject's switched-on classes and which have nothing due that week. For one student in that year it shows their timetable with homework on the lesson it's due in and their Homework cards, with their own Done ticks and their grades once released. The student view comes from the database under the same rules as the student's own page (current school year, released marks only, homework due before they joined the class left out), and returns nothing to anyone without the page. In the year view each homework shows its marking, not the student's "Overdue": Not marked, Marked n of N, or Marked (not released), counted against the class's active students who had joined by the due date; the subject table adds a "Past due, not fully marked" column (2 Oct 2026). Nothing can be changed from it. \[DB / Page\]
 
 **Not built yet:** students handing work in online (the principal's answer was "not yet"), and notifications: setting homework or releasing marks sends no email or inbox message.
 
@@ -815,7 +840,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 23. Known issues and open decisions
 
-30 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; two of them (6 and 30) have since been fixed. The first five stop something working today.
+34 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; four of them (6, 30, 32 and 33) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -823,10 +848,10 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 2 | Certificates | Levels now come from Lookups (Bronze 100, Silver 200, Gold 500), which fixed the old 200-point mismatch. Totals may still read only the first 1,000 events | Totals may be low for some students; needs checking | Open |
 | 3 | Subject settings | Assessment managers can open the page but only admins can save names, departments and target fallbacks | Saves by others change nothing, silently | Open |
 | 4 | Results | Decimal scores such as 89.5 can fall between whole-number grade bands | Saved with no grade | Open |
-| 5 | Behaviour | /behaviour/review page isn't granted to the school office, who release serious events without pictures | Office can't reach its review task | Open |
+| 5 | Behaviour | /behaviour/review page isn't granted to the school office, who release serious events without pictures | Office can't reach its review task. Decided 3 Oct 2026: only the principal's PA (who has the page) and SMT review Stage 5; migration 336 lets SMT release and return events without a picture | Decided: keep |
 | 6 | Behaviour | Any staff member can change an event's parent visibility with a direct request | Review can be bypassed | Fixed |
 | 7 | Behaviour | The weekly alert fires again on every further negative event that week | Repeat emails | Open |
-| 8 | Behaviour | Deleting an event that already booked a detention probably fails | Admin can't delete it | Open |
+| 8 | Behaviour | Deleting an event that already booked a detention probably fails | SMT can't delete it | Open |
 | 9 | Sign-in | Forced password change is page-only; office-made parent logins and auto-made staff and student logins are never forced to change | First passwords may stay in use | Open |
 | 10 | Access | HR can give anyone, including themselves, any role except admin | Logged, but not blocked | Open |
 | 11 | Reports | Report checkers see and edit every comment in the period, not only their scope | Wider access than set | Open |
@@ -849,6 +874,10 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 28 | Registers | Missed Lessons for an earlier day names the lesson from today's classes and timetable | After a class change the wrong class can be shown; the marks themselves are right | Open |
 | 29 | Fees | Record a Payment, All Students (/bursar/fees-table) and Add Paid Top-Up are written with styling classes the app never loads | The pages work but show as plain, unstyled text and form fields; found while taking screenshots for the User Manual | Open |
 | 30 | Registers | Planned absences skip only days marked as a holiday on the calendar. Mid-term breaks are a single date there (24 Oct, 13 Feb, 22 May), so an absence spanning one filled in the break days too. Fixed for 2026/27 on 2 Oct 2026: every weekday of the three breaks (26–30 Oct, 15–19 Feb, 24–28 May) is now a holiday on the calendar; later years' breaks need the same | Extra absence marks on days the school was closed | Fixed |
+| 31 | Parents | Some families have two or more parent records with the same email (from separate imports). A parent login is tied to one record, so a child linked only to the other record doesn't appear in the portal. Found 2 Oct 2026 when a parent saw "No linked children"; the 7 logins affected then were fixed by hand (one Francis IYIOKU link left off until the office confirms his guardian). Nothing stops a new case | A parent sees some or none of their children | Open |
+| 32 | Students | Any admin login could still add a student. Migration 275 left the office's rule as the only way in, but that rule's role check lets every admin through. Found 2 Oct 2026 by the Permissions page's new "What they can do" view. Migration 328 makes the rule check the school\_office role alone; run in the SQL editor on 2 Oct 2026, and admin alone can no longer add a student | FR-2.18 not enforced: admin alone can add students | Fixed |
+| 33 | Behaviour | Migration 319 (only SMT remove a merit or cancel a detention; events can't be withdrawn or moved from the app) was written on 2 Oct 2026 but never reached the live database. Found 3 Oct 2026 while preparing stage 2 of the tickable abilities; applied by migration 330 the same day. Every other migration since 300 was checked and is live | Until 3 Oct any admin could delete events, and anyone with Detention could cancel or re-date a detention | Fixed |
+| 34 | Behaviour | A reviewer's "return to teacher" note (FR-6.27) is stored on the event. The portals never show it, but a student can read their own events' data directly, so a technically minded student could read the note. It is cleared when the teacher edits the event, but stays if the reviewer sends the event to parents unchanged | Reviewers should keep notes factual (e.g. "this is Disruption in class, −2") | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 

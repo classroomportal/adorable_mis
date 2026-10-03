@@ -12,6 +12,7 @@ import { resizePhotoToBase64 } from '../../lib/photo';
 import BehaviourPhoto from '../components/BehaviourPhoto';
 import { useBehaviourRules } from '../../lib/behaviourRules';
 import { InvolvedStudentsPicker, saveInvolvedStudents } from '../components/InvolvedStudents';
+import { GuidanceText, SeriousConfirmTick } from '../components/SeriousEventGuidance';
 
 // boarding_room_number is text, so a plain sort puts "10" before "2". Sort the
 // numeric ones by value and leave anything non-numeric (e.g. "3A") after them.
@@ -74,6 +75,8 @@ function BehaviourPageInner() {
   // Other students in a serious event (migration 303): [{ student_id, involvement }].
   const [involved, setInvolved] = useState([]);
   const [showInvolved, setShowInvolved] = useState(false);
+  // The "this really is a serious incident" tick (migration 335).
+  const [seriousConfirmed, setSeriousConfirmed] = useState(false);
   // On a slow connection staff assumed the first tap hadn't registered and
   // tapped again, logging every event twice. The ref blocks a second submit
   // synchronously (state alone can let a fast double tap through before the
@@ -88,7 +91,7 @@ function BehaviourPageInner() {
   async function loadEvents() {
     const { data } = await supabase
       .from('behaviour_events')
-      .select('event_id, event_date, type, category, points, description, staff_id, photo_id, students!behaviour_events_student_id_fkey(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+      .select('event_id, event_date, type, category, points, description, staff_id, photo_id, return_note, students!behaviour_events_student_id_fkey(student_id, first_name, last_name, boarding_house), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('is_demo', !!profile?.is_demo_account)
       .is('voided_at', null)
       .order('event_date', { ascending: false })
@@ -157,7 +160,7 @@ function BehaviourPageInner() {
       setRestaurants([...new Set(list.map((x) => x.restaurant).filter(Boolean))].sort());
       setYearGroups([...new Set(list.map((x) => x.year_group).filter(Boolean))].sort((a, b) => a - b));
 
-      const { data: cat } = await supabase.from('behaviour_categories').select('category_id, name, type, default_points').order('name');
+      const { data: cat } = await supabase.from('behaviour_categories').select('category_id, name, type, default_points, description').order('name');
       setCategories(cat || []);
 
       const { data: access } = await supabase.rpc('my_house_access');
@@ -239,9 +242,11 @@ function BehaviourPageInner() {
   const usingGroup = groupType && (classId || boardingHouse || restaurant);
 
   const categoriesForType = categories.filter((c) => c.type === form.type);
+  const chosenCategory = categoriesForType.find((c) => c.name === form.category);
 
   function handleTypeChange(newType) {
     setForm({ ...form, type: newType, category: '', points: '' });
+    setSeriousConfirmed(false);
     // Pictures are for positive events only (migration 297).
     if (newType === 'negative') setPhoto(null);
   }
@@ -251,6 +256,7 @@ function BehaviourPageInner() {
   function handleCategoryChange(categoryName) {
     const match = categoriesForType.find((c) => c.name === categoryName);
     setForm({ ...form, category: categoryName, points: match?.default_points ?? '' });
+    setSeriousConfirmed(false);
   }
 
   function toggleStudent(studentId) {
@@ -264,7 +270,7 @@ function BehaviourPageInner() {
   function selectAll() { setSelected(new Set(roster.map((s) => s.student_id))); }
   function selectNone() { setSelected(new Set()); }
 
-  const { serious_event_points: seriousPoints } = useBehaviourRules();
+  const { serious_event_points: seriousPoints, serious_event_guidance: seriousGuidance } = useBehaviourRules();
   const isSerious = form.type === 'negative' && Number(form.points) <= seriousPoints && form.points !== '';
 
   // Shrink on the device before upload: 800px on the long side is plenty to
@@ -305,6 +311,11 @@ function BehaviourPageInner() {
 
     if (isSerious && !form.description.trim()) {
       setStatus(`This is a serious event (${seriousPoints} points or worse) — an explanation of what happened is required before it can be saved.`);
+      return;
+    }
+
+    if (isSerious && !seriousConfirmed) {
+      setStatus('Read the Stage 5 guidance and tick the confirmation before saving a serious event.');
       return;
     }
 
@@ -365,6 +376,7 @@ function BehaviourPageInner() {
       setPhoto(null);
       setInvolved([]);
       setShowInvolved(false);
+      setSeriousConfirmed(false);
       if (usingGroup) selectAll(); else setSingleStudentId('');
       loadEvents();
     }
@@ -547,11 +559,18 @@ function BehaviourPageInner() {
           </label>
         </div>
 
+        {chosenCategory?.description && (
+          <div className="bl-hint" style={{ marginTop: '-0.3rem' }}>{chosenCategory.description}</div>
+        )}
+
         {isSerious && (
           <div className="bl-serious">
-            <strong>Serious event ({seriousPoints} points or worse) — an explanation is required.</strong>{' '}
-            Explain what happened in your own words, following school protocol. Don&apos;t name any other
-            student. A school office reviewer checks this before parents see it.
+            <strong>Is this really a Stage 5?</strong>{' '}
+            A serious event ({seriousPoints} points or worse) gives a detention, and is reviewed and
+            then sent to parents.
+            <GuidanceText text={seriousGuidance} />
+            <strong>If it is:</strong> explain what happened in your own words, following school protocol.
+            Don&apos;t name any other student.
           </div>
         )}
 
@@ -615,7 +634,9 @@ function BehaviourPageInner() {
         </div>
         )}
 
-        <button type="submit" className="bl-submit" disabled={saving || photoBusy}>
+        {isSerious && <SeriousConfirmTick checked={seriousConfirmed} onChange={setSeriousConfirmed} />}
+
+        <button type="submit" className="bl-submit" disabled={saving || photoBusy || (isSerious && !seriousConfirmed)}>
           {saving ? 'Saving…' : usingGroup ? `Log for ${selected.size} student${selected.size === 1 ? '' : 's'}` : 'Log event'}
         </button>
         {status && <p style={{ margin: 0 }}>{status}</p>}

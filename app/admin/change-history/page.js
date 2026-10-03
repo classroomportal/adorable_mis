@@ -25,6 +25,7 @@ const AREAS = {
   admissions: 'Admissions',
   groups: 'Student groups',
   students: 'Student records',
+  reading_ages: 'Reading ages',
 };
 const ACTIONS = { INSERT: 'Added', UPDATE: 'Changed', DELETE: 'Removed' };
 const HIDDEN_FIELDS = new Set(['updated_at', 'updated_by', 'created_at', 'is_demo']);
@@ -219,6 +220,8 @@ function ChangeHistoryInner() {
       }
       case 'student_parent':
         return `Parent link: ${parentName(r.parent_id)}`;
+      case 'reading_age_tests':
+        return `Reading age ${Math.floor(r.reading_age_months / 12)} y ${r.reading_age_months % 12} m (${r.test_name}), ${formatUKDate(r.tested_on)}`;
       case 'email_reply_routes':
         return `Where replies go: ${r.label}`;
       default:

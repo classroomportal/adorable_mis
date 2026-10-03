@@ -19,6 +19,12 @@ anything, because the table underneath only allows a narrower set of roles
 to write. Five such mismatches were found and have now been fixed
 (migration 112) — see below.
 
+**Update (migration 327, 2 Oct 2026):** `/admin/permissions` now has a
+"What they can do" view that works this out live, per role, from
+`role_access_policies()` / `role_access_tables()` (evaluator in
+`lib/roleAbilities.js`, table names in `lib/dataAreas.js`). Prefer it over
+this snapshot for current access.
+
 ## Fixes applied (migration 112)
 
 1. **`school_office` — edit core data.** Can now insert/update `students`

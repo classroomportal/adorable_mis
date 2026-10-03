@@ -6,6 +6,7 @@ import { formatUKDate } from '../../lib/formatDate';
 import BehaviourPhoto from './BehaviourPhoto';
 import { useBehaviourRules } from '../../lib/behaviourRules';
 import { EventInvolvedStudents } from './InvolvedStudents';
+import { GuidanceText, SeriousConfirmTick } from './SeriousEventGuidance';
 
 // Who may edit a behaviour event: the member of staff who logged it,
 // pastoral/houseparents/SMT/admin, or the school office (who fix serious
@@ -23,7 +24,7 @@ function loadCategories() {
   if (!categoriesPromise) {
     categoriesPromise = supabase
       .from('behaviour_categories')
-      .select('name, type, default_points')
+      .select('name, type, default_points, description')
       .order('name')
       .then(({ data }) => data || []);
   }
@@ -53,20 +54,27 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
+  const [seriousConfirmed, setSeriousConfirmed] = useState(false);
 
   useEffect(() => {
     if (editing) loadCategories().then(setCategories);
   }, [editing]);
 
-  const { serious_event_points: seriousPoints } = useBehaviourRules();
+  const { serious_event_points: seriousPoints, serious_event_guidance: seriousGuidance } = useBehaviourRules();
   const options = categories.filter((c) => c.type === event.type);
   const chosen = options.find((c) => c.name === category);
   const points = chosen ? chosen.default_points : event.points;
   const serious = event.type === 'negative' && points <= seriousPoints;
+  // Moving an event up to Stage 5 asks the same as logging one (migration 335).
+  const becomingSerious = serious && !(event.type === 'negative' && event.points <= seriousPoints);
 
   async function save() {
     if (serious && !draft.trim()) {
       setError(`A serious event (${seriousPoints} points or worse) needs an explanation of what happened.`);
+      return;
+    }
+    if (becomingSerious && !seriousConfirmed) {
+      setError('Read the Stage 5 guidance and tick the confirmation first.');
       return;
     }
     setSaving(true);
@@ -80,7 +88,10 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
     if (err) { setError(`Couldn't save: ${err.message}`); return; }
     setEditing(false);
     setMessage(outcomeText(data));
-    onSaved?.({ description: draft.trim() || null, category: category || event.category, points: data?.points ?? event.points });
+    onSaved?.({
+      description: draft.trim() || null, category: category || event.category, points: data?.points ?? event.points,
+      ...(data?.changed ? { return_note: null, returned_at: null } : {}),
+    });
   }
 
   if (editing) {
@@ -90,7 +101,7 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => { setCategory(e.target.value); setSeriousConfirmed(false); }}
               style={{ width: 'auto', minWidth: '12rem', flex: '1 1 12rem' }}
             >
               {options.length === 0 && <option value={category}>{category}</option>}
@@ -105,6 +116,15 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
             )}
           </div>
         )}
+        {chosen?.description && chosen.name !== event.category && (
+          <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{chosen.description}</span>
+        )}
+        {becomingSerious && (
+          <div className="bl-serious">
+            <strong>Is this really a Stage 5?</strong> It gives a detention, and is reviewed and then sent to parents.
+            <GuidanceText text={seriousGuidance} />
+          </div>
+        )}
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -113,6 +133,7 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
           style={{ width: '100%', font: 'inherit', padding: '0.5rem', borderRadius: 8, border: '1px solid var(--slate-200)' }}
           autoFocus
         />
+        {becomingSerious && <SeriousConfirmTick checked={seriousConfirmed} onChange={setSeriousConfirmed} />}
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
           <button type="button" className="secondary" onClick={() => { setEditing(false); setError(null); }} disabled={saving}>Cancel</button>
@@ -137,6 +158,7 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
               setDraft(event.description || '');
               setCategory(event.category || '');
               setMessage(null);
+              setSeriousConfirmed(false);
               setEditing(true);
             }}
             style={{ padding: '0.15rem 0.55rem', fontSize: '0.8rem', flexShrink: 0 }}
@@ -146,6 +168,13 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
         )}
       </div>
       {message && <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{message}</span>}
+      {/* Sent back from Behaviour Review (migration 335); any edit clears it. */}
+      {event.return_note && (
+        <span className="bl-returned">
+          <strong>Returned by the reviewer:</strong> {event.return_note} Its points don&apos;t count until you
+          change it. Choose the right category if it isn&apos;t a Stage 5, or edit the explanation to send it back for review.
+        </span>
+      )}
       {event.photo_id && <BehaviourPhoto photoId={event.photo_id} showStatus />}
       {event.type === 'negative' && event.points != null && event.points <= seriousPoints && (
         <EventInvolvedStudents event={event} canEdit={canEdit} />

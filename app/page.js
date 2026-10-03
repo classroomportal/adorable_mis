@@ -8,6 +8,7 @@ import { ParentPortalInner } from './parent-portal/page';
 import { findMyParentId } from '../lib/parentByEmail';
 import { useTileOrder, sortTiles } from '../lib/tileOrder';
 import StudentHome from './components/StudentHome';
+import TuckshopOrderingStatus from './components/TuckshopOrderingStatus';
 
 // Every chip is the same fixed-size box, whatever the length of its label, and
 // carries a one-line description that pops out on hover or keyboard focus.
@@ -387,6 +388,8 @@ const TABS = [
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
       { href: '/assessments/import', label: 'Import CAT4/NGRT', desc: "Upload CAT4 and NGRT scores." },
+      { href: '/reading-ages', label: 'Reading Ages', desc: "Reading age against actual age, and how the gap changes over time." },
+      { href: '/reading-ages/record', label: 'Record Reading Tests', desc: "Enter a reading test for a year group or form." },
       { href: '/assessments/grade-history', label: 'Grade History', desc: "Every grade entered, changed or deleted, and who did it." },
     ].filter((it) => it && hasAccess(it.href)),
   },
@@ -543,6 +546,7 @@ export default function Home() {
               accent={t.accent}
               description={t.description}
               items={t.items({ hasAccess, staffRoles, isAdmin })}
+              extra={t.key === 'tuckshop' ? <TuckshopOrderingStatus /> : null}
             />
           ))}
         </div>
@@ -564,6 +568,7 @@ export default function Home() {
             description={t.description}
             items={t.items({ hasAccess, staffRoles, isAdmin })}
             extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts />
+              : t.key === 'tuckshop' ? <TuckshopOrderingStatus />
               : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].resource || CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} />
               : null}
           />
