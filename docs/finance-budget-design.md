@@ -3,7 +3,9 @@
 Status, 3 October 2026: **phase 1 built** (migration 338, `/finance/budget`):
 cost centres, each fee item's fund, the pro-rata payment split (backfilled for
 every existing payment) and fee income by fund. **Only the principal can see
-it while it is being built.** Phases 2 to 5 are not built. All the principal's
+it while it is being built.** The term forecast (the amount available for a term from student
+numbers, migration 339) is built; the rest of phase 2 (allocations) and
+phases 3 to 5 are not. All the principal's
 decisions are under "Decided" and "Agreed".
 
 What was asked for (the principal, 2 October 2026): "We collect fees in term 2
@@ -45,6 +47,7 @@ not keep a general ledger, reconcile the bank or produce statutory accounts.
 | Starting point (3 Oct) | **The school starts using the budget in Term 2** (January Term 2027, 10 Jan – 28 Mar). "Fees collected would go into our budget fund that would allow cs and myself to plan term 2 expenditure." So budgets are **per term**: the Term 2 budget is the Term 2 fees (tuck shop and anything earlier left out), and each term's unspent money carries forward to the next term. |
 | Plan against (3 Oct) | **Invoiced, spend to cash.** Allocations are planned against what has been charged for the term, so the whole term can be planned on day one. Spending is approved only up to the money actually collected, and the page shows how much of each allocation is backed by cash so far. |
 | College secretary (3 Oct) | **Not yet.** The principal alone sees the budget until go-live. |
+| Term forecast (3 Oct) | **"The fees items need to complete the amount available for the term using the numbers in each year."** Built in migration 339: per term, each fee item × students paying in each year group × approved price, totalled by fund, starting from the live headcount and editable per term by the principal or the college secretary. Term 2 and Term 3 budgets are chosen from the term picker on the Budget page. |
 | Term 2 fee term (3 Oct) | **Not created yet.** The principal and bursar are looking at Term 2's invoice items this week; the 2nd Term fee term is set up after that. |
 
 ## What exists today (checked against the live database, 2 Oct 2026)

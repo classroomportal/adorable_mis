@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { formatMoney, errorText } from '../../../lib/admissions';
+import BudgetTermForecast from '../../components/BudgetTermForecast';
 
 // Budget, phase 1 (migration 338, design in docs/finance-budget-design.md):
 // fee income by fund. Every fee item pays into one cost centre; each payment
@@ -133,6 +134,9 @@ function BudgetInner() {
         Only you can see this page while it is being built.
       </p>
 
+      <BudgetTermForecast canEdit={canEdit} centres={centres} />
+
+      <h2 style={{ marginTop: '2rem' }}>Fees charged and collected</h2>
       <label>Academic year{' '}
         <select value={year} onChange={(e) => setYear(e.target.value)}>
           {years.map((y) => <option key={y.label} value={y.label}>{y.label}</option>)}
