@@ -162,39 +162,44 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | P2-7 | Old applicants' personal data is removed after a retention period; interests reach the OH coordinator | A retention rule is agreed and applied | Not started |
 | P2-8 | Record a Payment, All Students and Add Paid Top-Up are styled like the rest of Formwork (they use styling classes the app never loads) | The three bursar pages look like the other fee pages | Not started |
 
-## Finance budget planning (proposed)
+## Finance: budgets and requisitions (designed, not built)
 
-Formwork knows the school's income (fees charged and paid) but nothing about its spending. This proposal adds a yearly budget per area of the school, spending requests against it, and a budget-against-actual view, using the same two-person approval the principal and the college secretary already use for fee prices. It is a proposal: nothing here is built, scheduled or approved, and the principal decides its scope and priority.
+The principal asked on 2 Oct 2026 for fee income to be shared out in advance across cost centres, and for staff spending to go through signed and approved requisitions. The full design is in docs/finance-budget-design.md (pull request 364, not yet merged); nothing is built. It is a budget and spending-control system, not accounting software: no general ledger, bank reconciliation or statutory accounts.
 
-**What it builds on**
+- **Budget:** fee income is shared out in advance across cost centres (Staffing, Power, Food, Maintenance and so on). Each cost centre shows allocated, committed, spent and remaining.
+- **Requisitions:** any member of staff raises one; the principal signs it; the college secretary costs and approves it, which commits the money; the goods are received; the bursar pays.
 
-- **Academic years** (2026/27 current, 2027/28 planning): each budget belongs to one year.
-- **Fee items, approved prices and Next Year's Numbers**: enough to forecast next year's fee income without retyping.
-- **Invoices and payments**: actual fee income, already recorded by the bursar.
-- **Roles**: bursar, principal and college\_secretary (two-person approval, migration 259), head\_of\_department for department budgets, smt.
-- **Change History**: every budget change logged like fees, with the bursar unable to edit the log.
+**Decided (the principal, 2 Oct 2026)**
 
-**Non-goals:** Formwork stays a planning and control tool, not the school's accounts. It does not replace accounting software, pay suppliers, run payroll or produce statutory accounts.
+- Tuition goes into a general fund, shared out in advance. Direct charges (swimming, sports, exam entry, ICT, medical) are ring-fenced: what is collected for a purpose is spent on it.
+- A part-payment is shared across the invoice's funds pro rata, in proportion to what each is still owed.
+- Each fund's unspent balance is carried forward to the next year.
+- No refund process. A rare exception goes through as a requisition against that fund.
+- Uniform is out of scope (bought from the tuck shop). Tuck shop money is the students' own and stays outside the budget.
 
-| ID | Requirement | Done when | Status |
+**Where it starts from:** only tuck shop has been invoiced so far; there is no exam-entry fee item yet; nothing exists for budgets, cost centres, requisitions or suppliers. Budgets and budget changes reuse the two-person approval already used for fee prices (the principal and the college secretary).
+
+| ID | Phase | Done when | Status |
 | --- | --- | --- | --- |
-| B-1 | A budget for each academic year, split into areas (departments, boarding, restaurants, tuckshop, maintenance, transport, administration) and lines within each area | The bursar enters next year's budget in naira by area and line; it stays a draft until approved | Not started |
-| B-2 | The budget is approved by the principal and the college secretary together | Both approve before it applies; any change after approval is a revision that needs both again | Not started |
-| B-3 | Fee income is forecast from Formwork's own data | Expected income (approved prices × places per year group, less discounts) shows beside planned spending, with the surplus or deficit | Not started |
-| B-4 | Budget holders request spending against their area | A Head of Department or area holder raises a request, sees what is left on the line, and the bursar approves it; above a set amount the principal approves too | Not started |
-| B-5 | The bursar records actual spending | Each entry (date, supplier, amount, line, receipt) reduces what is left; it is logged in Change History | Not started |
-| B-6 | Budget against actual, by area, term and year | SMT and the principal see planned, committed, spent and left per line, with a CSV download | Not started |
-| B-7 | Each person sees only what they hold | A budget holder sees only their own area; the bursar, the principal, the college secretary and SMT see all | Not started |
-| B-8 | Money moves between lines only with approval | Moving money between lines or areas needs the same two approvals as the budget | Not started |
+| F-1 | Cost centres and income | Every fee item points at a cost centre; each payment is split pro rata across its invoice's funds when recorded (existing payments backfilled); a budget page shows charged and collected by fund | Not started |
+| F-2 | Budgets | Allocations per cost centre (optionally by term) and every change to them need the principal and the college secretary; moving money between centres goes the same way; remaining balances show | Not started |
+| F-3 | Requisitions to approval | Staff raise requisitions; the principal signs; the college secretary costs and approves, committing the money, refused if it would overspend; nobody approves their own; each step emails the next person | Not started |
+| F-4 | Supply and payment | Goods received item by item; the bursar pays, never more than the approved total; quotes, invoices and delivery notes attached; payroll and utility bills recorded directly on centres marked for it | Not started |
+| F-5 | Year end and exams | Balances carried forward at the year switch; an exam-entry fee item and a check of charged against entered; reports for the auditors | Not started |
 
-**Open questions**
+**Still to decide** (the design's proposed answer, which will be built unless the principal says otherwise)
 
-- [ ] Which areas and lines should the budget use, and who holds each one?
-- [ ] Above what amount must the principal approve a spending request?
-- [ ] Does the school's financial year match the academic year (September to July)?
-- [ ] Are staff salaries in the budget? They are confidential, so they would need tighter access than the rest.
-- [ ] Which accounting software, if any, does the bursar use, and should Formwork export to it?
-- [ ] Where does it sit in the roadmap: after the year rollover, or alongside it?
+- [ ] Over budget: refused, unless the principal overrides with a written reason, logged and shown on the budget page.
+- [ ] Department budgets (e.g. Science within teaching materials): not at first; cost centres can be split later.
+- [ ] Petty cash for small purchases: none at first; everything goes through the full chain.
+- [ ] Who records payment: the bursar.
+- [ ] Allocations as fixed amounts or percentages of collections: fixed amounts, shown as percentages of expected income.
+- [ ] Ring-fenced spending against charged or collected: charged, so term 1 spending is possible before the term 2 collection, with a warning when commitments exceed collections.
+- [ ] Damages & Surcharge: Maintenance.
+- [ ] Discounts: reduce tuition (the general fund) only.
+- [ ] Sports: one Sports fund for Sports Academy and Taekwondo, Swimming separate.
+- [ ] Who receives goods: the requester, or a receiver the college secretary names.
+- [ ] Where it sits in the roadmap: after the year rollover, or alongside it.
 
 ## Roadmap
 
