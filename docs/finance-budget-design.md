@@ -3,7 +3,9 @@
 Status, 3 October 2026: **phase 1 built** (migration 338, `/finance/budget`):
 cost centres, each fee item's fund, the pro-rata payment split (backfilled for
 every existing payment) and fee income by fund. **Only the principal can see
-it while it is being built.** Phases 2 to 5 are not built. All the principal's
+it while it is being built.** The term forecast (the amount available for a term from student
+numbers, migration 339) is built; the rest of phase 2 (allocations) and
+phases 3 to 5 are not. All the principal's
 decisions are under "Decided" and "Agreed".
 
 What was asked for (the principal, 2 October 2026): "We collect fees in term 2
@@ -42,6 +44,11 @@ not keep a general ledger, reconcile the bank or produce statutory accounts.
 | Nothing is deleted (3 Oct) | **"Deleting is not allowed: cancelling the effect, and recording who did it."** Requisitions, budget changes, releases, suppliers and cost centres are cancelled, rejected or archived, never deleted, and who did it and when are stamped by the database. |
 | While it is built (3 Oct) | **Only the principal sees the Budget** ("I want to be the only person seeing the Budget tile while we develop"). |
 | Proposals (3 Oct) | **All the proposed answers at the end were agreed.** |
+| Starting point (3 Oct) | **The school starts using the budget in Term 2** (January Term 2027, 10 Jan – 28 Mar). "Fees collected would go into our budget fund that would allow cs and myself to plan term 2 expenditure." So budgets are **per term**: the Term 2 budget is the Term 2 fees (tuck shop and anything earlier left out), and each term's unspent money carries forward to the next term. |
+| Plan against (3 Oct) | **Invoiced, spend to cash.** Allocations are planned against what has been charged for the term, so the whole term can be planned on day one. Spending is approved only up to the money actually collected, and the page shows how much of each allocation is backed by cash so far. |
+| College secretary (3 Oct) | **Not yet.** The principal alone sees the budget until go-live. |
+| Term forecast (3 Oct) | **"The fees items need to complete the amount available for the term using the numbers in each year."** Built in migration 339: per term, each fee item × students paying in each year group × approved price, totalled by fund, starting from the live headcount and editable per term by the principal or the college secretary. Term 2 and Term 3 budgets are chosen from the term picker on the Budget page. |
+| Term 2 fee term (3 Oct) | **Not created yet.** The principal and bursar are looking at Term 2's invoice items this week; the 2nd Term fee term is set up after that. |
 
 ## What exists today (checked against the live database, 2 Oct 2026)
 
@@ -121,10 +128,12 @@ later doesn't silently move money that was collected months ago.
 
 For each academic year (`academic_years`, which already exists):
 
-- **Allocations**: an amount for each `allocated` cost centre, optionally split
-  by term so cash flow can be seen (money arrives mainly in term 2 but is
-  spent all year). Allocations are made **in advance**, against expected
-  general-fund income, not only against money already collected.
+- **Allocations**: an amount for each `allocated` cost centre (and
+  Contingency) **per term**, starting with Term 2 (January Term 2027).
+  Allocations are planned against what has been charged for the term; money
+  can be committed only up to what has been collected (the principal,
+  3 Oct 2026: "invoiced, spend to cash"). The page shows, for each
+  allocation, how much is backed by cash so far.
 - **Two-person approval**, as for fee prices. A budget, or a change to it, is
   a proposal in `budget_changes`. It is made by the bursar, SMT, the principal
   or the college secretary, and applied only when one holder of `principal`
@@ -342,10 +351,9 @@ can't sign, approve or pay.
 6. **Allocation**: fixed amounts, or percentages of general-fund collections?
    **Fixed amounts**, with the page showing them as percentages of expected
    income.
-7. **Ring-fenced spending limit**: can a fund spend against what has been
-   charged, or only what has been collected? **Charged**, so term 1 spending
-   is possible before the term 2 collection, with a warning when committed
-   spending is more than collected.
+7. **Ring-fenced spending limit**: replaced by "invoiced, spend to cash"
+   above (3 Oct): planned against what was charged, spent only up to what
+   was collected.
 8. **Sports**: one Sports fund for Sports Academy and Taekwondo, with
    Swimming separate? **Yes.**
 9. **Who receives goods**: the requester, or a store keeper role? **The
