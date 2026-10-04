@@ -10,6 +10,7 @@ import {
   VISIT_CATEGORIES, VISIT_OUTCOMES, labelFor, formatDateTime,
   localDateTimeValue, isoDateOffset, isoToday, studentName,
   matchesStudentFilter, EMPTY_STUDENT_FILTER,
+  withSafeguardingDetails,
 } from '../../../lib/medical';
 
 // The sick bay log across the whole school, and the quickest way to add to
@@ -27,7 +28,7 @@ const STUDENT_COLS =
 const EMPTY_VISIT = {
   student_id: '', visited_at: '', category: 'illness', reason: '', temperature_c: '',
   observations: '', treatment: '', medication_given: '', dose_given: '',
-  outcome: 'returned_to_class', parent_notified: false, follow_up_needed: false,
+  outcome: 'returned_to_class', parent_notified: false, follow_up_needed: false, safeguarding: false,
 };
 
 function Detail({ label, children }) {
@@ -66,6 +67,15 @@ function VisitsInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null);
+  // Only a DSL can mark an entry as safeguarding, which moves the presenting
+  // complaint and observations somewhere only the DSL can read; medication
+  // and the rest stay visible (migration 364). The database enforces it;
+  // this only decides whether to offer the tick box.
+  const [isDsl, setIsDsl] = useState(false);
+
+  useEffect(() => {
+    supabase.rpc('has_staff_role', { role_names: ['dsl'] }).then(({ data }) => setIsDsl(data === true));
+  }, []);
 
   const load = useCallback(async () => {
     // A date input reports partial values while being typed ("0002-09-15"),
@@ -79,7 +89,7 @@ function VisitsInner() {
     }
     setLoading(true);
     let query = supabase.from('student_clinic_visits')
-      .select(`visit_id, visited_at, category, reason, temperature_c, observations, treatment, medication_given, dose_given, outcome, parent_notified, parent_notified_at, follow_up_needed, ${STUDENT_COLS}`)
+      .select(`visit_id, visited_at, category, reason, temperature_c, observations, treatment, medication_given, dose_given, outcome, parent_notified, parent_notified_at, follow_up_needed, safeguarding, ${STUDENT_COLS}`)
       .gte('visited_at', fromDate.toISOString())
       .lte('visited_at', toDate.toISOString())
       .order('visited_at', { ascending: false })
@@ -88,9 +98,9 @@ function VisitsInner() {
 
     const { data, error: err } = await query;
     if (err) setError(err.message); else setError(null);
-    setVisits(data || []);
+    setVisits(isDsl ? await withSafeguardingDetails(data || []) : (data || []));
     setLoading(false);
-  }, [from, to, category]);
+  }, [from, to, category, isDsl]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -147,6 +157,7 @@ function VisitsInner() {
       parent_notified: draft.parent_notified,
       parent_notified_at: draft.parent_notified ? new Date().toISOString() : null,
       follow_up_needed: draft.follow_up_needed,
+      safeguarding: isDsl && draft.safeguarding,
       recorded_by: userData?.user?.id ?? null,
     });
     if (err) { setStatus(`Could not save: ${err.message}`); return; }
@@ -162,6 +173,15 @@ function VisitsInner() {
       .eq('visit_id', visitId);
     if (err) { setStatus(`Could not update: ${err.message}`); return; }
     setStatus('Marked as notified.');
+    load();
+  }
+
+  async function setSafeguarding(visitId, on) {
+    if (on && !window.confirm('Mark as safeguarding? The presenting complaint and observations will be visible to the DSL only. Medication, treatment and the rest stay visible to the nurses.')) return;
+    const { error: err } = await supabase.from('student_clinic_visits')
+      .update({ safeguarding: on }).eq('visit_id', visitId);
+    if (err) { setStatus(`Could not update: ${err.message}`); return; }
+    setStatus(on ? 'Marked as safeguarding: symptoms visible to the DSL only.' : 'Safeguarding mark removed: the nurses can see the symptoms again.');
     load();
   }
 
@@ -295,6 +315,12 @@ function VisitsInner() {
                 <input type="checkbox" checked={draft.follow_up_needed} onChange={(e) => setDraft({ ...draft, follow_up_needed: e.target.checked })} />
                 Follow-up needed
               </label>
+              {isDsl && (
+                <label className="checkbox-row">
+                  <input type="checkbox" checked={draft.safeguarding} onChange={(e) => setDraft({ ...draft, safeguarding: e.target.checked })} />
+                  Safeguarding: only the DSL can see the presenting complaint and observations
+                </label>
+              )}
             </div>
             <div style={{ marginTop: '0.75rem' }}>
               <button type="submit">Save visit</button>{' '}
@@ -349,6 +375,7 @@ function VisitsInner() {
                     <div>{formatDateTime(v.visited_at)}</div>
                     <div style={{ marginTop: '0.3rem' }}>
                       <Chip tone="neutral">{labelFor(VISIT_CATEGORIES, v.category) || 'Unspecified'}</Chip>
+                      {v.safeguarding && <Chip tone="bad">Safeguarding · symptoms DSL only</Chip>}
                       {v.follow_up_needed && <Chip tone="warn">Follow-up</Chip>}
                       {urgent && <Chip tone="bad">{labelFor(VISIT_OUTCOMES, v.outcome)}</Chip>}
                     </div>
@@ -374,10 +401,15 @@ function VisitsInner() {
                   <Detail label="Treatment">{v.treatment}</Detail>
                 </div>
 
-                {(!v.parent_notified || v.follow_up_needed) && (
+                {(!v.parent_notified || v.follow_up_needed || isDsl) && (
                   <div className="visit-card-actions">
                     {!v.parent_notified && <button type="button" onClick={() => markNotified(v.visit_id)}>Mark parent told</button>}
                     {v.follow_up_needed && <button type="button" onClick={() => clearFollowUp(v.visit_id)}>Close follow-up</button>}
+                    {isDsl && (
+                      <button type="button" onClick={() => setSafeguarding(v.visit_id, !v.safeguarding)}>
+                        {v.safeguarding ? 'Remove safeguarding mark' : 'Mark as safeguarding'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

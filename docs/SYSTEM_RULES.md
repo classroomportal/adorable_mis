@@ -35,7 +35,7 @@ Where a rule has changed several times, only the current version is given. Migra
 
 ## 1. Roles, page access and admins
 
-**Staff roles in use:** admin, smt, hr, pastoral, houseparent, head_of_boarding, assessment_manager, assessment_user, teacher, bursar, school_office, admissions, tuckshop, tuckshop_owner, head_of_department, mentor, nurse, other_half.
+**Staff roles in use:** admin, smt, hr, pastoral, houseparent, head_of_boarding, assessment_manager, assessment_user, teacher, bursar, school_office, admissions, tuckshop, tuckshop_owner, head_of_department, mentor, nurse, dsl, other_half.
 
 **Admins**
 - "Admin" is a separate account setting, not one of the staff roles. There are 3 admin accounts (175).
@@ -635,7 +635,8 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 
 **Clinic** (128–130)
 - Covers medical records, conditions, the sick-bay log, immunisations, BMI and resumption screenings.
-- **Only the nurse role and admins can see or change any of it.** Teachers, pastoral staff and parents have no access.
+- **Only the nurse and the Designated Safeguarding Lead (`dsl`, 363) can see any of it.** The nurse can view, add, edit and delete; the DSL can view, add and edit (no delete). Admins, the principal role, teachers, pastoral staff, students and parents have no access. This is padlocked at `/admin/permissions`: it changes only by a migration the principal agrees (4 Oct 2026). cs@ holds `dsl`.
+- **Safeguarding entries (364).** A DSL can mark a sick-bay log entry as safeguarding, when recording it or later. The presenting complaint and observations are then visible to the DSL only; everyone else, the nurses included, sees "Safeguarding: details held by the DSL". Medication, dose, treatment, temperature, outcome and the rest stay visible to the nurses. Only a DSL can set or remove the mark (removing it puts the description back); who marked it and when is recorded.
 
 **Staff HR records** (`/staff/records`)
 - HR and SMT can read them. Only HR (and admin) can edit.
