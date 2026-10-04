@@ -393,6 +393,7 @@ How it behaves:
 - "Reopen ordering now" undoes it early.
 - Closing does not clear orders already placed.
 - Special sessions aren't affected.
+- Staff can see whether ordering is open on the Tuckshop card of their home page: a green "Ordering open" or red "Ordering closed" badge with when it next closes or opens (2 Oct 2026) **(page only)**. It only reports; the database still decides.
 
 **Quantity limits** (171, 180, 242). These apply to staff as well as students.
 - **At most 2 of any one item.**
@@ -455,7 +456,7 @@ How it behaves:
 - **Returning a Stage 5 to the teacher** (migration 335): at Behaviour Review the reviewer (the PA or SMT; only SMT for an event with a picture) can mark a serious event "Not Stage 5" with a note. The teacher who logged it gets the note in their Formwork inbox and sees it on the event. If they change the category, it leaves the review (detentions are adjusted as for any edit). If they keep it as Stage 5 and edit the explanation, it goes back to the reviewer. Only the reviewers can return an event, and only before parents can see it.
   - As soon as an event is returned its −5 stops counting (it counts 0 until the teacher changes it), and its detention is cancelled if it hasn't happened yet, with the week's total detention if the week no longer reaches it; the student is told. When the teacher changes it, the new category's points count (migration 337).
   - Every return is kept permanently against the teacher who logged the event, and Behaviour Review shows SMT a count per teacher, to see who needs more training (migration 337).
-- **Other students in a serious event** (migration 303, 1 Oct 2026): on a serious event (−5, e.g. Stage 5, bullying), staff can add other students as a **witness**, **involved** or **target**, found with a filter by name, year group and house. This can be done when logging or later from the event. Anyone who can edit the event can add, change or remove them. All staff can see them; **students and parents never do**, so the explanation still mustn't name anyone. Being added gives a student no points, detention or alert. Changes are logged in Change History.
+- **Other students in a serious event** (migration 303, 1 Oct 2026): on a serious event (−5, e.g. Stage 5, bullying), staff can add other students as a **witness**, **involved** or **target**, found with a filter by name, year group and house. This can be done when logging (under the explanation, with the "+ Add a witness, someone involved or a target" button) or later from the event. Anyone who can edit the event can add, change or remove them. All staff can see them; **students and parents never do**, so the explanation still mustn't name anyone. Being added gives a student no points, detention or alert. Changes are logged in Change History.
   - **Parents never see these names** (304): once an event can be seen by parents, its explanation can't name any of the other students (first, last, preferred or legal names, whole words). The database refuses to release it, edit it to add one, or link a student it already names, and says which word to reword. A name the event's own student shares (e.g. a sibling's surname) doesn't count.
 - Staff can attach one picture per logging, on positive events only (migration 297, the principal, 30 Sept 2026): the picture field is hidden for negative events and the database refuses a picture on one. Pictures are shrunk in the browser and must be under about 150 KB.
 
@@ -507,6 +508,7 @@ How it behaves:
 
 **Entering scores** (`/results/enter`)
 - A teacher can enter or change scores only for students in their own classes, in that class's subject (129).
+- A Head of Department can enter or change scores in their department's subjects, the same rule as deleting them (321, the principal, 2 Oct 2026). A subject with no department stays with its class teacher and the assessment staff.
 - Assessment managers and admins can enter or change any score. Assessment users can too, but can't delete.
 - Scores are percentages (0–100). The grade is worked out from the subject's boundaries for that year group when the score is typed, and saved with it. Changing boundaries later does **not** regrade saved scores.
 - Only the current school year's result sets can be picked for entry **(page only)**.
