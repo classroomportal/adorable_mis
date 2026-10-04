@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 359). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 360). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -79,7 +79,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 
 Two further roles exist only to approve fee prices (FR-10.10): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either.
 
-**Students** see their own timetable, grades, behaviour (and appeal), tuckshop ordering, OH choices and documents. **Parents** see each linked child's timetable, results, released behaviour, attendance, published fees, tuckshop balance and documents.
+**Students** see their own timetable, grades, behaviour (and appeal), tuckshop ordering, OH choices and documents. **Parents** see each linked child's timetable, results (after the delay set on Lookups, FR-7.34), released behaviour, attendance, published fees, tuckshop balance and documents.
 
 **Two layers of access:**
 
@@ -430,6 +430,10 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.29** A new appeal goes to the teacher's inbox and by email, with the subject's Head of Department in cc (replies go to the Mark appeal row at Email Replies, sro@ to start). The Head of Department also gets an inbox copy naming the teacher it went to. The decision goes to the student's inbox and the Head of Department's, unless they decided it themselves; decisions aren't emailed. A student's text appears in the email as plain text, never as links or formatting. \[DB\]
 - **FR-7.30** The 5 days and 5 credits are set per school year on Lookups (Mark appeals), by anyone with that page. Changing them doesn't affect appeals already made. \[DB\]
 
+**When parents see marks** (Lookups, migration 360, the principal, 4 Oct 2026)
+
+- **FR-7.34** Parents see a mark only once it is a set number of hours old, counted from when it was first entered, so a wrong number can be put right (or appealed by the student, FR-7.24) before families see it. It covers every mark parents see: ReLPs, Teacher Assessments and all other results. The hours (0 to 168) are set on Lookups (When parents see marks) by anyone with that page; 0 means at once, which is where it started. A correction doesn't restart the clock, and the time a mark was entered can't be changed from the app. Students and staff see marks at once; staff viewing the parent portal, including staff who are parents, see every mark straight away. \[DB\]
+
 ## 11. FR-8 Reports, transcripts and documents
 
 Written reports are built only from checked comments; transcripts and score sheets are generated as PDFs and published to the student and parent portals.
@@ -448,7 +452,7 @@ Written reports are built only from checked comments; transcripts and score shee
 - **FR-8.7** The Termly Grade Report and Term Test Scores sheet show a subject only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey. \[DB / Page\]
 - **FR-8.8** Transcripts: KS3 (Years 7–9, IGCSE) and KS4/5 (Years 10–12, IGCSE and WAEC versions; Year 12 always WAEC). Each square takes the exam mark's grade, then the legacy transcript grade, then the score converted through boundaries (Year 12's for WAEC). Any error stops the PDF. \[Page\]
 - **FR-8.9** Publishing replaces the previous copy and makes it downloadable by the student and parents. Admins, SMT and assessment managers publish, and can bulk-upload PDFs at /reports/documents. \[DB\]
-- **FR-8.10** On the Termly Grade Report a special result set (FR-7.31) replaces the week column its date falls in, headed by its name (for Year 12 the Wk4 column becomes "Y12 Mocks"); subjects not in the set show grey. A set matching no week, or a second set in the same week, gets its own column after the weeks. Other year groups' reports are unchanged. The written report includes special-set marks like any other mark in the term. Transcripts never show them: they read only end-of-term exam sets and legacy transcript grades. \[DB / Page\]
+- **FR-8.10** On the Termly Grade Report a special result set (FR-7.31) replaces the week column its date falls in, headed by its name (Year 12 Mock 1, dated Monday 5 October 2026, replaces Year 12's Wk3 column). Weeks start on Mondays and a date goes to the nearest one, so Friday to Sunday count towards the following week's column; subjects not in the set show grey. A set matching no week, or a second set in the same week, gets its own column after the weeks. Other year groups' reports are unchanged. The written report includes special-set marks like any other mark in the term. Transcripts never show them: they read only end-of-term exam sets and legacy transcript grades. \[DB / Page\]
 
 ## 12. FR-9 Tuckshop
 
@@ -614,7 +618,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /admin/permissions | Tick which pages each role opens and which student fields it can edit | Admin (write) |
 | /staff/roles | Assign staff roles; warns when a houseparent has no house | HR, admin |
 | /staff/mentor-groups | Assign one or two staff to each mentor group | Granted roles |
-| /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals, mark appeal days and credits (FR-7.30). Every section starts folded closed and opens when clicked (4 Oct 2026) | Admin, SMT, HR |
+| /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals, mark appeal days and credits (FR-7.30), hours before parents see a mark (FR-7.34). Every section starts folded closed and opens when clicked (4 Oct 2026) | Admin, SMT, HR |
 | /admin/student-numbers | Boys, girls and unknown by year, mentor group, boarding house and room (rooms counted within their house), restaurant and class | Granted roles |
 | /admin/class-lists | Print class rosters by year, subject or class | HR, school office, admin |
 | /admin/bell-times | Sessions and times for each weekday | Admin |
