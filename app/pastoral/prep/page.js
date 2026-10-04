@@ -135,12 +135,13 @@ function PrepInner() {
       <p>
         Evening prep for each year group. The homework time on a prep evening is the length of prep
         less any fixed activity (Years 7–9 spend the first hour reviewing the day&apos;s work). Where a
-        year&apos;s private study is ticked, its timetabled Personal Study lessons count as homework
-        time on the days they fall.
+        year&apos;s private study is ticked (for a future Year 13), its timetabled Personal Study lessons
+        count as homework time on the days they fall.
       </p>
       <p>
-        Teachers say how long each homework takes and put it on a prep evening before the deadline.
-        Formwork won&apos;t let an evening hold more homework than the time here, for any student in the class.
+        Teachers say how long each homework takes. It is done in prep on the evening before its deadline
+        (Sunday for a Monday deadline), and Formwork won&apos;t let an evening hold more homework than the
+        time here, for any student in the class. Changing these times doesn&apos;t move homework already set.
       </p>
 
       <div className="card">

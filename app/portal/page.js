@@ -72,8 +72,8 @@ function PortalInner() {
   const [weekStart, setWeekStart] = useState(defaultWeekStart());
   const [weekHomework, setWeekHomework] = useState([]);
   const [recentHomework, setRecentHomework] = useState([]); // last four weeks up to the end of this week
-  // Homework planned for prep this week (migration 352), shown in the Evening
-  // Prep slot of the day it is to be done.
+  // Homework to do in prep this week (migration 352), shown on the Homework
+  // page under the evening it is done (the evening before its deadline).
   const [prepHomework, setPrepHomework] = useState([]);
   const [selectedHw, setSelectedHw] = useState(null);
   const tileOrder = useTileOrder('student');
@@ -280,9 +280,6 @@ function PortalInner() {
             <div className="tt-cell tt-period-label">{p.period_name}</div>
             {DAYS.map((d) => {
               const entries = cellMap[`${d}-${p.period_number}`];
-              // Homework to do in prep that evening (migration 352).
-              const prepItems = withHomework && p.short_label === 'EP'
-                ? (prepByDay[addDays(weekStart, DAYS.indexOf(d))] || []) : [];
               return (
                 <div key={`${d}-${p.period_number}`} className={`tt-cell ${entries ? 'tt-filled' : ''}`}>
                   {entries
@@ -299,11 +296,6 @@ function PortalInner() {
                         </div>
                       ))
                     : ''}
-                  {prepItems.map((hw) => (
-                    <div key={`prep-${hw.homework_id}`} style={{ marginTop: '0.25rem' }}>
-                      <HomeworkChip hw={hw} prep selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} />
-                    </div>
-                  ))}
                 </div>
               );
             })}
@@ -330,8 +322,11 @@ function PortalInner() {
   const homeworkByDay = groupHomeworkByDay(weekHomework, weekStart);
   const prepByDay = groupPrepByDay(prepHomework, weekStart);
   const weekendHomework = [...homeworkByDay[addDays(weekStart, 5)], ...homeworkByDay[addDays(weekStart, 6)]];
-  const gridDays = DAYS.map((d, i) => ({ key: d, date: addDays(weekStart, i), items: homeworkByDay[addDays(weekStart, i)] }));
-  if (weekendHomework.length) gridDays.push({ key: 'Weekend', date: addDays(weekStart, 5), items: weekendHomework, weekend: true });
+  const gridDays = DAYS.map((d, i) => ({ key: d, date: addDays(weekStart, i), prepDate: addDays(weekStart, i), items: homeworkByDay[addDays(weekStart, i)] }));
+  // Sunday prep (for Monday's deadlines) needs the weekend column too.
+  if (weekendHomework.length || prepByDay[addDays(weekStart, 6)].length) {
+    gridDays.push({ key: 'Weekend', date: addDays(weekStart, 5), prepDate: addDays(weekStart, 6), items: weekendHomework, weekend: true });
+  }
   const activeView = VIEWS.includes(view) ? view : null;
 
   return (
@@ -436,10 +431,10 @@ function PortalInner() {
           {gridDays.map((d) => (
             <div key={d.key} className={`hw-day${!d.weekend && d.date === today ? ' hw-today' : ''}`}>
               <div className="hw-day-head">{d.weekend ? 'Weekend' : shortDate(d.date)}</div>
-              {!d.weekend && (prepByDay[d.date] || []).length > 0 && (
+              {(prepByDay[d.prepDate] || []).length > 0 && (
                 <div className="hw-prep">
-                  <div className="hw-prep-head">In prep tonight</div>
-                  {prepByDay[d.date].map((hw) => (
+                  <div className="hw-prep-head">{d.weekend ? 'In prep on Sunday' : 'In prep this evening'}</div>
+                  {prepByDay[d.prepDate].map((hw) => (
                     <HomeworkChip key={`prep-${hw.homework_id}`} hw={hw} prep selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} />
                   ))}
                 </div>
