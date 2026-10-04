@@ -858,7 +858,7 @@ Teachers enter percentage scores for their own classes against result sets. Each
 
 A result set is a calendar event with the "result set" box ticked (SMT and admins manage the calendar, chapter 9). Weekly short tests, Teacher Assessment weeks and end-of-term exams are all result sets. End-of-term exams are one set per year group per term ("Y10 Term 1 Exam"); Year 12 has Terms 1 and 2 only, as Term 3 is WAEC. Only the current school year's sets can be picked for entry.
 
-**Special result sets** (the One Year category on the calendar) are for particular year groups only, such as Year 12 mocks. When you choose one on Enter Results, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk4" becomes "Y12 Mocks"). They count on the written report and never appear on a transcript.
+**Special result sets** (the One Year category on the calendar) are for particular year groups only, such as Year 12 mocks. When you choose one on Enter Results, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk3" becomes "Year 12 Mock 1"). They count on the written report and never appear on a transcript.
 
 ### Entering results (/results/enter)
 
@@ -1208,7 +1208,7 @@ To add a special result set, such as Year 12 mocks:
 2. Choose the **One Year** category, then tick the year group(s) it is for, e.g. **Y12**. The Result set box is ticked for you.
 3. Click **Add event**. The Result set column shows "Y12 only".
 
-The date decides which week's column the set replaces on the Termly Grade Report, so give it the date of that week's usual assessment (for the Year 12 mocks, Friday 9 October, the date of Week 4 TA). To change an existing event, use **Edit**: choosing One Year shows the year ticks, and choosing another category makes it an ordinary event again.
+The date decides which week's column the set replaces on the Termly Grade Report. The report's weeks start on Mondays: a date from Monday to Thursday falls in that week's column, and a Friday, Saturday or Sunday in the next week's (so Friday 2 October is in the same column as Monday 5 October). Give the set the date of the assessment it takes the place of: dated Monday 5 October, Year 12 Mock 1 replaces the column Week 3 ReLP (Friday 2 October) uses. To change an existing event, use **Edit**: choosing One Year shows the year ticks, and choosing another category makes it an ordinary event again.
 
 ### Sending a message (/comms/compose)
 
