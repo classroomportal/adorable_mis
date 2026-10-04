@@ -12,6 +12,7 @@ import { STUDENT_GENDERS, genderLabel } from '../../../lib/studentFields';
 import TermTestScoresDownload from '../../components/TermTestScoresDownload';
 import PublishedDocuments from '../../components/PublishedDocuments';
 import MedicalRecordCard from '../../components/MedicalRecordCard';
+import { holdsMedicalRole } from '../../RequireResource';
 import StudentParentsEditor from '../../components/StudentParentsEditor';
 import KeyStageTranscriptDownload from '../../components/KeyStageTranscriptDownload';
 import ReadingAgeHistory from '../../components/ReadingAgeHistory';
@@ -64,8 +65,10 @@ function StudentDetail() {
   // than seeing it: only the nurse and the DSL pass the RLS policies
   // (migration 363; admins no longer do), so anyone else gets a read-only
   // card rather than buttons that fail on save.
-  const canSeeMedical = hasAccess('/students/medical');
-  const canEditMedical = (staffRoles || []).some((r) => r === 'nurse' || r === 'dsl');
+  // Only the nurse and the DSL get any rows back, so nobody else (admins
+  // included) is shown the card at all rather than an empty one.
+  const canSeeMedical = hasAccess('/students/medical') && holdsMedicalRole(staffRoles);
+  const canEditMedical = holdsMedicalRole(staffRoles);
   // Parents and the student_parent links are writable by admin and the
   // school office under their RLS policies, so only they get the Edit button.
   const canEditParents = isAdmin || (staffRoles || []).includes('school_office');

@@ -1125,7 +1125,7 @@ Withdrawn events don't count, and a Stage 5 returned to the teacher counts as 0 
 
 ### The clinic (nurse and DSL only)
 
-The clinic holds each student's medical profile and consents, conditions, growth and BMI, sick-bay visits, immunisations and termly resumption screenings. Only the nurse and the Designated Safeguarding Lead (DSL, cs@) can see any of it; administrators, the principal role, teachers, pastoral staff, students and parents have no access. The nurse can add, edit and delete; the DSL can add and edit but not delete. Who can see medical records is padlocked on Permissions: it changes only by a change to the system agreed with the principal.
+The clinic holds each student's medical profile and consents, conditions, growth and BMI, sick-bay visits, immunisations and termly resumption screenings. Only the nurse and the Designated Safeguarding Lead (DSL, cs@) can see any of it; administrators, the principal role, teachers, pastoral staff, students and parents have no access. The nurse can add, edit and delete; the DSL can add and edit but not delete. Who can see medical records is padlocked on Permissions: it changes only by a change to the system agreed with the principal. Administrators still see the Clinic tile, but opening its pages shows "Access not allowed", and a student's profile has no Medical tab for them.
 
 - **Sick Bay Today** (/clinic): today's visits, follow-ups outstanding, parents not yet told and jabs overdue.
 - **Sick Bay Log** (/clinic/visits): record a visit (reason, temperature, treatment, medication and dose, outcome, parent told, follow-up). A visit marked as safeguarding shows a red Safeguarding chip (below).
