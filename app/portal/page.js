@@ -16,6 +16,7 @@ import { WeekPicker, HomeworkCard } from '../components/HomeworkWeek';
 import { useTileOrder, sortTiles } from '../../lib/tileOrder';
 import { loadPortalGroups } from '../../lib/studentGroups';
 import PortalGroups from '../components/PortalGroups';
+import GradeAppeals from '../components/GradeAppeals';
 import { schoolToday } from '../../lib/schoolTime';
 import {
   addDays, weekStartOf, defaultWeekStart, shortDate, loadMyHomework,
@@ -496,6 +497,8 @@ function PortalInner() {
         <p style={{ marginTop: '0.75rem' }}>
           <a href="/results/subject-overview">View my subject overview (max &amp; average %) →</a>
         </p>
+        {/* Mark appeals (migration 354): students only, never parents. */}
+        <GradeAppeals studentId={studentId} />
       </div>
       )}
 

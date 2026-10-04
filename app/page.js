@@ -385,6 +385,7 @@ const TABS = [
       { href: '/results/import-gradebook', label: 'Import Results', desc: "Upload the weekly Moodle gradebook." },
       { href: '/target-grades/import', label: 'Import Targets', desc: "Upload students' target grades." },
       !showsClassProgressTile(hasAccess, staffRoles, isAdmin) && { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
+      { href: '/grade-appeals', label: 'Mark Appeals', desc: "Students' appeals against a mark: check the paper and decide." },
       { href: '/results/top-ten', label: 'Top 10', desc: "Print the top 10 students for a result set." },
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
