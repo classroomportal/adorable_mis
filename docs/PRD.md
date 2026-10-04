@@ -190,12 +190,12 @@ The principal asked on 2 Oct 2026 for fee income to be shared out in advance acr
 
 **Still to decide** (the design's proposed answer, which will be built unless the principal says otherwise)
 
-- [ ] Over budget: refused, unless the principal overrides with a written reason, logged and shown on the budget page.
+- [x] Over budget: decided (the principal, 4 Oct 2026, as built). Approval beyond a cost centre's remaining budget is refused; the requisition waits until the principal releases money from Contingency, with a reason, recorded on its timeline.
 - [ ] Department budgets (e.g. Science within teaching materials): not at first; cost centres can be split later.
 - [ ] Petty cash for small purchases: none at first; everything goes through the full chain.
 - [ ] Who records payment: the bursar.
 - [ ] Allocations as fixed amounts or percentages of collections: fixed amounts, shown as percentages of expected income.
-- [ ] Ring-fenced spending against charged or collected: charged, so term 1 spending is possible before the term 2 collection, with a warning when commitments exceed collections.
+- [x] Spending against charged or collected: decided (the principal, 4 Oct 2026, as built). Invoiced, spend to cash: a real requisition can't be approved beyond the cash collected for the term.
 - [ ] Damages & Surcharge: Maintenance.
 - [ ] Discounts: reduce tuition (the general fund) only.
 - [ ] Sports: one Sports fund for Sports Academy and Taekwondo, Swimming separate.
