@@ -16,9 +16,12 @@ const ALL_YEAR_GROUPS = [7, 8, 9, 10, 11, 12];
 const toggleYear = (list, yg) => (list.includes(yg) ? list.filter((y) => y !== yg) : [...list, yg].sort((a, b) => a - b));
 
 // A special result set (migration 358, e.g. Year 12 mocks) is only for some
-// year groups: its marks are shown under its name, not in a week column, are
-// on the reports and never on a transcript. The database refuses marks for
-// students in other years.
+// year groups: its marks are shown under its name, in place of its week's
+// column, are on the reports and never on a transcript. The database refuses
+// marks for students in other years. It is made by choosing the One Year
+// category (the principal, 4 Oct 2026; migration 359 ties the two together),
+// which is always a result set.
+const ONE_YEAR = 'one_year';
 function SpecialYearsPicker({ value, onChange }) {
   return (
     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -32,7 +35,7 @@ function SpecialYearsPicker({ value, onChange }) {
   );
 }
 
-const specialLabel = (years) => (years?.length ? `Special: ${years.map((y) => `Y${y}`).join('/')}` : '');
+const specialLabel = (years) => (years?.length ? `${years.map((y) => `Y${y}`).join('/')} only` : '');
 
 function CalendarInner() {
   const { profile, staffRoles } = useAuth();
@@ -47,7 +50,6 @@ function CalendarInner() {
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [newEvent, setNewEvent] = useState({ event_date: '', event_name: '', category: 'relp', year_group_note: '', is_result_set: false });
-  const [newSpecial, setNewSpecial] = useState(false);
   const [newSpecialYears, setNewSpecialYears] = useState([]);
   const [status, setStatus] = useState(null);
   const [isReportPeriod, setIsReportPeriod] = useState(false);
@@ -109,18 +111,18 @@ function CalendarInner() {
 
   function startEdit(ev) {
     setEditingId(ev.event_id);
-    setEditDraft({ ...ev, special: !!ev.special_year_groups?.length, special_years: ev.special_year_groups || [] });
+    setEditDraft({ ...ev, special_years: ev.special_year_groups || [] });
   }
 
   async function saveEdit() {
-    const special = !!editDraft.is_result_set && editDraft.special;
-    if (special && editDraft.special_years.length === 0) { setStatus('Pick the year group(s) this special result set is for.'); return; }
+    const special = editDraft.category === ONE_YEAR;
+    if (special && editDraft.special_years.length === 0) { setStatus('Pick the year group(s) this One Year result set is for.'); return; }
     const { error } = await supabase.from('calendar_events').update({
       event_date: editDraft.event_date,
       event_name: editDraft.event_name,
       category: editDraft.category,
       year_group_note: editDraft.year_group_note || null,
-      is_result_set: !!editDraft.is_result_set,
+      is_result_set: special || !!editDraft.is_result_set,
       special_year_groups: special ? editDraft.special_years : null,
     }).eq('event_id', editingId);
     if (error) setStatus(`Error: ${error.message}`);
@@ -138,8 +140,8 @@ function CalendarInner() {
     e.preventDefault();
     if (!newEvent.event_date || !newEvent.event_name) { setStatus('Date and name are required.'); return; }
     if (isReportPeriod && reportYearGroups.length === 0) { setStatus('Select at least one year group for the report period.'); return; }
-    const special = newEvent.is_result_set && newSpecial;
-    if (special && newSpecialYears.length === 0) { setStatus('Pick the year group(s) this special result set is for.'); return; }
+    const special = !isReportPeriod && newEvent.category === ONE_YEAR;
+    if (special && newSpecialYears.length === 0) { setStatus('Pick the year group(s) this One Year result set is for.'); return; }
 
     const eventCategory = isReportPeriod ? 'report_period' : newEvent.category;
     const { data: inserted, error } = await supabase.from('calendar_events').insert([{
@@ -147,7 +149,7 @@ function CalendarInner() {
       event_name: newEvent.event_name,
       category: eventCategory,
       year_group_note: newEvent.year_group_note || (isReportPeriod ? reportYearGroups.map((y) => `Y${y}`).join('/') : null),
-      is_result_set: newEvent.is_result_set,
+      is_result_set: special || newEvent.is_result_set,
       special_year_groups: special ? newSpecialYears : null,
     }]).select().single();
 
@@ -168,7 +170,7 @@ function CalendarInner() {
 
     setNewEvent({ event_date: '', event_name: '', category: 'relp', year_group_note: '', is_result_set: false });
     setIsReportPeriod(false); setReportYearGroups([]); setCheckDueDate('');
-    setNewSpecial(false); setNewSpecialYears([]);
+    setNewSpecialYears([]);
     setStatus(isReportPeriod ? 'Event and report period added.' : 'Added.');
     loadEvents();
   }
@@ -272,21 +274,20 @@ function CalendarInner() {
                       <select value={editDraft.category} onChange={(ev) => setEditDraft({ ...editDraft, category: ev.target.value })}>
                         {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                       </select>
+                      {editDraft.category === ONE_YEAR && (
+                        <div style={{ marginTop: '0.3rem' }}>
+                          <SpecialYearsPicker value={editDraft.special_years} onChange={(v) => setEditDraft({ ...editDraft, special_years: v })} />
+                        </div>
+                      )}
                     </td>
                     <td><input value={editDraft.year_group_note || ''} onChange={(ev) => setEditDraft({ ...editDraft, year_group_note: ev.target.value })} /></td>
                     <td style={{ textAlign: 'center' }}>
-                      <input type="checkbox" checked={!!editDraft.is_result_set} onChange={(ev) => setEditDraft({ ...editDraft, is_result_set: ev.target.checked })} />
-                      {editDraft.is_result_set && (
-                        <div style={{ textAlign: 'left', marginTop: '0.3rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                            <input type="checkbox" checked={editDraft.special} onChange={(ev) => setEditDraft({ ...editDraft, special: ev.target.checked })} />
-                            Special set for
-                          </label>
-                          {editDraft.special && (
-                            <SpecialYearsPicker value={editDraft.special_years} onChange={(v) => setEditDraft({ ...editDraft, special_years: v })} />
-                          )}
-                        </div>
-                      )}
+                      <input
+                        type="checkbox"
+                        checked={editDraft.category === ONE_YEAR || !!editDraft.is_result_set}
+                        disabled={editDraft.category === ONE_YEAR}
+                        onChange={(ev) => setEditDraft({ ...editDraft, is_result_set: ev.target.checked })}
+                      />
                     </td>
                     <td>
                       <button onClick={saveEdit}>Save</button>{' '}
@@ -338,27 +339,25 @@ function CalendarInner() {
             <label>Note (optional)
               <input value={newEvent.year_group_note} onChange={(e) => setNewEvent({ ...newEvent, year_group_note: e.target.value })} placeholder="e.g. Y9/11" />
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <input type="checkbox" checked={newEvent.is_result_set} onChange={(e) => setNewEvent({ ...newEvent, is_result_set: e.target.checked })} />
-              Result set (show in Review Results dataset picker)
-            </label>
-            {newEvent.is_result_set && (
+            {newEvent.category === ONE_YEAR && !isReportPeriod && (
               <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '0.6rem', margin: '0.4rem 0', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <input type="checkbox" checked={newSpecial} onChange={(e) => setNewSpecial(e.target.checked)} />
-                  Special set for particular year groups (e.g. Year 12 mocks)
-                </label>
-                {newSpecial && (
-                  <>
-                    <SpecialYearsPicker value={newSpecialYears} onChange={setNewSpecialYears} />
-                    <span style={{ fontSize: '0.75rem', color: '#666' }}>
-                      Marks are kept under this name, not in a week: the Termly Grade Report gives the set its own column, and the written report includes it.
-                      It never goes on a transcript. Only students in these year groups can be given a mark.
-                    </span>
-                  </>
-                )}
+                <div style={{ fontSize: '0.8rem' }}>Which year group(s)?</div>
+                <SpecialYearsPicker value={newSpecialYears} onChange={setNewSpecialYears} />
+                <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                  A result set for these year groups only, e.g. Year 12 mocks. Marks are kept under this name: on the Termly Grade Report it takes the place of the week its date falls in.
+                  It is on the written report and never on a transcript. Only students in these year groups can be given a mark.
+                </span>
               </div>
             )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <input
+                type="checkbox"
+                checked={newEvent.category === ONE_YEAR || newEvent.is_result_set}
+                disabled={newEvent.category === ONE_YEAR}
+                onChange={(e) => setNewEvent({ ...newEvent, is_result_set: e.target.checked })}
+              />
+              Result set (show in Review Results dataset picker)
+            </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <input type="checkbox" checked={isReportPeriod} onChange={(e) => setIsReportPeriod(e.target.checked)} />
               Report period (also creates a Report Period for Write/Check Reports)

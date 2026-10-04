@@ -543,7 +543,7 @@ How it behaves:
 - Missing Grades (`/results/missing`) lists, class by class, who still has no mark. A subject is only expected if someone in that year group has a mark for it.
 
 **Special result sets** (358, the principal, 4 Oct 2026; e.g. Year 12 mocks)
-- When adding (or editing) a result set on the calendar, it can be marked **special for particular year groups**.
+- On the calendar, choosing the **One Year** category (359) and ticking the year groups makes a special result set. One Year events are always result sets, and the database keeps the category and the year groups together.
 - Only students currently in those year groups can be given a mark in it. Enter Results lists only their classes and students, and the database refuses anyone else. A mark can still be corrected after the student moves up a year.
 - Its marks are kept under its name, not in a week: on the Termly Grade Report the set **replaces the week column its date falls in**, headed by its name (e.g. Year 12's "Wk4" becomes "Y12 Mocks"; the principal, 4 Oct 2026), and it doesn't count towards that week's weekly assessments. Students in other year groups see that week as usual. The written report includes it like any other mark in the term.
 - **It never goes on a transcript**: a special set can't also be an end-of-term exam set, and transcripts read only those.
