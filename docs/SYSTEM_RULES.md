@@ -445,6 +445,11 @@ How it behaves:
 
 ## 8. Behaviour, appeals and detentions
 
+**Behaviour Totals** (migration 361, 4 Oct 2026, `/pastoral/behaviour-totals` on the Pastoral tile)
+- Running totals of positive and negative points for a term, the academic year or chosen dates. Net = positives minus negatives. Withdrawn events don't count.
+- Mentors see their own mentor group, student by student. SMT, pastoral, head of boarding and admins see every mentor group with its average (net points divided by the number of students in the group, counting students with no events) and can open any group. Both views download as CSV.
+- This only arranges what staff can already read: every member of staff can see behaviour events.
+
 **Logging events**
 - Any member of staff can log an event. Students and parents can't.
 - **Points always come from the category**, and every event must have one. Staff can't type points.
