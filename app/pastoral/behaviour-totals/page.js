@@ -105,7 +105,7 @@ function StudentTable({ students, title, from, to }) {
           <tbody>
             {sorted.map((s) => (
               <tr key={s.student_id}>
-                <td><Link href={`/students/${s.student_id}`}>{studentName(s)}</Link></td>
+                <td><Link href={`/students/${s.student_id}#behaviour`} title="Open this student's behaviour log">{studentName(s)}</Link></td>
                 <td>{s.year_group}</td>
                 <td style={{ textAlign: 'right', color: '#1a7f37' }}>{signed(s.positive_points)} <span style={{ color: '#667', fontSize: '0.8rem' }}>({s.positive_count})</span></td>
                 <td style={{ textAlign: 'right', color: '#b42318' }}>{s.negative_points} <span style={{ color: '#667', fontSize: '0.8rem' }}>({s.negative_count})</span></td>
