@@ -533,6 +533,13 @@ How it behaves:
 - The 5 days and 5 credits are set per school year on Lookups (`/admin/lookups`, Mark appeals, 355), by anyone with that page. Changing them doesn't affect appeals already made.
 - Not handled: an appeal waits until the teacher decides; nobody else can step in if the teacher is away or has left.
 
+**When parents see a mark** (360, the principal, 4 Oct 2026)
+- Parents see a mark only once it is a set number of hours old, counted from when it was first entered. This gives a teacher (or the student, through an appeal) time to put a wrong number right before families see it.
+- The number of hours is set on Lookups (`/admin/lookups`, When parents see marks) by anyone with that page, from 0 to 168 (a week). It starts at **0**, which means parents see marks as soon as they are entered.
+- It covers every mark parents see: ReLPs, Teacher Assessments and all other results.
+- A correction doesn't restart the clock, so a mark a parent has already seen stays visible after it is fixed. The time a mark was entered can't be changed from the app.
+- Students and staff see marks at once. Staff who view the parent portal (including staff who are also parents) see every mark straight away, because they can see all marks as staff.
+
 **Every grade change is logged permanently** in Grade History (215)
 - This covers every insert, change and delete of scores, target grades, transcript grades and homework grades, with the old and new grade and who did it.
 - Nobody can edit or delete the log, even from the database editor.
