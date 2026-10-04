@@ -277,7 +277,7 @@ function StudentDetail() {
       .eq('student_id', id)
       .order('week_start_date', { ascending: false });
     setResults(r || []);
-    const { data: rse } = await supabase.from('calendar_events').select('event_id, event_name, event_date').eq('is_result_set', true);
+    const { data: rse } = await supabase.from('calendar_events').select('event_id, event_name, event_date, special_year_groups').eq('is_result_set', true);
     setResultSetEvents(rse || []);
 
     const { data: tg } = await supabase.from('target_grades').select('subject_id, target_grade, subjects(subject_name, display_name)').eq('student_id', id);
