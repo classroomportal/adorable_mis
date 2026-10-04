@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 3 October 2026 (database migrations up to 337). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 350). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -19,7 +19,7 @@ This specification describes what Formwork does as built on 3 October 2026 (data
 - **\[DB\]** — enforced by the database. It holds however someone reaches the data, including an edited browser request.
 - **\[Page\]** — enforced only by the web page. It guides normal use but is not a security boundary.
 
-Where behaviour differs from what a page suggests, it is listed in section 23, Known issues. An issue that is later fixed stays in that section, marked Fixed.
+Where behaviour differs from what a page suggests, it is listed in section 24, Known issues. An issue that is later fixed stays in that section, marked Fixed.
 
 ## 2. System overview
 
@@ -38,7 +38,7 @@ Every screen reads and writes the database directly under the signed-in person's
 | Scheduled jobs | pg\_cron in the database | Email queue every 15 seconds, register alerts every 15 minutes, detention reminders on Thursdays. |
 | Server routes | 3 routes in the web app | Nightly backup, and two AI helpers for report comments. Each checks the caller first. |
 | AI | Anthropic Claude API | Drafts and checks report comments. Never reads or writes the database. |
-| Backups | Nightly dump to private storage, plus Supabase's own daily backups | See section 22. |
+| Backups | Nightly dump to private storage, plus Supabase's own daily backups | See section 23. |
 
 **Where the data came from.** Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
 
@@ -466,6 +466,7 @@ Students pre-order within fixed weekly windows, with at most 2 food items per tu
 - **FR-9.9** Top-up: staff enter a target balance (default ₦40,000) and the difference is added to the fee invoice as a Tuck Shop Recharge, for one student, a form, a year or everyone. \[DB\]
 - **FR-9.15** Paid top-up (/bursar/tuckshop-top-up, bursar only): the bursar first records the money on Record a Payment, then picks that payment and adds all or part of it to the student's balance. It adds a Tuck Shop Recharge line on the payment's own invoice, so the payment already covers it and no unpaid bill is created. Each line records the payment it came from; a payment can't be added for more than it was, and can't be deleted while credit taken from it remains. Not shown on /bursar/audit, so no undo there. The page lists all of a student's payments, so the bursar must pick only money sent in as tuckshop credit. (Migration 273.) \[DB\]
 - **FR-9.10** Counter sales at /tuckshop/purchase have no limits and no window. \[DB\]
+- **FR-9.16** Group sale (/tuckshop/purchase, "A group"): staff choose an active item and how many each, load a form, year group, restaurant or student group, and tick each student getting it. Only the ticked students are charged, one ordinary purchase each at the item's current price. It is all or nothing: a leaver among them, or any error, charges nobody. Charged students are marked and can't be ticked again on that screen. Same roles as counter sales; the seller is the signed-in person. (Migration 350.) \[DB / Page\]
 
 **Hand-out (/tuckshop/hand-out)**
 
@@ -499,13 +500,20 @@ The bursar runs invoices, charges, payments and discounts; parents see a term's 
 - **FR-10.13** Tuition, activity, technology and medical items are **locked**. They can have one approved price per year group (7–12), set as a single proposal for all six years. \[DB\]
 - **FR-10.14** A charge for a locked item must equal the approved price for the student's current year group, or failing that the item's approved single price; otherwise it is refused. This applies to everyone signed in; only changes made directly in the database are exempt. Charge Checklist fills in the locked price and doesn't allow another amount. \[DB / Page\]
 - **FR-10.15** Damages, tuckshop and discounts are not locked and can be charged at any amount. Charges already on invoices before locking were left as they were. \[DB\]
+- **FR-10.16** A fee item added with, or changed to, a tuition, activity, technology, medical or exam category is locked automatically, so it can have year and term prices and is charged only at them. The app can't set or remove the lock itself. (Migration 340.) \[DB\]
+- **FR-10.17** Prices by year and term: a locked item can have an approved price for each school term and year group, proposed at /finance/term-fees and approved by both approvers. Charging and the forecast take the term price, else the year price, else the single price. Year 12's Term 2 price covers Terms 2 and 3 (Term 3 is ₦0). A fee term finds its school term through a link: "1st Term" is the September Term 2026 and "2nd Term" the January Term 2027 (set up 3 Oct 2026, not yet current or published). (Migrations 343, 349.) \[DB\]
+- **FR-10.18** Each fee item can be limited to the school terms it is charged in; a charge in another term is refused, and the forecast leaves it out. No terms chosen means every term, as for all items today. (Migration 348.) \[DB\]
+- **FR-10.19** Add a fee (/bursar/fee-items) is one numbered form: (1) name, what parents see, category, optional; (2) the fund; (3) the terms; (4) prices, sent for two-person approval. Only the principal or the college secretary can choose the fund. (Migration 348.) \[DB / Page\]
+- **FR-10.20** Each fee item pays into one fund (FR-19.1), set by the principal or the college secretary and fixed once the item has been charged. Each payment is shared between its invoice's funds in proportion to what each is still owed, and stored when recorded; an overpayment is credit in the general fund. (Migration 338.) \[DB\]
+- **FR-10.21** A discount type can be marked as a sibling discount (for example 3rd child and later). Discounts suggests active students whose place among their active siblings (oldest first by date of birth; "Other" links don't count) qualifies, and the bursar confirms each. Percentages keep seven decimals, so a bursary such as "pays ₦500,000 of ₦1,500,000" comes to the exact naira. (Migration 343.) \[DB / Page\]
+- **FR-10.22** Naira in database messages and admission letters are shown as whole numbers. (Migration 345.) \[DB\]
 
 **Pages**
 
 | Page | What it does |
 | --- | --- |
 | /bursar/charge-checklist | Pick a term and fee item, select students, charge them in one batch; shows who already has it |
-| /bursar/fee-items | Add or edit fee items: name, category, optional or not, default amount (₦) |
+| /bursar/fee-items | Add a fee in one numbered form (name, fund, terms, prices sent for approval); edit items' name, category and optional flag |
 | /bursar/discounts | Define discount types, assign and apply them |
 | /bursar/payments | Find a student and term, see invoice lines and payments, record a payment (amount, method, reference, date), download the invoice PDF |
 | /bursar/fees-table | Charged, paid and balance for every active student this term |
@@ -706,10 +714,11 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed), finance (funds, forecast numbers, term budgets, contingency releases, suppliers and requisitions) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
+| Requisition timeline | Every step of each requisition (raised, signed, costed, approved, contingency released, received, paid, cancelled), who and when; practice entries cleared, never deleted | Each requisition on /finance/requisitions | Principal (while the budget is built) | Yes |
 | Admission letters | Every letter produced, as sent, who sent it and the email address | Each applicant's page | Admissions, SMT, admin | Yes |
 | Sent messages and emails | Every message and automatic email, recipients and delivery status (never the body) | /comms/history | SMT, pastoral, school office, admin | Yes |
 | Tuckshop hand-out locks | Every save and unlock, numbers given and value | /tuckshop/hand-out | Tuckshop, tuckshop owner | Yes |
@@ -808,7 +817,39 @@ SMT, pastoral staff and the school office make groups of students for activities
 - **FR-18.17** A Groups tile appears on the student portal, the student home page and the parent portal when there is a group to show (migration 300). A student sees their groups marked "the students in it" or "the students and their parents"; a parent sees only those marked for parents, and only for children still at the school. Staff viewing as a parent see the parent's view. Archived groups, groups from an earlier school year and groups built from a rule are never shown. \[DB\]
 - **FR-18.18** The portals show a group's name, description, kind and the staff who run it. They never show who else is in it, and never group marks. \[DB\]
 
-## 22. Non-functional requirements
+## 22. FR-19 Budgets and requisitions
+
+Fee income is shared into funds and spent through approved term budgets and requisitions (migrations 338–347; design and the principal's decisions in docs/finance-budget-design.md). It is a working draft: while it is built only the principal sees it, and as of 4 Oct 2026 every budget and requisition entered is practice.
+
+**Funds (/finance/funds) and income (/finance/budget)**
+
+- **FR-19.1** Funds (cost centres) are of five kinds: one general fund (tuition, less discounts), one contingency, one held fund (tuck shop money, the students' own, outside the budget), and any number of allocated funds and ring-fenced funds (direct charges such as swimming or exam entry, spent only on themselves). Added, renamed and archived by the principal or the college secretary; never deleted. \[DB\]
+- **FR-19.2** Income shows, per fund and academic year, what has been charged and collected, from the stored payment shares (FR-10.20). Totals only; no student's name or payment. \[DB\]
+
+**Forecast (/finance/forecast)**
+
+- **FR-19.3** For a term, each fee item and year group: students paying × approved price (term, then year, then single price). The number starts from the live active headcount (compulsory items: everyone; tuition: everyone on the highest-priced tuition item; optional items: nobody) unless the principal or the college secretary enters one for that term; an entered number is changed, never deleted. Each discount or bursary type is its own line, from the active students who have it. A fee not charged in that term is left out. \[DB\]
+
+**Term budgets and contingency (/finance/term-budget)**
+
+- **FR-19.4** A term budget allocates money to each fund except the general fund and the tuck shop. Proposed by the principal or the college secretary and applied when both have approved; a newly approved budget replaces the term's last one. Cancelled, never deleted. \[DB\]
+- **FR-19.5** Only the principal releases money from Contingency to a fund that would otherwise overspend, with a reason and the requisition that needed it. \[DB\]
+
+**Suppliers (/finance/suppliers)**
+
+- **FR-19.6** Approved suppliers are proposed by the principal, the college secretary or the bursar and approved by the principal and the college secretary together. Changing bank details sends a supplier back for approval. Suspended or archived, never deleted; bank details are seen only by those who see the budget. \[DB\]
+
+**Requisitions (/finance/requisitions, /finance/approvals)**
+
+- **FR-19.7** A requisition is raised by a member of staff, signed by the principal (the principal's own count as signed), costed (approved supplier, prices, fund) and approved by the college secretary (the college secretary's own are approved by the principal; nobody approves their own). The requester records delivery and the bursar pays, never more than the approved total. Every step is on the requisition's timeline. \[DB\]
+- **FR-19.8** Approval is refused beyond the fund's remaining budget (the requisition then waits for a contingency release) and, for real entries, beyond the cash collected for the term. \[DB\]
+
+**Practice and access**
+
+- **FR-19.9** Every entry is practice or real, and the two never mix. In practice the principal can do every step and one approval completes a budget or supplier, so the process can be shown by one person. Clearing practice entries cancels or archives them all, recorded. \[DB / Page\]
+- **FR-19.10** Only the principal sees the Budget tile and its pages: 1 Funds, 2 Fees, 3 Forecast, 4 Income, 5 Budget, 6 Suppliers, 7 Requests, 8 Approvals. Being an admin is not enough. Opening it to the bursar, SMT and the college secretary needs a later migration. Every change goes through a database function (the tables can be read, never written directly) and is logged in Change History under finance. \[DB\]
+
+## 23. Non-functional requirements
 
 The database, not the browser, decides who someone is and what they may do; sensitive changes are logged permanently; the whole database is backed up nightly.
 
@@ -838,7 +879,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 - **NFR-10** Sized for about 260 students, 60 staff and 1,000 parent logins. Email is sent at about 12 a minute. \[Design\]
 - **NFR-11** The reads every open page repeats are worked out in the database for the person asking: the overdue-register count on staff timetables, the dashboard card counts and the "is this member of staff also a parent" check. At 08:00 on 2 Oct 2026 they slowed every request to 20–90 seconds as staff signed in (migrations 315–316). \[DB\]
 
-## 23. Known issues and open decisions
+## 24. Known issues and open decisions
 
 34 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; four of them (6, 30, 32 and 33) have since been fixed. The first five stop something working today.
 
@@ -881,7 +922,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
-## 24. Glossary
+## 25. Glossary
 
 | Term | Meaning |
 | --- | --- |
