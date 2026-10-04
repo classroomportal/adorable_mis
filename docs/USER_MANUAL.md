@@ -778,7 +778,7 @@ Press **Set homework**, on /homework or in the Homework panel of a class registe
 
 1. **Title**: at most 10 characters, so it fits the mark sheet (e.g. "Ex 4B"). Put the detail in the instructions.
 2. **Instructions**: plain text. Links starting https:// become clickable for students.
-3. **Due**: pick one of the class's coming lessons, or a date and "end of the day".
+3. **Due**: pick one of the class's coming lessons, or a date and "end of the day". Then choose Time it takes (30 minutes unless you change it). The homework is done in prep the evening before the deadline (Sunday for a Monday deadline), and the form shows that evening and the least time any student in the class has left. If any student would run out of prep time that evening, it won't save: shorten it or choose a later deadline. Homework due today can't be set, because its prep evening has passed.
 4. **Files and links**: PDF, Word, PowerPoint, Excel, images, text or CSV up to 20 MB each, and https:// links. Files are private and open through a link that lasts ten minutes.
 5. **Graded as**: Mark out of …, Percentage, A\*–U, 9–1, WAEC, Effort 1–4, Complete / Incomplete, or Not graded.
 6. Press **Set homework**. Students see it straight away on their timetable and Homework page.
@@ -809,7 +809,20 @@ Students see nothing until you press **Release marks**; **Hide marks again** tak
 
 Students see homework on their timetable (on the lesson it is due in) and on a Homework page laid out by day. Colour shows where each piece stands: red for overdue or not handed in, amber for due today, green for ticked done, purple for graded, blue for due later. A student can tick **Done** as their own note; it is not a hand-in.
 
+Each day on the Homework page also lists **To do today**: the homework on that evening's prep (Saturday and Sunday under Weekend). To plan ahead, a student opens a homework and chooses **I'll do it on…** to move it to an earlier day, from today up to the day before its prep evening, or back again. Only the student sees their plan; it doesn't change the evening teachers see or the prep time check.
+
 ![A student's Homework page](manual-images/27-student-homework.jpg)
+
+### Prep times (/pastoral/prep)
+
+Homework is done in evening prep, so each year's prep time limits how much homework can go on one evening. **Prep Times**, on the Pastoral card, is for admins, SMT, pastoral staff and the head of boarding.
+
+1. Each year group has one row: when prep starts and ends, the days it runs, and any fixed activity that isn't homework time, with its minutes. Years 7–9 spend their first hour reviewing the day's work.
+2. **Private study counts** adds the year's timetabled Personal Study lessons to its homework time on the days they fall. It is meant for a future Year 13; no year has it ticked.
+3. **Homework time** shows the minutes each prep evening gives, and the total for a week.
+4. Change a value and press **Save** on that row.
+
+As set on 4 October 2026: Years 7–9 7.00–9.15 pm less the hour's review (75 minutes), Years 10–12 7.00–9.45 pm (165 minutes), Sunday to Friday. Changes are kept in Change History. They don't move homework already set.
 
 ### Homework Monitor (SMT)
 
