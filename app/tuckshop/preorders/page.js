@@ -85,7 +85,7 @@ function PreordersInner() {
                   <tr key={p.id}>
                     <td>{p.students?.first_name} {p.students?.last_name}</td>
                     <td>{p.for_date}</td>
-                    <td><span className={`badge ${p.status === 'fulfilled' ? 'badge-positive' : 'badge-negative'}`}>{p.status}</span></td>
+                    <td><span className={`badge ${p.status === 'fulfilled' ? 'badge-positive' : 'badge-negative'}`}>{p.status === 'not_collected' ? 'not collected' : p.status}</span></td>
                   </tr>
                 ))}
               </tbody>

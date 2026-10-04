@@ -268,6 +268,7 @@ function TuckshopInner() {
   const pastOrders = myOrders.filter((o) => !(openDates.has(o.for_date) && o.status === 'pending'));
 
   function statusLabel(o) {
+    if (o.status === 'not_collected') return 'not collected';
     if (o.status !== 'pending') return o.status;
     return openDates.has(o.for_date) ? 'open' : 'locked';
   }
