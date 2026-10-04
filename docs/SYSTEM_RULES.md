@@ -447,7 +447,7 @@ How it behaves:
 
 **Behaviour Totals** (migration 361, 4 Oct 2026, `/pastoral/behaviour-totals` on the Pastoral tile)
 - Running totals of positive and negative points for a term, the academic year or chosen dates. Net = positives minus negatives. Withdrawn events don't count.
-- Mentors see their own mentor group, student by student. SMT, pastoral, head of boarding and admins see every mentor group with its average (net points divided by the number of students in the group, counting students with no events) and can open any group. Both views download as CSV.
+- Mentors see their own mentor group, student by student. SMT, pastoral, head of boarding and admins see every mentor group with its average (net points divided by the number of students in the group, counting students with no events) and can open any group. A student's name opens their profile on its Behaviour log. Both views download as CSV.
 - This only arranges what staff can already read: every member of staff can see behaviour events.
 
 **Logging events**
