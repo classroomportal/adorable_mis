@@ -8,7 +8,7 @@ Sep 30, 2026 · @Chris TERRY
 
 ## Summary
 
-Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 29 known issues still open, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
+Formwork already runs the school's daily life. The next phase is to make it trustworthy at the edges, by fixing the 28 known issues still open, and to carry it through a whole school year, from admission to year-end rollover, without anyone rebuilding data by hand.
 
 **Where the data came from.** Adorable British College has about 260 students in Years 7–12, many of them boarders. Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
 
@@ -82,7 +82,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | Area | State | What it does | Open issues |
 | --- | --- | --- | --- |
 | Sign-in and accounts | Live | Formwork-made logins only; Google for staff and students; leavers locked out; parent welcome letters sent by admins or the school office, and resendable to reset a forgotten password; a Forgot Password page in the sign-in style, aimed at parents | 1 |
-| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type; who added each student and every change to a student record are logged; names are tidied of stray spaces; the office is warned when a new parent's email is already on record and offered the existing parent instead | 2 |
+| Students, parents, portals | Live | Field-level edit rights; parents see current children only; siblings found through shared parents; relationship recorded per child; gender required; only the school office adds new students; the Students list searches names as you type; who added each student and every change to a student record are logged; names are tidied of stray spaces; the office is warned when a new parent's email is already on record and offered the existing parent instead | 1 |
 | Timetable and imports | Live | Nova-T import with preview; lesson-level teacher and room; the school office can save class allocations | 0 |
 | Registers | Live | Any staff marks any register; 15-minute not-done alerts; a Missed Lessons list of students in school who missed a lesson, and a pop-up on the office's and the new attendance officer's screens 15 minutes into a lesson when a student seen earlier is marked absent; planned absences give a student one code (illness, holiday, exclusion and so on) over a run of days, filled into every register without overwriting a teacher's mark | 2 |
 | The Other Half | Live | Choices only in Evening Prep; capacity and year checks; a student group can be placed in an activity by the school and locked, until unlocked or a date | 5 |
@@ -148,7 +148,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | P1-14 | First passwords are always changed, enforced by the database | Every new login is flagged, and a flagged login can't read data until changed | Not started |
 | P1-15 | A passed leaving date makes the student a leaver without anyone saving the record | A daily job applies it and locks the login | Not started |
 | P1-16 | Decimal scores always get a grade | 89.5 takes the lower band, as transcripts already do | Not started |
-| P1-17 | A parent sees every current child, even when the family has two parent records with the same email | No parent login is missing a child linked to another record with its email, and a new case is caught or prevented | Not started |
+| P1-17 | A parent sees every current child, even when the family has two parent records with the same email | No parent login is missing a child linked to another record with its email, and a new case is caught or prevented | Done |
 
 ### P2 — tighten later
 
