@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 360). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 361). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -374,6 +374,7 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.26** Each behaviour category can have a short description, edited at /admin/lookups and shown when the category is picked (when logging, and when changing an event's category). Stage 5, Bullying and Academic dishonesty were given one; the rest are for the school to write. \[DB / Page\]
 - **FR-6.27** At Behaviour Review, the reviewer (the school office or SMT; only SMT or admin for an event with a picture) can mark a serious event "Not Stage 5: return to teacher", with a note saying why. Only before parents can see it, and not on a withdrawn event. The teacher who logged it gets the note in their Formwork inbox, and it shows on the event wherever they see it. The event waits under "Returned to the teacher", where it can't be sent to parents. From the moment it is returned it counts 0 points (its category is kept), and its detention is cancelled if it hasn't happened yet, with the week's total detention if the week no longer reaches it; the student is told (migration 337). Detentions already attended stay. If the teacher changes the category, the new category's points count, it leaves the review and detentions are recalculated (FR-6.6). If they keep Stage 5 and edit the explanation, the −5 and its detention come back and it goes to "Waiting for review" again. Staff can't mark or clear a return any other way; any real edit clears it. Returns are logged in Change History (behaviour). Only the principal's PA (through school\_office) and SMT review Stage 5 (the principal, 3 Oct 2026). \[DB\]
 - **FR-6.28** Every return is kept permanently against the teacher who logged the event (behaviour\_event\_returns: the teacher, the reviewer, the note and the original category and points), even after the event is changed or deleted. Only SMT and admins can read it. Behaviour Review shows them "Stage 5s returned, by teacher": the number for each teacher and the latest date, to see who needs more training (migration 337, the principal, 3 Oct 2026). Only the return step writes to it. The first four returns (3 Oct 2026, made before the points rule existed) were brought into line: points 0, recorded in the tally, and the one detention not yet held (dated 2 Oct, still "scheduled") cancelled; the other three had been attended and stay. \[DB\]
+- **FR-6.29** Behaviour Totals (/pastoral/behaviour-totals, on the Pastoral card, migration 361, the principal, 4 Oct 2026) gives running totals of positive and negative points for a term (the current one to start with), the academic year or chosen dates. Net is positives minus negatives; withdrawn events don't count, and a returned Stage 5 counts its 0 points. Mentors see their own mentor group (the Mentor class on the timetable), student by student, with the number of events, the group's totals and its average. SMT, pastoral, head of boarding and admins also see every mentor group with its mentor, students, positives, negatives, net and average per student (net points divided by all the group's active students, including those with no events), filtered by year with a whole-school or year total, and can open any group. Both tables download as CSV. The page is granted to mentor, pastoral, head\_of\_boarding and smt. The totals come from behaviour\_totals(), which runs under the caller's own permissions; every member of staff can already read behaviour events, so showing a mentor only their group is a display choice. \[Page\]
 
 ## 10. FR-7 Assessment, results and targets
 
@@ -909,7 +910,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 24. Known issues and open decisions
 
-35 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; five of them (6, 30, 31, 32 and 33) have since been fixed. The first five stop something working today.
+36 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; five of them (6, 30, 31, 32 and 33) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -948,6 +949,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 33 | Behaviour | Migration 319 (only SMT remove a merit or cancel a detention; events can't be withdrawn or moved from the app) was written on 2 Oct 2026 but never reached the live database. Found 3 Oct 2026 while preparing stage 2 of the tickable abilities; applied by migration 330 the same day. Every other migration since 300 was checked and is live | Until 3 Oct any admin could delete events, and anyone with Detention could cancel or re-date a detention | Fixed |
 | 34 | Behaviour | A reviewer's "return to teacher" note (FR-6.27) is stored on the event. The portals never show it, but a student can read their own events' data directly, so a technically minded student could read the note. It is cleared when the teacher edits the event, but stays if the reviewer sends the event to parents unchanged | Reviewers should keep notes factual (e.g. "this is Disruption in class, −2") | Open |
 | 35 | Results | A mark appeal (FR-7.27) waits until the student's teacher decides. Nobody else can decide it if the teacher is away or has left, and it holds one of the student's credits meanwhile | An appeal can wait with no end; no deadline or hand-over to the Head of Department yet | Open |
+| 36 | Behaviour | Two mentors on the timetable don't hold the mentor role (found 4 Oct 2026): Uche Isiani (UIS, 10C/Me) and Christopher Agunwa (CSA, 10D/Me), who are teachers only. Behaviour Totals (FR-6.29), Certificates and other pages granted to mentor are missing for them | They can't see their group's behaviour totals; give them the mentor role on Staff & Access | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
