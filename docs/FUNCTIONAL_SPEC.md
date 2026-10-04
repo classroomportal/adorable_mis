@@ -910,7 +910,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 24. Known issues and open decisions
 
-36 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; five of them (6, 30, 31, 32 and 33) have since been fixed. The first five stop something working today.
+36 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; fix of them (6, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -949,7 +949,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 33 | Behaviour | Migration 319 (only SMT remove a merit or cancel a detention; events can't be withdrawn or moved from the app) was written on 2 Oct 2026 but never reached the live database. Found 3 Oct 2026 while preparing stage 2 of the tickable abilities; applied by migration 330 the same day. Every other migration since 300 was checked and is live | Until 3 Oct any admin could delete events, and anyone with Detention could cancel or re-date a detention | Fixed |
 | 34 | Behaviour | A reviewer's "return to teacher" note (FR-6.27) is stored on the event. The portals never show it, but a student can read their own events' data directly, so a technically minded student could read the note. It is cleared when the teacher edits the event, but stays if the reviewer sends the event to parents unchanged | Reviewers should keep notes factual (e.g. "this is Disruption in class, −2") | Open |
 | 35 | Results | A mark appeal (FR-7.27) waits until the student's teacher decides. Nobody else can decide it if the teacher is away or has left, and it holds one of the student's credits meanwhile | An appeal can wait with no end; no deadline or hand-over to the Head of Department yet | Open |
-| 36 | Behaviour | Two mentors on the timetable don't hold the mentor role (found 4 Oct 2026): Uche Isiani (UIS, 10C/Me) and Christopher Agunwa (CSA, 10D/Me), who are teachers only. Behaviour Totals (FR-6.29), Certificates and other pages granted to mentor are missing for them | They can't see their group's behaviour totals; give them the mentor role on Staff & Access | Open |
+| 36 | Behaviour | Two mentors on the timetable don't hold the mentor role (found 4 Oct 2026): Uche Isiani (UIS, 10C/Me) and Christopher Agunwa (CSA, 10D/Me), who are teachers only. Behaviour Totals (FR-6.29), Certificates and other pages granted to mentor are missing for them | They can't see their group's behaviour totals; both were given the mentor role on 4 Oct 2026, and every mentor group's mentor now holds it | Fixed |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
