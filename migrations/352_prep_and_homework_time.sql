@@ -40,6 +40,9 @@
 --     Counts only, never another class's homework; for those who can set
 --     homework for the class.
 --
+--   * homework_plans: a student can move a homework's card to an earlier
+--     day for their own planning (end of this file).
+--
 -- Prep for KS3 counts 75 minutes (7.00-9.15 less the hour's review); KS4
 -- and Year 12 165 minutes (7.00-9.45).
 
@@ -325,3 +328,77 @@ $$;
 
 revoke all on function public.homework_prep_check(integer, date, integer, bigint) from public, anon;
 grant execute on function public.homework_prep_check(integer, date, integer, bigint) to authenticated;
+
+-- ---- A student's own plan --------------------------------------------------
+--
+-- The principal, 4 Oct 2026: a student can move a homework's card to an
+-- earlier day for their own planning. homework_plans holds that day, one row
+-- per student per homework, written only by the student for themself. It
+-- changes nothing else: the homework stays on its prep evening for the
+-- teacher and for the time check, and staff don't see the plans. The day
+-- must be today or later and before the homework's prep evening; moving it
+-- back to the prep evening deletes the row. Its key is its own id, with
+-- (homework_id, student_id) unique by index only, so PostgREST doesn't take
+-- it for a junction table (migration 306).
+
+create table public.homework_plans (
+  id bigint generated always as identity primary key,
+  homework_id bigint not null references public.homework (homework_id) on delete cascade,
+  student_id integer not null references public.students (student_id) on delete cascade,
+  plan_on date not null,
+  updated_at timestamptz not null default now()
+);
+
+create unique index homework_plans_one_each on public.homework_plans (homework_id, student_id);
+create index homework_plans_student_day on public.homework_plans (student_id, plan_on);
+
+comment on table public.homework_plans is
+  'A student''s own earlier day for a homework (migration 352), for their planning only. Written and read only by the student.';
+
+alter table public.homework_plans enable row level security;
+grant select, insert, update, delete on public.homework_plans to authenticated;
+
+create policy "Students read their own homework plans"
+  on public.homework_plans for select to authenticated
+  using (student_id = my_student_id());
+create policy "Students plan their own homework"
+  on public.homework_plans for insert to authenticated
+  with check (
+    student_id = my_student_id()
+    and exists (select 1 from homework h where h.homework_id = homework_plans.homework_id and h.status = 'set'));
+create policy "Students change their own homework plans"
+  on public.homework_plans for update to authenticated
+  using (student_id = my_student_id())
+  with check (student_id = my_student_id());
+create policy "Students remove their own homework plans"
+  on public.homework_plans for delete to authenticated
+  using (student_id = my_student_id());
+
+create or replace function public.homework_plans_check()
+returns trigger
+language plpgsql
+security definer
+set search_path to 'public', 'pg_temp'
+as $$
+declare
+  v_prep date;
+begin
+  if tg_op = 'UPDATE' and (new.homework_id <> old.homework_id or new.student_id <> old.student_id) then
+    raise exception 'A plan can only be moved to another day.';
+  end if;
+  select coalesce(h.prep_on, h.due_on - 1) into v_prep from homework h where h.homework_id = new.homework_id;
+  if new.plan_on < school_today() then
+    raise exception 'Choose today or a later day.';
+  end if;
+  if new.plan_on >= v_prep then
+    raise exception 'A homework can only be moved to a day before its prep evening (%).', to_char(v_prep, 'Dy FMDD Mon');
+  end if;
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+revoke execute on function public.homework_plans_check() from public, anon, authenticated;
+
+create trigger trg_homework_plans_check before insert or update on public.homework_plans
+  for each row execute function public.homework_plans_check();

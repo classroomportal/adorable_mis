@@ -20,7 +20,7 @@ import { schoolToday } from '../../lib/schoolTime';
 import {
   addDays, weekStartOf, defaultWeekStart, shortDate, loadMyHomework,
   placeHomeworkInCells, groupHomeworkByDay, isOutstanding, setHomeworkDone,
-  loadMyPrepHomework, groupPrepByDay,
+  loadMyPrepHomework, groupPrepByDay, setHomeworkPlan,
 } from '../../lib/homework';
 
 
@@ -95,6 +95,16 @@ function PortalInner() {
       setPrepHomework(apply(!done));
       setHwError(`That didn't save: ${error.message}`);
     }
+  }
+
+  // Move a homework's card to an earlier day, or back to its prep evening
+  // (migration 352): the student's own planning only.
+  async function planHomework(hw, day) {
+    setHwError(null);
+    const error = await setHomeworkPlan(hw, studentId, day);
+    if (error) { setHwError(`That didn't save: ${error.message}`); return; }
+    const { homework } = await loadMyPrepHomework(weekStart);
+    setPrepHomework(homework);
   }
 
   async function load() {
@@ -258,7 +268,7 @@ function PortalInner() {
   // Homework goes on the lesson it's due in; homework whose class has no lesson
   // that day is listed under the day's heading.
   const unplacedHomework = homeworkOn ? placeHomeworkInCells(cellMap, weekHomework, periods) : {};
-  const selectedHomework = [...weekHomework, ...recentHomework, ...prepHomework].find((h) => h.homework_id === selectedHw) || null;
+  const selectedHomework = [...prepHomework, ...weekHomework, ...recentHomework].find((h) => h.homework_id === selectedHw) || null;
 
   function renderTimetableGrid({ forPrint = false } = {}) {
     const withHomework = homeworkOn && !forPrint;
@@ -322,10 +332,13 @@ function PortalInner() {
   const homeworkByDay = groupHomeworkByDay(weekHomework, weekStart);
   const prepByDay = groupPrepByDay(prepHomework, weekStart);
   const weekendHomework = [...homeworkByDay[addDays(weekStart, 5)], ...homeworkByDay[addDays(weekStart, 6)]];
-  const gridDays = DAYS.map((d, i) => ({ key: d, date: addDays(weekStart, i), prepDate: addDays(weekStart, i), items: homeworkByDay[addDays(weekStart, i)] }));
+  // Each column also lists what to do that day: homework on that evening's
+  // prep, or moved there by the student (migration 352).
+  const gridDays = DAYS.map((d, i) => ({ key: d, date: addDays(weekStart, i), toDo: prepByDay[addDays(weekStart, i)], items: homeworkByDay[addDays(weekStart, i)] }));
   // Sunday prep (for Monday's deadlines) needs the weekend column too.
-  if (weekendHomework.length || prepByDay[addDays(weekStart, 6)].length) {
-    gridDays.push({ key: 'Weekend', date: addDays(weekStart, 5), prepDate: addDays(weekStart, 6), items: weekendHomework, weekend: true });
+  const weekendToDo = [...prepByDay[addDays(weekStart, 5)], ...prepByDay[addDays(weekStart, 6)]];
+  if (weekendHomework.length || weekendToDo.length) {
+    gridDays.push({ key: 'Weekend', date: addDays(weekStart, 5), toDo: weekendToDo, items: weekendHomework, weekend: true });
   }
   const activeView = VIEWS.includes(view) ? view : null;
 
@@ -431,10 +444,10 @@ function PortalInner() {
           {gridDays.map((d) => (
             <div key={d.key} className={`hw-day${!d.weekend && d.date === today ? ' hw-today' : ''}`}>
               <div className="hw-day-head">{d.weekend ? 'Weekend' : shortDate(d.date)}</div>
-              {(prepByDay[d.prepDate] || []).length > 0 && (
+              {d.toDo.length > 0 && (
                 <div className="hw-prep">
-                  <div className="hw-prep-head">{d.weekend ? 'In prep on Sunday' : 'In prep this evening'}</div>
-                  {prepByDay[d.prepDate].map((hw) => (
+                  <div className="hw-prep-head">To do{d.weekend ? '' : ' today'}</div>
+                  {d.toDo.map((hw) => (
                     <HomeworkChip key={`prep-${hw.homework_id}`} hw={hw} prep selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} />
                   ))}
                 </div>
@@ -447,7 +460,7 @@ function PortalInner() {
             </div>
           ))}
         </div>
-        <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} onToggleDone={toggleDone} />
+        <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} onToggleDone={toggleDone} onPlan={planHomework} />
 
         {overdueEarlier.length > 0 && (
           <>
