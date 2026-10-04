@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import { useAuth } from '../../lib/AuthContext';
+import { formatUKDateTime } from '../../lib/formatDate';
 
 function InboxInner() {
   const { session } = useAuth();
@@ -58,7 +59,7 @@ function InboxInner() {
             <p style={{ fontWeight: 400, whiteSpace: 'pre-line' }}>{item.messages?.body}</p>
           )}
           <p style={{ fontWeight: 400, color: '#666', fontSize: '0.85rem' }}>
-            {item.messages?.sent_at && new Date(item.messages.sent_at).toLocaleString()}
+            {item.messages?.sent_at && formatUKDateTime(item.messages.sent_at)}
             {!item.read_at && ' — unread'}
           </p>
         </div>

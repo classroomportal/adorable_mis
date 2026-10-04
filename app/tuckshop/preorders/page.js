@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { formatUKDate } from '../../../lib/formatDate';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
@@ -62,7 +63,7 @@ function PreordersInner() {
             const total = p.items.reduce((s, it) => s + it.tuckshop_items.price * it.quantity, 0);
             return (
               <div className="card" key={p.id}>
-                <strong>{p.students?.first_name} {p.students?.last_name}</strong> ({p.students?.form_class}) — for {p.for_date}
+                <strong>{p.students?.first_name} {p.students?.last_name}</strong> ({p.students?.form_class}) — for {formatUKDate(p.for_date, { weekday: true })}
                 <ul>
                   {p.items.map((it, i) => (
                     <li key={i}>{it.quantity} × {it.tuckshop_items.name} ({naira(it.tuckshop_items.price)} each)</li>
@@ -84,7 +85,7 @@ function PreordersInner() {
                 {past.slice(0, 30).map((p) => (
                   <tr key={p.id}>
                     <td>{p.students?.first_name} {p.students?.last_name}</td>
-                    <td>{p.for_date}</td>
+                    <td>{formatUKDate(p.for_date, { weekday: true })}</td>
                     <td><span className={`badge ${p.status === 'fulfilled' ? 'badge-positive' : 'badge-negative'}`}>{p.status === 'not_collected' ? 'not collected' : p.status}</span></td>
                   </tr>
                 ))}

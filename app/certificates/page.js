@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
+import { formatUKDate } from '../../lib/formatDate';
 
 // Levels come from certificate_levels (migration 262), edited at
 // /admin/lookups. A certificate once given is matched by its level's name,
@@ -108,7 +109,7 @@ function CertificatesInner() {
                   <tr key={`${a.student_id}-${a.milestone}`}>
                     <td>{a.student?.first_name} {a.student?.last_name}</td>
                     <td>{a.level_name ? `${a.level_name} (${a.milestone})` : a.milestone}</td>
-                    <td>{a.awarded_date}</td>
+                    <td>{formatUKDate(a.awarded_date)}</td>
                   </tr>
                 ))}
               </tbody>

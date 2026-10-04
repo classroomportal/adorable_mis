@@ -483,7 +483,7 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                   <tbody>
                     {behaviour.map((b) => (
                       <tr key={b.event_id}>
-                        <td>{b.event_date}</td>
+                        <td>{formatUKDate(b.event_date)}</td>
                         <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
                         <td>
                           {b.category}
@@ -586,7 +586,7 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                           <tbody>
                             {feePayments.map((p) => (
                               <tr key={p.id}>
-                                <td>{p.paid_date}</td>
+                                <td>{formatUKDate(p.paid_date)}</td>
                                 <td>₦{Number(p.amount).toLocaleString('en-GB', { maximumFractionDigits: 0 })}</td>
                                 <td>{p.method}</td>
                               </tr>

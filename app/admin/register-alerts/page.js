@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { formatUKDate } from '../../../lib/formatDate';
 
 function RegisterAlertsInner() {
   const [rows, setRows] = useState([]);
@@ -50,7 +51,7 @@ function RegisterAlertsInner() {
                 <tr key={r.register_alert_id}>
                   <td>{r.staff?.first_name} {r.staff?.last_name}</td>
                   <td>{r.other_half_activities ? `Other Half: ${r.other_half_activities.activity_name}` : 'Class'}</td>
-                  <td>{r.period_date}</td>
+                  <td>{formatUKDate(r.period_date)}</td>
                   <td>{r.minutes_late}</td>
                   <td>
                     <input
