@@ -10,6 +10,7 @@ import {
   VISIT_CATEGORIES, VISIT_OUTCOMES, labelFor, formatDateTime,
   localDateTimeValue, isoDateOffset, isoToday, studentName,
   matchesStudentFilter, EMPTY_STUDENT_FILTER,
+  withSafeguardingDetails,
 } from '../../../lib/medical';
 
 // The sick bay log across the whole school, and the quickest way to add to
@@ -66,9 +67,10 @@ function VisitsInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null);
-  // Only a DSL can mark an entry as safeguarding, which hides it from
-  // everyone else, the nurses included (migration 364). The database enforces
-  // it; this only decides whether to offer the tick box.
+  // Only a DSL can mark an entry as safeguarding, which moves the presenting
+  // complaint and observations somewhere only the DSL can read; medication
+  // and the rest stay visible (migration 364). The database enforces it;
+  // this only decides whether to offer the tick box.
   const [isDsl, setIsDsl] = useState(false);
 
   useEffect(() => {
@@ -96,9 +98,9 @@ function VisitsInner() {
 
     const { data, error: err } = await query;
     if (err) setError(err.message); else setError(null);
-    setVisits(data || []);
+    setVisits(isDsl ? await withSafeguardingDetails(data || []) : (data || []));
     setLoading(false);
-  }, [from, to, category]);
+  }, [from, to, category, isDsl]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -175,11 +177,11 @@ function VisitsInner() {
   }
 
   async function setSafeguarding(visitId, on) {
-    if (on && !window.confirm('Mark as safeguarding? Only the DSL will be able to see this entry; the nurses will no longer see it.')) return;
+    if (on && !window.confirm('Mark as safeguarding? The presenting complaint and observations will be visible to the DSL only. Medication, treatment and the rest stay visible to the nurses.')) return;
     const { error: err } = await supabase.from('student_clinic_visits')
       .update({ safeguarding: on }).eq('visit_id', visitId);
     if (err) { setStatus(`Could not update: ${err.message}`); return; }
-    setStatus(on ? 'Marked as safeguarding: DSL only.' : 'Safeguarding mark removed: the nurses can see it again.');
+    setStatus(on ? 'Marked as safeguarding: symptoms visible to the DSL only.' : 'Safeguarding mark removed: the nurses can see the symptoms again.');
     load();
   }
 
@@ -316,7 +318,7 @@ function VisitsInner() {
               {isDsl && (
                 <label className="checkbox-row">
                   <input type="checkbox" checked={draft.safeguarding} onChange={(e) => setDraft({ ...draft, safeguarding: e.target.checked })} />
-                  Safeguarding: only the DSL can see this entry
+                  Safeguarding: only the DSL can see the presenting complaint and observations
                 </label>
               )}
             </div>
@@ -373,7 +375,7 @@ function VisitsInner() {
                     <div>{formatDateTime(v.visited_at)}</div>
                     <div style={{ marginTop: '0.3rem' }}>
                       <Chip tone="neutral">{labelFor(VISIT_CATEGORIES, v.category) || 'Unspecified'}</Chip>
-                      {v.safeguarding && <Chip tone="bad">Safeguarding · DSL only</Chip>}
+                      {v.safeguarding && <Chip tone="bad">Safeguarding · symptoms DSL only</Chip>}
                       {v.follow_up_needed && <Chip tone="warn">Follow-up</Chip>}
                       {urgent && <Chip tone="bad">{labelFor(VISIT_OUTCOMES, v.outcome)}</Chip>}
                     </div>
