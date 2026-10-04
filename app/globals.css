@@ -1686,6 +1686,9 @@ button.hw-chip.hw-graded:hover { background: #ede3f7; }
 .hw-day-head { font-weight: 700; font-size: 0.85rem; color: var(--brand-900); }
 .hw-today .hw-day-head::after { content: ' · Today'; color: var(--brand-700); }
 .hw-nothing { color: var(--ink-soft); font-size: 0.8rem; }
+/* Homework to do in prep that evening (migration 352). */
+.hw-prep { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.35rem; border: 1px dashed var(--slate-200); border-radius: 8px; }
+.hw-prep-head { width: 100%; font-size: 0.75rem; font-weight: 600; color: var(--ink-soft); }
 .hw-card {
   display: flex;
   flex-direction: column;

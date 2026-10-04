@@ -14,6 +14,7 @@ import HomeworkStudentView from '../components/HomeworkStudentView';
 import { Instructions } from '../components/HomeworkChip';
 import SaveBar, { useSaveStatus } from '../components/SaveBar';
 import HomeworkForm, { btnSmall, schemeLabel, classLabel } from '../components/HomeworkForm';
+import { minutesLabel } from '../../lib/prep';
 
 // Homework (migration 278, docs/homework-design.md): set homework for a class,
 // with a deadline and a grading system, and record a grade for each student.
@@ -469,6 +470,8 @@ function HomeworkInner() {
                         {formatUKDate(hw.due_on, { weekday: true })}
                         <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
                           {lesson ? `Lesson ${lesson.period_number}` : 'End of day'}
+                          {hw.prep_on ? ` · prep ${formatUKDate(hw.prep_on, { weekday: true }).replace(/ \d{4}$/, '')}` : ''}
+                          {hw.minutes ? ` · ${minutesLabel(hw.minutes)}` : ''}
                           {cls.canSet && !withdrawn && hw.due_on < today && n < rosterFor(hw) ? ' · past due' : ''}
                         </div>
                       </td>

@@ -7,6 +7,7 @@ import {
   addDays, dayKey, loadAttachments, addHomeworkLink, addHomeworkFile, removeAttachment,
 } from '../../lib/homework';
 import { AttachmentEditor } from './HomeworkAttachments';
+import { loadPrepCheck, minutesLabel, HOMEWORK_MINUTE_CHOICES } from '../../lib/prep';
 
 // The set / edit homework form (migration 278), used on /homework and on the
 // class register (/attendance). The database decides who may save it
@@ -39,6 +40,34 @@ export function classLabel(c) {
   return `${c.class_code} · ${c.subjects?.display_name || c.subjects?.subject_name || ''}`;
 }
 
+// Which prep evening the homework goes on, and whether the class has time then.
+function PrepNote({ check, dueOn, minutes, unchanged }) {
+  if (!dueOn) return <span style={{ color: 'var(--ink-soft)' }}>Done in prep the evening before the deadline.</span>;
+  if (!check) return <span style={{ color: 'var(--ink-soft)' }}>Checking prep time…</span>;
+  if (!check.prep_on) {
+    return <span style={{ color: '#a3232c' }}>No prep evening in the week before that deadline. Choose another deadline.</span>;
+  }
+  const evening = formatUKDate(check.prep_on, { weekday: true }).replace(/ \d{4}$/, '');
+  if (!unchanged && check.prep_on < schoolToday()) {
+    return <span style={{ color: '#a3232c' }}>Its prep evening ({evening}) has passed. Choose a later deadline.</span>;
+  }
+  if (!unchanged && check.students_short > 0) {
+    return (
+      <span style={{ color: '#a3232c' }}>
+        Done in prep on <strong>{evening}</strong>, but {check.students_short} of {check.students} students
+        haven&apos;t {minutesLabel(minutes)} left that evening (least: {minutesLabel(Math.max(check.least_free, 0))}).
+        Shorten it or choose another deadline.
+      </span>
+    );
+  }
+  return (
+    <span>
+      Done in prep on <strong>{evening}</strong>
+      <span style={{ color: 'var(--ink-soft)' }}> · {minutesLabel(Math.max(check.least_free, 0))} free for every student before this</span>
+    </span>
+  );
+}
+
 export default function HomeworkForm({ cls, schemes, existing, markCount, onSaved, onCancel, embedded = false }) {
   const [title, setTitle] = useState(existing?.title || '');
   const [instructions, setInstructions] = useState(existing?.instructions || '');
@@ -46,6 +75,10 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
   const [dueSlotId, setDueSlotId] = useState(existing?.due_slot_id ? String(existing.due_slot_id) : '');
   const [schemeId, setSchemeId] = useState(existing?.scheme_id ? String(existing.scheme_id) : '');
   const [outOf, setOutOf] = useState(existing?.out_of != null ? String(Number(existing.out_of)) : '');
+  // How long it takes (migration 352). It is done in prep the evening
+  // before the deadline, which the database works out.
+  const [minutes, setMinutes] = useState(existing?.minutes != null ? String(existing.minutes) : '30');
+  const [prepCheck, setPrepCheck] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   // Files and links (migration 281), saved after the homework itself.
@@ -54,6 +87,19 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
   useEffect(() => {
     if (existing?.homework_id) loadAttachments(existing.homework_id).then((a) => setAttachments((v) => ({ ...v, existing: a })));
   }, [existing?.homework_id]);
+
+  // The prep evening the deadline puts it on and the least time any student
+  // in the class has left then. The database checks again on saving.
+  useEffect(() => {
+    if (!dueOn) { setPrepCheck(null); return undefined; }
+    let live = true;
+    setPrepCheck(null);
+    loadPrepCheck(supabase, cls.class_id, dueOn, minutes, existing?.homework_id || null)
+      .then(({ check }) => { if (live) setPrepCheck(check || { prep_on: null, students: 0, least_free: 0, students_short: 0 }); });
+    return () => { live = false; };
+  }, [cls.class_id, dueOn, minutes, existing?.homework_id]);
+  // An existing homework whose deadline and time haven't changed isn't re-checked.
+  const unchanged = existing && dueOn === existing.due_on && Number(minutes) === Number(existing.minutes);
 
   const scheme = schemes.find((s) => String(s.scheme_id) === schemeId);
   const needsOutOf = scheme?.kind === 'mark' && scheme.fixed_max == null;
@@ -75,6 +121,7 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
     }
     if (!dueOn) { setError('Choose a deadline.'); return; }
     if (!existing && dueOn < schoolToday()) { setError('The deadline is in the past.'); return; }
+    if (!(Number(minutes) >= 5)) { setError('Say how many minutes it should take.'); return; }
     if (!schemeId) { setError('Choose how it will be graded.'); return; }
     if (needsOutOf && !(Number(outOf) > 0)) { setError('Say what it is marked out of.'); return; }
     setSaving(true);
@@ -83,6 +130,7 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
       instructions: instructions.trim() || null,
       due_on: dueOn,
       due_slot_id: dueSlotId ? Number(dueSlotId) : null,
+      minutes: Number(minutes),
       scheme_id: Number(schemeId),
       out_of: needsOutOf ? Number(outOf) : null,
     };
@@ -172,6 +220,19 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
               {lessonsThatDay.map((s) => <option key={s.slot_id} value={s.slot_id}>Lesson {s.period_number}</option>)}
             </select>
           </label>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <label style={{ flex: '0 1 10rem' }}>
+            Time it takes
+            <select value={minutes} onChange={(e) => setMinutes(e.target.value)}>
+              {[...new Set([...HOMEWORK_MINUTE_CHOICES, Number(minutes)])].sort((a, b) => a - b).map((m) => (
+                <option key={m} value={m}>{minutesLabel(m)}</option>
+              ))}
+            </select>
+          </label>
+          <div style={{ flex: '1 1 18rem', fontSize: '0.9rem', paddingBottom: '0.4rem' }}>
+            <PrepNote check={prepCheck} dueOn={dueOn} minutes={minutes} unchanged={unchanged} />
+          </div>
         </div>
         <AttachmentEditor value={attachments} onChange={setAttachments} disabled={saving} />
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>

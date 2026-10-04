@@ -1,13 +1,30 @@
 'use client';
 import { Fragment, useEffect, useRef } from 'react';
 import { formatUKDate } from '../../lib/formatDate';
-import { homeworkStatus, linkifyParts } from '../../lib/homework';
+import { homeworkStatus, linkifyParts, addDays } from '../../lib/homework';
+import { schoolToday } from '../../lib/schoolTime';
 import { AttachmentList } from './HomeworkAttachments';
 
 // The small "Homework" button shown on a timetable lesson or a Homework grid
 // card; tapping it opens HomeworkDetail below the grid.
-export function HomeworkChip({ hw, selected, onSelect }) {
+// With `prep`, the chip sits under the evening the homework is done on the
+// Homework page (migration 352), or the earlier day the student moved it
+// to, and names the subject and time.
+export function HomeworkChip({ hw, selected, onSelect, prep = false }) {
   const status = homeworkStatus(hw);
+  if (prep) {
+    return (
+      <button
+        type="button"
+        className={`hw-chip hw-${status.key}${selected ? ' hw-chip-selected' : ''}`}
+        onClick={(e) => { e.stopPropagation(); onSelect(selected ? null : hw.homework_id); }}
+        aria-expanded={selected}
+        title={hw.plan_on ? `${hw.title}: moved here by you` : `${hw.title}: do this in prep`}
+      >
+        {status.key === 'done' ? '✓' : hw.plan_on ? '📌' : '📝'} {hw.subject_name}{hw.minutes ? ` · ${hw.minutes} min` : ''}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
@@ -34,7 +51,27 @@ export function Instructions({ text }) {
   );
 }
 
-export function HomeworkDetail({ hw, onClose, onToggleDone }) {
+// The student's own planning day (migration 352): from today up to the
+// homework's prep evening, which is where it goes back to.
+function PlanPicker({ hw, onPlan }) {
+  const today = schoolToday();
+  if (!hw.prep_on || hw.prep_on <= today) return null;
+  const days = [];
+  for (let d = today; d < hw.prep_on; d = addDays(d, 1)) days.push(d);
+  const label = (d) => formatUKDate(d, { weekday: true }).replace(/ \d{4}$/, '');
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', margin: '0 0 0.6rem' }}>
+      I&apos;ll do it on
+      <select value={hw.plan_on || hw.prep_on} onChange={(e) => onPlan(hw, e.target.value)} style={{ width: 'auto' }}>
+        {days.map((d) => <option key={d} value={d}>{label(d)}</option>)}
+        <option value={hw.prep_on}>{label(hw.prep_on)} (prep evening)</option>
+      </select>
+      {hw.minutes ? <span style={{ color: 'var(--ink-soft)', fontSize: '0.85rem' }}>about {hw.minutes} min</span> : null}
+    </label>
+  );
+}
+
+export function HomeworkDetail({ hw, onClose, onToggleDone, onPlan }) {
   const ref = useRef(null);
   // Chips and cards can be far from the panel (a small screen, or the lists
   // under the Homework grid), so bring it into view when it opens.
@@ -62,6 +99,7 @@ export function HomeworkDetail({ hw, onClose, onToggleDone }) {
           </label>
         )}
       </p>
+      {onPlan && !hw.marked && <PlanPicker hw={hw} onPlan={onPlan} />}
       {hw.instructions ? <Instructions text={hw.instructions} /> : <p style={{ color: 'var(--ink-soft)' }}>No further instructions.</p>}
       <AttachmentList homeworkId={hw.homework_id} />
       <dl className="hw-facts">
