@@ -7,7 +7,7 @@ import {
   addDays, dayKey, loadAttachments, addHomeworkLink, addHomeworkFile, removeAttachment,
 } from '../../lib/homework';
 import { AttachmentEditor } from './HomeworkAttachments';
-import { loadPrepCheck, minutesLabel, HOMEWORK_MINUTE_CHOICES } from '../../lib/prep';
+import { loadPrepCheck, loadPrepBlocks, minutesLabel, HOMEWORK_MINUTE_CHOICES } from '../../lib/prep';
 
 // The set / edit homework form (migration 278), used on /homework and on the
 // class register (/attendance). The database decides who may save it
@@ -15,13 +15,15 @@ import { loadPrepCheck, minutesLabel, HOMEWORK_MINUTE_CHOICES } from '../../lib/
 
 export const btnSmall = { padding: '0.3rem 0.6rem', fontSize: '0.85rem' };
 
-// The class's next few lessons from tomorrow, as one-click deadlines.
-function nextLessons(slots, count = 6) {
+// The class's next few lessons from tomorrow, as one-click deadlines,
+// leaving out days the year has no homework (migration 353).
+function nextLessons(slots, blocked = {}, count = 6) {
   const out = [];
   const start = addDays(schoolToday(), 1);
   for (let i = 0; i < 21 && out.length < count; i += 1) {
     const date = addDays(start, i);
     const k = dayKey(date);
+    if (blocked[date]) continue;
     (slots || [])
       .filter((s) => s.day_of_week === k)
       .sort((a, b) => a.period_number - b.period_number)
@@ -41,8 +43,15 @@ export function classLabel(c) {
 }
 
 // Which prep evening the homework goes on, and whether the class has time then.
-function PrepNote({ check, dueOn, minutes, unchanged }) {
+function PrepNote({ check, dueOn, minutes, unchanged, blockedReason, yearGroup }) {
   if (!dueOn) return <span style={{ color: 'var(--ink-soft)' }}>Done in prep the evening before the deadline.</span>;
+  if (blockedReason && !unchanged) {
+    return (
+      <span style={{ color: '#a3232c' }}>
+        Year {yearGroup} has no homework on {formatUKDate(dueOn, { weekday: true }).replace(/ \d{4}$/, '')} ({blockedReason}). Choose another deadline.
+      </span>
+    );
+  }
   if (!check) return <span style={{ color: 'var(--ink-soft)' }}>Checking prep time…</span>;
   if (!check.prep_on) {
     return <span style={{ color: '#a3232c' }}>No prep evening in the week before that deadline. Choose another deadline.</span>;
@@ -79,6 +88,11 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
   // before the deadline, which the database works out.
   const [minutes, setMinutes] = useState(existing?.minutes != null ? String(existing.minutes) : '30');
   const [prepCheck, setPrepCheck] = useState(null);
+  const [blocked, setBlocked] = useState({});
+
+  useEffect(() => {
+    loadPrepBlocks(supabase, cls.year_group, schoolToday()).then(setBlocked);
+  }, [cls.year_group]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   // Files and links (migration 281), saved after the homework itself.
@@ -107,7 +121,7 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
   const lessonsThatDay = dueOn
     ? (cls.timetable_slots || []).filter((s) => s.day_of_week === dayKey(dueOn)).sort((a, b) => a.period_number - b.period_number)
     : [];
-  const picks = nextLessons(cls.timetable_slots);
+  const picks = nextLessons(cls.timetable_slots, blocked);
   const offered = schemes.filter((s) => s.is_active || String(s.scheme_id) === schemeId);
 
   async function save() {
@@ -231,7 +245,7 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
             </select>
           </label>
           <div style={{ flex: '1 1 18rem', fontSize: '0.9rem', paddingBottom: '0.4rem' }}>
-            <PrepNote check={prepCheck} dueOn={dueOn} minutes={minutes} unchanged={unchanged} />
+            <PrepNote check={prepCheck} dueOn={dueOn} minutes={minutes} unchanged={unchanged} blockedReason={blocked[dueOn]} yearGroup={cls.year_group} />
           </div>
         </div>
         <AttachmentEditor value={attachments} onChange={setAttachments} disabled={saving} />

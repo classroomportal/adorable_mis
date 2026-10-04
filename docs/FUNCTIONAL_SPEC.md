@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 352). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 353). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -157,7 +157,7 @@ Every member of staff can read the whole student record; what each role can chan
 | Tuckshop | Order, see balance and purchases | See balance and purchases; cannot order |
 | Other Half | Choose activities during Evening Prep | See the chosen activity |
 | Published documents | Own | Each child's |
-| Homework (Years 10 and 11) | Own classes' homework, files and links; own grade once released; this school year | No |
+| Homework (Years 7–12) | Own classes' homework, files and links; own grade once released; this school year | No |
 | Student groups | Own groups marked for students or for students and parents (FR-18.17) | Only groups marked for parents (FR-18.17) |
 | Inbox | Yes | Yes |
 
@@ -717,7 +717,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed), finance (funds, forecast numbers, term budgets, contingency releases, suppliers and requisitions), prep times | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed), finance (funds, forecast numbers, term budgets, contingency releases, suppliers and requisitions), prep times and days with no homework | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
@@ -740,11 +740,11 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 ## 20. FR-17 Homework
 
-Teachers set homework for a class with a deadline and a grading system, and record a grade for each student. The grades inform the end-of-term written report (FR-17.12) but never transcripts, result sets or target grades. It began as a pilot on 10\_1/Ma and 11\_1/Ma and has been open to every Year 10 and 11 teaching group since 30 September 2026 (migration 295). The design and the principal's decisions are in docs/homework-design.md.
+Teachers set homework for a class with a deadline and a grading system, and record a grade for each student. The grades inform the end-of-term written report (FR-17.12) but never transcripts, result sets or target grades. It began as a pilot on 10\_1/Ma and 11\_1/Ma was opened to every Year 10 and 11 teaching group on 30 September 2026 (migration 295) and to every teaching group in Years 7–12 on 4 October 2026 (migration 353). The design and the principal's decisions are in docs/homework-design.md.
 
 **Which classes, and access**
 
-- **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. Every Year 10 and 11 class is switched on except mentor groups and Prep (supervised study, not a taught subject); a new Year 10 or 11 class, from a later timetable import or next year's timetable, is switched on automatically unless it is a mentor group or Prep (migration 296). An admin can still switch a class off, and a re-import doesn't switch it back on. \[DB\]
+- **FR-17.1** Homework can be set only for classes an admin has switched on. Switching a class off stops new homework but keeps everything already set and marked. Every teaching class in Years 7–12 is switched on (migration 353, 4 October 2026; Years 10 and 11 only from 30 September) except mentor groups, Prep (supervised study, not a taught subject) and Year 12's Personal Study (private study); a new class, from a later timetable import or next year's timetable, is switched on automatically unless it is one of those (migrations 296 and 353). An admin can still switch a class off, and a re-import doesn't switch it back on. \[DB\]
 - **FR-17.2** /homework is granted to teachers, Heads of Department and SMT (and admins). The page shows the person's own classes (those they teach, or teach a lesson of) as buttons. A drop-down holds the other switched-on classes in the subjects they teach, marked view only (what was set, with instructions and files, but no grades and no editing), plus any class they manage as Head of Department or admin; a Year 7–9 teacher sees that it isn't switched on for their classes yet. \[DB\]
 
 **Setting homework**
@@ -756,6 +756,7 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 - **FR-17.7** The teacher can attach files (PDF, Word, PowerPoint, Excel, OpenDocument, images, text or CSV, up to 20 MB each) and https:// links. The same people who can set the homework add or remove them. Files are private and open through a link that lasts ten minutes. \[DB\]
 - **FR-17.20** Each homework says how long it should take (5 minutes to 4 hours; 30 unless the teacher changes it) and is done in prep on the evening before its deadline: the year's last prep evening before it, in term and not a holiday, so Sunday for a Monday deadline. The database works the evening out, never the page, so homework set weeks ahead still lands the evening before. It refuses a new homework, or a change to its time or deadline, when that evening has passed or when any student in the class (who has joined by the deadline) wouldn't have that much homework time left that evening, counting their homework from every class; the message names up to five of them. The form shows the evening and the least time any student has left. Editing only the title or instructions, withdrawing or restoring isn't re-checked. Homework set before 4 October 2026 counts as 30 minutes on the evening before its deadline. (Migration 352.) \[DB / Page\]
 - **FR-17.21** Prep Times (/pastoral/prep, on the Pastoral card; admin, SMT, pastoral and head\_of\_boarding) holds each year group's prep: start and end, the days it runs, the fixed activity that isn't homework time and its minutes, and whether timetabled Personal Study lessons count. As set on 4 October 2026: Years 7–9 7.00–9.15 pm less the first hour reviewing the day's work (75 minutes), Years 10–12 7.00–9.45 pm (165 minutes), Sunday to Friday; no year counts private study yet (it is meant for a future Year 13). A student's homework time on a day is their year's prep less the fixed activity, plus counted Personal Study lessons that day; none outside term or on a holiday. Changes are logged in Change History and don't move homework already set. (Migration 352.) \[DB\]
+- **FR-17.23** Days with no homework (migration 353, the principal, 4 October 2026): Prep Times lists blocked days for a year group, each with a reason (mock exams, a trip). On a blocked day no homework for that year can be due, and its evening has no homework time, so homework goes on the prep evening before. The homework form leaves those days out of its lesson picks and explains why if one is typed in. Homework already set isn't moved. The same people as Prep Times add and remove them; changes are logged in Change History. First use: Year 12's mocks on Thursday 8 and Friday 9 October 2026. \[DB / Page\]
 
 **Grading systems**
 

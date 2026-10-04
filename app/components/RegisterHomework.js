@@ -57,7 +57,7 @@ export default function RegisterHomework({ classId }) {
       if (cancelled || ok !== true) return;
       const [{ data: c }, { data: sch }] = await Promise.all([
         supabase.from('classes')
-          .select(`class_id, class_code, subjects(subject_name, display_name), timetable_slots(${LESSON_COLUMNS})`)
+          .select(`class_id, class_code, year_group, subjects(subject_name, display_name), timetable_slots(${LESSON_COLUMNS})`)
           .eq('class_id', classId).single(),
         supabase.from('homework_schemes').select('*, homework_scheme_values(value, sort_order)').order('sort_order'),
       ]);

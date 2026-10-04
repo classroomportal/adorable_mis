@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
-import { DAY_KEYS } from '../../../lib/homework';
+import { DAY_KEYS, addDays } from '../../../lib/homework';
+import { formatUKDate } from '../../../lib/formatDate';
+import { schoolToday } from '../../../lib/schoolTime';
 import { prepEveningMinutes, minutesLabel } from '../../../lib/prep';
 
 // Prep Times (migration 352): evening prep for each year group, the fixed
@@ -102,6 +104,96 @@ function PrepRow({ row, privateStudy, onSaved }) {
   );
 }
 
+// Days with no homework for a year group (migration 353), such as mock
+// exams: nothing can be due that day and its evening has no homework time.
+// Homework already set isn't moved. Blocks from today on are listed.
+function PrepBlocks() {
+  const [blocks, setBlocks] = useState([]);
+  const [years, setYears] = useState([]);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function load() {
+    const { data } = await supabase.from('prep_blocks').select('id, year_group, block_on, reason')
+      .gte('block_on', schoolToday()).order('block_on').order('year_group');
+    setBlocks(data || []);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function add() {
+    setError(null);
+    if (!years.length) { setError('Tick at least one year group.'); return; }
+    if (!from) { setError('Choose the first day.'); return; }
+    const last = to || from;
+    if (last < from) { setError('The last day is before the first.'); return; }
+    if (!reason.trim()) { setError('Say why (for example, Mock exams).'); return; }
+    const days = [];
+    for (let d = from; d <= last && days.length < 60; d = addDays(d, 1)) days.push(d);
+    const rows = years.flatMap((y) => days.map((d) => ({ year_group: y, block_on: d, reason: reason.trim() })))
+      .filter((r) => !blocks.some((b) => b.year_group === r.year_group && b.block_on === r.block_on));
+    setBusy(true);
+    const { error: e } = rows.length ? await supabase.from('prep_blocks').insert(rows) : { error: null };
+    setBusy(false);
+    if (e) { setError(e.message); return; }
+    setYears([]); setFrom(''); setTo(''); setReason('');
+    load();
+  }
+
+  async function remove(b) {
+    setError(null);
+    const { error: e } = await supabase.from('prep_blocks').delete().eq('id', b.id);
+    if (e) setError(e.message);
+    load();
+  }
+
+  const field = { display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.85rem', color: 'var(--ink-soft)', flex: '0 0 auto' };
+  return (
+    <div className="card">
+      <h2 style={{ marginTop: 0 }}>Days with no homework</h2>
+      <p style={{ marginTop: 0 }}>
+        For mock exams, trips and the like. On a blocked day nothing can be due for that year, and its evening
+        has no homework time, so homework goes on the prep evening before. Homework already set isn&apos;t moved.
+      </p>
+      {blocks.length === 0 ? <p style={{ color: 'var(--ink-soft)' }}>No days blocked from today on.</p> : (
+        <div className="table-scroll"><table>
+          <thead><tr><th>Day</th><th>Year</th><th>Why</th><th></th></tr></thead>
+          <tbody>
+            {blocks.map((b) => (
+              <tr key={b.id}>
+                <td style={{ whiteSpace: 'nowrap' }}>{formatUKDate(b.block_on, { weekday: true })}</td>
+                <td>Year {b.year_group}</td>
+                <td>{b.reason}</td>
+                <td><button type="button" className="secondary" style={{ padding: '0.25rem 0.6rem' }} onClick={() => remove(b)}>Remove</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem 1.25rem', alignItems: 'flex-end', marginTop: '0.75rem' }}>
+        <div style={{ ...field, flex: '0 1 auto', minWidth: 0 }}>
+          Years
+          <span style={{ display: 'flex', flexWrap: 'wrap', gap: '0.1rem 0.6rem', color: 'var(--ink)' }}>
+            {[7, 8, 9, 10, 11, 12].map((y) => (
+              <label key={y} style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '0.2rem', margin: 0, flex: '0 0 auto' }}>
+                <input type="checkbox" checked={years.includes(y)} onChange={(e) => setYears(e.target.checked ? [...years, y] : years.filter((x) => x !== y))} />
+                {y}
+              </label>
+            ))}
+          </span>
+        </div>
+        <label style={field}>First day<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ width: '10rem' }} /></label>
+        <label style={field}>Last day (if more than one)<input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ width: '10rem' }} /></label>
+        <label style={{ ...field, flex: '1 1 12rem' }}>Why<input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Mock exams" /></label>
+        <button type="button" onClick={add} disabled={busy}>{busy ? 'Saving…' : 'Block'}</button>
+      </div>
+      {error && <p style={{ color: '#a3232c', margin: '0.5rem 0 0' }}>{error}</p>}
+    </div>
+  );
+}
+
 function PrepInner() {
   const [rows, setRows] = useState([]);
   const [privateStudy, setPrivateStudy] = useState({});
@@ -160,6 +252,8 @@ function PrepInner() {
           </div>
         )}
       </div>
+
+      <PrepBlocks />
     </div>
   );
 }
