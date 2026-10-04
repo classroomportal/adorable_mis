@@ -136,7 +136,7 @@ create index homework_prep_on_idx on public.homework (prep_on) where status = 's
 
 -- Minutes of homework time a student has on a day: prep (less the fixed
 -- activity) plus counted private-study lessons. 0 outside term and on
--- holidays. Internal: called by the trigger and homework_prep_days().
+-- holidays. Internal: called by the trigger and homework_prep_check().
 create or replace function public.prep_minutes_for(p_student_id integer, p_day date)
 returns integer
 language sql
