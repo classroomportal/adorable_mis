@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 358). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 359). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -383,7 +383,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 
 - **FR-7.1** A result set is a calendar event with the "result set" box ticked; SMT and admins manage the calendar. Only the current school year's sets can be picked for entry. \[DB / Page\]
 - **FR-7.2** End-of-term exams are one result set per year group per term, back to 2017; Year 12 has Terms 1 and 2 only (Term 3 is WAEC). They are found by year group and term, never by name. \[DB\]
-- **FR-7.31** A result set can be marked special for particular year groups when it is added or edited on the calendar, e.g. Year 12 mocks (migration 358, the principal, 4 October 2026). A special set can never also be an end-of-term exam set, and it must stay a result set while it is special. \[DB\]
+- **FR-7.31** A result set can be special for particular year groups, e.g. Year 12 mocks (migrations 358–359, the principal, 4 October 2026). It is made by choosing the One Year category on the calendar and ticking the year groups; One Year events are always result sets. The database keeps the category and the year groups together, and a special set can never also be an end-of-term exam set. \[DB\]
 - **FR-7.32** Only students currently in a special set's year groups can be given a mark in it. Enter Results lists only their classes and students, and the database refuses anyone else. A mark can still be corrected after the student moves up a year. \[DB / Page\]
 - **FR-7.33** A special set's marks are kept under its name, not in a week: they don't count as that week's assessment, and the student profile never files an untagged weekly mark on the same day under the special set. \[DB / Page\]
 
@@ -596,7 +596,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 
 **Calendar (/calendar)**
 
-- **FR-13.1** Staff see the academic calendar of terms and events. SMT and admins add, edit and delete events; each has a date, name, category, optional year-group note and a "result set" flag; a result set can also be marked special for particular year groups (FR-7.31). \[DB\]
+- **FR-13.1** Staff see the academic calendar of terms and events. SMT and admins add, edit and delete events; each has a date, name, category, optional year-group note and a "result set" flag; the One Year category makes a special result set for the year groups ticked (FR-7.31). \[DB\]
 - **FR-13.2** Adding a report-period event also creates the report period, with its year groups and due dates. \[Page\]
 - **FR-13.3** SMT add and edit terms; only admins delete a term (it also deletes that term's OH programme). \[DB\]
 - **FR-13.4** Parents see a read-only calendar of term dates and events, without staff deadlines. \[Page\]

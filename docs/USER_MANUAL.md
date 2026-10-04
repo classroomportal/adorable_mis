@@ -858,7 +858,7 @@ Teachers enter percentage scores for their own classes against result sets. Each
 
 A result set is a calendar event with the "result set" box ticked (SMT and admins manage the calendar, chapter 9). Weekly short tests, Teacher Assessment weeks and end-of-term exams are all result sets. End-of-term exams are one set per year group per term ("Y10 Term 1 Exam"); Year 12 has Terms 1 and 2 only, as Term 3 is WAEC. Only the current school year's sets can be picked for entry.
 
-**Special result sets** are for particular year groups only, such as Year 12 mocks. When you choose one on Enter Results, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk4" becomes "Y12 Mocks"). They count on the written report and never appear on a transcript.
+**Special result sets** (the One Year category on the calendar) are for particular year groups only, such as Year 12 mocks. When you choose one on Enter Results, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk4" becomes "Y12 Mocks"). They count on the written report and never appear on a transcript.
 
 ### Entering results (/results/enter)
 
@@ -1204,11 +1204,11 @@ Each event has a date, name, category, an optional year-group note and a **resul
 
 To add a special result set, such as Year 12 mocks:
 
-1. Under **Add event**, enter the date and name (e.g. "Y12 Mocks") and choose the **Exam** category.
-2. Tick **Result set**, then **Special set for particular year groups**, and tick the year group(s), e.g. **Y12**.
-3. Click **Add event**. The Result set column shows "Special: Y12".
+1. Under **Add event**, enter the date and name (e.g. "Y12 Mocks").
+2. Choose the **One Year** category, then tick the year group(s) it is for, e.g. **Y12**. The Result set box is ticked for you.
+3. Click **Add event**. The Result set column shows "Y12 only".
 
-The date decides which week's column the set replaces on the Termly Grade Report, so give it the date of that week's usual assessment (for the Year 12 mocks, Friday 9 October, the date of Week 4 TA). An existing event can be made special, or changed back, with **Edit**.
+The date decides which week's column the set replaces on the Termly Grade Report, so give it the date of that week's usual assessment (for the Year 12 mocks, Friday 9 October, the date of Week 4 TA). To change an existing event, use **Edit**: choosing One Year shows the year ticks, and choosing another category makes it an ordinary event again.
 
 ### Sending a message (/comms/compose)
 
