@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 353). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 357). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -149,6 +149,7 @@ Every member of staff can read the whole student record; what each role can chan
 | --- | --- | --- |
 | Timetable, with Other Half activity | Yes | Yes |
 | Grades against targets | Yes | Yes |
+| Mark appeals | Appeal own marks from the last 5 days; 5 credits a year (FR-7.24) | No |
 | Behaviour | Own events (not voided); can appeal negatives | Only events released to parents |
 | Attendance | No | Yes, including today lesson by lesson |
 | CAT4 / NGRT scores | No | Yes |
@@ -416,6 +417,16 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.22** Parents see their own children's readings, for children still at the school, on the parent portal's Reading Age tile, which appears only once the child has two readings from the school's tests or the admissions interview (migrations 325–326: one reading isn't yet a trend, and old NGRT sittings don't count towards the two, though they are shown once the tile appears; before that the database returns parents nothing): the same dates, reading ages, ages, gaps and chart as staff (the principal, 2 Oct 2026). Students see none. Parents read them only through the database's reading-age function, never the table itself. \[DB\]
 - **FR-7.23** Every school test added, changed or removed is logged in Change History under Reading ages, with who did it. \[DB\]
 
+**Mark appeals** (/grade-appeals, migrations 354–357, the principal, 4 Oct 2026, because wrong numbers were being entered)
+
+- **FR-7.24** A student can appeal one of their own marks, in any result set, within 5 days of the mark appearing or last changing. A re-import that changes nothing doesn't restart the 5 days. They give a reason and, if they like, the mark on their paper, on the Assessment page of their portal. Parents can't appeal. \[DB\]
+- **FR-7.25** Each student has 5 appeal credits a school year. Only an appeal that is turned down uses one; an upheld or withdrawn appeal gives it back. An appeal waiting for a decision holds a credit, so a student can't have more appeals open than credits left. \[DB\]
+- **FR-7.26** One appeal per mark at a time; once decided, a mark can be appealed again only if it changes. A student can withdraw a waiting appeal. A student whose subject has no teacher in Formwork can't appeal and is told to see their mentor. \[DB\]
+- **FR-7.27** Only the student's teacher for that subject decides, at Mark Appeals (/grade-appeals, on the Assessment card; granted to teacher, head\_of\_department, assessment\_manager and smt). Upheld: the teacher enters the correct score, the grade is worked out from the subject's boundaries for the student's year group, and the change is in Grade History under the teacher's name. Turned down: the teacher must write a note, which the student sees. \[DB\]
+- **FR-7.28** The student sees their own appeals, the teacher their students', a Head of Department their department's, and SMT, assessment managers and admins every appeal. Only the teacher decides. Appeals are never deleted. \[DB\]
+- **FR-7.29** A new appeal goes to the teacher's inbox and by email, with the subject's Head of Department in cc (replies go to the Mark appeal row at Email Replies, sro@ to start). The Head of Department also gets an inbox copy naming the teacher it went to. The decision goes to the student's inbox and the Head of Department's, unless they decided it themselves; decisions aren't emailed. A student's text appears in the email as plain text, never as links or formatting. \[DB\]
+- **FR-7.30** The 5 days and 5 credits are set per school year on Lookups (Mark appeals), by anyone with that page. Changing them doesn't affect appeals already made. \[DB\]
+
 ## 11. FR-8 Reports, transcripts and documents
 
 Written reports are built only from checked comments; transcripts and score sheets are generated as PDFs and published to the student and parent portals.
@@ -570,6 +581,7 @@ Every email goes through one queue from mis@abc.sch.ng with a Reply-To chosen by
 | Welcome letters | sro@ |
 | Behaviour alert | guardian.counselling@ |
 | Detention notices | All SMT |
+| Mark appeal (to the teacher, Head of Department in cc) | sro@ |
 | Anything else | sro@ |
 
 - **FR-12.7** One admin switch pauses every email to parents; inbox copies are still delivered. It is currently off (emails are sent). \[DB\]
@@ -598,7 +610,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /admin/permissions | Tick which pages each role opens and which student fields it can edit | Admin (write) |
 | /staff/roles | Assign staff roles; warns when a houseparent has no house | HR, admin |
 | /staff/mentor-groups | Assign one or two staff to each mentor group | Granted roles |
-| /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals | Admin, SMT, HR |
+| /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals, mark appeal days and credits (FR-7.30). Every section starts folded closed and opens when clicked (4 Oct 2026) | Admin, SMT, HR |
 | /admin/student-numbers | Boys, girls and unknown by year, mentor group, boarding house and room (rooms counted within their house), restaurant and class | Granted roles |
 | /admin/class-lists | Print class rosters by year, subject or class | HR, school office, admin |
 | /admin/bell-times | Sessions and times for each weekday | Admin |
@@ -719,6 +731,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 | --- | --- | --- | --- | --- |
 | Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed), finance (funds, forecast numbers, term budgets, contingency releases, suppliers and requisitions), prep times and days with no homework | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
+| Mark appeals | Every appeal: the mark appealed, the student's reason and claimed mark, the outcome, the corrected mark, the teacher's note, who decided and when; never deleted (the corrected mark is also in Grade History) | /grade-appeals (waiting and decided) | The teacher (their students), Heads of Department (their department), SMT, assessment managers, admin; the student their own | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
 | Charge batches | The last 100 group charges and who made them | /bursar/audit, with undo | Bursar | Yes |
 | Requisition timeline | Every step of each requisition (raised, signed, costed, approved, contingency released, received, paid, cancelled), who and when; practice entries cleared, never deleted | Each requisition on /finance/requisitions | Principal (while the budget is built) | Yes |
@@ -888,7 +901,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 24. Known issues and open decisions
 
-34 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; five of them (6, 30, 31, 32 and 33) have since been fixed. The first five stop something working today.
+35 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; five of them (6, 30, 31, 32 and 33) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -926,6 +939,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 32 | Students | Any admin login could still add a student. Migration 275 left the office's rule as the only way in, but that rule's role check lets every admin through. Found 2 Oct 2026 by the Permissions page's new "What they can do" view. Migration 328 makes the rule check the school\_office role alone; run in the SQL editor on 2 Oct 2026, and admin alone can no longer add a student | FR-2.18 not enforced: admin alone can add students | Fixed |
 | 33 | Behaviour | Migration 319 (only SMT remove a merit or cancel a detention; events can't be withdrawn or moved from the app) was written on 2 Oct 2026 but never reached the live database. Found 3 Oct 2026 while preparing stage 2 of the tickable abilities; applied by migration 330 the same day. Every other migration since 300 was checked and is live | Until 3 Oct any admin could delete events, and anyone with Detention could cancel or re-date a detention | Fixed |
 | 34 | Behaviour | A reviewer's "return to teacher" note (FR-6.27) is stored on the event. The portals never show it, but a student can read their own events' data directly, so a technically minded student could read the note. It is cleared when the teacher edits the event, but stays if the reviewer sends the event to parents unchanged | Reviewers should keep notes factual (e.g. "this is Disruption in class, −2") | Open |
+| 35 | Results | A mark appeal (FR-7.27) waits until the student's teacher decides. Nobody else can decide it if the teacher is away or has left, and it holds one of the student's credits meanwhile | An appeal can wait with no end; no deadline or hand-over to the Head of Department yet | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 

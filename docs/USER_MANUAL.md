@@ -48,6 +48,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
 | Set or mark homework | [Setting homework](#setting-homework) · [Marking](#marking-the-mark-book) |
 | Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
+| Appeal a mark, or decide a student's appeal | [Mark appeals](#mark-appeals-grade-appeals) |
 | Record or track reading ages | [Reading ages](#reading-ages-reading-ages) |
 | Write or check report comments | [Reports and documents](#6-reports-and-documents) |
 | Update a student's or parent's details | [Editing a record](#editing-a-record) · [Parents and leavers](#parents-and-leavers) |
@@ -127,6 +128,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 - Check the banner on My Timetable for any register you forgot. Taking it late still clears it from the list.
 - Mark homework that came in: open /homework, choose the class, press **Mark book**, enter marks (or Not handed in) and press **Release marks** when you want students to see them.
 - Read your **Inbox** for messages from SMT and the office.
+- If you get a mark appeal email, check the student's paper and decide it at Mark Appeals (chapter 5). Decide promptly: nobody else can, and it holds one of the student's credits.
 
 **Every week**
 
@@ -190,6 +192,7 @@ Leaders use Formwork to see what is happening across classes and the school, and
 3. Look at your department's homework on /homework: the drop-down lists every class in your subjects, and you can open any class's mark book.
 4. You can correct or delete a score in your department's subjects, and move students between classes at **Class Allocation** when sets change.
 5. **Each term**, read your department's comments before the deadline if you are a checker.
+6. You are copied on every mark appeal in your department, by email and in your inbox, and get its outcome in your inbox. Follow them at Mark Appeals; the class teacher decides.
 
 **Assessment manager**
 
@@ -325,7 +328,7 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 - **After doing homework**: tick **Done** as a reminder for yourself. It isn't a hand-in; teachers still mark it. Grades appear once your teacher releases them.
 - **At the start of term, in Evening Prep (19:00–21:00)**: choose your Other Half activity for each weekday. Choices close on the date shown. If a day says "Placed by the school", you can't change it.
 - **Twice a week**: order from the **Tuckshop** while the window is open (Monday 5pm to Tuesday 9am for Wednesday; Wednesday 7pm to Thursday 11pm for Saturday). Up to 2 of any item and 2 food items a day; you pay when it's handed out.
-- **When you get a behaviour point you think is unfair**: open **Behaviour** and appeal it once, explaining why. Pastoral staff decide.
+- **When you get a behaviour point you think is unfair**: open **Behaviour** and appeal it once, explaining why. Pastoral staff decide. If a test mark doesn't match your marked paper, appeal it within 5 days under Assessment, Appeal a mark; your teacher checks the paper.
 - **At the end of term**: download your report and transcripts from **Assessment**.
 
 **Parents**
@@ -912,6 +915,25 @@ Every score, target and transcript grade entered, changed or deleted, with the o
 
 ![Grade History](manual-images/34-grade-history.jpg)
 
+### Mark appeals (/grade-appeals)
+
+A student who thinks a mark doesn't match their marked paper can appeal it, as they would an exam result. Their teacher checks the paper and either corrects the mark or says why it stands. Only the student's teacher for that subject decides (the principal, 4 Oct 2026).
+
+**What the student does.** On the **Assessment** page of their portal, under **Appeal a mark**, they see their marks from the last 5 days. They press **Appeal**, give a reason and, if they like, the mark on their paper, then press **Send appeal**. Each student has 5 credits a school year: an appeal that is turned down uses one, and an upheld or withdrawn appeal gives it back. An appeal still waiting can be withdrawn with **Withdraw**. Parents can't appeal.
+
+![A student appealing a mark, with their earlier appeals below](manual-images/116-portal-appeals.jpg)
+
+**Deciding an appeal (teachers).** You get an email, with your Head of Department copied in, and a message in your inbox. Open **Mark Appeals** from the Assessment card.
+
+1. Find the appeal under **Waiting for a decision**. It shows the mark, what the student says their paper shows, and their reason.
+2. Check the student's paper.
+3. If the mark was entered wrongly, type the **Correct score** and press **Uphold**. The grade is worked out from the boundaries, the mark is changed, and the change is kept in Grade History under your name. If you have already corrected it on Enter Results, press **Uphold** without a score.
+4. If the mark is right, write a note to the student and press **Turn down**. The note is required, and the student sees it.
+
+![Mark Appeals: two appeals waiting and one decided](manual-images/38-mark-appeals.jpg)
+
+The student gets the outcome in their inbox, and so does the Head of Department, who can follow their department's appeals on the same page but can't decide them. SMT, assessment managers and admins see every appeal. Appeals are never deleted. Please decide promptly: a waiting appeal holds one of the student's credits, and nobody else can decide it if you are away. The 5 days and 5 credits are set on Lookups (chapter 14).
+
 ### Reading ages (/reading-ages)
 
 Literacy is one of the school's improvement targets, so every student's reading age is tracked against their actual age from the admissions interview onwards. The **gap** is the reading age minus the student's age on the day of the test: **−1 y 2 m** means reading 14 months below their age, **+8 m** means 8 months above. Formwork works out the age and the gap from the date of birth and the test date; nobody types them.
@@ -1218,6 +1240,7 @@ Nobody reads mis@abc.sch.ng, so each kind of email carries a Reply-To. SMT and a
 | Welcome letters | sro@ |
 | Behaviour alert | guardian.counselling@ |
 | Detention notices | All SMT |
+| Mark appeal (to the teacher, Head of Department in cc) | sro@ |
 | Admissions letters | The sender |
 | Anything else | sro@ |
 
@@ -1453,6 +1476,7 @@ Students and parents see only their own information: a student their own record,
 | Other Half | Choose during Evening Prep | See the chosen activity |
 | Groups | Groups shown to students | Groups shown to parents |
 | Inbox | Yes | Yes |
+| Mark appeals | Appeal own marks from the last 5 days (5 credits a year) | No |
 
 ### The student portal
 
@@ -1462,7 +1486,7 @@ After signing in, a student sees big tiles (in the order set at /admin/tile-orde
 
 ![The student portal](manual-images/111-portal.jpg)
 
-**Timetable** shows the week with teachers and rooms, the student's Other Half activity, and homework on the lesson it's due in. **Assessment** shows the latest grade in each subject beside the target (green above, amber on, red below), downloadable term test scores and transcripts, and documents published by the school. **Behaviour** lists their events; a negative one can be appealed once, with a reason.
+**Timetable** shows the week with teachers and rooms, the student's Other Half activity, and homework on the lesson it's due in. **Assessment** shows the latest grade in each subject beside the target (green above, amber on, red below), downloadable term test scores and transcripts, and documents published by the school. **Behaviour** lists their events; a negative one can be appealed once, with a reason. Under Assessment, Appeal a mark lists marks from the last 5 days that can be appealed (chapter 5, Mark appeals).
 
 ![A student's timetable with homework and the Other Half](manual-images/112-portal-tt.jpg)
 
@@ -1525,9 +1549,9 @@ Add staff (name, code, email: a login is created automatically from the email) a
 
 ### Lookups (/admin/lookups)
 
-The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, and admission fee proposals. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
+The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, admission fee proposals, and the mark appeal rules (days to appeal and credits a year, for each school year). Every section starts folded closed: click its title to open it. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
 
-![Lookups](manual-images/122-lookups.jpg)
+![Lookups, every section closed except Mark appeals](manual-images/122-lookups.jpg)
 
 ### Timetable setup
 
