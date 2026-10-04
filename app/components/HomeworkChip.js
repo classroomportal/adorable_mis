@@ -6,8 +6,23 @@ import { AttachmentList } from './HomeworkAttachments';
 
 // The small "Homework" button shown on a timetable lesson or a Homework grid
 // card; tapping it opens HomeworkDetail below the grid.
-export function HomeworkChip({ hw, selected, onSelect }) {
+// With `prep`, the chip sits in the Evening Prep slot of the day the
+// homework is to be done (migration 352) and names the subject and time.
+export function HomeworkChip({ hw, selected, onSelect, prep = false }) {
   const status = homeworkStatus(hw);
+  if (prep) {
+    return (
+      <button
+        type="button"
+        className={`hw-chip hw-${status.key}${selected ? ' hw-chip-selected' : ''}`}
+        onClick={(e) => { e.stopPropagation(); onSelect(selected ? null : hw.homework_id); }}
+        aria-expanded={selected}
+        title={`${hw.title}: do this in prep`}
+      >
+        {status.key === 'done' ? '✓' : '📝'} {hw.subject_name}{hw.minutes ? ` · ${hw.minutes} min` : ''}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
