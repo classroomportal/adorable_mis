@@ -63,7 +63,7 @@ function PrepNote({ check, dueOn, minutes, unchanged }) {
   return (
     <span>
       Done in prep on <strong>{evening}</strong>
-      <span style={{ color: 'var(--ink-soft)' }}> · {minutesLabel(Math.max(check.least_free, 0))} free for every student before this</span>
+      <span style={{ color: 'var(--ink-soft)' }}> · every student has at least {minutesLabel(Math.max(check.least_free, 0))} free that evening</span>
     </span>
   );
 }
