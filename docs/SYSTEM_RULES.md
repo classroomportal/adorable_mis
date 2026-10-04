@@ -418,6 +418,7 @@ How it behaves:
 - Top-up: staff enter a target balance (default ₦40,000). The difference is added to the student's fee invoice as a "Tuck Shop Recharge". Top-ups can be done for one student, a form, a year or everyone.
 - Paid top-up (`/bursar/tuckshop-top-up`, bursar only, 273): the bursar records the money on Record a Payment first, then adds all or part of that payment to the student's balance. The recharge goes on the payment's own invoice, so no unpaid bill is created. A payment can't be used for more than it was, and can't be deleted while credit taken from it remains.
 - Counter sales (`/tuckshop/purchase`) have no limits and no window.
+- Sell Items can also sell one item to a group (migration 350): load a form, year group, restaurant or student group, tick the students getting it, and only the ticked students are charged, at the item's current price, one purchase each. A leaver among the ticked students stops the whole sale, so nobody is half-charged.
 
 **Hand-out** (`/tuckshop/hand-out`, 228–233)
 - Open to the **tuckshop and tuckshop_owner roles only**. Admins and the bursar are shut out.
