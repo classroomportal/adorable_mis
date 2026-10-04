@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import TuckshopGroupSale from '../../components/TuckshopGroupSale';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
@@ -19,6 +20,7 @@ function TuckshopPurchaseInner() {
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [history, setHistory] = useState([]);
+  const [mode, setMode] = useState('individual'); // individual | group
 
   useEffect(() => {
     (async () => {
@@ -110,6 +112,17 @@ function TuckshopPurchaseInner() {
     <div>
       <h1>Tuckshop Purchase</h1>
 
+      <div className="card" style={{ display: 'flex', gap: '1rem' }}>
+        <label>
+          <input type="radio" checked={mode === 'individual'} onChange={() => setMode('individual')} /> One student
+        </label>
+        <label>
+          <input type="radio" checked={mode === 'group'} onChange={() => setMode('group')} /> A group
+        </label>
+      </div>
+
+      {mode === 'group' ? <TuckshopGroupSale items={items} /> : (
+      <>
       <div className="card" style={{ position: 'relative' }}>
         <input
           value={studentQuery}
@@ -188,6 +201,8 @@ function TuckshopPurchaseInner() {
             </div>
           )}
         </>
+      )}
+      </>
       )}
     </div>
   );
