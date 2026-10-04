@@ -858,6 +858,8 @@ Teachers enter percentage scores for their own classes against result sets. Each
 
 A result set is a calendar event with the "result set" box ticked (SMT and admins manage the calendar, chapter 9). Weekly short tests, Teacher Assessment weeks and end-of-term exams are all result sets. End-of-term exams are one set per year group per term ("Y10 Term 1 Exam"); Year 12 has Terms 1 and 2 only, as Term 3 is WAEC. Only the current school year's sets can be picked for entry.
 
+**Special result sets** are for particular year groups only, such as Year 12 mocks. When you choose one on Enter Results, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk4" becomes "Y12 Mocks"). They count on the written report and never appear on a transcript.
+
 ### Entering results (/results/enter)
 
 1. Choose your **Class** and the **Result Set**, and check the **Result Type** (Short Test, Teacher Assessment or Exam Grade).
@@ -1020,8 +1022,8 @@ Checkers assigned to the period, SMT and admins can check. Only checked comments
 What goes in:
 
 - **Written report**: checked comments only, English, then Maths, then the rest A–Z, then the Mentor, Houseparent and SMT comments. A student with no checked comments is skipped. The Homework line shows the grade only.
-- **Termly Grade Report and Term Test Scores**: a subject appears only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey.
-- **Transcripts**: KS3 (Years 7–9, IGCSE) and KS4/5 (Years 10–12, IGCSE and WAEC versions; Year 12 always WAEC), built from the end-of-term exam result sets.
+- **Termly Grade Report and Term Test Scores**: a subject appears only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey. A special result set (such as Year 12 mocks) appears in place of the week its date falls in, headed by its name.
+- **Transcripts**: KS3 (Years 7–9, IGCSE) and KS4/5 (Years 10–12, IGCSE and WAEC versions; Year 12 always WAEC), built from the end-of-term exam result sets. Special result sets such as mocks never appear on them.
 
 ### Uploading documents (/reports/documents)
 
@@ -1199,6 +1201,14 @@ Staff see the academic calendar of terms and events for the chosen **Academic ye
 ![The academic calendar](manual-images/70-calendar.jpg)
 
 Each event has a date, name, category, an optional year-group note and a **result set** tick. Ticking result set makes the event available on Enter Results (chapter 5); adding a report-period event also creates the report period. Parents see a read-only calendar without staff deadlines, and can subscribe to it on their phone (chapter 13).
+
+To add a special result set, such as Year 12 mocks:
+
+1. Under **Add event**, enter the date and name (e.g. "Y12 Mocks") and choose the **Exam** category.
+2. Tick **Result set**, then **Special set for particular year groups**, and tick the year group(s), e.g. **Y12**.
+3. Click **Add event**. The Result set column shows "Special: Y12".
+
+The date decides which week's column the set replaces on the Termly Grade Report, so give it the date of that week's usual assessment (for the Year 12 mocks, Friday 9 October, the date of Week 4 TA). An existing event can be made special, or changed back, with **Edit**.
 
 ### Sending a message (/comms/compose)
 

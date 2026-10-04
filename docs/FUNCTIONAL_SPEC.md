@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 357). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 358). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -383,6 +383,9 @@ Teachers enter percentage scores for their own classes against result sets; each
 
 - **FR-7.1** A result set is a calendar event with the "result set" box ticked; SMT and admins manage the calendar. Only the current school year's sets can be picked for entry. \[DB / Page\]
 - **FR-7.2** End-of-term exams are one result set per year group per term, back to 2017; Year 12 has Terms 1 and 2 only (Term 3 is WAEC). They are found by year group and term, never by name. \[DB\]
+- **FR-7.31** A result set can be marked special for particular year groups when it is added or edited on the calendar, e.g. Year 12 mocks (migration 358, the principal, 4 October 2026). A special set can never also be an end-of-term exam set, and it must stay a result set while it is special. \[DB\]
+- **FR-7.32** Only students currently in a special set's year groups can be given a mark in it. Enter Results lists only their classes and students, and the database refuses anyone else. A mark can still be corrected after the student moves up a year. \[DB / Page\]
+- **FR-7.33** A special set's marks are kept under its name, not in a week: they don't count as that week's assessment, and the student profile never files an untagged weekly mark on the same day under the special set. \[DB / Page\]
 
 **Entering and deleting scores (/results/enter)**
 
@@ -445,6 +448,7 @@ Written reports are built only from checked comments; transcripts and score shee
 - **FR-8.7** The Termly Grade Report and Term Test Scores sheet show a subject only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey. \[DB / Page\]
 - **FR-8.8** Transcripts: KS3 (Years 7–9, IGCSE) and KS4/5 (Years 10–12, IGCSE and WAEC versions; Year 12 always WAEC). Each square takes the exam mark's grade, then the legacy transcript grade, then the score converted through boundaries (Year 12's for WAEC). Any error stops the PDF. \[Page\]
 - **FR-8.9** Publishing replaces the previous copy and makes it downloadable by the student and parents. Admins, SMT and assessment managers publish, and can bulk-upload PDFs at /reports/documents. \[DB\]
+- **FR-8.10** On the Termly Grade Report a special result set (FR-7.31) replaces the week column its date falls in, headed by its name (for Year 12 the Wk4 column becomes "Y12 Mocks"); subjects not in the set show grey. A set matching no week, or a second set in the same week, gets its own column after the weeks. Other year groups' reports are unchanged. The written report includes special-set marks like any other mark in the term. Transcripts never show them: they read only end-of-term exam sets and legacy transcript grades. \[DB / Page\]
 
 ## 12. FR-9 Tuckshop
 
@@ -592,7 +596,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 
 **Calendar (/calendar)**
 
-- **FR-13.1** Staff see the academic calendar of terms and events. SMT and admins add, edit and delete events; each has a date, name, category, optional year-group note and a "result set" flag. \[DB\]
+- **FR-13.1** Staff see the academic calendar of terms and events. SMT and admins add, edit and delete events; each has a date, name, category, optional year-group note and a "result set" flag; a result set can also be marked special for particular year groups (FR-7.31). \[DB\]
 - **FR-13.2** Adding a report-period event also creates the report period, with its year groups and due dates. \[Page\]
 - **FR-13.3** SMT add and edit terms; only admins delete a term (it also deletes that term's OH programme). \[DB\]
 - **FR-13.4** Parents see a read-only calendar of term dates and events, without staff deadlines. \[Page\]
