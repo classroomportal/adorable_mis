@@ -4,8 +4,12 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const DAY_NAMES = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday' };
+// Sunday has no lessons, only Evening Prep, which is when students may
+// change their Other Half choices (in_evening_prep()). It isn't offered in
+// "make these days the same", so a weekday's lessons can't be copied onto it.
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sun'];
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const DAY_NAMES = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sun: 'Sunday' };
 
 const trim = (t) => (t ? t.slice(0, 5) : '');
 
@@ -287,15 +291,19 @@ function BellTimesInner() {
               </tbody>
             </table></div>
 
+            {day === 'Sun' ? (
+              <p style={{ marginTop: '1rem' }}>Sunday has no lessons; Evening Prep here sets when students can change their Other Half choices.</p>
+            ) : (
             <p style={{ marginTop: '1rem' }}>
               Also make these days the same:{' '}
-              {DAYS.filter((d) => d !== day).map((d) => (
+              {WEEKDAYS.filter((d) => d !== day).map((d) => (
                 <label key={d} style={{ marginRight: '1rem', whiteSpace: 'nowrap' }}>
                   <input type="checkbox" checked={copyTo.includes(d)} onChange={() => toggleCopy(d)} />
                   {' '}{DAY_NAMES[d]}
                 </label>
               ))}
             </p>
+            )}
 
             <button onClick={save} disabled={!dirty}>
               Save {DAY_NAMES[day]}{copyTo.length ? ` + ${copyTo.length} more day${copyTo.length === 1 ? '' : 's'}` : ''}

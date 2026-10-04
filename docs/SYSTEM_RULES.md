@@ -201,7 +201,7 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 
 **How students choose** (at `/portal/other-half`). Every choice or change must pass all of these checks:
 1. The account is a student's.
-2. **It is Evening Prep right now** (249). The window is the "EP" row in Bell Times for today, currently 19:00–21:00 Monday to Friday. Moving EP in Bell Times moves the window with it.
+2. **It is Evening Prep right now** (249). The window is the "EP" row in Bell Times for today, currently 19:00–21:00 Sunday to Friday (Sunday added 4 Oct 2026, migration 362). Moving EP in Bell Times moves the window with it.
 3. Choices are open for the term, and the closing time (if one is set) hasn't passed.
 4. The activity is active.
 5. The student is active and in one of the activity's year groups.
@@ -337,6 +337,8 @@ How it behaves:
 | L6 | 14:30–15:25 | 13:20–14:00 |
 | The Other Half (OH) | 15:30–16:15 | 14:05–14:50 |
 | Evening Prep (EP) | 19:00–21:00 | 19:00–21:00 |
+
+Sunday has Evening Prep only (19:00–21:00, migration 362), so students can change Other Half choices on Sunday evenings. It is on the Bell Times page and can't be made the same as a weekday from there.
 
 ---
 
