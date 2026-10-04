@@ -90,12 +90,21 @@ function EnterResultsInner() {
 
     supabase
       .from('calendar_events')
-      .select('event_id, event_date, event_name')
+      .select('event_id, event_date, event_name, special_year_groups')
       .eq('is_result_set', true)
       .order('event_date', { ascending: false })
-      .then(({ data }) => setResultSets(currentYearSets(data || [])));
-
-    loadResultSetScopes().then(setSetScopes);
+      .then(async ({ data }) => {
+        const sets = currentYearSets(data || []);
+        setResultSets(sets);
+        // A special result set (migration 358, e.g. Year 12 mocks) is for
+        // its year groups only, narrowed the same way as a report period's
+        // set; the database refuses marks for anyone else.
+        const scopes = await loadResultSetScopes();
+        for (const ev of sets) {
+          if (ev.special_year_groups?.length) scopes[ev.event_id] = { year_groups: ev.special_year_groups };
+        }
+        setSetScopes(scopes);
+      });
   }, [staffId, canEnterAnyClass]);
 
   const setScope = setScopes[resultSetEventId] || null;
