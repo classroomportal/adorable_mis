@@ -182,10 +182,10 @@ The principal asked on 2 Oct 2026 for fee income to be shared out in advance acr
 
 | ID | Phase | Done when | Status |
 | --- | --- | --- | --- |
-| F-1 | Cost centres and income | Every fee item points at a cost centre; each payment is split pro rata across its invoice's funds when recorded (existing payments backfilled); a budget page shows charged and collected by fund | Not started |
-| F-2 | Budgets | Allocations per cost centre (optionally by term) and every change to them need the principal and the college secretary; moving money between centres goes the same way; remaining balances show | Not started |
-| F-3 | Requisitions to approval | Staff raise requisitions; the principal signs; the college secretary costs and approves, committing the money, refused if it would overspend; nobody approves their own; each step emails the next person | Not started |
-| F-4 | Supply and payment | Goods received item by item; the bursar pays, never more than the approved total; quotes, invoices and delivery notes attached; payroll and utility bills recorded directly on centres marked for it | Not started |
+| F-1 | Cost centres and income | Every fee item points at a cost centre; each payment is split pro rata across its invoice's funds when recorded (existing payments backfilled); a budget page shows charged and collected by fund | In progress |
+| F-2 | Budgets | Allocations per cost centre (optionally by term) and every change to them need the principal and the college secretary; moving money between centres goes the same way; remaining balances show | In progress |
+| F-3 | Requisitions to approval | Staff raise requisitions; the principal signs; the college secretary costs and approves, committing the money, refused if it would overspend; nobody approves their own; each step emails the next person | In progress |
+| F-4 | Supply and payment | Goods received item by item; the bursar pays, never more than the approved total; quotes, invoices and delivery notes attached; payroll and utility bills recorded directly on centres marked for it | In progress |
 | F-5 | Year end and exams | Balances carried forward at the year switch; an exam-entry fee item and a check of charged against entered; reports for the auditors | Not started |
 
 **Still to decide** (the design's proposed answer, which will be built unless the principal says otherwise)
