@@ -38,7 +38,7 @@ function downloadCsv(filename, header, rows) {
 }
 
 function summarise(students) {
-  const t = { students: students.length, positive: 0, negative: 0, positiveCount: 0, negativeCount: 0 };
+  const t = { count: students.length, positive: 0, negative: 0, positiveCount: 0, negativeCount: 0 };
   students.forEach((s) => {
     t.positive += s.positive_points;
     t.negative += s.negative_points;
@@ -46,7 +46,7 @@ function summarise(students) {
     t.negativeCount += s.negative_count;
   });
   t.net = t.positive + t.negative;
-  t.average = t.students ? t.net / t.students : 0;
+  t.average = t.count ? t.net / t.count : 0;
   return t;
 }
 
@@ -86,7 +86,7 @@ function StudentTable({ students, title, from, to }) {
         </div>
       </div>
       <p style={{ margin: '0.5rem 0' }}>
-        {t.students} students · positives <strong style={{ color: '#1a7f37' }}>{signed(t.positive)}</strong> ({t.positiveCount})
+        {t.count} students · positives <strong style={{ color: '#1a7f37' }}>{signed(t.positive)}</strong> ({t.positiveCount})
         · negatives <strong style={{ color: '#b42318' }}>{t.negative}</strong> ({t.negativeCount})
         · net <strong style={{ color: netColour(t.net) }}>{signed(t.net)}</strong>
         · average per student <strong style={{ color: netColour(t.average) }}>{signed(Number(t.average.toFixed(1)))}</strong>
@@ -211,7 +211,7 @@ function BehaviourTotalsInner() {
     downloadCsv(
       `behaviour-totals-groups${year ? `-year${year}` : ''}-${from}-to-${to}.csv`,
       ['Mentor group', 'Year', 'Mentor', 'Students', 'Positive events', 'Positive points', 'Negative events', 'Negative points', 'Net points', 'Average per student'],
-      shownGroups.map((g) => [g.code, g.year, mentorName(g.staffId), g.students, g.positiveCount, g.positive, g.negativeCount, g.negative, g.net, g.average.toFixed(2)]),
+      shownGroups.map((g) => [g.code, g.year, mentorName(g.staffId), g.count, g.positiveCount, g.positive, g.negativeCount, g.negative, g.net, g.average.toFixed(2)]),
     );
   }
 
@@ -283,7 +283,7 @@ function BehaviourTotalsInner() {
                       style={{ cursor: 'pointer', background: g.id === groupId ? '#fff7e0' : undefined }}>
                       <td style={{ textDecoration: 'underline' }}>{g.code}</td>
                       <td>{mentorName(g.staffId)}</td>
-                      <td style={{ textAlign: 'right' }}>{g.students}</td>
+                      <td style={{ textAlign: 'right' }}>{g.count}</td>
                       <td style={{ textAlign: 'right', color: '#1a7f37' }}>{signed(g.positive)}</td>
                       <td style={{ textAlign: 'right', color: '#b42318' }}>{g.negative}</td>
                       <td style={{ textAlign: 'right', color: netColour(g.net) }}>{signed(g.net)}</td>
@@ -292,7 +292,7 @@ function BehaviourTotalsInner() {
                   ))}
                   <tr style={{ fontWeight: 600, borderTop: '2px solid #ccd' }}>
                     <td colSpan={2}>{year ? `Year ${year}` : 'Whole school'}</td>
-                    <td style={{ textAlign: 'right' }}>{shownTotal.students}</td>
+                    <td style={{ textAlign: 'right' }}>{shownTotal.count}</td>
                     <td style={{ textAlign: 'right', color: '#1a7f37' }}>{signed(shownTotal.positive)}</td>
                     <td style={{ textAlign: 'right', color: '#b42318' }}>{shownTotal.negative}</td>
                     <td style={{ textAlign: 'right', color: netColour(shownTotal.net) }}>{signed(shownTotal.net)}</td>
