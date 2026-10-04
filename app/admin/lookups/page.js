@@ -549,17 +549,56 @@ function MarkAppealRules() {
   );
 }
 
+// When parents see marks (migration 360): parents see a mark only once it is
+// this many hours old, counted from when it was first entered. 0 = at once.
+// Saved through set_parent_result_delay(), which checks the caller.
+function ParentMarkDelay() {
+  const [hours, setHours] = useState('');
+  const [status, setStatus] = useState(null);
+
+  async function load() {
+    const { data } = await supabase.from('system_settings').select('parent_result_delay_hours').maybeSingle();
+    setHours(data?.parent_result_delay_hours ?? 0);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function save() {
+    const h = parseInt(hours, 10);
+    if (!Number.isFinite(h)) { setStatus('Error: enter a whole number of hours.'); return; }
+    const { error } = await supabase.rpc('set_parent_result_delay', { p_hours: h });
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus(h === 0 ? 'Saved: parents see marks as soon as they are entered.' : `Saved: parents see a mark ${h} hour${h === 1 ? '' : 's'} after it is entered.`); load(); }
+  }
+
+  return (
+    <Section title="When parents see marks">
+      <p style={{ marginTop: 0 }}>
+        Parents see a mark (ReLPs, Teacher Assessments and every other result) only once it is this many hours old,
+        counted from when the teacher first entered it. This gives time to put a wrong number right first. A correction
+        doesn&apos;t restart the clock. Students and staff see marks at once. 0 means parents see marks straight away.
+      </p>
+      {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
+      <label>
+        Hours before parents see a mark:{' '}
+        <input type="number" min="0" max="168" value={hours} onChange={(e) => setHours(e.target.value)} style={{ width: '5rem' }} />
+      </label>{' '}
+      <button onClick={save}>Save</button>
+    </Section>
+  );
+}
+
 function LookupsInner() {
   return (
     <div>
       <h1>Lookups</h1>
-      <p>Manage the fixed lists used for student core data and behaviour groups, the admission fees and the mark appeal rules. Open a section to see or change it. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
+      <p>Manage the fixed lists used for student core data and behaviour groups, the admission fees, the mark appeal rules and when parents see marks. Open a section to see or change it. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
       <LookupList title="Boarding houses" table="boarding_houses" idField="house_id" />
       <LookupList title="Sports houses" table="sports_houses" idField="house_id" />
       <BehaviourCategories />
       <DetentionRules />
       <CertificateLevels />
       <MarkAppealRules />
+      <ParentMarkDelay />
       <AcademicYears />
       <AdmissionFees />
     </div>
