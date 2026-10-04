@@ -817,10 +817,12 @@ Each day on the Homework page also lists **To do**: the homework on that evening
 
 Homework is done in evening prep, so each year's prep time limits how much homework can go on one evening. **Prep Times**, on the Pastoral card, is for admins, SMT, pastoral staff and the head of boarding.
 
-1. Each year group has one row: when prep starts and ends, the days it runs, and any fixed activity that isn't homework time, with its minutes. Years 7–9 spend their first hour reviewing the day's work.
+![Prep Times: one card per year group, with its homework time a prep evening](manual-images/28-prep-times.jpg)
+
+1. Each year group has one card: when prep starts and ends, the days it runs, and any fixed activity that isn't homework time, with its minutes. Years 7–9 spend their first hour reviewing the day's work.
 2. **Private study counts** adds the year's timetabled Personal Study lessons to its homework time on the days they fall. It is meant for a future Year 13; no year has it ticked.
-3. **Homework time** shows the minutes each prep evening gives, and the total for a week.
-4. Change a value and press **Save** on that row.
+3. **Homework time** at the top of each card shows the minutes each prep evening gives, and the total for a week.
+4. Change a value and press **Save** on that card.
 
 As set on 4 October 2026: Years 7–9 7.00–9.15 pm less the hour's review (75 minutes), Years 10–12 7.00–9.45 pm (165 minutes), Sunday to Friday. Changes are kept in Change History. They don't move homework already set.
 
