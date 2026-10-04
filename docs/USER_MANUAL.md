@@ -25,7 +25,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
-| Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; HR |
+| Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
 | Care and conduct | [8. The Other Half and student groups](#8-the-other-half-and-student-groups) | Activity registers, the programme, student choices, groups, building a group from a rule | All staff; SMT; pastoral |
 | Care and conduct | [9. Calendar, messages and email](#9-calendar-messages-and-email) | The calendar, sending messages, the inbox, where replies go | SMT, office, pastoral |
 | School business | [10. Fees and bills](#10-fees-and-bills) | Payments, charging, fee items, discounts, debtors, price approval, the SMT dashboard | Bursar, SMT, principal, college secretary |
@@ -64,7 +64,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 
 ## About this manual
 
-This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 2 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
+This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 4 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
 
 **How it is organised.** It starts with How each person uses Formwork: a guide for each role (teachers, mentors, leaders, the office, specialist roles, students and parents) to what they do each day, week and term. Two short sections follow it for everyone: Using Formwork to raise achievement, and Safeguarding and keeping students safe. After that, each chapter covers one area of the school's work. It says who can use the pages, walks through the common tasks step by step, and lists the rules the system enforces so you know why something is refused. Where a page is only open to some roles, the chapter says so at the top.
 
@@ -318,7 +318,12 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 - **Every day**: record each sick-bay visit at **Sick Bay Log**, including temperature, treatment and any medication with its dose, and tick when parents are told. **Sick Bay Today** shows follow-ups still open.
 - **Start of term**: run the **Resumption Check** for boarders.
 - **Each term**: a **Height & Weight** round by group, and **Immunisations** due or overdue.
-- Medical records are visible only to you and the administrators; teachers and parents can't see them.
+- Medical records are visible only to you and the DSL; administrators, teachers and parents can't see them. A visit the DSL has marked as safeguarding shows its medication and treatment but not its symptoms.
+
+**Designated Safeguarding Lead (DSL)**
+
+- You can see and edit every medical record and sick-bay visit, but not delete them.
+- When a visit is a safeguarding matter, tick **Safeguarding** as you record it, or press **Mark as safeguarding** on it in the Sick Bay Log. Its symptoms are then yours alone; the nurses still see the medicine given (chapter 7, The clinic).
 
 ### Students and parents
 
@@ -503,7 +508,7 @@ Many people can read most of Formwork, and some text reaches parents. Never reco
 | Student group names and descriptions | All staff; students and parents if the group is shown to them |
 | Homework feedback | The student and their teachers |
 
-Medical details belong in the clinic record, which only the nurse and administrators can see. Safeguarding information belongs with the safeguarding lead, in the school's own records.
+Medical details belong in the clinic record, which only the nurse and the Designated Safeguarding Lead can see. Safeguarding information belongs with the safeguarding lead, in the school's own records.
 
 Formwork already protects some of this. Parents never see which other students were linked to a behaviour event, and an explanation that names one is refused once parents can see the event. Pictures are allowed only on positive events. Negative events reach parents only after the office or SMT have checked them. Students and parents never see who else is in a group.
 
@@ -604,7 +609,7 @@ A profile opens on a grid of tiles. Each tile opens one part of the record.
 | Tile | What it holds |
 | --- | --- |
 | Core Data | Names, date of birth, year, form, house, room, restaurant, contact and identity fields. **Full view** shows every field; **Edit** changes the ones your role may edit |
-| Medical | The clinic record (nurse and admins only) |
+| Medical | The clinic record (nurse and DSL only) |
 | Parents / Guardians | Linked parents, their relationship to this child, phone and email; the office can create a parent login here |
 | Siblings | Brothers and sisters found through shared parents (staff only) |
 | Groups | Student groups the student belongs to |
@@ -652,7 +657,7 @@ Registers are taken lesson by lesson. Any lesson whose register is not taken 15 
 
 ### The school day
 
-There are nine sessions: Registration (M), Lessons 1–6 (L1–L6), The Other Half (OH) and Evening Prep (EP). Bell times are set per weekday at /admin/bell-times (admins). The timetable itself comes from Nova-T and is imported by admins (chapter 14); a single lesson can have its own teacher or room, different from its class.
+There are nine sessions: Registration (M), Lessons 1–6 (L1–L6), The Other Half (OH) and Evening Prep (EP). Bell times are set per weekday at /admin/bell-times (admins). Sunday has an Evening Prep time only, since prep runs Sunday to Friday; it is listed on Bell Times but not in "make these days the same". The timetable itself comes from Nova-T and is imported by admins (chapter 14); a single lesson can have its own teacher or room, different from its class.
 
 ### My Timetable (/staff/timetable)
 
@@ -1097,6 +1102,18 @@ Certificates are awarded at cumulative points milestones (currently Bronze 100, 
 
 ![Certificates ready to award](manual-images/56-certificates.jpg)
 
+### Behaviour Totals (/pastoral/behaviour-totals)
+
+**Behaviour Totals**, on the Pastoral card, adds up positive and negative points. Mentors, pastoral staff, the head of boarding and SMT can open it.
+
+1. Choose the **Period**: a term (the current one to start with), the academic year, or **Choose dates…** for your own From and To.
+2. **Mentors** see their own mentor group student by student: positives, negatives, net (positives minus negatives) and the number of events, with the group's totals and average.
+3. **SMT, pastoral and the head of boarding** also see every mentor group with its mentor, number of students, positives, negatives, net and average per student. Filter by year for a year total, and open any group to see its students.
+4. Click a student's name to open their profile straight on its Behaviour log.
+5. **Download CSV** saves either table.
+
+Withdrawn events don't count, and a Stage 5 returned to the teacher counts as 0 points. The average is the group's net points divided by all its active students, including those with no events.
+
 ### Boarding and mentors
 
 - Houseparents' student and behaviour pages open on their own house; those with school-wide jobs get a **Whole school** switch.
@@ -1106,13 +1123,20 @@ Certificates are awarded at cumulative points milestones (currently Bronze 100, 
 
 ![Birthdays this week](manual-images/57-birthdays.jpg)
 
-### The clinic (nurse and admins only)
+### The clinic (nurse and DSL only)
 
-The clinic holds each student's medical profile and consents, conditions, growth and BMI, sick-bay visits, immunisations and termly resumption screenings. Only the nurse role and admins can see any of it; teachers, pastoral staff and parents have no access.
+The clinic holds each student's medical profile and consents, conditions, growth and BMI, sick-bay visits, immunisations and termly resumption screenings. Only the nurse and the Designated Safeguarding Lead (DSL, cs@) can see any of it; administrators, the principal role, teachers, pastoral staff, students and parents have no access. The nurse can add, edit and delete; the DSL can add and edit but not delete. Who can see medical records is padlocked on Permissions: it changes only by a change to the system agreed with the principal. Administrators still see the Clinic tile, but opening its pages shows "Access not allowed", and a student's profile has no Medical tab for them.
 
 - **Sick Bay Today** (/clinic): today's visits, follow-ups outstanding, parents not yet told and jabs overdue.
-- **Sick Bay Log** (/clinic/visits): record a visit (reason, temperature, treatment, medication and dose, outcome, parent told, follow-up).
+- **Sick Bay Log** (/clinic/visits): record a visit (reason, temperature, treatment, medication and dose, outcome, parent told, follow-up). A visit marked as safeguarding shows a red Safeguarding chip (below).
 - **Height & Weight** (/clinic/measurements), **Resumption Check** (/clinic/screenings) and **Immunisations** (/clinic/immunisations).
+
+**Safeguarding entries (DSL only).** When the DSL records a visit at Sick Bay Log, or on a student's medical card, a tick box reads **Safeguarding: only the DSL can see the presenting complaint and observations**. On any visit already in the log, the DSL can press **Mark as safeguarding** (and confirm), including on a visit a nurse recorded. Once marked:
+
+- The DSL sees the visit in full, with a red **Safeguarding · symptoms DSL only** chip.
+- Everyone else, the nurses included, sees "Safeguarding: details held by the DSL" in place of the complaint, and no observations.
+- Medication and dose, treatment, temperature, visit type, outcome, parent told and follow-up stay visible to the nurses, so they know what a student has been given. Write symptoms in the complaint or observations, not under Treatment, or the nurses will see them.
+- Only the DSL can remove the mark (**Remove safeguarding mark**), which puts the complaint and observations back for the nurses. Who marked it and when are recorded.
 
 ![Sick Bay Today](manual-images/58-clinic.jpg)
 
@@ -1149,7 +1173,7 @@ SMT, the OH coordinator and admins manage the programme.
 
 ### Student choices
 
-Students choose at /portal/other-half, and only when all of these hold: it is Evening Prep (19:00–21:00 Mon–Fri), choices are open and not past the closing time, the activity is active and open to their year, and it isn't full. One choice per weekday; choosing again replaces it.
+Students choose at /portal/other-half, and only when all of these hold: it is Evening Prep (19:00–21:00, Sunday to Friday), choices are open and not past the closing time, the activity is active and open to their year, and it isn't full. One choice per weekday; choosing again replaces it.
 
 ![A student choosing activities during Evening Prep](manual-images/68-portal-oh.jpg)
 
@@ -1543,7 +1567,7 @@ Choose a role from the list at the top. Beside it you see what the role is for, 
 - **What they can do**: for each kind of record (registers, behaviour events, results, payments and so on), whether the role can **View**, **Add**, **Edit** and **Delete** it. **Yes** means any record, **Own only** means only records tied to the person (their own classes, events they logged), and **No** means not at all. Click a row to see the names of the database rules that allow it. This is read from the database itself, so it is always current: tick a page and any access that depends on it changes straight away. Below the table, give the role Read or Edit on each student Core Data field.
 - **Compare roles**: every page against every role in one grid, to check at a glance who can open what. Click a role's name to open it on the Pages tab.
 
-**Changing what a role can do.** Some records have tick boxes beside View, Add, Edit and Delete: certificates, certificate levels, the sick-bay records, the BMI table and grade boundaries, and (since 3 Oct 2026) behaviour, attendance, reports, results, homework, students and families, staff and HR, the tuckshop, The Other Half, student groups, admissions, fees (fee prices stay with the two approvers), the timetable, the calendar and next year's plan. Staff roles, page permissions and logins have no tick boxes, so a tick can never hand out admin powers. A record whose rows belong to someone (a teacher's own report comments, a checker's report period) keeps that rule whatever is ticked: the tick decides who sees or changes everyone's. Tick or untick a box and Formwork lists the people who would gain or lose that ability, by name, before it saves; press **OK** to go ahead. Every change is kept in Change History.
+**Changing what a role can do.** Some records have tick boxes beside View, Add, Edit and Delete: certificates, certificate levels, the BMI table and grade boundaries, and (since 3 Oct 2026) behaviour, attendance, reports, results, homework, students and families, staff and HR, the tuckshop, The Other Half, student groups, admissions, fees (fee prices stay with the two approvers), the timetable, the calendar and next year's plan. Staff roles, page permissions and logins have no tick boxes, so a tick can never hand out admin powers. A record whose rows belong to someone (a teacher's own report comments, a checker's report period) keeps that rule whatever is ticked: the tick decides who sees or changes everyone's. Tick or untick a box and Formwork lists the people who would gain or lose that ability, by name, before it saves; press **OK** to go ahead. Every change is kept in Change History. Medical and sick-bay records show padlocks instead: only the nurse and the DSL can see them, and that can't be changed here.
 
 A padlock (🔒) means the cell can't be changed here by anyone, admin included. These are the principal's own decisions: only the school office adds students; Grade History and Change History can't be edited; fee prices need the principal and the college secretary. Some things everyone signed in can read also have a padlock. Hover over the padlock to see why.
 
@@ -1654,7 +1678,8 @@ A full database backup runs every night. Admins can also run one before anything
 | admissions | Admissions pages |
 | tuckshop | Tuckshop pages, including Hand Out |
 | tuckshop\_owner | As tuckshop, plus unlocking a saved hand-out list |
-| nurse | The clinic and medical records (with admins, the only ones who can see them) |
+| nurse | The clinic and medical records: add, edit and delete (with the DSL, the only ones who can see them) |
+| dsl | The Designated Safeguarding Lead: the clinic and medical records (add and edit, not delete), and marking sick-bay visits as safeguarding |
 | other\_half | Manages Other Half activities and choices |
 | principal, college\_secretary | Together approve every fee price change |
 
@@ -1684,7 +1709,7 @@ A full database backup runs every night. Admins can also run one before anything
 | Block | A curriculum block from Nova-T; a student takes one class per ordinary block |
 | CAT4 / NGRT | Cognitive Abilities Test and New Group Reading Test scores, imported from CoreSats |
 | Change History | The permanent log of sensitive changes |
-| EP | Evening Prep, 19:00–21:00 on weekdays |
+| EP | Evening Prep, 19:00–21:00 Sunday to Friday |
 | Grade History | The permanent log of every grade entered, changed or deleted |
 | KS3 / KS4 / KS5 | Years 7–9, 10–11 and 12 |
 | Mentor group | A form group; its mentor writes the mentor report comment |

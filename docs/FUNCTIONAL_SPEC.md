@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 361). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 364). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -57,7 +57,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 
 | Role | Who holds it | Main powers |
 | --- | --- | --- |
-| admin | 3 accounts (an account setting, not a staff role) | Passes nearly every check. Sets permissions, bell times, imports, backups. Cannot unlock the tuckshop hand-out list or use Hand Out. |
+| admin | 3 accounts (an account setting, not a staff role) | Passes nearly every check. Sets permissions, bell times, imports, backups. Cannot unlock the tuckshop hand-out list or use Hand Out. Has no access to medical records (migration 363). |
 | smt | Senior leaders | Calendar and terms, behaviour picture review, Change History, Grade History, email reply routes, publishing fees, sending messages, OH management. |
 | hr | HR | Staff HR records, register alerts, staff roles (any except admin). |
 | pastoral | Pastoral staff | Appeals, detentions, editing behaviour events, class allocation, sending messages. |
@@ -74,7 +74,8 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | admissions | Admissions | Admissions pages and student entry. |
 | tuckshop | Tuckshop staff | Tuckshop pages only, including Hand Out. |
 | tuckshop\_owner | cs@ (Uju MBA) | As tuckshop, plus the only role that can unlock a saved hand-out list. |
-| nurse | School nurse | The only role (with admin) that can see clinic and medical records. |
+| nurse | School nurses: nurse10@, nurse12@, nurse13@, hoc@ | Clinic and medical records: view, add, edit and delete (FR-11.6). The only role that can delete them. |
+| dsl | Designated Safeguarding Lead: cs@ (Uju MBA), from 4 Oct 2026 (migration 363) | Clinic and medical records: view, add and edit, not delete (FR-11.6). The only role that can mark a sick-bay entry as safeguarding and read its hidden details (FR-11.10–11.11). |
 | other\_half | OH coordinator | Manages OH activities and choices. Nobody holds it at present. |
 
 Two further roles exist only to approve fee prices (FR-10.10): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either.
@@ -183,7 +184,7 @@ The timetable comes from Nova-T and is imported by admins; Formwork never invent
 
 **Structure**
 
-- **FR-3.1** The school day has 9 sessions: Registration (M), Lessons 1–6, The Other Half (OH) and Evening Prep (EP). Each weekday has its own bell times, set by admins at /admin/bell-times. \[DB\]
+- **FR-3.1** The school day has 9 sessions: Registration (M), Lessons 1–6, The Other Half (OH) and Evening Prep (EP). Each weekday has its own bell times, set by admins at /admin/bell-times. Sunday has an Evening Prep bell time only (migration 362, 4 Oct 2026), because prep runs Sunday to Friday; Sunday has no lessons, and Bell Times lists it but leaves it out of "make these days the same". \[DB\]
 - **FR-3.2** Saving a bell time moves every lesson in that period to the new time. A session can't be removed from a day while lessons are timetabled in it. Registers are tied to the period, not the time. \[DB\]
 - **FR-3.3** A class belongs to a curriculum block. In an ordinary block a student can be in only one class; compound blocks (Pathway, Vocational) allocate a whole group of subjects together. \[DB\]
 - **FR-3.4** A single lesson can have its own teacher or room, different from its class. Timetables, printed timetables, Registers Not Done and alerts all use the lesson's own first. \[DB\]
@@ -278,7 +279,7 @@ The Other Half (OH) is the after-lessons activity programme, run entirely in For
 
 **Student choice (/portal/other-half)**
 
-- **FR-5.7** A student can choose, change or clear a choice only when all of these hold: it is Evening Prep now (the EP bell time for today, currently 19:00–21:00 Mon–Fri); choices are open for the term and the closing time hasn't passed; the activity is active; the student is active and in one of its year groups; and the activity isn't full. \[DB\]
+- **FR-5.7** A student can choose, change or clear a choice only when all of these hold: it is Evening Prep now (the EP bell time for today, currently 19:00–21:00 Sun–Fri; Sunday was added by migration 362 after a Year 11 student couldn't change a choice on a Sunday evening); choices are open for the term and the closing time hasn't passed; the activity is active; the student is active and in one of its year groups; and the activity isn't full. \[DB\]
 - **FR-5.8** One choice per student per weekday per term; choosing again replaces it. Two students can't both take the last place. \[DB\]
 - **FR-5.9** Staff with OH management can place, move or remove any student's choice at any time at /other-half/choices, and can go over capacity or outside the year groups after an "anyway?" warning. \[DB / Page warning\]
 
@@ -374,7 +375,7 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.26** Each behaviour category can have a short description, edited at /admin/lookups and shown when the category is picked (when logging, and when changing an event's category). Stage 5, Bullying and Academic dishonesty were given one; the rest are for the school to write. \[DB / Page\]
 - **FR-6.27** At Behaviour Review, the reviewer (the school office or SMT; only SMT or admin for an event with a picture) can mark a serious event "Not Stage 5: return to teacher", with a note saying why. Only before parents can see it, and not on a withdrawn event. The teacher who logged it gets the note in their Formwork inbox, and it shows on the event wherever they see it. The event waits under "Returned to the teacher", where it can't be sent to parents. From the moment it is returned it counts 0 points (its category is kept), and its detention is cancelled if it hasn't happened yet, with the week's total detention if the week no longer reaches it; the student is told (migration 337). Detentions already attended stay. If the teacher changes the category, the new category's points count, it leaves the review and detentions are recalculated (FR-6.6). If they keep Stage 5 and edit the explanation, the −5 and its detention come back and it goes to "Waiting for review" again. Staff can't mark or clear a return any other way; any real edit clears it. Returns are logged in Change History (behaviour). Only the principal's PA (through school\_office) and SMT review Stage 5 (the principal, 3 Oct 2026). \[DB\]
 - **FR-6.28** Every return is kept permanently against the teacher who logged the event (behaviour\_event\_returns: the teacher, the reviewer, the note and the original category and points), even after the event is changed or deleted. Only SMT and admins can read it. Behaviour Review shows them "Stage 5s returned, by teacher": the number for each teacher and the latest date, to see who needs more training (migration 337, the principal, 3 Oct 2026). Only the return step writes to it. The first four returns (3 Oct 2026, made before the points rule existed) were brought into line: points 0, recorded in the tally, and the one detention not yet held (dated 2 Oct, still "scheduled") cancelled; the other three had been attended and stay. \[DB\]
-- **FR-6.29** Behaviour Totals (/pastoral/behaviour-totals, on the Pastoral card, migration 361, the principal, 4 Oct 2026) gives running totals of positive and negative points for a term (the current one to start with), the academic year or chosen dates. Net is positives minus negatives; withdrawn events don't count, and a returned Stage 5 counts its 0 points. Mentors see their own mentor group (the Mentor class on the timetable), student by student, with the number of events, the group's totals and its average. SMT, pastoral, head of boarding and admins also see every mentor group with its mentor, students, positives, negatives, net and average per student (net points divided by all the group's active students, including those with no events), filtered by year with a whole-school or year total, and can open any group. Both tables download as CSV. The page is granted to mentor, pastoral, head\_of\_boarding and smt. The totals come from behaviour\_totals(), which runs under the caller's own permissions; every member of staff can already read behaviour events, so showing a mentor only their group is a display choice. \[Page\]
+- **FR-6.29** Behaviour Totals (/pastoral/behaviour-totals, on the Pastoral card, migration 361, the principal, 4 Oct 2026) gives running totals of positive and negative points for a term (the current one to start with), the academic year or chosen dates. Net is positives minus negatives; withdrawn events don't count, and a returned Stage 5 counts its 0 points. Mentors see their own mentor group (the Mentor class on the timetable), student by student, with the number of events, the group's totals and its average. SMT, pastoral, head of boarding and admins also see every mentor group with its mentor, students, positives, negatives, net and average per student (net points divided by all the group's active students, including those with no events), filtered by year with a whole-school or year total, and can open any group. Each student's name opens their profile straight on its Behaviour log. Both tables download as CSV. The page is granted to mentor, pastoral, head\_of\_boarding and smt. The totals come from behaviour\_totals(), which runs under the caller's own permissions; every member of staff can already read behaviour events, so showing a mentor only their group is a display choice. \[Page\]
 
 ## 10. FR-7 Assessment, results and targets
 
@@ -546,7 +547,7 @@ The bursar runs invoices, charges, payments and discounts; parents see a term's 
 
 ## 14. FR-11 Pastoral, boarding, clinic and HR
 
-Medical records are visible only to the nurse and admins; HR records only to HR and SMT; boarding views default to the houseparent's own house.
+Medical records are visible only to the nurse and the Designated Safeguarding Lead (not admins, migration 363); HR records only to HR and SMT; boarding views default to the houseparent's own house.
 
 **Boarding and pastoral**
 
@@ -559,7 +560,10 @@ Medical records are visible only to the nurse and admins; HR records only to HR 
 **Clinic**
 
 - **FR-11.5** The clinic holds each student's medical profile and consents, conditions, growth and BMI, sick-bay visits, immunisations, and termly resumption screenings (one per student per term per type). \[DB\]
-- **FR-11.6** Only the nurse role and admins can see or change any of it. Teachers, pastoral staff, houseparents and parents have no access. \[DB\]
+- **FR-11.6** Only the nurse and dsl (Designated Safeguarding Lead) roles can see any of it (migration 363, the principal, 4 Oct 2026). The nurse can view, add, edit and delete; the DSL can view, add and edit, but not delete. Admins, the principal role, teachers, pastoral staff, houseparents, students and parents have no access. \[DB\]
+- **FR-11.9** Who sees medical records is padlocked at /admin/permissions for all seven medical tables: it can't be ticked or unticked there, by admins either, and changes only by a migration the principal agrees. \[DB\]
+- **FR-11.10** A DSL can mark a sick-bay log entry as safeguarding, when recording it or later on any entry, a nurse's included (migration 364). The presenting complaint and observations then move to a table only the DSL can read, and the entry shows "Safeguarding: details held by the DSL" to everyone else, the nurses included. Medication, dose, treatment, temperature, visit type, outcome, parent told and follow-up stay visible to the nurses. \[DB\]
+- **FR-11.11** Only a DSL can set or remove the safeguarding mark; a nurse who tries is refused. Removing it puts the complaint and observations back on the entry. Who marked it and when are stamped by the database. The page offers the tick box and the Mark as safeguarding button to DSL holders only. \[DB rule; Page display\]
 
 **Staff HR**
 
@@ -961,7 +965,7 @@ Choose "Decided: keep" for anything the school is happy to leave as it is.
 | Block | A curriculum block from Nova-T; a student takes one class per ordinary block |
 | CAT4 / NGRT | Cognitive Abilities Test and New Group Reading Test scores, imported from CoreSats |
 | Change History | The permanent log of sensitive changes (registers, fees, behaviour, access, parent links, email) |
-| EP | Evening Prep, 19:00–21:00 on weekdays; the only time students can choose OH |
+| EP | Evening Prep, 19:00–21:00 Sunday to Friday; the only time students can choose OH |
 | Grade History | The permanent log of every score, target and transcript-grade change |
 | KS3 / KS4 / KS5 | Key stages: Years 7–9, 10–11 and 12 |
 | Lagos time | West Africa Time (UTC+1); every date and cut-off in Formwork uses it |

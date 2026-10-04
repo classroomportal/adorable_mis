@@ -6,9 +6,28 @@ import { useAuth } from '../lib/AuthContext';
 // boundary — RLS in Postgres is what actually protects data — so a wrong
 // grant here means a confusing page, not a data leak.
 export default function RequireResource({ resourceKey, children }) {
-  const { profileLoaded, hasAccess } = useAuth();
+  const { profileLoaded, hasAccess, staffRoles } = useAuth();
 
   if (!profileLoaded) return <p>Loading...</p>;
   if (!hasAccess(resourceKey)) return <p>You don&apos;t have access to this page. Ask an admin to grant it at /admin/permissions.</p>;
+  // Medical records are for the nurse and the DSL only (migration 363): the
+  // database returns nothing to anyone else, admins included, so say so
+  // rather than show empty lists. Admins still see the Clinic tile.
+  if (isClinicPage(resourceKey) && !holdsMedicalRole(staffRoles)) {
+    return (
+      <main style={{ padding: '1.25rem', maxWidth: 700, margin: '0 auto' }}>
+        <h1>Access not allowed</h1>
+        <p>Clinic and medical records are for the nurse and the Designated Safeguarding Lead only.</p>
+      </main>
+    );
+  }
   return children;
+}
+
+function isClinicPage(resourceKey) {
+  return resourceKey === '/clinic' || resourceKey?.startsWith('/clinic/');
+}
+
+export function holdsMedicalRole(staffRoles) {
+  return (staffRoles || []).some((r) => r === 'nurse' || r === 'dsl');
 }
