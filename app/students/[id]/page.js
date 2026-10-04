@@ -61,11 +61,11 @@ function StudentDetail() {
   const canEditCore = isAdmin || editableFields.size > 0;
   // The medical record is gated on its own resource key so
   // /admin/permissions can move it between roles. Writing is narrower
-  // than seeing it: only the nurse (and admin) pass the RLS policies in
-  // migration 128, so anyone else gets a read-only card rather than
-  // buttons that fail on save.
+  // than seeing it: only the nurse and the DSL pass the RLS policies
+  // (migration 363; admins no longer do), so anyone else gets a read-only
+  // card rather than buttons that fail on save.
   const canSeeMedical = hasAccess('/students/medical');
-  const canEditMedical = isAdmin || (staffRoles || []).includes('nurse');
+  const canEditMedical = (staffRoles || []).some((r) => r === 'nurse' || r === 'dsl');
   // Parents and the student_parent links are writable by admin and the
   // school office under their RLS policies, so only they get the Edit button.
   const canEditParents = isAdmin || (staffRoles || []).includes('school_office');
