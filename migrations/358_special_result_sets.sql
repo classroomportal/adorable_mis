@@ -30,8 +30,9 @@
 --    special sets in a date range that concern the student (they have a
 --    mark in it, or are in its year groups now) and which subjects were
 --    marked in each. Subject ids only, no marks or names; same caller check
---    as report_week_assessments(). The report prints each such set as its
---    own column, headed by its name, after the week columns.
+--    as report_week_assessments(). The report prints each such set in place
+--    of the week column its date falls in, headed by its name (the
+--    principal: "Year 12 mocks will replace a weekly report column").
 --
 -- The written report already takes the term's marks by date, so a special
 -- set's grade is on it with no change (an exam-grade mark there is the
