@@ -527,10 +527,10 @@ How it behaves:
 - A student can appeal one of their own marks, in any result set, within **5 days** of it appearing or last changing (a re-import that changes nothing doesn't reopen it). They give a reason and, if they like, the mark on their paper. Students only; parents can't appeal.
 - Each student has **5 appeal credits a school year**. An appeal that is turned down uses one; an upheld or withdrawn appeal gives it back. A waiting appeal holds a credit, so a student can't have more appeals open than credits left.
 - One appeal per mark at a time; once decided, a mark can be appealed again only if it changes.
-- **Only the student's teacher for that subject decides**, at Mark Appeals (`/grade-appeals`, Assessment card), after checking the paper. Upheld: the teacher enters the correct score, the grade is worked out from the boundaries, and the change is in Grade History under the teacher's name. Turned down: the teacher must give a note, which the student sees. Teacher and student are told in their Formwork inbox.
+- **Only the student's teacher for that subject decides**, at Mark Appeals (`/grade-appeals`, Assessment card), after checking the paper. Upheld: the teacher enters the correct score, the grade is worked out from the boundaries, and the change is in Grade History under the teacher's name. Turned down: the teacher must give a note, which the student sees. Teacher and student are told in their Formwork inbox. The subject's Head of Department gets a copy of each new appeal, saying which teacher it has gone to (355); they can follow their department's appeals on Mark Appeals but can't decide them.
 - A student whose subject has no teacher in Formwork can't appeal (they're told to see their mentor).
-- SMT, assessment managers and admins can see every appeal but can't decide them. Appeals are never deleted.
-- The 5 days and 5 credits are set per school year (`academic_years.grade_appeal_days` / `grade_appeal_credits`); there is no screen for them yet.
+- SMT, assessment managers and admins can see every appeal, and Heads of Department their department's, but none of them can decide. Appeals are never deleted.
+- The 5 days and 5 credits are set per school year on Lookups (`/admin/lookups`, Mark appeals, 355), by anyone with that page. Changing them doesn't affect appeals already made.
 - Not handled: an appeal waits until the teacher decides; nobody else can step in if the teacher is away or has left.
 
 **Every grade change is logged permanently** in Grade History (215)

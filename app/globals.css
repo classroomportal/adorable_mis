@@ -1907,3 +1907,13 @@ nav button.help-button span {
   padding: 0.4rem 0.6rem; font-size: 0.85rem; color: var(--ink);
 }
 .bl-returned strong { color: #b45309; }
+
+/* Lookups: each section folds away, closed by default. */
+.lookup-section { padding: 0; }
+.lookup-section > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.9rem 1.1rem; }
+.lookup-section > summary::-webkit-details-marker { display: none; }
+.lookup-section > summary::after { content: '▸'; color: var(--ink-soft); font-size: 1.1rem; }
+.lookup-section[open] > summary::after { content: '▾'; }
+.lookup-section > summary h2 { margin: 0; }
+.lookup-section[open] > summary { border-bottom: 1px solid var(--slate-200); }
+.lookup-section-body { padding: 1rem 1.1rem 1.1rem; }

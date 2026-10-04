@@ -4,6 +4,17 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 
+// Each Lookups section folds away, closed when the page opens (the
+// principal, 4 Oct 2026: the page had grown long). Open one to edit it.
+function Section({ title, children }) {
+  return (
+    <details className="card lookup-section">
+      <summary><h2>{title}</h2></summary>
+      <div className="lookup-section-body">{children}</div>
+    </details>
+  );
+}
+
 function LookupList({ title, table, idField }) {
   const [items, setItems] = useState([]);
   const [newName, setNewName] = useState('');
@@ -31,8 +42,7 @@ function LookupList({ title, table, idField }) {
   }
 
   return (
-    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <h2>{title}</h2>
+    <Section title={title}>
       {status && <p style={{ color: 'red' }}>{status}</p>}
       <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.75rem' }}>
         {items.map((item) => (
@@ -47,7 +57,7 @@ function LookupList({ title, table, idField }) {
         <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New name" />
         <button onClick={add}>Add</button>
       </div>
-    </div>
+    </Section>
   );
 }
 
@@ -131,8 +141,7 @@ function BehaviourCategories() {
   const negative = categories.filter((c) => c.type === 'negative');
 
   return (
-    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <h2>Behaviour categories</h2>
+    <Section title="Behaviour categories">
       <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
         Default points pre-fill the points field on the Behaviour Events page when a category is picked — staff can still override the number per event.
         The description is shown to staff when they pick the category, to help them choose the right one.
@@ -169,7 +178,7 @@ function BehaviourCategories() {
         </label>
         <button onClick={add}>Add</button>
       </div>
-    </div>
+    </Section>
   );
 }
 
@@ -213,8 +222,7 @@ function AdmissionFees() {
   }
 
   return (
-    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <h2>Admission fees</h2>
+    <Section title="Admission fees">
       <p style={{ marginTop: 0 }}>
         What a family pays for the admission form, and the deposit paid after accepting an offer, for each entry year.
         Leave the form price blank until it is decided; the bursar can&apos;t record form payments until it is set.
@@ -246,7 +254,7 @@ function AdmissionFees() {
           </tbody>
         </table>
       </div>
-    </div>
+    </Section>
   );
 }
 
@@ -297,8 +305,7 @@ function DetentionRules() {
   if (!d) return null;
   const field = (k) => ({ value: d[k], onChange: (e) => { setD({ ...d, [k]: e.target.value }); setStatus(null); } });
   return (
-    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <h2>Detentions and serious events</h2>
+    <Section title="Detentions and serious events">
       <p style={{ marginTop: 0 }}>
         A student gets a Friday detention when one negative event is worth this many points or more, or when their
         negative points from Saturday to Friday add up to this much. Enter them as negative points, as they are logged (e.g. −5).
@@ -326,7 +333,7 @@ function DetentionRules() {
       </p>
       <textarea rows={14} {...field('guidance')} style={{ width: '100%', font: 'inherit' }} />
       <button type="button" onClick={saveGuidance} style={{ width: 'fit-content', marginTop: '0.5rem' }}>Save guidance</button>
-    </div>
+    </Section>
   );
 }
 
@@ -373,8 +380,7 @@ function CertificateLevels() {
   }
 
   return (
-    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <h2>Certificates</h2>
+    <Section title="Certificates">
       <p style={{ marginTop: 0 }}>The cumulative behaviour points (positive and negative combined) that earn each certificate.</p>
       {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
       <table>
@@ -401,7 +407,7 @@ function CertificateLevels() {
         <input type="number" min="1" value={newLevel.points} onChange={(e) => setNewLevel({ ...newLevel, points: e.target.value })} placeholder="Points" style={{ width: '7rem' }} />
         <button type="submit">Add</button>
       </form>
-    </div>
+    </Section>
   );
 }
 
@@ -443,8 +449,7 @@ function AcademicYears() {
   }
 
   return (
-    <div className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <h2>Academic years</h2>
+    <Section title="Academic years">
       <p style={{ marginTop: 0 }}>
         Admissions, admission fees and term dates are filed under these years. Add terms for a year on the
         <a href="/calendar"> Calendar</a> page: a term belongs to the year its start date falls in. The current year
@@ -477,7 +482,70 @@ function AcademicYears() {
       <div style={{ marginTop: '0.75rem' }}>
         <button onClick={() => run('add_next_academic_year', {}, (label) => `${label} added.`)}>Add the next academic year</button>
       </div>
-    </div>
+    </Section>
+  );
+}
+
+// Mark appeals (migrations 354-355): how many days a student has to appeal
+// a mark, and how many credits a school year (only a turned-down appeal uses
+// one). Saved through set_grade_appeal_rules(), which checks the caller.
+function MarkAppealRules() {
+  const [years, setYears] = useState([]);
+  const [drafts, setDrafts] = useState({});
+  const [status, setStatus] = useState(null);
+
+  async function load() {
+    const { data } = await supabase.from('academic_years')
+      .select('academic_year_id, label, status, grade_appeal_days, grade_appeal_credits')
+      .neq('status', 'closed').order('start_date');
+    setYears(data || []);
+    setDrafts(Object.fromEntries((data || []).map((y) => [y.academic_year_id, {
+      days: y.grade_appeal_days, credits: y.grade_appeal_credits,
+    }])));
+  }
+  useEffect(() => { load(); }, []);
+
+  async function save(y) {
+    const d = drafts[y.academic_year_id];
+    const days = parseInt(d.days, 10);
+    const credits = parseInt(d.credits, 10);
+    if (!Number.isFinite(days) || !Number.isFinite(credits)) { setStatus('Error: enter whole numbers.'); return; }
+    const { error } = await supabase.rpc('set_grade_appeal_rules', {
+      p_academic_year_id: y.academic_year_id, p_days: days, p_credits: credits,
+    });
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus(`Saved for ${y.label}.`); load(); }
+  }
+
+  return (
+    <Section title="Mark appeals">
+      <p style={{ marginTop: 0 }}>
+        Students can appeal a mark that doesn&apos;t match their marked paper. The student&apos;s teacher decides, and the
+        Head of Department gets a copy. Days to appeal are counted from the day the mark appears or last changes.
+        Credits are per school year: only an appeal that is turned down uses one; an upheld or withdrawn appeal gives it back.
+        Changing these doesn&apos;t affect appeals already made.
+      </p>
+      {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
+      <div className="table-scroll">
+        <table>
+          <thead><tr><th>School year</th><th>Days to appeal</th><th>Credits a year</th><th></th></tr></thead>
+          <tbody>
+            {years.map((y) => {
+              const d = drafts[y.academic_year_id] || {};
+              const set = (k) => (e) => setDrafts({ ...drafts, [y.academic_year_id]: { ...d, [k]: e.target.value } });
+              return (
+                <tr key={y.academic_year_id}>
+                  <td>{y.label}{y.status === 'current' ? ' (this year)' : ''}</td>
+                  <td><input type="number" min="1" max="60" value={d.days ?? ''} onChange={set('days')} style={{ width: '5rem' }} /></td>
+                  <td><input type="number" min="0" max="50" value={d.credits ?? ''} onChange={set('credits')} style={{ width: '5rem' }} /></td>
+                  <td><button onClick={() => save(y)}>Save</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Section>
   );
 }
 
@@ -485,12 +553,13 @@ function LookupsInner() {
   return (
     <div>
       <h1>Lookups</h1>
-      <p>Manage the fixed lists used for student core data and behaviour groups, and the admission fees. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
+      <p>Manage the fixed lists used for student core data and behaviour groups, the admission fees and the mark appeal rules. Open a section to see or change it. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
       <LookupList title="Boarding houses" table="boarding_houses" idField="house_id" />
       <LookupList title="Sports houses" table="sports_houses" idField="house_id" />
       <BehaviourCategories />
       <DetentionRules />
       <CertificateLevels />
+      <MarkAppealRules />
       <AcademicYears />
       <AdmissionFees />
     </div>
