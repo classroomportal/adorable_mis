@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 350). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 351). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -475,6 +475,7 @@ Students pre-order within fixed weekly windows, with at most 2 food items per tu
 - **FR-9.11** Open to the tuckshop and tuckshop\_owner roles only; admins and the bursar can't use it. \[DB\]
 - **FR-9.12** Tapping a student marks the order given and charges it; tapping again undoes it and refunds exactly. Staff can record fewer items than ordered when stock ran out, and the student pays only for what they got. \[DB\]
 - **FR-9.13** Save and lock freezes a restaurant's list for the day, recording the numbers, value, who and when. Only tuckshop\_owner can unlock; being admin is not enough. Every save and unlock is kept. \[DB\]
+- **FR-9.15** Not collected marks an order the student never came for: nothing is charged, and it can be undone until the list is saved. It is kept apart from a cancelled order (withdrawn before the day), and the saved totals count it as not given. \[DB\]
 - **FR-9.14** Order sheets print per restaurant for a delivery date, marked PROVISIONAL until the window closes. \[Page\]
 
 ## 13. FR-10 Fees

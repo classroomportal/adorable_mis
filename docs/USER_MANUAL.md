@@ -1314,7 +1314,8 @@ Open to the tuckshop and tuckshop owner roles only; admins and the bursar can't 
 1. Choose the day and the **Restaurant**.
 2. Tap a student when their order has been given: this charges the order to their balance. Tap again to undo; the refund is exact.
 3. If some items ran out, press **Edit** and record only what the student got; they pay just for that.
-4. When a restaurant is finished, press **Save and lock**. The list is frozen with numbers, value, who and when. Only the tuckshop owner can unlock it.
+4. If a student doesn't come for their order, press **Not collected**. Nothing is charged. Tap the grey row to undo it before the list is saved.
+5. When a restaurant is finished, press **Save and lock**. The list is frozen with numbers, value, who and when. Only the tuckshop owner can unlock it.
 
 ![Hand Out Orders for one restaurant](manual-images/90-handout.jpg)
 
