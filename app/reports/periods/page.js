@@ -200,7 +200,7 @@ function ManagePeriodsInner() {
                   <span style={{ color: '#666' }}>— {describeReportPeriod(p, formatUKDate)}</span>
                   {p.is_published && <span style={{ marginLeft: '0.5rem', color: 'green' }}>Published</span>}
                   <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                    Comments due: {p.comments_due_date || '—'} &nbsp;|&nbsp; Checking due: {p.check_due_date || '—'}
+                    Comments due: {formatUKDate(p.comments_due_date) || '—'} &nbsp;|&nbsp; Checking due: {formatUKDate(p.check_due_date) || '—'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>

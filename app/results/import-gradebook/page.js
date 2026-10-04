@@ -6,6 +6,7 @@ import { schoolToday } from '../../../lib/schoolTime';
 import { buildWeekColumns } from '../../../lib/generateTermTestScores';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { formatUKDate } from '../../../lib/formatDate';
 
 // Columns that are NOT subject score columns in the weekly gradebook export.
 const METADATA_COLUMNS = new Set([
@@ -287,7 +288,7 @@ function ImportInner() {
             Week:{' '}
             <select value={weekLabel} onChange={(e) => setWeekLabel(e.target.value)}>
               {weekOptions.map((w) => (
-                <option key={w.label} value={w.label}>{w.label} ({w.date})</option>
+                <option key={w.label} value={w.label}>{w.label} ({formatUKDate(w.date)})</option>
               ))}
             </select>
           </label>

@@ -104,7 +104,7 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
   }
 
   function downloadCsv() {
-    const header = ['Student', ...homework.map((h) => `${h.title} (${h.due_on})`), 'Average %', 'Average grade', 'Marked', 'Not handed in'];
+    const header = ['Student', ...homework.map((h) => `${h.title} (${formatUKDate(h.due_on)})`), 'Average %', 'Average grade', 'Marked', 'Not handed in'];
     const lines = students.map((s) => {
       const sum = summary(s);
       return [

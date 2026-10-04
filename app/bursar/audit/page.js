@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { formatUKDateTime } from '../../../lib/formatDate';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
@@ -99,7 +100,7 @@ function AuditInner() {
             <tbody>
               {batches.map((b) => (
                 <tr key={b.id}>
-                  <td>{new Date(b.created_at).toLocaleString()}</td>
+                  <td>{formatUKDateTime(b.created_at)}</td>
                   <td>{b.creatorLabel}</td>
                   <td>{b.description || b.fee_items?.name}</td>
                   <td>{b.fee_terms?.name}</td>

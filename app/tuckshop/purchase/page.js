@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import TuckshopGroupSale from '../../components/TuckshopGroupSale';
+import { formatUKDate } from '../../../lib/formatDate';
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
@@ -193,7 +194,7 @@ function TuckshopPurchaseInner() {
                   <thead><tr><th>Date</th><th>Amount</th></tr></thead>
                   <tbody>
                     {history.map((h) => (
-                      <tr key={h.id}><td>{h.purchase_date}</td><td>{naira(h.total_amount)}</td></tr>
+                      <tr key={h.id}><td>{formatUKDate(h.purchase_date)}</td><td>{naira(h.total_amount)}</td></tr>
                     ))}
                   </tbody>
                 </table>

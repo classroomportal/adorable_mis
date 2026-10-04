@@ -23,6 +23,7 @@ import {
   placeHomeworkInCells, groupHomeworkByDay, isOutstanding, setHomeworkDone,
   loadMyPrepHomework, groupPrepByDay, setHomeworkPlan,
 } from '../../lib/homework';
+import { formatUKDate } from '../../lib/formatDate';
 
 
 // Which of these events have a picture this viewer may see. Row-level
@@ -520,7 +521,7 @@ function PortalInner() {
                 const existingAppeal = appealFor(b.event_id);
                 return (
                   <tr key={b.event_id}>
-                    <td>{b.event_date}</td>
+                    <td>{formatUKDate(b.event_date)}</td>
                     <td><span className={`badge ${b.type === 'positive' ? 'badge-positive' : 'badge-negative'}`}>{b.type}</span></td>
                     <td>
                       {b.category}

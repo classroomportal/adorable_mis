@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
+import { formatUKDateTime } from '../../../lib/formatDate';
 
 const AUDIENCES = [
   { key: 'parents', label: 'To parents' },
@@ -100,7 +101,7 @@ function ComposeInner() {
         return (
           <div className="card" key={m.id}>
             <p><strong>{m.subject}</strong> — {m.recipient_count} recipient(s), {m.email_sent ? 'emailed + in-app' : 'in-app only'}</p>
-            <p style={{ color: '#666', fontSize: '0.85rem' }}>{new Date(m.sent_at).toLocaleString()} — {m.target_type}{m.target_value ? `: ${m.target_value}` : ''}{m.audience ? ` (${AUDIENCE_LABELS[m.audience] || m.audience})` : ''}</p>
+            <p style={{ color: '#666', fontSize: '0.85rem' }}>{formatUKDateTime(m.sent_at)} — {m.target_type}{m.target_value ? `: ${m.target_value}` : ''}{m.audience ? ` (${AUDIENCE_LABELS[m.audience] || m.audience})` : ''}</p>
             <p>{m.body}</p>
             <button onClick={() => toggleExpand(m.id)}>
               {expanded === m.id ? 'Hide read receipts' : 'Show read receipts'}
@@ -111,7 +112,7 @@ function ComposeInner() {
                 <ul>
                   {receipts.map((r, i) => (
                     <li key={i}>
-                      {r.recipient_name || r.recipient_email || 'Unknown'} — {r.read_at ? `read ${new Date(r.read_at).toLocaleString()}` : 'unread'}
+                      {r.recipient_name || r.recipient_email || 'Unknown'} — {r.read_at ? `read ${formatUKDateTime(r.read_at)}` : 'unread'}
                     </li>
                   ))}
                 </ul>
@@ -135,17 +136,17 @@ function ComposeInner() {
                 const reads = noticeReads[m.id] || [];
                 return (
                   <tr key={m.id}>
-                    <td>{m.subject}<div style={{ color: '#666', fontSize: '0.8rem' }}>{new Date(m.sent_at).toLocaleString()}</div></td>
+                    <td>{m.subject}<div style={{ color: '#666', fontSize: '0.8rem' }}>{formatUKDateTime(m.sent_at)}</div></td>
                     <td>{reads.map((x) => x.recipient_name).filter(Boolean).join(', ') || '—'}</td>
                     <td>
                       {reads.length <= 1
-                        ? (reads[0]?.read_at ? `Read ${new Date(reads[0].read_at).toLocaleString()}` : <strong>Not read yet</strong>)
+                        ? (reads[0]?.read_at ? `Read ${formatUKDateTime(reads[0].read_at)}` : <strong>Not read yet</strong>)
                         : (
                           <>
                             <strong>{reads.filter((x) => x.read_at).length} of {reads.length} read</strong>
                             {reads.filter((x) => x.read_at).map((x) => (
                               <div key={x.recipient_name} style={{ fontSize: '0.8rem' }}>
-                                {x.recipient_name} — {new Date(x.read_at).toLocaleString()}
+                                {x.recipient_name} — {formatUKDateTime(x.read_at)}
                               </div>
                             ))}
                           </>
@@ -182,7 +183,7 @@ function ComposeInner() {
                     <strong>{g.kind}</strong> — {g.rows.length} email{g.rows.length === 1 ? '' : 's'}
                     {g.failed > 0 && <span style={{ color: '#a3232c' }}>, {g.failed} failed</span>}
                     {g.waiting > 0 && <span>, {g.waiting} waiting to send</span>}
-                    <span style={{ color: '#666', fontSize: '0.85rem' }}> · latest {new Date(g.latest).toLocaleString()}</span>
+                    <span style={{ color: '#666', fontSize: '0.85rem' }}> · latest {formatUKDateTime(g.latest)}</span>
                   </summary>
                   <div className="table-scroll"><table>
                     <thead><tr><th>Subject</th><th>To</th><th>Status</th><th>Time</th></tr></thead>
@@ -197,7 +198,7 @@ function ComposeInner() {
                               <div style={{ color: '#a3232c', fontSize: '0.8rem' }}>{e.last_error}</div>
                             )}
                           </td>
-                          <td>{new Date(e.sent_at || e.created_at).toLocaleString()}</td>
+                          <td>{formatUKDateTime(e.sent_at || e.created_at)}</td>
                         </tr>
                       ))}
                     </tbody>

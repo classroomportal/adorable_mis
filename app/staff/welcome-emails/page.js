@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
+import { formatUKDateTime } from '../../../lib/formatDate';
 
 // Supabase Auth rate-limits /recover (it shows up in the auth logs as
 // over_email_send_rate_limit). Sending the whole list in a tight loop trips
@@ -132,7 +133,7 @@ function StaffWelcomeEmailsInner() {
                   </td>
                   <td>{r.staff_name}</td>
                   <td>{r.email}</td>
-                  <td>{r.account_created ? String(r.account_created).slice(0, 10) : ''}</td>
+                  <td>{r.account_created ? formatUKDateTime(r.account_created, { time: false }) : ''}</td>
                 </tr>
               ))}
             </tbody>

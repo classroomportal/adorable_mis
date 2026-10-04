@@ -351,7 +351,7 @@ function RecordPaymentInner() {
                   >
                     <div className="flex justify-between">
                       <span className="font-medium text-neutral-800">{naira(p.amount)}</span>
-                      <span className="text-neutral-500">{p.paid_date}</span>
+                      <span className="text-neutral-500">{formatUKDate(p.paid_date)}</span>
                     </div>
                     <p className="text-neutral-500 text-xs mt-0.5">
                       {p.method}
