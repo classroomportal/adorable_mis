@@ -21,7 +21,9 @@ export function HomeworkChip({ hw, selected, onSelect, prep = false }) {
         aria-expanded={selected}
         title={hw.plan_on ? `${hw.title}: moved here by you` : `${hw.title}: do this in prep`}
       >
-        {status.key === 'done' ? '✓' : hw.plan_on ? '📌' : '📝'} {hw.subject_name}{hw.minutes ? ` · ${hw.minutes} min` : ''}
+        {hw.marked
+          ? `${hw.subject_name} · ${hw.grade || status.label}`
+          : `${status.key === 'done' ? '✓' : hw.plan_on ? '📌' : '📝'} ${hw.subject_name}${hw.minutes ? ` · ${hw.minutes} min` : ''}`}
       </button>
     );
   }
@@ -60,14 +62,17 @@ function PlanPicker({ hw, onPlan }) {
   for (let d = today; d < hw.prep_on; d = addDays(d, 1)) days.push(d);
   const label = (d) => formatUKDate(d, { weekday: true }).replace(/ \d{4}$/, '');
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', margin: '0 0 0.6rem' }}>
-      I&apos;ll do it on
-      <select value={hw.plan_on || hw.prep_on} onChange={(e) => onPlan(hw, e.target.value)} style={{ width: 'auto' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '0.5rem', flexWrap: 'wrap', margin: '0 0 0.6rem', textAlign: 'left' }}>
+      <span>I&apos;ll do it on</span>
+      <select
+        aria-label="I'll do it on" value={hw.plan_on || hw.prep_on}
+        onChange={(e) => onPlan(hw, e.target.value)} style={{ width: 'auto', margin: 0 }}
+      >
         {days.map((d) => <option key={d} value={d}>{label(d)}</option>)}
         <option value={hw.prep_on}>{label(hw.prep_on)} (prep evening)</option>
       </select>
       {hw.minutes ? <span style={{ color: 'var(--ink-soft)', fontSize: '0.85rem' }}>about {hw.minutes} min</span> : null}
-    </label>
+    </div>
   );
 }
 

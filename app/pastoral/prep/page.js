@@ -52,46 +52,53 @@ function PrepRow({ row, privateStudy, onSaved }) {
     else onSaved();
   }
 
+  const field = { display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.85rem', color: 'var(--ink-soft)', flex: '0 0 auto' };
   return (
-    <tr>
-      <td><strong>Year {row.year_group}</strong></td>
-      <td style={{ whiteSpace: 'nowrap' }}>
-        <input type="time" value={v.prep_starts} onChange={(e) => set('prep_starts', e.target.value)} style={{ width: '7rem' }} />
-        {' – '}
-        <input type="time" value={v.prep_ends} onChange={(e) => set('prep_ends', e.target.value)} style={{ width: '7rem' }} />
-      </td>
-      <td style={{ whiteSpace: 'nowrap' }}>
-        {DAY_KEYS.map((d) => (
-          <label key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.15rem', marginRight: '0.35rem', fontSize: '0.85rem' }}>
-            <input
-              type="checkbox" checked={v.prep_days.includes(d)}
-              onChange={(e) => set('prep_days', e.target.checked ? [...v.prep_days, d] : v.prep_days.filter((x) => x !== d))}
-            />
-            {d}
-          </label>
-        ))}
-      </td>
-      <td>
-        <input value={v.fixed_activity} onChange={(e) => set('fixed_activity', e.target.value)} placeholder="None" style={{ minWidth: '10rem' }} />
-      </td>
-      <td>
-        <input type="number" min="0" step="5" value={v.fixed_minutes} onChange={(e) => set('fixed_minutes', e.target.value)} style={{ width: '5rem' }} />
-      </td>
-      <td>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-          <input type="checkbox" checked={v.counts_private_study} onChange={(e) => set('counts_private_study', e.target.checked)} />
-          {privateStudy ? minutesLabel(privateStudy) : 'none on timetable'}
+    <div style={{ borderTop: '1px solid var(--slate-200)', padding: '0.9rem 0' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+        <strong style={{ fontSize: '1.05rem' }}>Year {row.year_group}</strong>
+        <span><strong>{minutesLabel(Math.max(evening, 0))}</strong> of homework a prep evening</span>
+        <span style={{ color: 'var(--ink-soft)', fontSize: '0.85rem' }}>{minutesLabel(Math.max(weekly, 0))} a week</span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem 1.25rem', alignItems: 'flex-end' }}>
+        <label style={field}>
+          Prep
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <input type="time" value={v.prep_starts} onChange={(e) => set('prep_starts', e.target.value)} style={{ width: '8.5rem' }} />
+            to
+            <input type="time" value={v.prep_ends} onChange={(e) => set('prep_ends', e.target.value)} style={{ width: '8.5rem' }} />
+          </span>
         </label>
-      </td>
-      <td style={{ whiteSpace: 'nowrap' }}>
-        <strong>{minutesLabel(Math.max(evening, 0))}</strong> an evening
-        <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{minutesLabel(Math.max(weekly, 0))} a week</div>
-      </td>
-      <td>
-        {changed && <button type="button" onClick={save} disabled={saving} style={{ padding: '0.3rem 0.6rem' }}>{saving ? 'Saving…' : 'Save'}</button>}
-        {error && <div style={{ color: '#a3232c', fontSize: '0.85rem' }}>{error}</div>}
-      </td>
-    </tr>
+        <div style={{ ...field, flex: '0 1 auto', minWidth: 0 }}>
+          Days
+          <span style={{ display: 'flex', flexWrap: 'wrap', gap: '0.1rem 0.5rem', color: 'var(--ink)' }}>
+            {DAY_KEYS.map((d) => (
+              <label key={d} style={{ display: 'inline-flex', flexDirection: 'row', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap', margin: 0, flex: '0 0 auto' }}>
+                <input
+                  type="checkbox" checked={v.prep_days.includes(d)}
+                  onChange={(e) => set('prep_days', e.target.checked ? [...v.prep_days, d] : v.prep_days.filter((x) => x !== d))}
+                />
+                {d}
+              </label>
+            ))}
+          </span>
+        </div>
+        <label style={{ ...field, flex: '1 1 12rem' }}>
+          Fixed activity (not homework time)
+          <input value={v.fixed_activity} onChange={(e) => set('fixed_activity', e.target.value)} placeholder="None" />
+        </label>
+        <label style={field}>
+          Its minutes
+          <input type="number" min="0" step="5" value={v.fixed_minutes} onChange={(e) => set('fixed_minutes', e.target.value)} style={{ width: '6rem' }} />
+        </label>
+        <label style={{ ...field, flex: '1 1 14rem', minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: '0.4rem', color: 'var(--ink)' }}>
+          <input type="checkbox" checked={v.counts_private_study} onChange={(e) => set('counts_private_study', e.target.checked)} />
+          Private study counts ({privateStudy ? `${minutesLabel(privateStudy)} a week on the timetable` : 'none on the timetable'})
+        </label>
+        {changed && <button type="button" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>}
+      </div>
+      {error && <div style={{ color: '#a3232c', fontSize: '0.85rem', marginTop: '0.4rem' }}>{error}</div>}
+    </div>
   );
 }
 
@@ -146,25 +153,11 @@ function PrepInner() {
 
       <div className="card">
         {loading ? <p>Loading…</p> : error ? <p style={{ color: '#a3232c' }}>{error}</p> : (
-          <div className="table-scroll"><table>
-            <thead>
-              <tr>
-                <th>Year</th>
-                <th>Prep</th>
-                <th>Days</th>
-                <th>Fixed activity</th>
-                <th>Minutes</th>
-                <th>Private study counts</th>
-                <th>Homework time</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <PrepRow key={`${r.year_group}-${r.updated_at}`} row={r} privateStudy={privateStudy[r.year_group] || 0} onSaved={() => setSaved((n) => n + 1)} />
-              ))}
-            </tbody>
-          </table></div>
+          <div>
+            {rows.map((r) => (
+              <PrepRow key={`${r.year_group}-${r.updated_at}`} row={r} privateStudy={privateStudy[r.year_group] || 0} onSaved={() => setSaved((n) => n + 1)} />
+            ))}
+          </div>
         )}
       </div>
     </div>

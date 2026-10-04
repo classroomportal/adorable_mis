@@ -446,7 +446,7 @@ function PortalInner() {
               <div className="hw-day-head">{d.weekend ? 'Weekend' : shortDate(d.date)}</div>
               {d.toDo.length > 0 && (
                 <div className="hw-prep">
-                  <div className="hw-prep-head">To do{d.weekend ? '' : ' today'}</div>
+                  <div className="hw-prep-head">To do</div>
                   {d.toDo.map((hw) => (
                     <HomeworkChip key={`prep-${hw.homework_id}`} hw={hw} prep selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} />
                   ))}

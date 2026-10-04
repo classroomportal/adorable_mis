@@ -809,7 +809,7 @@ Students see nothing until you press **Release marks**; **Hide marks again** tak
 
 Students see homework on their timetable (on the lesson it is due in) and on a Homework page laid out by day. Colour shows where each piece stands: red for overdue or not handed in, amber for due today, green for ticked done, purple for graded, blue for due later. A student can tick **Done** as their own note; it is not a hand-in.
 
-Each day on the Homework page also lists **To do today**: the homework on that evening's prep (Saturday and Sunday under Weekend). To plan ahead, a student opens a homework and chooses **I'll do it on…** to move it to an earlier day, from today up to the day before its prep evening, or back again. Only the student sees their plan; it doesn't change the evening teachers see or the prep time check.
+Each day on the Homework page also lists **To do**: the homework on that evening's prep (Saturday and Sunday under Weekend). To plan ahead, a student opens a homework and chooses **I'll do it on…** to move it to an earlier day, from today up to the day before its prep evening, or back again. Once it is graded it goes back to its prep evening and shows the grade. Only the student sees their plan; it doesn't change the evening teachers see or the prep time check.
 
 ![A student's Homework page](manual-images/27-student-homework.jpg)
 
