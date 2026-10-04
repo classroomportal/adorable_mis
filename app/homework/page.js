@@ -25,8 +25,8 @@ import { minutesLabel } from '../../lib/prep';
 // Which classes appear is decided by can_set_homework() in the database: the
 // class teacher, the teacher of any single lesson of the class, the Head of
 // Department and admins, and only for classes homework is switched on for
-// (homework_classes: every Year 10 and 11 group except Mentor and Prep since
-// migration 295). RLS enforces the same rule on every save.
+// (homework_classes: every Year 7-12 teaching group except Mentor, Prep and
+// Personal Study since migration 353). RLS enforces the same rule on every save.
 
 function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
   const [students, setStudents] = useState([]);
@@ -382,7 +382,7 @@ function HomeworkInner() {
       </p>
 
       {classes === null ? <p>Loading…</p> : classes.length === 0 ? (
-        <div className="card"><p>Homework isn&apos;t switched on for any of your classes yet. It is on for Year 10 and 11 teaching groups.</p></div>
+        <div className="card"><p>Homework isn&apos;t switched on for any of your classes yet. It is on for every teaching group in Years 7–12 (not mentor groups, Prep or Personal Study).</p></div>
       ) : (
         <div className="card" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {classes.some((c) => c.mine) && <strong style={{ marginRight: '0.25rem' }}>My classes</strong>}

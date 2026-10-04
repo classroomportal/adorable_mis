@@ -22,7 +22,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [1. Getting started](#1-getting-started) | Signing in, the dashboard, roles, using a phone | Everyone |
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
 | Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, planned absences | Teachers, office, pastoral |
-| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers (Years 10–11), HoDs, SMT |
+| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
 | Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; HR |
@@ -120,7 +120,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 2. Everyone starts as present. Change the code for anyone absent or late, adding minutes late. Press **Save** within the first 15 minutes; after that the lesson appears on Registers Not Done, and at 15-minute checks it becomes a register alert for HR and the office.
 3. If a student who was in an earlier lesson is missing, mark them N (no reason yet). The office gets a pop-up straight away and goes to find them. Don't wait to report it some other way.
 4. To praise or sanction during the lesson, press **Log behaviour for this class** on the register, pick the student(s) and the category, and save. A −5 event needs a written explanation of what happened, naming no other student, and a tick to confirm it really is a single serious incident; read the Stage 5 guidance shown first (chapter 7).
-5. For Year 10 and 11 classes, the **Homework** panel on the register shows what is due. Use **Set homework** there to set the next piece while you're with the class.
+5. For every teaching class, the **Homework** panel on the register shows what is due. Use **Set homework** there to set the next piece while you're with the class.
 
 **Every day**
 
@@ -671,7 +671,7 @@ On the register:
 - **Today so far** shows each student's other marks today as coloured badges (M, L1–L6, OH, EP).
 - **Show last grades** reveals each student's most recent grade in the subject. It is hidden by default so it is not on the class's screen.
 - **Log behaviour for this class** opens behaviour logging with the class already chosen.
-- For Year 10 and 11 classes, the **Homework** panel shows what is due and links to each mark book (chapter 4).
+- For every teaching class, the **Homework** panel shows what is due and links to each mark book (chapter 4).
 
 | Code | Meaning | Counts as |
 | --- | --- | --- |
@@ -751,7 +751,7 @@ Each student's profile shows today, this week and this academic year: sessions, 
 
 ## 4. Homework
 
-Teachers set homework for a class with a deadline and a grading system, and record a grade for each student. Homework is switched on for every Year 10 and 11 teaching class (not mentor groups or Prep). Grades feed the end-of-term written report only, never transcripts, result sets or targets.
+Teachers set homework for a class with a deadline and a grading system, and record a grade for each student. Homework is switched on for every teaching class in Years 7–12 (not mentor groups, Prep or Year 12's Personal Study). Grades feed the end-of-term written report only, never transcripts, result sets or targets.
 
 ### Who can do what
 
@@ -825,6 +825,8 @@ Homework is done in evening prep, so each year's prep time limits how much homew
 4. Change a value and press **Save** on that card.
 
 As set on 4 October 2026: Years 7–9 7.00–9.15 pm less the hour's review (75 minutes), Years 10–12 7.00–9.45 pm (165 minutes), Sunday to Friday. Changes are kept in Change History. They don't move homework already set.
+
+**Days with no homework** (for mock exams, trips and the like) are listed under the year cards. Tick the year groups, choose the first day (and the last, for more than one), say why, and press **Block**. On a blocked day nothing can be due for that year, and its evening has no homework time, so homework goes on the prep evening before; the homework form leaves those days out and says why. **Remove** takes a day off the list. Homework already set isn't moved. Year 12's mocks on Thursday 8 and Friday 9 October 2026 were the first.
 
 ### Homework Monitor (SMT)
 
@@ -1441,7 +1443,7 @@ Students and parents see only their own information: a student their own record,
 | What | Student portal | Parent portal (per child) |
 | --- | --- | --- |
 | Timetable, with the Other Half activity | Yes | Yes |
-| Homework (Years 10–11) | Own classes' homework, files and released grades | No |
+| Homework | Own classes' homework, files and released grades | No |
 | Grades against targets, reports and transcripts | Yes | Yes |
 | Behaviour | Own events; can appeal a negative one | Only events released to parents |
 | Attendance | No | Yes, including today lesson by lesson |
@@ -1632,7 +1634,7 @@ A full database backup runs every night. Admins can also run one before anything
 | Detentions | Single event of −5, or a week (Sat–Fri) totalling −10; Friday in CG4 after lesson 7 |
 | Behaviour alert | −5, or a week at −8: email to cs@, SMT and sro@ |
 | Results | Percentages 0–100; grade from the subject's boundaries for the year; one score per set |
-| Homework | Years 10–11; titles up to 10 characters; marks shown to students only when released |
+| Homework | Years 7–12; titles up to 10 characters; marks shown to students only when released |
 | Other Half | Choose only during Evening Prep (19:00–21:00) while choices are open; one per weekday |
 | Tuckshop | Order in the window; max 2 of any item and 2 food items per day; charged at hand-out |
 | Fees | Prices change only with both the principal's and the college secretary's approval |
