@@ -77,7 +77,7 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 
 ## What is live today
 
-14 of 17 areas are complete for daily use; homework is live for Years 10 and 11 only, and admissions and year setup are part-built. Full detail is in the [functional specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714).
+14 of 18 areas are complete for daily use; homework is live for Years 10 and 11 only, and admissions and year setup are part-built; budgets and requisitions are a working draft only the principal sees. Full detail is in the [functional specification](https://claude.ai/code/artifact/659cca3b-399b-425f-bb5f-8b23577d5714).
 
 | Area | State | What it does | Open issues |
 | --- | --- | --- | --- |
@@ -90,12 +90,13 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | Assessment and results | Live | Own-class entry; grade history log; exam sets back to 2017; assessment managers delete a wrong score from the student's profile; Class Progress is a top-row tile for Heads of Department (their department) and SMT (every class), and teachers see only their own classes in it; it loads quickly because the database picks one grade per student and subject; Heads of Department enter and change scores in their department's subjects; Years 10–11 graded on Cambridge IGCSE's June 2026 thresholds; reading ages recorded with each test's date and tracked against each student's age, by year group and form and over time, with parents seeing their own children's once there are two school or interview readings (literacy target) | 3 |
 | Homework | Years 10–11 | Set from the register or /homework, with files and links; marks converted to grades that follow the student across classes; the term's homework suggests the report's Homework judgement and prints as a grade on the written report; a class mark sheet over any dates; a student view for staff; a Homework Monitor where SMT see a year group's or one student's week as students see it, and how much of each past-due homework is marked; late joiners don't inherit earlier homework; on students' timetables, where students tick it done; every Year 10 and 11 teaching group (not mentor groups or Prep), for their teachers, Heads of Department and SMT | 0 |
 | Reports and transcripts | Live | Draft→checked comments with AI help; KS3 and KS4/5 transcripts | 2 |
-| Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists; the bursar adds paid top-ups from recorded payments; the staff Tuckshop card shows whether ordering is open and when it next opens or closes | 3 |
-| Fees | Live | Invoices, batches, discounts; two-person price approval; locked prices | 2 |
+| Tuckshop | Live | Windowed ordering; 2-food limit; locked hand-out lists; one item sold to a group, ticking off each student before anyone is charged; the bursar adds paid top-ups from recorded payments; the staff Tuckshop card shows whether ordering is open and when it next opens or closes | 3 |
+| Fees | Live | Invoices, batches, discounts; two-person price approval; locked prices, by year group and by term; each fee limited to the terms it is charged in; a new fee added in one numbered form; every fee item paying into a fund, with payments shared between funds; 3rd-child discounts suggested from siblings | 2 |
 | Clinic, pastoral, HR | Live | Nurse-only medical records; HR records; an Unallocated Students list of students missing a boarding house, a room or a lesson their year group has | 0 |
 | Messages and email | Live | One queue; Reply-To per kind; parent pause switch; messages to the students or parents of any group of students, with parents emailed | 0 |
 | Student groups | Live | Groups for activities, prefects and messages, made by SMT, pastoral and the office; lists built from six rules (negative or positive behaviour, below target, below a grade or target in one subject, a term exam average, attendance) with every setting chosen each time; mark sheets for a group, kept outside reporting; a Groups tile on the student and parent portals for groups marked to be shown (no member lists or marks) | 0 |
 | Calendar and administration | Live | SMT calendar, which parents can subscribe to on their phones; editable rules on Lookups; one school-wide order for students' tiles and every row of the staff dashboard, with the student, staff and behaviour-alert numbers on their module cards, and pages with a big tile kept off the cards; a Student Numbers report of boys and girls by year, mentor group, boarding room, restaurant and class; backups | 1 |
+| Budgets and requisitions | Draft, principal only | Funds, term forecast from headcount and approved prices, income by fund, term budgets, contingency releases, approved suppliers, requisitions from raising to payment; practice entries only so far | 0 |
 | Admissions | Part-built | Applicants, tests, interviews, letters, form fee and deposit; Next Year's Numbers from places allowed per year group, boys and girls | 2 + enrolment missing |
 | Next year setup | Part-built | Academic years, mentor structure, next year's Nova-T plan | 2 + most steps missing |
 
@@ -161,6 +162,45 @@ Most staff use Formwork from a phone between lessons, so each task must take a f
 | P2-6 | tuckshop\_owner can do what its pages offer, or the pages are hidden | Page access and data rules agree | Not started |
 | P2-7 | Old applicants' personal data is removed after a retention period; interests reach the OH coordinator | A retention rule is agreed and applied | Not started |
 | P2-8 | Record a Payment, All Students and Add Paid Top-Up are styled like the rest of Formwork (they use styling classes the app never loads) | The three bursar pages look like the other fee pages | Not started |
+
+## Finance: budgets and requisitions (working draft)
+
+The principal asked on 2 Oct 2026 for fee income to be shared out in advance across cost centres, and for staff spending to go through signed and approved requisitions. The full design is in docs/finance-budget-design.md. Phases 1 to 4 were built on 3 Oct 2026 as a working draft (migrations 338–348): only the principal sees it, and everything entered so far is practice, to be cleared in one recorded step before go-live. It is a budget and spending-control system, not accounting software: no general ledger, bank reconciliation or statutory accounts.
+
+- **Budget:** fee income is shared out in advance across cost centres (Staffing, Power, Food, Maintenance and so on). Each cost centre shows allocated, committed, spent and remaining.
+- **Requisitions:** any member of staff raises one; the principal signs it; the college secretary costs and approves it, which commits the money; the goods are received; the bursar pays.
+
+**Decided (the principal, 2 Oct 2026)**
+
+- Tuition goes into a general fund, shared out in advance. Direct charges (swimming, sports, exam entry, ICT, medical) are ring-fenced: what is collected for a purpose is spent on it.
+- A part-payment is shared across the invoice's funds pro rata, in proportion to what each is still owed.
+- Each fund's unspent balance is carried forward to the next year.
+- No refund process. A rare exception goes through as a requisition against that fund.
+- Uniform is out of scope (bought from the tuck shop). Tuck shop money is the students' own and stays outside the budget.
+
+**Where it starts from:** only tuck shop has been invoiced so far; 12 funds exist and every fee item pays into one; no year-group or term prices have been approved yet, and there is no exam-entry fee item yet; no real budget, supplier or requisition has been entered (4 Oct 2026). Budgets and budget changes reuse the two-person approval already used for fee prices (the principal and the college secretary).
+
+| ID | Phase | Done when | Status |
+| --- | --- | --- | --- |
+| F-1 | Cost centres and income | Every fee item points at a cost centre; each payment is split pro rata across its invoice's funds when recorded (existing payments backfilled); a budget page shows charged and collected by fund | Not started |
+| F-2 | Budgets | Allocations per cost centre (optionally by term) and every change to them need the principal and the college secretary; moving money between centres goes the same way; remaining balances show | Not started |
+| F-3 | Requisitions to approval | Staff raise requisitions; the principal signs; the college secretary costs and approves, committing the money, refused if it would overspend; nobody approves their own; each step emails the next person | Not started |
+| F-4 | Supply and payment | Goods received item by item; the bursar pays, never more than the approved total; quotes, invoices and delivery notes attached; payroll and utility bills recorded directly on centres marked for it | Not started |
+| F-5 | Year end and exams | Balances carried forward at the year switch; an exam-entry fee item and a check of charged against entered; reports for the auditors | Not started |
+
+**Still to decide** (the design's proposed answer, which will be built unless the principal says otherwise)
+
+- [ ] Over budget: refused, unless the principal overrides with a written reason, logged and shown on the budget page.
+- [ ] Department budgets (e.g. Science within teaching materials): not at first; cost centres can be split later.
+- [ ] Petty cash for small purchases: none at first; everything goes through the full chain.
+- [ ] Who records payment: the bursar.
+- [ ] Allocations as fixed amounts or percentages of collections: fixed amounts, shown as percentages of expected income.
+- [ ] Ring-fenced spending against charged or collected: charged, so term 1 spending is possible before the term 2 collection, with a warning when commitments exceed collections.
+- [ ] Damages & Surcharge: Maintenance.
+- [ ] Discounts: reduce tuition (the general fund) only.
+- [ ] Sports: one Sports fund for Sports Academy and Taekwondo, Swimming separate.
+- [ ] Who receives goods: the requester, or a receiver the college secretary names.
+- [ ] Where it sits in the roadmap: after the year rollover, or alongside it.
 
 ## Roadmap
 

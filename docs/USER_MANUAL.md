@@ -1320,10 +1320,20 @@ Open to the tuckshop and tuckshop owner roles only; admins and the bursar can't 
 ### Items, sales and balances
 
 - **Items & Prices** (/tuckshop/items): add items, set prices, tick **Food / drink** and **Active**. Only active items can be ordered. The price charged is the price when handed out.
-- **Sell Items** (/tuckshop/purchase): counter sales from a student's balance, with no limits and no window.
+- **Sell Items** (/tuckshop/purchase): counter sales from a student's balance, with no limits and no window. Choose **A group** to sell one item to several students at once (below).
 - **Top Up Balance** (/tuckshop/topup): enter a target balance (default ₦40,000) for one student, a form, a year or everyone; the difference is added to the fee invoice as a Tuck Shop Recharge.
 - **Add Paid Top-Up** (/bursar/tuckshop-top-up, bursar only): after recording a payment, put all or part of it onto the student's balance, so no unpaid bill is created.
 - **Balances** (/tuckshop/balances): every student's balance, with the school total. There is no balance check, so a balance can go negative.
+
+**Selling one item to a group** (a class treat or a trip snack):
+
+1. Open **Sell Items** and choose **A group**.
+2. Choose the item and how many each student gets.
+3. Choose **Form**, **Year group**, **Restaurant** or **Student group**, pick which one, and press **Load group**.
+4. Tick each student who is getting the item; tapping anywhere on the row works. **Find a name** narrows the list, and **Tick all** / **Untick all** help with a whole form.
+5. Press **Charge N ticked students** and check the total before pressing **OK**. Only the ticked students are charged; they then show **Charged** and can't be ticked again.
+
+If a ticked student has left the school, nobody is charged and the page says so.
 
 ![Tuckshop Items](manual-images/92-items.jpg)
 
