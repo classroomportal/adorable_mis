@@ -545,7 +545,7 @@ How it behaves:
 **Special result sets** (358, the principal, 4 Oct 2026; e.g. Year 12 mocks)
 - On the calendar, choosing the **One Year** category (359) and ticking the year groups makes a special result set. One Year events are always result sets, and the database keeps the category and the year groups together.
 - Only students currently in those year groups can be given a mark in it. Enter Results lists only their classes and students, and the database refuses anyone else. A mark can still be corrected after the student moves up a year.
-- Its marks are kept under its name, not in a week: on the Termly Grade Report the set **replaces the week column its date falls in**, headed by its name (e.g. Year 12's "Wk4" becomes "Y12 Mocks"; the principal, 4 Oct 2026), and it doesn't count towards that week's weekly assessments. Students in other year groups see that week as usual. The written report includes it like any other mark in the term.
+- Its marks are kept under its name, not in a week: on the Termly Grade Report the set **replaces the week column its date falls in**, headed by its name (e.g. Year 12 Mock 1, dated Monday 5 October 2026, replaces Year 12's "Wk3"; the principal, 4 Oct 2026). Weeks start on Mondays: a Monday–Thursday date falls in that week's column, a Friday–Sunday date in the next week's, and it doesn't count towards that week's weekly assessments. Students in other year groups see that week as usual. The written report includes it like any other mark in the term.
 - **It never goes on a transcript**: a special set can't also be an end-of-term exam set, and transcripts read only those.
 
 **End-of-term exams** (246, 247, 252)
