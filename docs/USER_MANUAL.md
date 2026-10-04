@@ -858,13 +858,13 @@ Teachers enter percentage scores for their own classes against result sets. Each
 
 A result set is a calendar event with the "result set" box ticked (SMT and admins manage the calendar, chapter 9). Weekly short tests, Teacher Assessment weeks and end-of-term exams are all result sets. End-of-term exams are one set per year group per term ("Y10 Term 1 Exam"); Year 12 has Terms 1 and 2 only, as Term 3 is WAEC. Only the current school year's sets can be picked for entry.
 
-**Special result sets** (the One Year category on the calendar) are for particular year groups only, such as Year 12 mocks. When you choose one on Enter Results, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk4" becomes "Y12 Mocks"). They count on the written report and never appear on a transcript.
+**Special result sets** (the One Year category on the calendar) are for particular year groups only, such as Year 12 mocks. When you choose one on Enter Results, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk3" becomes "Year 12 Mock 1"). They count on the written report and never appear on a transcript.
 
 ### Entering results (/results/enter)
 
 1. Choose your **Class** and the **Result Set**, and check the **Result Type** (Short Test, Teacher Assessment or Exam Grade).
 2. Type a percentage (0–100) for each student. The grade appears as you type, worked out from the boundaries for that subject and year group, and is saved with the score.
-3. Scores save as you go. **Delete** removes a score (see below).
+3. Scores save as you go. Students see a score straight away; parents see it only once it is the number of hours old set on Lookups (0 means at once), so a wrong number can be put right first. Correcting a score doesn't restart the wait. **Delete** removes a score (see below).
 
 ![Entering results for a class](manual-images/30-results-enter.jpg)
 
@@ -1208,7 +1208,7 @@ To add a special result set, such as Year 12 mocks:
 2. Choose the **One Year** category, then tick the year group(s) it is for, e.g. **Y12**. The Result set box is ticked for you.
 3. Click **Add event**. The Result set column shows "Y12 only".
 
-The date decides which week's column the set replaces on the Termly Grade Report, so give it the date of that week's usual assessment (for the Year 12 mocks, Friday 9 October, the date of Week 4 TA). To change an existing event, use **Edit**: choosing One Year shows the year ticks, and choosing another category makes it an ordinary event again.
+The date decides which week's column the set replaces on the Termly Grade Report. The report's weeks start on Mondays: a date from Monday to Thursday falls in that week's column, and a Friday, Saturday or Sunday in the next week's (so Friday 2 October is in the same column as Monday 5 October). Give the set the date of the assessment it takes the place of: dated Monday 5 October, Year 12 Mock 1 replaces the column Week 3 ReLP (Friday 2 October) uses. To change an existing event, use **Edit**: choosing One Year shows the year ticks, and choosing another category makes it an ordinary event again.
 
 ### Sending a message (/comms/compose)
 
@@ -1512,7 +1512,7 @@ Parents sign in with email and password and go straight to **My Children**. With
 
 ![A child's tiles in the parent portal](manual-images/115-parent.jpg)
 
-**Attendance** shows today, this week and this year, and today lesson by lesson. **Fees** shows the term's invoice lines, total, paid and amount due with a PDF download, only once SMT have published the term.
+**Attendance** shows today, this week and this year, and today lesson by lesson. **Fees** shows the term's invoice lines, total, paid and amount due with a PDF download, only once SMT have published the term. Assessment shows each mark once it is the number of hours old set on Lookups (chapter 14), so a mark a child mentions may not be there yet.
 
 ![Attendance in the parent portal](manual-images/119-parent-att.jpg)
 
@@ -1559,7 +1559,7 @@ Add staff (name, code, email: a login is created automatically from the email) a
 
 ### Lookups (/admin/lookups)
 
-The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, admission fee proposals, and the mark appeal rules (days to appeal and credits a year, for each school year). Every section starts folded closed: click its title to open it. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
+The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, admission fee proposals, the mark appeal rules (days to appeal and credits a year, for each school year), and When parents see marks: how many hours (0 to 168) a new mark waits before parents can see it, counted from when it was first entered. 0 means parents see marks as soon as they are entered. Every section starts folded closed: click its title to open it. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
 
 ![Lookups, every section closed except Mark appeals](manual-images/122-lookups.jpg)
 
