@@ -53,6 +53,12 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
   const [newMeasurement, setNewMeasurement] = useState(null);
   const [newVisit, setNewVisit] = useState(null);
   const [newImmunisation, setNewImmunisation] = useState(null);
+  // Safeguarding entries are DSL-only (migration 364); only a DSL is offered the tick.
+  const [isDsl, setIsDsl] = useState(false);
+
+  useEffect(() => {
+    supabase.rpc('has_staff_role', { role_names: ['dsl'] }).then(({ data }) => setIsDsl(data === true));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -188,6 +194,7 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
       parent_notified: newVisit.parent_notified,
       parent_notified_at: newVisit.parent_notified ? new Date().toISOString() : null,
       follow_up_needed: newVisit.follow_up_needed,
+      safeguarding: isDsl && !!newVisit.safeguarding,
       recorded_by: await currentUserId(),
     });
     if (report(result, 'Sick bay visit recorded.')) { setNewVisit(null); load(); }
@@ -548,7 +555,7 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
                             <tr key={v.visit_id}>
                               <td>{formatDateTime(v.visited_at)}</td>
                               <td>{labelFor(VISIT_CATEGORIES, v.category) || '—'}</td>
-                              <td>{v.reason}{v.follow_up_needed && <> <Chip tone="warn">follow-up</Chip></>}</td>
+                              <td>{v.reason}{v.safeguarding && <> <Chip tone="bad">safeguarding · DSL only</Chip></>}{v.follow_up_needed && <> <Chip tone="warn">follow-up</Chip></>}</td>
                               <td>{v.temperature_c ? `${v.temperature_c}°C` : '—'}</td>
                               <td>{[v.treatment, v.medication_given, v.dose_given].filter(Boolean).join(' · ') || '—'}</td>
                               <td>{labelFor(VISIT_OUTCOMES, v.outcome) || '—'}</td>
@@ -568,7 +575,7 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
                         visited_at: localDateTimeValue(),
                         category: 'illness', reason: '', temperature_c: '', observations: '', treatment: '',
                         medication_given: '', dose_given: '', outcome: 'returned_to_class',
-                        parent_notified: false, follow_up_needed: false,
+                        parent_notified: false, follow_up_needed: false, safeguarding: false,
                       })}
                     >
                       Record a sick bay visit
@@ -615,6 +622,12 @@ export default function MedicalRecordCard({ studentId, canEdit = false }) {
                         <input type="checkbox" checked={newVisit.follow_up_needed} onChange={(e) => setNewVisit({ ...newVisit, follow_up_needed: e.target.checked })} />
                         Follow-up needed
                       </label>
+                      {isDsl && (
+                        <label className="checkbox-row">
+                          <input type="checkbox" checked={!!newVisit.safeguarding} onChange={(e) => setNewVisit({ ...newVisit, safeguarding: e.target.checked })} />
+                          Safeguarding: only the DSL can see this entry
+                        </label>
+                      )}
                       <button type="submit">Save visit</button>{' '}
                       <button type="button" onClick={() => setNewVisit(null)}>Cancel</button>
                     </form>
