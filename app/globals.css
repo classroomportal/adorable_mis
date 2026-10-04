@@ -1917,3 +1917,14 @@ nav button.help-button span {
 .lookup-section > summary h2 { margin: 0; }
 .lookup-section[open] > summary { border-bottom: 1px solid var(--slate-200); }
 .lookup-section-body { padding: 1rem 1.1rem 1.1rem; }
+
+/* Mark appeal forms inside a table cell (student portal and /grade-appeals).
+   The site-wide label rule (flex: 1 1 140px) made each label 140px tall
+   when stacked in a column, leaving big gaps; these sit tight instead. */
+.appeal-form { display: flex; flex-direction: column; gap: 0.4rem; min-width: 14rem; }
+.appeal-form label { flex: none; flex-direction: row; align-items: center; gap: 0.5rem; }
+.appeal-form textarea {
+  width: 100%; box-sizing: border-box; font: inherit; font-size: 0.95rem;
+  padding: 0.4rem 0.55rem; border: 1px solid var(--slate-200); border-radius: 8px; resize: vertical;
+}
+.appeal-form-buttons { display: flex; gap: 0.4rem; }

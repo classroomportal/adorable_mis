@@ -125,10 +125,10 @@ export default function GradeAppeals({ studentId }) {
                   {!m.can_appeal ? (
                     <span style={{ fontSize: '0.85rem' }}>{STATUS[m.appeal_status] || 'Appealed'}</span>
                   ) : form === m.result_id ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: '14rem' }}>
+                    <div className="appeal-form">
                       {m.score != null && (
-                        <label style={{ fontSize: '0.85rem' }}>
-                          Mark on my paper (optional){' '}
+                        <label>
+                          Mark on my paper (optional)
                           <input
                             type="number" min="0" max={m.max_score ?? undefined} step="any"
                             value={claimed} onChange={(e) => setClaimed(e.target.value)}
@@ -141,7 +141,7 @@ export default function GradeAppeals({ studentId }) {
                         value={reason} onChange={(e) => setReason(e.target.value)}
                         maxLength={1000} rows={2}
                       />
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <div className="appeal-form-buttons">
                         <button onClick={() => submit(m.result_id)} disabled={submitting}>{submitting ? 'Sending…' : 'Send appeal'}</button>
                         <button className="secondary" onClick={closeForm}>Cancel</button>
                       </div>

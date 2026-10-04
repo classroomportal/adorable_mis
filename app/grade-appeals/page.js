@@ -149,10 +149,10 @@ function GradeAppealsInner() {
                       {!canDecide ? (
                         <span style={soft}>For the student&apos;s teacher to decide.</span>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div className="appeal-form">
                           {a.score_appealed != null ? (
-                            <label style={{ fontSize: '0.85rem' }}>
-                              Correct score{' '}
+                            <label>
+                              Correct score
                               <input
                                 type="number" min="0" max={a.max_score_appealed ?? undefined} step="any"
                                 value={d.score ?? ''} onChange={(e) => setDraft(a.appeal_id, 'score', e.target.value)}
@@ -160,16 +160,17 @@ function GradeAppealsInner() {
                               />
                             </label>
                           ) : (
-                            <label style={{ fontSize: '0.85rem' }}>
-                              Correct grade{' '}
+                            <label>
+                              Correct grade
                               <input value={d.grade ?? ''} onChange={(e) => setDraft(a.appeal_id, 'grade', e.target.value)} style={{ width: '4rem' }} />
                             </label>
                           )}
-                          <input
+                          <textarea
                             placeholder="Note to the student (needed to turn down)"
                             value={d.note ?? ''} onChange={(e) => setDraft(a.appeal_id, 'note', e.target.value)}
+                            rows={2}
                           />
-                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <div className="appeal-form-buttons">
                             <button onClick={() => decide(a, true)} disabled={busy === a.appeal_id}>Uphold</button>
                             <button className="secondary" onClick={() => decide(a, false)} disabled={busy === a.appeal_id}>Turn down</button>
                           </div>
