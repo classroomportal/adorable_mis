@@ -16,7 +16,9 @@ import { canHandOut } from '../../../lib/tuckshopHandout';
 // unlock it (migration 229). The database enforces the lock, not this page.
 // When some items aren't available, Edit gives part of an order and charges
 // only what was handed over (give_tuckshop_order_edited(), migration 233);
-// the order itself keeps what the student asked for.
+// the order itself keeps what the student asked for. "Not collected" marks
+// an order the student never came for (nothing charged) and can be undone
+// until the list is saved (set_tuckshop_orders_not_collected(), migration 351).
 
 function naira(n) {
   return `₦${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
@@ -135,11 +137,13 @@ function HandOutInner() {
     orders.forEach((o) => {
       if (!byStudent.has(o.student_id)) {
         byStudent.set(o.student_id, {
-          studentId: o.student_id, student: o.students, lines: new Map(), pending: 0, given: 0, charged: 0,
+          studentId: o.student_id, student: o.students, lines: new Map(), pending: 0, given: 0, missed: 0, charged: 0,
         });
       }
       const s = byStudent.get(o.student_id);
-      if (o.status === 'fulfilled') s.given += 1; else s.pending += 1;
+      if (o.status === 'fulfilled') s.given += 1;
+      else if (o.status === 'not_collected') s.missed += 1;
+      else s.pending += 1;
       o.items.forEach((it) => {
         const cur = s.lines.get(it.tuckshop_item_id) || {
           itemId: it.tuckshop_item_id,
@@ -160,7 +164,11 @@ function HandOutInner() {
     return [...byStudent.values()]
       .map((s) => {
         const lines = [...s.lines.values()].sort((a, b) => a.name.localeCompare(b.name));
-        const done = s.pending === 0;
+        // Handled: nothing left to hand out. Given unless every order was
+        // not collected.
+        const handled = s.pending === 0;
+        const notCollected = handled && s.given === 0;
+        const done = handled && !notCollected;
         const ordered = lines.reduce((n, l) => n + l.qty * l.price, 0);
         return {
           ...s,
@@ -171,6 +179,8 @@ function HandOutInner() {
           // Given, but not everything the student ordered.
           short: done && lines.some((l) => l.givenQty < l.qty),
           done,
+          handled,
+          notCollected,
           restaurant: s.student?.restaurant || '',
         };
       })
@@ -183,7 +193,7 @@ function HandOutInner() {
     students.forEach((s) => {
       const cur = byRest.get(s.restaurant) || { key: s.restaurant, count: 0, given: 0 };
       cur.count += 1;
-      if (s.done) cur.given += 1;
+      if (s.handled) cur.given += 1;
       byRest.set(s.restaurant, cur);
     });
     return [...byRest.values()].sort((a, b) => {
@@ -204,11 +214,12 @@ function HandOutInner() {
   const inRestaurant = students.filter((s) => s.restaurant === restaurant);
   const q = search.trim().toLowerCase();
   const shown = inRestaurant.filter((s) => {
-    if (hideGiven && s.done) return false;
+    if (hideGiven && s.handled) return false;
     if (!q) return true;
     return `${s.student?.first_name} ${s.student?.last_name} ${s.student?.form_class || ''}`.toLowerCase().includes(q);
   });
-  const outstanding = inRestaurant.filter((s) => !s.done);
+  const outstanding = inRestaurant.filter((s) => !s.handled);
+  const notCollectedCount = inRestaurant.filter((s) => s.notCollected).length;
   const saved = saves.get(restaurant ?? '');
 
   async function setGiven(studentIds, given) {
@@ -223,10 +234,36 @@ function HandOutInner() {
     setBusy((b) => { const n = new Set(b); studentIds.forEach((id) => n.delete(id)); return n; });
   }
 
+  async function setNotCollected(studentIds, notCollected) {
+    if (studentIds.length === 0) return;
+    setError(null);
+    setBusy((b) => new Set([...b, ...studentIds]));
+    const { error: err } = await supabase.rpc('set_tuckshop_orders_not_collected', {
+      p_student_ids: studentIds, p_for_date: forDate, p_not_collected: notCollected,
+    });
+    if (err) setError(err.message);
+    await loadOrders(forDate);
+    setBusy((b) => { const n = new Set(b); studentIds.forEach((id) => n.delete(id)); return n; });
+  }
+
+  function markNotCollected(s) {
+    if (busy.has(s.studentId) || saved) return;
+    const name = `${s.student?.first_name} ${s.student?.last_name}`;
+    if (window.confirm(`${name} didn't collect their order? It is marked not collected and nothing is charged.`)) {
+      setNotCollected([s.studentId], true);
+    }
+  }
+
   function tap(s) {
     if (busy.has(s.studentId) || saved) return;
-    if (!s.done) { setGiven([s.studentId], true); return; }
     const name = `${s.student?.first_name} ${s.student?.last_name}`;
+    if (s.notCollected) {
+      if (window.confirm(`Undo "not collected" for ${name}? The order goes back to not given.`)) {
+        setNotCollected([s.studentId], false);
+      }
+      return;
+    }
+    if (!s.done) { setGiven([s.studentId], true); return; }
     if (window.confirm(`Undo ${name}'s order? It goes back to not given and ${naira(s.total)} is put back on their balance.`)) {
       setGiven([s.studentId], false);
     }
@@ -274,10 +311,11 @@ function HandOutInner() {
   }
 
   async function saveList() {
-    const given = inRestaurant.length - outstanding.length;
+    const given = inRestaurant.filter((s) => s.done).length;
     const value = inRestaurant.filter((s) => s.done).reduce((n, s) => n + s.total, 0);
     const msg = `Save ${restaurantLabel(restaurant)} for ${longDate(forDate)}?\n\n`
-      + `${given} given (${naira(value)}), ${outstanding.length} not given.\n\n`
+      + `${given} given (${naira(value)}), ${notCollectedCount} not collected`
+      + `${outstanding.length > 0 ? `, ${outstanding.length} still not given` : ''}.\n\n`
       + 'Once saved, the list is locked and only the tuckshop owner can unlock it.';
     if (!window.confirm(msg)) return;
     setSaving(true);
@@ -303,7 +341,8 @@ function HandOutInner() {
       <h1>Hand Out Orders</h1>
       <p style={{ color: '#555', marginTop: 0 }}>
         Tap a student when their order has been given. This takes the order&apos;s value from their
-        tuckshop balance. Tap again to undo. If some items weren&apos;t available, press Edit and
+        tuckshop balance. Tap again to undo. If a student doesn&apos;t come for their order, press
+        Not collected: nothing is charged. If some items weren&apos;t available, press Edit and
         give only what the student got: they are charged just for that. When a restaurant is
         finished, press Save: the list is then locked and only the tuckshop owner can unlock it.
       </p>
@@ -321,7 +360,7 @@ function HandOutInner() {
         </label>
         <label style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
           <input type="checkbox" checked={hideGiven} onChange={(e) => setHideGiven(e.target.checked)} />
-          Hide given
+          Hide given and not collected
         </label>
       </div>
 
@@ -346,7 +385,8 @@ function HandOutInner() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', margin: '0.75rem 0' }}>
             <strong>
-              {restaurantLabel(restaurant)}: {inRestaurant.length - outstanding.length} of {inRestaurant.length} given
+              {restaurantLabel(restaurant)}: {inRestaurant.length - outstanding.length - notCollectedCount} of {inRestaurant.length} given
+              {notCollectedCount > 0 && `, ${notCollectedCount} not collected`}
             </strong>
             {!saved && (
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -376,18 +416,18 @@ function HandOutInner() {
           )}
 
           {shown.length === 0 ? (
-            <p>{q ? 'No student matches that search here.' : 'Every order here has been given.'}</p>
+            <p>{q ? 'No student matches that search here.' : 'Every order here has been given or marked not collected.'}</p>
           ) : (
             <ul className="handout-list">
               {shown.map((s) => (
                 <li key={s.studentId} className="handout-item">
                   <div className="handout-line">
                     <button
-                      className={`handout-row${s.done ? ' given' : ''}${saved ? ' locked' : ''}`}
+                      className={`handout-row${s.done ? ' given' : ''}${s.notCollected ? ' not-collected' : ''}${saved ? ' locked' : ''}`}
                       onClick={() => tap(s)}
                       disabled={busy.has(s.studentId) || !!saved || editing?.studentId === s.studentId}
                     >
-                      <span className="handout-tick" aria-hidden="true">{s.done ? '✓' : ''}</span>
+                      <span className="handout-tick" aria-hidden="true">{s.done ? '✓' : s.notCollected ? '✕' : ''}</span>
                       <span className="handout-main">
                         <span className="handout-name">
                           {s.student?.last_name}, {s.student?.first_name}
@@ -411,12 +451,23 @@ function HandOutInner() {
                         {s.short && <s className="handout-was">{naira(s.ordered)}</s>}
                         <span className="handout-status">
                           {busy.has(s.studentId) ? 'Saving…'
+                            : s.notCollected ? 'Not collected'
                             : s.done ? (s.short ? (s.total === 0 ? 'None available' : 'Part given') : 'Given')
                               : s.given > 0 ? 'Part given' : ''}
                         </span>
                       </span>
                     </button>
-                    {!saved && editing?.studentId !== s.studentId && (
+                    {!saved && editing?.studentId !== s.studentId && !s.handled && (
+                      <button
+                        className="secondary handout-edit"
+                        onClick={() => markNotCollected(s)}
+                        disabled={busy.has(s.studentId)}
+                        aria-label={`${s.student?.first_name} ${s.student?.last_name} did not collect their order`}
+                      >
+                        Not collected
+                      </button>
+                    )}
+                    {!saved && editing?.studentId !== s.studentId && !s.notCollected && (
                       <button
                         className="secondary handout-edit"
                         onClick={() => startEdit(s)}

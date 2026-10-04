@@ -1211,6 +1211,12 @@ tbody.collapsed-on-screen { display: none; }
   color: white;
 }
 .handout-row.given .handout-tick { background: #1a7a3d; border-color: #1a7a3d; }
+.handout-row.not-collected,
+.handout-row.not-collected:hover,
+.handout-row.not-collected:disabled { background: #f3f4f6; border-color: var(--slate-200); }
+.handout-row.not-collected .handout-tick { background: #6b7280; border-color: #6b7280; }
+.handout-row.not-collected .handout-items { text-decoration: line-through; color: #777; }
+.handout-row.not-collected .handout-status { color: #6b7280; }
 .handout-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
 .handout-name { font-weight: 600; }
 .handout-form { font-weight: 400; color: #666; font-size: 0.85rem; }

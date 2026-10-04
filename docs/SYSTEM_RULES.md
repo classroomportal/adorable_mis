@@ -421,10 +421,11 @@ How it behaves:
 - Counter sales (`/tuckshop/purchase`) have no limits and no window.
 - Sell Items can also sell one item to a group (migration 350): load a form, year group, restaurant or student group, tick the students getting it, and only the ticked students are charged, at the item's current price, one purchase each. A leaver among the ticked students stops the whole sale, so nobody is half-charged.
 
-**Hand-out** (`/tuckshop/hand-out`, 228–233)
+**Hand-out** (`/tuckshop/hand-out`, 228–233, 351)
 - Open to the **tuckshop and tuckshop_owner roles only**. Admins and the bursar are shut out.
 - Tapping a student marks the order given and charges it. Tapping again (after a confirmation) undoes it and refunds the charge exactly.
 - If some items weren't available, staff enter what was actually given, from 0 up to what was ordered. The student is charged only for that, and the original order is kept for comparison.
+- **Not collected** (migration 351) marks an order the student never came for. Nothing is charged, and it can be undone until the list is saved. It is kept apart from a cancelled order (withdrawn before the day), so the record shows orders that were made but not picked up.
 - **Save and lock** freezes a restaurant's list for the day. It records the numbers given and not given, the value, who saved it and when. While locked, nothing on that list can be marked, undone or edited.
 - **Only `tuckshop_owner` can unlock** (cs@, Uju MBA). Being an admin is not enough. Every save and unlock is kept on record.
 
