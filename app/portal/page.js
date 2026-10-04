@@ -328,7 +328,6 @@ function PortalInner() {
   const thisWeekEnd = addDays(weekStartOf(today), 6);
   const dueThisWeek = recentHomework.filter((h) => isOutstanding(h) && h.due_on >= today && h.due_on <= thisWeekEnd).length;
   const overdueEarlier = recentHomework.filter((h) => isOutstanding(h) && h.due_on < today && h.due_on < weekStart);
-  const recentlyGraded = recentHomework.filter((h) => h.marked).sort((a, b) => b.due_on.localeCompare(a.due_on));
   const homeworkByDay = groupHomeworkByDay(weekHomework, weekStart);
   const prepByDay = groupPrepByDay(prepHomework, weekStart);
   const weekendHomework = [...homeworkByDay[addDays(weekStart, 5)], ...homeworkByDay[addDays(weekStart, 6)]];
@@ -471,16 +470,6 @@ function PortalInner() {
               ))}
             </div>
           </>
-        )}
-        <h3>Recently graded</h3>
-        {recentlyGraded.length === 0 ? (
-          <p style={{ color: 'var(--ink-soft)' }}>No grades from the last four weeks yet.</p>
-        ) : (
-          <div className="hw-list">
-            {recentlyGraded.map((hw) => (
-              <HomeworkCard key={hw.homework_id} hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} showDate onToggleDone={toggleDone} />
-            ))}
-          </div>
         )}
       </div>
       )}
