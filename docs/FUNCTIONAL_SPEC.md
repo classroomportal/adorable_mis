@@ -564,6 +564,7 @@ Medical records are visible only to the nurse and the Designated Safeguarding Le
 - **FR-11.9** Who sees medical records is padlocked at /admin/permissions for all seven medical tables: it can't be ticked or unticked there, by admins either, and changes only by a migration the principal agrees. \[DB\]
 - **FR-11.10** A DSL can mark a sick-bay log entry as safeguarding, when recording it or later on any entry, a nurse's included (migration 364). The presenting complaint and observations then move to a table only the DSL can read, and the entry shows "Safeguarding: details held by the DSL" to everyone else, the nurses included. Medication, dose, treatment, temperature, visit type, outcome, parent told and follow-up stay visible to the nurses. \[DB\]
 - **FR-11.11** Only a DSL can set or remove the safeguarding mark; a nurse who tries is refused. Removing it puts the complaint and observations back on the entry. Who marked it and when are stamped by the database. The page offers the tick box and the Mark as safeguarding button to DSL holders only. \[DB rule; Page display\]
+- **FR-11.12** Admins still see the Clinic tile (the principal's choice, 4 Oct 2026), but any Clinic page opened by someone without the nurse or dsl role shows "Access not allowed: clinic and medical records are for the nurse and the Designated Safeguarding Lead only" instead of empty lists. A student's profile shows the Medical tab, and its edit buttons, only to the nurse and the DSL. \[Page; the data is already refused by FR-11.6\]
 
 **Staff HR**
 
