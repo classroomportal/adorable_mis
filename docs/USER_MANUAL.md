@@ -239,7 +239,7 @@ The office keeps student and parent records right and is first to hear about mis
 *When a family's details change*
 
 - Open the student (Students → search) and **Edit** Core Data: address, house, room, restaurant, form. Every change is logged.
-- Add or change parents from the student's **Parents / Guardians** tile, choosing the relationship (Mother, Father, Other) for that child. Create a parent's login there if they have none.
+- Add or change parents from the student's **Parents / Guardians** tile, choosing the relationship (Mother, Father, Other) for that child. Create a parent's login there if they have none. If a new parent's email is already on record, Formwork shows who has it and offers **Link this parent instead**: use it, so their existing login sees this child too.
 - When a student leaves, set their status to left with a leaving date. They are taken out of classes, their login is locked and their parents stop seeing them.
 
 *When a new student joins*
@@ -539,7 +539,7 @@ Everyone signs in at misform.work. Staff and students use their school Google ac
 
 **If sign-in is refused.** Google only links to a login Formwork already made. If you see "not set up in Formwork yet", ask the school office or an administrator; nobody can create their own account. A student who leaves is signed out at once and cannot sign in again unless they return.
 
-**Passwords.** Use **Change Password** at the top right at any time. A new password must be at least 8 characters. Forgotten passwords can be reset from the sign-in page.
+**Passwords.** Use **Change Password** at the top right at any time. A new password must be at least 8 characters. Staff and students who sign in with their school account have no Formwork password to forget. A parent who forgets theirs presses **Forgot your password?** on the sign-in page, enters the email the school holds and follows the link emailed to them; it can take a few minutes and may land in spam or junk. If nothing arrives within 15 minutes, the school office can resend their welcome letter.
 
 ### The staff dashboard
 
@@ -639,6 +639,7 @@ Holding admin is not enough to add a student; the school\_office role is needed.
 ### Parents and leavers
 
 - The school office manages parent records at /parents and links them to students from the student's Parents tile. Each link records the relationship (Mother, Father, Other).
+- When you add a new parent, the email is checked as you type. If a parent already has it, you see their name, phone and children, with **Link this parent instead**. Adding a second parent with the same email needs the **Add as a separate parent anyway** tick, for the rare case of two people sharing an email. A duplicate leaves the existing login without the new child, so the parent signs in to an empty portal.
 - Parents only see children who are still active. A leaver's records drop out of the parent portal automatically, though the link is kept.
 - Admins, SMT and the office can use **View as Parent** (/parents/view-as) to see exactly what a parent sees.
 
