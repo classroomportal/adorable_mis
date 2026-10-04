@@ -910,7 +910,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 24. Known issues and open decisions
 
-36 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; fix of them (6, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
+36 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; six of them (6, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
