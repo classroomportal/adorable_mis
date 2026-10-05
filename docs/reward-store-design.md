@@ -1,8 +1,9 @@
 # Reward Store: design
 
-Status, 5 October 2026: **design only, nothing built.** The questions under
-"To decide" need the principal's answers before migration work starts; each has
-a recommended answer so building can begin as soon as they are agreed.
+Status, 5 October 2026: **stage 1 built** (migration 370): the store, the
+ledger, the portal tile, the staff request page `/rewards` with its day list,
+and `/rewards/items`. The principal agreed every recommendation under "To
+decide" the same day. Stages 2 and 3 are not built.
 
 What was asked for (the principal, 5 Oct 2026): "a reward store where students
 can use the merit points to purchase things. The merit total for our records
@@ -135,9 +136,9 @@ a stationery item, extra screen time in boarding.
 `behaviour_events`, `behaviour_totals()`, certificates, the written report,
 Behaviour Totals, detentions and alerts. None of them read the store.
 
-## To decide (the principal)
+## Decided (the principal, 5 Oct 2026: every recommendation agreed)
 
-| # | Question | Recommended |
+| # | Question | Decided |
 | --- | --- | --- |
 | 1 | Do **negative points** reduce points to spend? | **No.** Spending is for merits earned; negatives are already handled by detentions and alerts, and one Stage 5 wiping out a term's savings would discourage good behaviour. (Option: allow it as a setting.) |
 | 2 | Which merits can be spent: everything since 21 Sept, or only from the store's opening day? Do unspent points **reset** each academic year? | **Everything since 21 Sept** (students already earned them), and **reset each September**, so the store follows the school year. |

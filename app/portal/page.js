@@ -26,6 +26,7 @@ import {
 import { formatUKDate } from '../../lib/formatDate';
 import LessonFeedbackForm from '../components/LessonFeedbackForm';
 import { loadFeedbackLessons, feedbackKey } from '../../lib/lessonFeedback';
+import RewardStore, { useRewardPoints } from '../components/RewardStore';
 
 
 // Which of these events have a picture this viewer may see. Row-level
@@ -90,6 +91,8 @@ function PortalInner() {
     setFeedbackLessons(lessons);
   }
   const tileOrder = useTileOrder('student');
+  // Reward Store (migration 370): merit points to spend, shown on its tile.
+  const [rewardPoints, reloadRewardPoints] = useRewardPoints(studentId);
   // Groups shown to students (migration 300); the tile appears only if there are any.
   const [groups, setGroups] = useState([]);
   const [hwError, setHwError] = useState(null);
@@ -353,7 +356,7 @@ function PortalInner() {
   const firstName = studentName.split(' ')[0];
 
   // Sections that open on this page; the other tiles link to their own pages.
-  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour', 'groups'];
+  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour', 'rewards', 'groups'];
 
   // Homework tile badge and lists.
   const today = schoolToday();
@@ -421,6 +424,12 @@ function PortalInner() {
               <DashboardTile
                 key="behaviour" label="Behaviour" icon="📋" onClick={() => openView('behaviour')}
                 sub={behaviour.length === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative`}
+              />
+            ) },
+            { key: 'rewards', el: (
+              <DashboardTile
+                key="rewards" label="Reward Store" icon="🎁" onClick={() => openView('rewards')}
+                sub={rewardPoints ? `${rewardPoints.balance} point${rewardPoints.balance === 1 ? '' : 's'} to spend` : 'Spend your merits'}
               />
             ) },
             { key: 'tuckshop', el: (
@@ -552,6 +561,13 @@ function PortalInner() {
         </p>
         {/* Mark appeals (migration 354): students only, never parents. */}
         <GradeAppeals studentId={studentId} />
+      </div>
+      )}
+
+      {activeView === 'rewards' && (
+      <div className="card">
+        <h2>Reward Store</h2>
+        <RewardStore studentId={studentId} points={rewardPoints} onPointsChange={reloadRewardPoints} />
       </div>
       )}
 

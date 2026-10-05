@@ -6,11 +6,13 @@ import { schoolToday } from '../../lib/schoolTime';
 import { addDays, weekStartOf, loadMyHomework, isOutstanding } from '../../lib/homework';
 import { useTileOrder, sortTiles } from '../../lib/tileOrder';
 import { loadPortalGroups } from '../../lib/studentGroups';
+import { useRewardPoints } from './RewardStore';
 
 // A student's home page: the same big tiles as their portal, in the
 // school-wide order set at /admin/tile-order (migration 280). Homework only
-// appears once one of their classes has it switched on (migration 278), and
-// Groups once they are in a group shown to students (migration 300).
+// appears once one of their classes has it switched on (migration 278),
+// Groups once they are in a group shown to students (migration 300). The
+// Reward Store (migration 370) shows their points to spend.
 export default function StudentHome() {
   const { profile } = useAuth();
   const studentId = profile?.student_id;
@@ -18,6 +20,8 @@ export default function StudentHome() {
   const [homeworkOn, setHomeworkOn] = useState(false);
   const [dueThisWeek, setDueThisWeek] = useState(null);
   const [groups, setGroups] = useState([]);
+  // Reward Store (migration 370).
+  const [rewardPoints] = useRewardPoints(studentId);
 
   useEffect(() => { loadPortalGroups(studentId).then(setGroups); }, [studentId]);
 
@@ -46,6 +50,10 @@ export default function StudentHome() {
     { key: 'assessment', href: '/portal#assessment', label: 'Assessment', icon: '⭐', accent: 'school', sub: 'Your grades and targets' },
     { key: 'behaviour', href: '/portal#behaviour', label: 'Behaviour', icon: '📋', accent: 'students', sub: 'Your behaviour record' },
     { key: 'tuckshop', href: '/portal/tuckshop', label: 'Tuckshop', icon: '🛒', accent: 'family', sub: 'Balance and orders' },
+    {
+      key: 'rewards', href: '/portal#rewards', label: 'Reward Store', icon: '🎁', accent: 'school',
+      sub: rewardPoints ? `${rewardPoints.balance} point${rewardPoints.balance === 1 ? '' : 's'} to spend` : 'Spend your merits',
+    },
     { key: 'messages', href: '/inbox', label: 'Messages', icon: '📬', accent: 'family', sub: 'Your inbox' },
     groups.length > 0 && {
       key: 'groups', href: '/portal#groups', label: 'Groups', icon: '👥', accent: 'students',
