@@ -13,14 +13,21 @@ import { formatUKDate } from '../../lib/formatDate';
 
 const note = { margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--ink-soft, #5b6472)' };
 
+// Points to spend, and whether the store is open: the tile is hidden while
+// it is closed (reward_settings.store_open, ticked on /rewards/items).
 export function useRewardPoints(studentId) {
   const [points, setPoints] = useState(null);
+  const [open, setOpen] = useState(false);
   async function reload() {
-    const { data } = await supabase.rpc('reward_points');
+    const [{ data }, { data: settings }] = await Promise.all([
+      supabase.rpc('reward_points'),
+      supabase.from('reward_settings').select('store_open').maybeSingle(),
+    ]);
     setPoints((data || [])[0] || null);
+    setOpen(!!settings?.store_open);
   }
   useEffect(() => { if (studentId) reload(); }, [studentId]);
-  return [points, reload];
+  return [points, reload, open];
 }
 
 export default function RewardStore({ studentId, points, onPointsChange }) {

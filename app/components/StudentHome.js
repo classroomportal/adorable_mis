@@ -21,7 +21,7 @@ export default function StudentHome() {
   const [dueThisWeek, setDueThisWeek] = useState(null);
   const [groups, setGroups] = useState([]);
   // Reward Store (migration 370).
-  const [rewardPoints] = useRewardPoints(studentId);
+  const [rewardPoints, , rewardsOpen] = useRewardPoints(studentId);
 
   useEffect(() => { loadPortalGroups(studentId).then(setGroups); }, [studentId]);
 
@@ -50,7 +50,7 @@ export default function StudentHome() {
     { key: 'assessment', href: '/portal#assessment', label: 'Assessment', icon: '⭐', accent: 'school', sub: 'Your grades and targets' },
     { key: 'behaviour', href: '/portal#behaviour', label: 'Behaviour', icon: '📋', accent: 'students', sub: 'Your behaviour record' },
     { key: 'tuckshop', href: '/portal/tuckshop', label: 'Tuckshop', icon: '🛒', accent: 'family', sub: 'Balance and orders' },
-    {
+    rewardsOpen && {
       key: 'rewards', href: '/portal#rewards', label: 'Reward Store', icon: '🎁', accent: 'school',
       sub: rewardPoints ? `${rewardPoints.balance} point${rewardPoints.balance === 1 ? '' : 's'} to spend` : 'Spend your merits',
     },

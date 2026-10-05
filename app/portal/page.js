@@ -92,7 +92,7 @@ function PortalInner() {
   }
   const tileOrder = useTileOrder('student');
   // Reward Store (migration 370): merit points to spend, shown on its tile.
-  const [rewardPoints, reloadRewardPoints] = useRewardPoints(studentId);
+  const [rewardPoints, reloadRewardPoints, rewardsOpen] = useRewardPoints(studentId);
   // Groups shown to students (migration 300); the tile appears only if there are any.
   const [groups, setGroups] = useState([]);
   const [hwError, setHwError] = useState(null);
@@ -426,7 +426,7 @@ function PortalInner() {
                 sub={behaviour.length === 0 ? 'No events logged' : `${positiveCount} positive, ${negativeCount} negative`}
               />
             ) },
-            { key: 'rewards', el: (
+            rewardsOpen && { key: 'rewards', el: (
               <DashboardTile
                 key="rewards" label="Reward Store" icon="🎁" onClick={() => openView('rewards')}
                 sub={rewardPoints ? `${rewardPoints.balance} point${rewardPoints.balance === 1 ? '' : 's'} to spend` : 'Spend your merits'}
