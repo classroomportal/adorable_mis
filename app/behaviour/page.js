@@ -561,7 +561,7 @@ function BehaviourPageInner() {
         </div>
 
         {chosenCategory?.description && (
-          <div className="bl-hint" style={{ marginTop: '-0.3rem' }}>{chosenCategory.description}</div>
+          <div className="bl-category-note"><strong>About {chosenCategory.name}</strong>{chosenCategory.description}</div>
         )}
 
         {isSerious && (
