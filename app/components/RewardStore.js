@@ -87,7 +87,7 @@ export default function RewardStore({ studentId, points, onPointsChange }) {
       setBusy(false);
     }
     if (error) { setStatus(error.message); return; }
-    setStatus(`Done: ${what}. A member of staff will approve it, and you'll get a message in your inbox.`);
+    setStatus(`Done: ${what}. A member of staff will accept it, and you'll get a message in your inbox.`);
     setBuying(null);
     await Promise.all([load(), onPointsChange?.()]);
   }
@@ -111,7 +111,7 @@ export default function RewardStore({ studentId, points, onPointsChange }) {
         </div>
         <p style={note}>
           Your merit total this year is {points?.merit_total ?? 0}, and spending doesn't change it:
-          certificates and reports still count every merit. Points come back if a request is declined or cancelled.
+          certificates and reports still count every merit. Points come back if an order is declined or cancelled.
         </p>
       </div>
 
