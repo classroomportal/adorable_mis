@@ -244,9 +244,10 @@ function StudentDetail() {
       // Events withdrawn on appeal (voided_at, migration 196) stay in the log,
       // crossed out with the appeal's resolution notes (any staff can read a
       // decided appeal, migration 223).
+      // Or cancelled at Behaviour Review (migration 377), with who and why.
       // Who logged it: behaviour_events links to staff twice (staff_id and
       // protocol_reviewed_by), so the embed names its foreign key.
-      .select('*, behaviour_appeals(resolution_notes, reviewed_at), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
+      .select('*, behaviour_appeals(resolution_notes, reviewed_at), behaviour_event_cancellations(note, canceller:staff!behaviour_event_cancellations_cancelled_by_fkey(first_name, last_name)), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .eq('student_id', id)
       .order('event_date', { ascending: false });
     setBehaviour(be || []);
@@ -722,6 +723,7 @@ function StudentDetail() {
     const ap = Array.isArray(e.behaviour_appeals) ? e.behaviour_appeals[0] : e.behaviour_appeals;
     return ap?.resolution_notes || '';
   };
+  const cancellation = (e) => (e.behaviour_event_cancellations || [])[0] || null;
   const loggedBy = (e) => (e.staff ? `${e.staff.first_name} ${e.staff.last_name}` : '—');
   const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
   const positiveCount = behaviour.filter((b) => b.type === 'positive' && !b.voided_at).length;
@@ -1242,9 +1244,19 @@ function StudentDetail() {
                     <td style={{ minWidth: '16rem' }}>
                       {b.description && <div><s>{b.description}</s></div>}
                       <div style={{ fontSize: '0.85em', marginTop: '0.2rem' }}>
-                        <strong>Withdrawn on appeal</strong>
-                        {b.voided_at ? ` (${formatUKDate(b.voided_at.slice(0, 10))})` : ''}
-                        {appealNotes(b) ? `: ${appealNotes(b)}` : ''}
+                        {cancellation(b) ? (
+                          <>
+                            <strong>Cancelled</strong>
+                            {cancellation(b).canceller ? ` by ${cancellation(b).canceller.first_name} ${cancellation(b).canceller.last_name}` : ''}
+                            {b.voided_at ? ` (${formatUKDate(b.voided_at.slice(0, 10))})` : ''}: {cancellation(b).note}
+                          </>
+                        ) : (
+                          <>
+                            <strong>Withdrawn on appeal</strong>
+                            {b.voided_at ? ` (${formatUKDate(b.voided_at.slice(0, 10))})` : ''}
+                            {appealNotes(b) ? `: ${appealNotes(b)}` : ''}
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
