@@ -279,6 +279,7 @@ const TABS = [
       { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
       { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
       { href: '/homework', label: 'Homework', desc: "Set homework for a class and record grades." },
+      { href: '/lesson-feedback', label: 'Lesson Feedback', desc: "What students say about lessons: a summary for each class, no names." },
       // Shares the /results grant rather than having a resource of its own.
       { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
       { href: '/results/subject-overview', label: 'Review Results', desc: "A student's exam results in each subject against the cohort average." },

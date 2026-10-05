@@ -24,6 +24,8 @@ import {
   loadMyPrepHomework, groupPrepByDay, setHomeworkPlan,
 } from '../../lib/homework';
 import { formatUKDate } from '../../lib/formatDate';
+import LessonFeedbackForm from '../components/LessonFeedbackForm';
+import { loadFeedbackLessons, feedbackKey } from '../../lib/lessonFeedback';
 
 
 // Which of these events have a picture this viewer may see. Row-level
@@ -78,6 +80,15 @@ function PortalInner() {
   // page under the evening it is done (the evening before its deadline).
   const [prepHomework, setPrepHomework] = useState([]);
   const [selectedHw, setSelectedHw] = useState(null);
+
+  // Lesson feedback (migration 365): today's and yesterday's lessons that have
+  // ended, which the student can tap on the timetable to give feedback on.
+  const [feedbackLessons, setFeedbackLessons] = useState([]);
+  const [feedbackLesson, setFeedbackLesson] = useState(null);
+  async function loadFeedback() {
+    const { lessons } = await loadFeedbackLessons();
+    setFeedbackLessons(lessons);
+  }
   const tileOrder = useTileOrder('student');
   // Groups shown to students (migration 300); the tile appears only if there are any.
   const [groups, setGroups] = useState([]);
@@ -198,6 +209,8 @@ function PortalInner() {
 
   useEffect(() => { loadPortalGroups(studentId).then(setGroups); }, [studentId]);
 
+  useEffect(() => { if (studentId) loadFeedback(); }, [studentId]);
+
   useEffect(() => {
     if (!homeworkOn) return;
     loadMyHomework(weekStart, addDays(weekStart, 6)).then(({ homework }) => setWeekHomework(homework));
@@ -272,6 +285,9 @@ function PortalInner() {
   const unplacedHomework = homeworkOn ? placeHomeworkInCells(cellMap, weekHomework, periods) : {};
   const selectedHomework = [...prepHomework, ...weekHomework, ...recentHomework].find((h) => h.homework_id === selectedHw) || null;
 
+  const feedbackByKey = new Map(feedbackLessons.map((l) => [feedbackKey(l.lesson_date, l.period_number, l.class_id), l]));
+  const feedbackToGive = feedbackLessons.filter((l) => !l.given);
+
   function renderTimetableGrid({ forPrint = false } = {}) {
     const withHomework = homeworkOn && !forPrint;
     return (
@@ -290,8 +306,9 @@ function PortalInner() {
         {periods.map((p) => (
           <Fragment key={p.period_number}>
             <div className="tt-cell tt-period-label">{p.period_name}</div>
-            {DAYS.map((d) => {
+            {DAYS.map((d, di) => {
               const entries = cellMap[`${d}-${p.period_number}`];
+              const cellDate = addDays(weekStart, di);
               return (
                 <div key={`${d}-${p.period_number}`} className={`tt-cell ${entries ? 'tt-filled' : ''}`}>
                   {entries
@@ -300,6 +317,19 @@ function PortalInner() {
                           {e.subject}<br />
                           <span style={{ opacity: 0.6 }}>{e.room}{e.teacher ? ` · ${e.teacher}` : ''}</span><br />
                           <span style={{ opacity: 0.6, fontSize: '0.85em' }}>{e.time}</span>
+                          {!forPrint && e.classId && (() => {
+                            const fl = feedbackByKey.get(feedbackKey(cellDate, p.period_number, e.classId));
+                            if (!fl) return null;
+                            return fl.given
+                              ? <div className="lf-given">✓ Feedback given</div>
+                              : (
+                                <div>
+                                  <button type="button" className="lf-open-btn" onClick={() => { setSelectedHw(null); setFeedbackLesson(fl); }}>
+                                    Give feedback
+                                  </button>
+                                </div>
+                              );
+                          })()}
                           {withHomework && (e.homework || []).map((hw) => (
                             <div key={hw.homework_id} style={{ marginTop: '0.25rem' }}>
                               <HomeworkChip hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} />
@@ -426,11 +456,33 @@ function PortalInner() {
           <p>No timetable found yet.</p>
         ) : (
           <>
+            {feedbackToGive.length > 0 && (
+              <div className="lf-todo no-print">
+                <strong>Lesson feedback:</strong> tap a lesson you&apos;ve had today or yesterday to say how it went.
+                <div className="lf-todo-list">
+                  {feedbackToGive.map((l) => (
+                    <button
+                      key={feedbackKey(l.lesson_date, l.period_number, l.class_id)}
+                      type="button"
+                      className="secondary"
+                      onClick={() => { setSelectedHw(null); setFeedbackLesson(l); }}
+                    >
+                      {l.subject_name} · {l.lesson_date === today ? 'today' : 'yesterday'}, lesson {l.period_number}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {homeworkOn && <WeekPicker weekStart={weekStart} onChange={(w) => { setWeekStart(w); setSelectedHw(null); }} />}
             <div className="table-scroll">
               {renderTimetableGrid()}
             </div>
             {homeworkOn && <HomeworkDetail hw={selectedHomework} onClose={() => setSelectedHw(null)} onToggleDone={toggleDone} />}
+            <LessonFeedbackForm
+              lesson={feedbackLesson}
+              onClose={() => setFeedbackLesson(null)}
+              onSaved={() => { setFeedbackLesson(null); loadFeedback(); }}
+            />
           </>
         )}
       </div>
