@@ -587,11 +587,116 @@ function ParentMarkDelay() {
   );
 }
 
+// Lesson feedback questions (migration 365): the yes/no questions students
+// answer about a lesson. good_answer says which answer is the good one, or
+// null for a question that is neither. A question that has been answered
+// can't be reworded (the database refuses it): retire it and add a new one.
+const GOOD_OPTIONS = [
+  { value: 'true', label: 'Yes is good' },
+  { value: 'false', label: 'No is good' },
+  { value: '', label: 'Neither' },
+];
+
+function LessonFeedbackQuestions() {
+  const [items, setItems] = useState([]);
+  const [drafts, setDrafts] = useState({});
+  const [adding, setAdding] = useState({ question: '', good: 'true' });
+  const [status, setStatus] = useState(null);
+
+  async function load() {
+    const { data, error } = await supabase.from('lesson_feedback_questions').select('*').order('position').order('question_id');
+    if (error) setStatus(`Error: ${error.message}`);
+    setItems(data || []);
+    const d = {};
+    (data || []).forEach((q) => { d[q.question_id] = { question: q.question, good: q.good_answer == null ? '' : String(q.good_answer), position: q.position }; });
+    setDrafts(d);
+  }
+  useEffect(() => { load(); }, []);
+
+  const toBool = (v) => (v === '' ? null : v === 'true');
+
+  async function save(q) {
+    const d = drafts[q.question_id];
+    const question = d.question.trim();
+    if (!question) { setStatus('Error: a question can\'t be empty.'); return; }
+    const { error } = await supabase.from('lesson_feedback_questions')
+      .update({ question, good_answer: toBool(d.good), position: parseInt(d.position, 10) || 0 })
+      .eq('question_id', q.question_id);
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus('Saved.'); load(); }
+  }
+
+  async function setActive(q, active) {
+    const { error } = await supabase.from('lesson_feedback_questions').update({ active }).eq('question_id', q.question_id);
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus(active ? 'Question brought back.' : 'Question retired. Its past answers are kept.'); load(); }
+  }
+
+  async function add() {
+    const question = adding.question.trim();
+    if (!question) return;
+    const position = Math.max(0, ...items.map((q) => q.position || 0)) + 1;
+    const { error } = await supabase.from('lesson_feedback_questions').insert({ question, good_answer: toBool(adding.good), position });
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus('Question added.'); setAdding({ question: '', good: 'true' }); load(); }
+  }
+
+  return (
+    <Section title="Lesson feedback questions">
+      <p style={{ marginTop: 0 }}>
+        The Yes / No questions students answer about a lesson, after green, amber or red for how well they understood it.
+        &ldquo;Good answer&rdquo; decides how the staff summary colours each question. Once students have answered a question
+        its wording can&apos;t change, because that would change what the old answers mean: retire it and add a new one.
+        Retired questions keep their past answers.
+      </p>
+      {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
+      <div className="table-scroll">
+        <table>
+          <thead><tr><th>Order</th><th>Question</th><th>Good answer</th><th></th></tr></thead>
+          <tbody>
+            {items.map((q) => {
+              const d = drafts[q.question_id] || {};
+              const set = (k) => (e) => setDrafts({ ...drafts, [q.question_id]: { ...d, [k]: e.target.value } });
+              return (
+                <tr key={q.question_id} style={q.active ? undefined : { opacity: 0.55 }}>
+                  <td><input type="number" value={d.position ?? ''} onChange={set('position')} style={{ width: '4rem' }} /></td>
+                  <td><input type="text" maxLength={120} value={d.question ?? ''} onChange={set('question')} style={{ width: '100%', minWidth: '16rem' }} />{!q.active && <div style={{ fontSize: '0.8em' }}>Retired</div>}</td>
+                  <td>
+                    <select value={d.good ?? ''} onChange={set('good')}>
+                      {GOOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button onClick={() => save(q)}>Save</button>{' '}
+                    {q.active
+                      ? <button className="secondary" onClick={() => setActive(q, false)}>Retire</button>
+                      : <button className="secondary" onClick={() => setActive(q, true)}>Bring back</button>}
+                  </td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td></td>
+              <td><input type="text" maxLength={120} placeholder="New question" value={adding.question} onChange={(e) => setAdding({ ...adding, question: e.target.value })} style={{ width: '100%', minWidth: '16rem' }} /></td>
+              <td>
+                <select value={adding.good} onChange={(e) => setAdding({ ...adding, good: e.target.value })}>
+                  {GOOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </td>
+              <td><button onClick={add} disabled={!adding.question.trim()}>Add</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </Section>
+  );
+}
+
 function LookupsInner() {
   return (
     <div>
       <h1>Lookups</h1>
-      <p>Manage the fixed lists used for student core data and behaviour groups, the admission fees, the mark appeal rules and when parents see marks. Open a section to see or change it. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
+      <p>Manage the fixed lists used for student core data and behaviour groups, the admission fees, the mark appeal rules, when parents see marks and the lesson feedback questions. Open a section to see or change it. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
       <LookupList title="Boarding houses" table="boarding_houses" idField="house_id" />
       <LookupList title="Sports houses" table="sports_houses" idField="house_id" />
       <BehaviourCategories />
@@ -599,6 +704,7 @@ function LookupsInner() {
       <CertificateLevels />
       <MarkAppealRules />
       <ParentMarkDelay />
+      <LessonFeedbackQuestions />
       <AcademicYears />
       <AdmissionFees />
     </div>

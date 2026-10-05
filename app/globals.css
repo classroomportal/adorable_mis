@@ -1928,3 +1928,52 @@ nav button.help-button span {
   padding: 0.4rem 0.55rem; border: 1px solid var(--slate-200); border-radius: 8px; resize: vertical;
 }
 .appeal-form-buttons { display: flex; gap: 0.4rem; }
+
+/* Lesson feedback (migration 365) */
+.lf-todo {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: var(--brand-050);
+  font-size: 0.9rem;
+}
+.lf-todo-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+.lf-open-btn { margin-top: 0.3rem; padding: 0.15rem 0.5rem; font-size: 0.78rem; }
+.lf-given { margin-top: 0.3rem; font-size: 0.78rem; color: #1f7a3a; font-weight: 600; }
+.lf-question { font-weight: 600; margin: 0.6rem 0 0.4rem; }
+.lf-rag { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+@media (max-width: 560px) { .lf-rag { grid-template-columns: 1fr; } }
+.lf-rag-btn {
+  display: flex; flex-direction: column; gap: 0.2rem; text-align: left;
+  border: 2px solid transparent; border-radius: 10px; padding: 0.55rem 0.7rem;
+  color: #1a1a1a; font-size: 0.82rem; line-height: 1.3;
+}
+.lf-rag-btn strong { font-size: 0.95rem; }
+.lf-rag-btn.lf-green { background: #d8f0de; }
+.lf-rag-btn.lf-amber { background: #fdebc8; }
+.lf-rag-btn.lf-red { background: #f8d4d2; }
+.lf-rag-btn:hover { filter: brightness(0.96); }
+.lf-rag-btn.lf-chosen { border-color: #1a1a1a; box-shadow: 0 0 0 2px rgba(0,0,0,0.12); }
+.lf-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;
+  padding: 0.35rem 0; border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.lf-row .lf-question { margin: 0; font-weight: 500; }
+.lf-yesno { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.lf-yesno button { min-width: 3.4rem; }
+
+/* Staff summary */
+.lf-bar { display: flex; height: 0.9rem; border-radius: 4px; overflow: hidden; min-width: 8rem; background: #eee; }
+.lf-bar span { display: block; height: 100%; }
+.lf-bar .g { background: #2e9d4f; }
+.lf-bar .a { background: #e9a23b; }
+.lf-bar .r { background: #d0453f; }
+.lf-pct-good { color: #1f7a3a; font-weight: 600; }
+.lf-pct-bad { color: #b0302a; font-weight: 600; }
+.lf-pct-mid { color: #8a5a00; font-weight: 600; }
+.lf-chip { display: inline-block; padding: 0.05rem 0.45rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.lf-chip.lf-green { background: #d8f0de; color: #1f5f31; }
+.lf-chip.lf-amber { background: #fdebc8; color: #7a4d00; }
+.lf-chip.lf-red { background: #f8d4d2; color: #8a1f1a; }
+.lf-key { columns: 2 22rem; font-size: 0.85rem; margin: 0 0 0.75rem; padding-left: 1.6rem; }
+.lf-key li { break-inside: avoid; margin-bottom: 0.15rem; }

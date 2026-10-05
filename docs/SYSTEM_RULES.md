@@ -621,6 +621,14 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - All staff can read reading ages, as they can NGRT. **Parents** see their own children's (still at the school) on the parent portal's Reading Age tile: each reading's date, test, reading age, age on the day and gap, with the chart (324, the principal's decision). **The tile appears only once a child has two readings from the school's tests or the admissions interview** (old NGRT sittings don't count towards the two, but are shown once it appears); before that parents see nothing (325, 326). **Students** see none.
 - Every school test added, changed or removed is logged in Change History under "Reading ages", with who did it.
 
+**Lesson feedback** (365, 5 Oct 2026; `/lesson-feedback`)
+- **Students** give feedback on a lesson from their timetable: a "Give feedback" button on the lesson, and a list of open lessons above the timetable. They choose **green** (understood it and could do the work alone), **amber** (understood some of it) or **red** (didn't understand, need help), then answer Yes or No to each question. Every question must be answered. There is no comment box.
+- **When:** from the end of the lesson until the end of the next day, once per lesson, and it can't be changed once sent. Only teaching lessons (not Mentor, Prep, Personal Study or the Other Half), in term and not on a holiday, in a class the student had joined. A student marked absent for that lesson can't give feedback; if the register hasn't been taken yet, they can.
+- **The questions** are listed at Lookups ("Lesson feedback questions"): ten to start (started on time, knew what to learn, pace about right, too easy, too hard, bored, could explain the main idea, got help when needed, classroom calm, book marked). Each says whether Yes or No is the good answer, or neither. Questions can be added, reordered or retired; once students have answered one, its wording can't change (retire it and add a new one instead). Retired questions keep their answers.
+- **Teachers never see names.** On Lesson Feedback (Students card: teachers, Heads of Department and SMT) they see a summary for each class they taught, for the dates they choose: how many responded, the green/amber/red split and the share answering Yes to each question. Heads of Department see their department's classes the same way. **A class's figures are shown only once it has at least 3 responses in those dates**, so one student's answers can't be picked out.
+- **SMT** see the summary for every class and also the **named responses**, by default only students who were red, so someone can follow them up. Admins without the SMT role don't see names.
+- **Parents** see nothing. No emails or inbox messages are sent.
+
 **Certificates:** these are behaviour-points certificates. See the gap in [§14](#14-known-gaps-and-inconsistencies-found-while-writing-this).
 
 ---
