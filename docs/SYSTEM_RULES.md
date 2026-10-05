@@ -482,6 +482,8 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - Any member of staff can log an event. Students and parents can't.
 - **Points always come from the category**, and every event must have one. Staff can't type points.
 - Only admins set the categories and their points (`/admin/lookups`).
+- **An event keeps the points it was logged with** (migration 378, the principal, 5 Oct 2026). Changing a category's points at Lookups applies to new events, and to events moved into that category, never to events already logged, even when their comment is edited. A returned Stage 5 that the teacher keeps as Stage 5 gets back the points it had when it was returned.
+- **Categories are retired, not removed** (378). A retired category isn't offered when logging or changing an event's category, but events already logged keep it, can still be edited, and can still be filtered by it; it can be brought back. A category that any event has used can't be removed, renamed or moved to the other type: retire it and add a new one. Only a category no event has used can be removed.
 - Negative categories range from −1 (e.g. late to lesson) to −5 (e.g. bullying, academic dishonesty, Stage 5). Positive categories range from +1 to +5.
 - **"Logged by" is always the signed-in person**, so nobody can log an event under a colleague's name (138).
 - The event's class is worked out from the class the teacher shares with the student (145). Parents see the subject, not the teacher.
@@ -500,9 +502,9 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 **Editing and deleting** (207, 208, 211)
 - The teacher who logged an event can edit it, and so can pastoral, houseparent, head of boarding, SMT, school office and admin.
 - Only the comment and the category can change, and the category must stay the same kind (negative stays negative).
-- Detentions are recalculated after an edit.
+- Detentions are recalculated after an edit that changes the points (a change of category).
 - Events withdrawn on appeal can't be edited.
-- Only SMT can delete an event, a merit included (migration 319, the principal, 2 Oct 2026). Holding the smt role is what counts; an admin login alone is not enough. Staff can't withdraw an event or move it to another student any other way; withdrawing is done only by an upheld appeal.
+- Only SMT can delete an event, a merit included (migration 319, the principal, 2 Oct 2026). Holding the smt role is what counts; an admin login alone is not enough. Staff can't withdraw an event or move it to another student any other way; withdrawing is done only by an upheld appeal or a reviewer cancelling it at Behaviour Review (377).
 - Changes and deletions are logged in Change History.
 
 **What parents see**

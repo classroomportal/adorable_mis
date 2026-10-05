@@ -34,7 +34,7 @@ function BehaviourLogInner() {
   useEffect(() => {
     supabase.from('students').select('student_id, first_name, last_name, boarding_house').eq('status', 'active').order('last_name')
       .then(({ data }) => setStudents(data || []));
-    supabase.from('behaviour_categories').select('name, type').order('name')
+    supabase.from('behaviour_categories').select('name, type, retired').order('name')
       .then(({ data }) => setCategories(data || []));
     supabase.rpc('my_house_access').then(({ data }) => setHouse(data?.house && data?.exclusive ? data.house : null));
   }, []);
@@ -109,7 +109,7 @@ function BehaviourLogInner() {
             Category
             <select value={filters.category} onChange={set('category')}>
               <option value="">All</option>
-              {categoryOptions.map((c) => <option key={`${c.type}-${c.name}`} value={c.name}>{c.name}</option>)}
+              {categoryOptions.map((c) => <option key={`${c.type}-${c.name}`} value={c.name}>{c.name}{c.retired ? ' (retired)' : ''}</option>)}
             </select>
           </label>
           <label>

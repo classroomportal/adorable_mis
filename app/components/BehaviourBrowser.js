@@ -65,7 +65,7 @@ export default function BehaviourBrowser() {
   const [notice, setNotice] = useState(null); // shown above the list (a cancelled row may leave it)
 
   useEffect(() => {
-    supabase.from('behaviour_categories').select('name, type, default_points, description').order('name')
+    supabase.from('behaviour_categories').select('name, type, default_points, description, retired').order('name')
       .then(({ data }) => setCategories(data || []));
   }, []);
 
@@ -192,7 +192,7 @@ export default function BehaviourBrowser() {
   }
 
   function renderEditor(ev) {
-    const options = categories.filter((c) => c.type === ev.type && c.name !== ev.category);
+    const options = categories.filter((c) => c.type === ev.type && c.name !== ev.category && !c.retired);
     const chosen = options.find((c) => c.name === editing.category);
     const becomingSerious = chosen && ev.type === 'negative' && chosen.default_points <= seriousPoints && ev.points > seriousPoints;
     return (
@@ -269,7 +269,7 @@ export default function BehaviourBrowser() {
           <select value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="">All</option>
             {categoryOptions.map((c) => (
-              <option key={`${c.type}-${c.name}`} value={c.name}>{c.name} ({signed(c.default_points)})</option>
+              <option key={`${c.type}-${c.name}`} value={c.name}>{c.name} ({signed(c.default_points)}){c.retired ? ' (retired)' : ''}</option>
             ))}
           </select>
         </label>

@@ -88,18 +88,27 @@ function BehaviourCategories() {
     else { setStatus(null); load(); }
   }
 
+  // A category already used by events can't be renamed or removed
+  // (migration 378): retire it instead, so its events keep working.
   async function rename(category_id, name) {
-    if (!name.trim()) return;
+    if (!name.trim()) return false;
     const { error } = await supabase.from('behaviour_categories').update({ name: name.trim() }).eq('category_id', category_id);
+    if (error) { setStatus(`Error: ${error.message}`); return false; }
+    setStatus(null); load();
+    return true;
+  }
+
+  async function remove(category_id) {
+    if (!window.confirm('Remove this category? This only works for a category no event has used; otherwise retire it.')) return;
+    const { error } = await supabase.from('behaviour_categories').delete().eq('category_id', category_id);
     if (error) setStatus(`Error: ${error.message}`);
     else { setStatus(null); load(); }
   }
 
-  async function remove(category_id) {
-    if (!window.confirm('Remove this category? Past behaviour events keep whatever category text they already have.')) return;
-    const { error } = await supabase.from('behaviour_categories').delete().eq('category_id', category_id);
+  async function setRetired(category_id, retired) {
+    const { error } = await supabase.from('behaviour_categories').update({ retired }).eq('category_id', category_id);
     if (error) setStatus(`Error: ${error.message}`);
-    else load();
+    else { setStatus(null); load(); }
   }
 
   async function add() {
@@ -117,8 +126,15 @@ function BehaviourCategories() {
     const [points, setPoints] = useState(c.default_points ?? '');
     const [description, setDescription] = useState(c.description ?? '');
     return (
-      <tr>
-        <td><input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name !== c.name && rename(c.category_id, name)} /></td>
+      <tr style={c.retired ? { color: 'var(--ink-soft)' } : undefined}>
+        <td>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => name !== c.name && rename(c.category_id, name).then((ok) => { if (!ok) setName(c.name); })}
+          />
+          {c.retired && <span style={{ fontSize: '0.8rem' }}>Retired: not offered for new events</span>}
+        </td>
         <td style={{ width: '7rem' }}>
           <input type="number" value={points} onChange={(e) => setPoints(e.target.value)} onBlur={() => Number(points || 0) !== (c.default_points ?? 0) && updatePoints(c.category_id, points)} />
         </td>
@@ -132,7 +148,14 @@ function BehaviourCategories() {
             style={{ width: '100%', minWidth: '14rem', font: 'inherit' }}
           />
         </td>
-        <td><button className="secondary" onClick={() => remove(c.category_id)} style={{ fontSize: '0.8rem' }}>Remove</button></td>
+        <td>
+          <span style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+            <button className="secondary" onClick={() => setRetired(c.category_id, !c.retired)} style={{ fontSize: '0.8rem' }}>
+              {c.retired ? 'Bring back' : 'Retire'}
+            </button>
+            <button className="secondary" onClick={() => remove(c.category_id)} style={{ fontSize: '0.8rem' }}>Remove</button>
+          </span>
+        </td>
       </tr>
     );
   }
@@ -143,8 +166,12 @@ function BehaviourCategories() {
   return (
     <Section title="Behaviour categories">
       <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
-        Default points pre-fill the points field on the Behaviour Events page when a category is picked — staff can still override the number per event.
-        The description is shown to staff when they pick the category, to help them choose the right one.
+        An event takes its category&apos;s points when it is logged, or when it is moved to another category. Changing a
+        category&apos;s points applies to new events only: events already logged keep their points, even when their comment
+        is edited. The description is shown to staff when they pick the category, to help them choose the right one.
+        To stop using a category, <strong>Retire</strong> it: it is no longer offered for new events or category changes, but
+        events already logged keep it and can still be edited. A category no event has used can be removed; one that has
+        been used can&apos;t be removed or renamed, so retire it and add a new one.
       </p>
       {status && <p style={{ color: 'red' }}>{status}</p>}
 

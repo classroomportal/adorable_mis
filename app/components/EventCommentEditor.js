@@ -24,7 +24,7 @@ function loadCategories() {
   if (!categoriesPromise) {
     categoriesPromise = supabase
       .from('behaviour_categories')
-      .select('name, type, default_points, description')
+      .select('name, type, default_points, description, retired')
       .order('name')
       .then(({ data }) => data || []);
   }
@@ -61,9 +61,13 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
   }, [editing]);
 
   const { serious_event_points: seriousPoints, serious_event_guidance: seriousGuidance } = useBehaviourRules();
-  const options = categories.filter((c) => c.type === event.type);
+  // A retired category (migration 378) is offered only as the event's own.
+  const options = categories.filter((c) => c.type === event.type && (!c.retired || c.name === event.category));
   const chosen = options.find((c) => c.name === category);
-  const points = chosen ? chosen.default_points : event.points;
+  // Keeping the category keeps the event's points (migration 378); a
+  // returned Stage 5 (0 points until changed) gets its points back.
+  const returned = !!(event.returned_at || event.return_note);
+  const points = chosen && (chosen.name !== event.category || returned) ? chosen.default_points : event.points;
   const serious = event.type === 'negative' && points <= seriousPoints;
   // Moving an event up to Stage 5 asks the same as logging one (migration 335).
   const becomingSerious = serious && !(event.type === 'negative' && event.points <= seriousPoints);
@@ -104,12 +108,12 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
               onChange={(e) => { setCategory(e.target.value); setSeriousConfirmed(false); }}
               style={{ width: 'auto', minWidth: '12rem', flex: '1 1 12rem' }}
             >
-              {options.length === 0 && <option value={category}>{category}</option>}
+              {!options.some((c) => c.name === category) && <option value={category}>{category}</option>}
               {options.map((c) => (
                 <option key={c.name} value={c.name}>{c.name} ({c.default_points > 0 ? '+' : ''}{c.default_points})</option>
               ))}
             </select>
-            {chosen && chosen.default_points !== event.points && event.type === 'negative' && (
+            {chosen && chosen.name !== event.category && chosen.default_points !== event.points && event.type === 'negative' && (
               <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>
                 {event.points} → {chosen.default_points} pts; detentions will be updated to match.
               </span>
