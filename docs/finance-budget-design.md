@@ -2,8 +2,9 @@
 
 Status, 3 October 2026: **phase 1 built** (migration 338, `/finance/budget`):
 cost centres, each fee item's fund, the pro-rata payment split (backfilled for
-every existing payment) and fee income by fund. **Only the principal can see
-it while it is being built.** The term forecast (the amount available for a term from student
+every existing payment) and fee income by fund. **Only the principal and the college
+secretary can see it while it is being built** (the college secretary since
+migration 369). The term forecast (the amount available for a term from student
 numbers, migration 339) is built; the rest of phase 2 (allocations) and
 phases 3 to 5 are not. All the principal's
 decisions are under "Decided" and "Agreed".
@@ -47,6 +48,7 @@ not keep a general ledger, reconcile the bank or produce statutory accounts.
 | Starting point (3 Oct) | **The school starts using the budget in Term 2** (January Term 2027, 10 Jan – 28 Mar). "Fees collected would go into our budget fund that would allow cs and myself to plan term 2 expenditure." So budgets are **per term**: the Term 2 budget is the Term 2 fees (tuck shop and anything earlier left out), and each term's unspent money carries forward to the next term. |
 | Plan against (3 Oct) | **Invoiced, spend to cash.** Allocations are planned against what has been charged for the term, so the whole term can be planned on day one. Spending is approved only up to the money actually collected, and the page shows how much of each allocation is backed by cash so far. |
 | College secretary (3 Oct) | **Not yet.** The principal alone sees the budget until go-live. |
+| College secretary (5 Oct) | **Now sees it** ("Cs needs to see it", migration 369): the Budget tile and all eight pages. The bursar and SMT still don't. |
 | Term forecast (3 Oct) | **"The fees items need to complete the amount available for the term using the numbers in each year."** Built in migration 339: per term, each fee item × students paying in each year group × approved price, totalled by fund, starting from the live headcount and editable per term by the principal or the college secretary. Term 2 and Term 3 budgets are chosen from the term picker on the Budget page. |
 | Fees by year (3 Oct) | **Fees are termly. The grid assumes every year group pays the same, but several fees (exam entry, for example) will need different prices for different years.** Migration 340 locks new items in a term-fee category (now including exam entry) so they can have approved year-group prices; the forecast shows each year's price where they differ. |
 | Budget tile (3 Oct) | **"The budget process needs a big tile and not the top button. Different parts need to be in the big tile. Call the big tile Budget."** Migration 341: a Budget module tile with Term forecast, Fee income by fund, and Funds & cost centres; later parts (allocations, requisitions, suppliers) are added to it. |

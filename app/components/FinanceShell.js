@@ -93,7 +93,7 @@ function ShellInner({ step, title, intro, children, noTerm }) {
           {practice
             ? 'Practice entries never count in real totals. You can do every step yourself to show the process; they are cleared before go-live.'
             : 'Real entries: every rule applies (two approvals, who may do each step, cash collected).'}
-          {' '}Only you can see the Budget while it is being built.
+          {' '}Only you and the college secretary can see the Budget while it is being built.
         </span>
       </div>
       {intro && <p style={{ color: '#666', fontSize: '0.9rem' }}>{intro}</p>}
