@@ -417,12 +417,13 @@ const TABS = [
   },
   // Budget (migrations 338–339): a big tile, not a top-row button (the
   // principal, 3 Oct 2026), with each part of the budget as a link. The
-  // principal only while it is being built, checked on the principal role
-  // itself as can_view_budget() does, so being admin is not enough.
+  // principal and the college secretary only while it is being built
+  // (migration 369), checked on those roles themselves as can_view_budget()
+  // does, so being admin is not enough.
   {
     key: 'budget', label: 'Budget', icon: '💰', accent: 'family',
     description: 'Plan each term’s spending from the fees it brings in.',
-    items: ({ hasAccess, staffRoles }) => ((staffRoles || []).includes('principal') ? [
+    items: ({ hasAccess, staffRoles }) => ((staffRoles || []).some((r) => r === 'principal' || r === 'college_secretary') ? [
       // Numbered in the order the process runs (the principal, 3 Oct 2026).
       { href: '/finance/funds', label: '1 Funds', desc: 'The cost centres, and which fund each fee pays into.' },
       { href: '/finance/term-fees', label: '2 Fees', desc: 'The termly price of each fee for each year group, approved by you and the college secretary.' },

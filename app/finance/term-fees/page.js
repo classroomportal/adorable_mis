@@ -100,7 +100,7 @@ function TermFeesInner() {
       <h1>2. Fees</h1>
       <p style={{ color: '#666', margin: '0 0 0.5rem' }}>Fees by year and term</p>
       <p style={{ fontSize: '0.85rem', background: '#fff1cc', padding: '0.4rem 0.6rem', borderRadius: 4 }}>
-        Only you can see the Budget while it is being built.
+        Only you and the college secretary can see the Budget while it is being built.
       </p>
       <p style={{ color: '#666', fontSize: '0.9rem' }}>
         The termly price of each fee for each year group. A term only needs its own list where it differs (for example

@@ -20,7 +20,7 @@ import BudgetTermForecast from './BudgetTermForecast';
 // secretary add cost centres and choose each fee item's fund. Allocations,
 // requisitions and spending come in later phases.
 //
-// While it is being built only the principal sees it (can_view_budget()).
+// While it is being built only the principal and the college secretary see it (can_view_budget(), migration 369).
 
 const KIND_LABEL = {
   general_pool: 'General fund',
@@ -137,7 +137,7 @@ function BudgetInner({ view }) {
       <p style={{ margin: 0 }}><a href="/">← Dashboard</a></p>
       <h1>{TITLES[view]}</h1>
       <p style={{ fontSize: '0.85rem', background: '#fff1cc', padding: '0.4rem 0.6rem', borderRadius: 4 }}>
-        Only you can see the Budget while it is being built.
+        Only you and the college secretary can see the Budget while it is being built.
       </p>
       {msg && <p style={{ color: msg.error ? '#a3232c' : '#1a7a3d' }}>{msg.text}</p>}
 

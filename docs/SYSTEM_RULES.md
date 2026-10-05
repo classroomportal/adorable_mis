@@ -741,7 +741,7 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - **Suppliers:** requisitions can only use approved suppliers, approved by the principal and the college secretary together; changing a supplier's bank details sends it back for approval.
 - **Nothing in the budget is deleted:** budgets, requisitions and releases are cancelled, suppliers archived, always with who did it and when.
 - **Practice entries:** while the budget is being shown, entries can be marked practice. They never count in real totals, the principal can do every step to demonstrate, and they are cleared in one recorded step before go-live.
-- While it is being built, only the principal can see the Budget page or its figures (being admin is not enough). Allocations, requisitions and spending come in later phases (design in `docs/finance-budget-design.md`).
+- While it is being built, only the principal and the college secretary can see the Budget tile, its pages or its figures (being admin is not enough; the college secretary since 5 Oct 2026). The bursar and SMT don't see it yet. Allocations, requisitions and spending come in later phases (design in `docs/finance-budget-design.md`).
 
 ---
 
