@@ -337,6 +337,7 @@ The same kind of full-screen flashing pop-up, for a teacher whose own lesson tod
 **Bell times** (`/admin/bell-times`, admin only)
 - Each weekday has its own sessions and times. With no row for a session, it doesn't run that day.
 - Saving a bell time moves every lesson in that period to the new time.
+- **One day on another day's times** (373, 5 Oct 2026): at Bell Times a date can be booked to run on another weekday's times (for example a Monday on Friday's shorter times). Every period that runs on both days takes the other day's times for that date and every class's lessons move with them; periods on only one of the days are left alone. Booking today applies at once; otherwise it applies that morning, and the usual times come back at 04:45 the next morning (a time changed by hand that day is left as it is). One booking per date, weekdays only. Cancelling puts the times back at once if it is in effect. Bookings are never deleted. Only those who can edit bell times (admins) can book or cancel.
 - A session can't be removed from a day while lessons are timetabled in it.
 - Bell times also decide which days and times OH runs, and when students can choose OH (Evening Prep).
 
