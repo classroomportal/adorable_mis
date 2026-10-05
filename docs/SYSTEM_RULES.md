@@ -313,6 +313,16 @@ How it behaves:
 - It checks every minute, flashes the browser tab's title, and beeps when a new alert arrives (once someone has clicked on the page; browsers block sound before that).
 - Being admin does not give the pop-up; only a role with the grant does. The checks happen in the database.
 
+**Register-not-taken pop-up on teachers' screens** (migration 367)
+
+The same kind of full-screen flashing pop-up, for a teacher whose own lesson today started **at least 10 minutes ago** and has no register yet (five minutes before it reaches Registers Not Done).
+- Their lessons are the ones they teach (a lesson's own teacher first) and Other Half activities they are staff on. Same rules as Registers Not Done, except that a day with a holiday on the calendar gives no pop-ups. Planned-absence marks don't count as the register being taken.
+- It shows the class, room, period and how long ago it started, with a **Take register now** button that opens that register.
+- Earlier lessons today stay on it until their register is taken. Saving the register clears it by itself; there is no "seen" button.
+- **Remind me in 5 minutes** hides it on that screen; a newly overdue lesson still appears at once.
+- It is never shown on the register pages themselves, so it doesn't cover a register being taken.
+- It checks every minute, flashes the tab title and beeps when a new lesson is added. Only the teacher's own lessons are shown; the database works out who they are from their sign-in.
+
 **Register alerts** (`/admin/register-alerts`)
 - Every 15 minutes, outstanding registers are copied into a permanent alert list: one per lesson per day, and one per OH activity per member of staff per day.
 - An alert stays even if the register is taken later. Someone must mark it resolved.
