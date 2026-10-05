@@ -31,6 +31,12 @@ import EventCommentEditor from '../../components/EventCommentEditor';
 // While returned it counts 0 points and its future detention is cancelled,
 // and each return is tallied against the teacher (migration 337,
 // behaviour_event_returns, SMT and admin only).
+// A reviewer can also correct the category themselves on the card (the
+// principal, 5 Oct 2026), through edit_behaviour_event(), which already lets
+// SMT, the school office and admin edit any event: the points follow the
+// category, detentions are adjusted, and the change is kept in
+// behaviour_event_audit and Change History. An event moved below Stage 5
+// leaves the review.
 const EVENT_FIELDS = 'event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, visible_to_parents, protocol_reviewed_at, returned_at, return_note, returner:staff!behaviour_events_returned_by_fkey(first_name, last_name), students!behaviour_events_student_id_fkey(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)';
 
 const PICTURE_STATUS = { pending: 'Waiting', approved: 'Sent', rejected: 'Not sent' };
@@ -41,6 +47,61 @@ const MAX_EDITORS = 5;
 
 function fullName(p) {
   return p ? `${p.first_name} ${p.last_name}` : '—';
+}
+
+// Categories are the same for every card, so fetch them once.
+let categoriesPromise = null;
+function loadCategories() {
+  if (!categoriesPromise) {
+    categoriesPromise = supabase
+      .from('behaviour_categories')
+      .select('name, type, default_points')
+      .order('name')
+      .then(({ data }) => data || []);
+  }
+  return categoriesPromise;
+}
+
+// The reviewer's own category correction. Text and explanation stay as they
+// are; edit_behaviour_event() sets the points and detentions from the category.
+function CategoryChanger({ events, busy, onChange }) {
+  const [categories, setCategories] = useState([]);
+  const [choice, setChoice] = useState('');
+  useEffect(() => { loadCategories().then(setCategories); }, []);
+  const type = events[0]?.type;
+  const current = events.every((e) => e.category === events[0].category) ? events[0].category : '';
+  const options = categories.filter((c) => c.type === type);
+  const value = choice || current || '';
+  const picked = options.find((c) => c.name === value);
+  return (
+    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+      <label htmlFor={`cat-${events[0].event_id}`} style={{ fontSize: '0.9em' }}>
+        Category{events.length > 1 ? ` (all ${events.length} students)` : ''}
+      </label>
+      <select
+        id={`cat-${events[0].event_id}`}
+        value={value}
+        onChange={(e) => setChoice(e.target.value)}
+        disabled={busy}
+        style={{ width: 'auto', minWidth: '12rem', flex: '0 1 18rem' }}
+      >
+        {!current && <option value="">Mixed categories</option>}
+        {options.map((c) => (
+          <option key={c.name} value={c.name}>{c.name} ({c.default_points > 0 ? '+' : ''}{c.default_points})</option>
+        ))}
+      </select>
+      {picked && value !== current && (
+        <>
+          <button type="button" disabled={busy} onClick={() => onChange(picked).then((ok) => ok && setChoice(''))} style={{ width: 'fit-content' }}>
+            Change category
+          </button>
+          <button type="button" className="secondary" disabled={busy} onClick={() => setChoice('')} style={{ width: 'fit-content' }}>
+            Cancel
+          </button>
+        </>
+      )}
+    </div>
+  );
 }
 
 function ReviewInner() {
@@ -173,6 +234,47 @@ function ReviewInner() {
     }
   }
 
+  async function changeCategory(item, category) {
+    const toChange = item.events.filter((e) => e.category !== category.name);
+    if (toChange.length === 0) return true;
+    if (category.type === 'negative' && category.default_points <= seriousPoints
+        && toChange.some((e) => !(e.description || '').trim())) {
+      setStatus(`A serious event (${seriousPoints} points or worse) needs an explanation. Use Edit to add one first.`);
+      return false;
+    }
+    setBusyKey(item.key);
+    setStatus(null);
+    let added = 0;
+    let cancelled = 0;
+    for (const ev of toChange) {
+      const { data, error } = await supabase.rpc('edit_behaviour_event', {
+        p_event_id: ev.event_id,
+        p_category: category.name,
+        p_description: ev.description || '',
+      });
+      if (error) {
+        setBusyKey(null);
+        setStatus(`Error changing ${fullName(ev.students)}'s category: ${error.message}`);
+        load();
+        return false;
+      }
+      added += data?.detentions_added || 0;
+      cancelled += data?.detentions_cancelled || 0;
+    }
+    setBusyKey(null);
+    setConfirmed((c) => ({ ...c, [item.key]: false }));
+    const pts = `${category.default_points > 0 ? '+' : ''}${category.default_points}`;
+    const leaves = item.events[0]?.type === 'negative' && category.default_points > seriousPoints && !item.photo;
+    setStatus([
+      `Category changed to ${category.name} (${pts} points).`,
+      added ? `${added} detention${added === 1 ? '' : 's'} added.` : '',
+      cancelled ? `${cancelled} detention${cancelled === 1 ? '' : 's'} cancelled.` : '',
+      leaves ? 'It is no longer a Stage 5, so it has left the review and stays hidden from parents.' : '',
+    ].filter(Boolean).join(' '));
+    load();
+    return true;
+  }
+
   async function returnToTeacher(item) {
     const ev = item.events[0];
     const note = (returning[item.key] || '').trim();
@@ -242,6 +344,10 @@ function ReviewInner() {
             <strong>Returned to the teacher</strong> by {fullName(first.returner)} on {formatUKDate(first.returned_at.slice(0, 10))}: {first.return_note}
             {' '}It counts 0 points until they change it.
           </span>
+        )}
+
+        {first && (
+          <CategoryChanger events={events} busy={busy} onChange={(category) => changeCategory(item, category)} />
         )}
 
         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -402,9 +508,11 @@ function ReviewInner() {
         it, or use Edit to correct the text first and then send it. Before
         sending text, check it follows school protocol, names no other student
         and is written in clear, good English. Check a picture shows only what
-        it should and no other student can be identified. If an event isn&apos;t
-        really a Stage 5, use <em>Not Stage 5: return to teacher</em> and say
-        why; the teacher gets a message asking them to change it.
+        it should and no other student can be identified. If the category is
+        wrong, choose the right one and press <em>Change category</em>: the
+        points and detentions follow it. If an event isn&apos;t really a
+        Stage 5, you can instead use <em>Not Stage 5: return to teacher</em>
+        and say why; the teacher gets a message asking them to change it.
       </p>
 
       {status && <p>{status}</p>}
