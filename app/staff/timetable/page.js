@@ -10,6 +10,7 @@ import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday } from '../../../lib/schoolTime';
 import { loadOtherHalfSlots, loadCurrentOtherHalfTermId } from '../../../lib/otherHalf';
 import GroupFreeTimes from '../../components/GroupFreeTimes';
+import CoverPanel from '../../components/CoverPanel';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -26,6 +27,15 @@ function StaffTimetable() {
   const [loading, setLoading] = useState(true);
   const [myMissingCount, setMyMissingCount] = useState(0);
   const [mode, setMode] = useState('person'); // 'person' | 'group'
+  const [canCover, setCanCover] = useState(false); // SMT: may arrange cover (migration 374)
+  const [covers, setCovers] = useState([]); // live covers this person gives or receives, this week on
+  const [coverReload, setCoverReload] = useState(0);
+  // Opened from Cover on the dashboard's Timetable card (/staff/timetable?cover=1):
+  // start with no teacher chosen and the cover panel open.
+  const [coverMode, setCoverMode] = useState(null); // null until the URL is read
+  useEffect(() => {
+    setCoverMode(new URLSearchParams(window.location.search).get('cover') === '1');
+  }, []);
 
   useEffect(() => {
     async function loadStatic() {
@@ -37,16 +47,18 @@ function StaffTimetable() {
         .order('last_name');
       setStaffList(st || []);
       setOhSlots(await loadOtherHalfSlots());
+      const { data: cc } = await supabase.rpc('can_arrange_cover');
+      setCanCover(!!cc);
     }
     loadStatic();
   }, []);
 
   // Default to the logged-in staff member's own timetable once profile loads.
   useEffect(() => {
-    if (profile?.staff_id && selectedStaffId === null) {
+    if (profile?.staff_id && selectedStaffId === null && coverMode === false) {
       setSelectedStaffId(profile.staff_id);
     }
-  }, [profile, selectedStaffId]);
+  }, [profile, selectedStaffId, coverMode]);
 
   useEffect(() => {
     async function loadTimetable() {
@@ -73,6 +85,27 @@ function StaffTimetable() {
     }
     loadTimetable();
   }, [selectedStaffId]);
+
+  // Covers (migration 374): lessons this person covers for someone, and their
+  // own lessons someone else covers, from the start of this school week on.
+  useEffect(() => {
+    if (!selectedStaffId) { setCovers([]); return; }
+    const from = [dateForDay('Mon'), schoolToday()].sort()[0];
+    supabase
+      .from('lesson_covers')
+      .select('cover_id, cover_date, period_number, class_id, note, cover_staff_id, absent_staff_id, '
+        + 'classes(class_code, room, subjects(subject_name, display_name)), timetable_slots(room, start_time, end_time), '
+        + 'absent:staff!lesson_covers_absent_staff_id_fkey(first_name, last_name), '
+        + 'cover:staff!lesson_covers_cover_staff_id_fkey(first_name, last_name)')
+      .or(`cover_staff_id.eq.${selectedStaffId},absent_staff_id.eq.${selectedStaffId}`)
+      .is('cancelled_at', null)
+      .gte('cover_date', from)
+      .order('cover_date')
+      .order('period_number')
+      .then(({ data }) => setCovers(data || []));
+    // dateForDay only reads the school's today
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStaffId, coverReload]);
 
   const cellMap = {};
   classes.forEach((c) => {
@@ -140,8 +173,38 @@ function StaffTimetable() {
     return toLocalISO(d);
   }
 
+  // This week's covers on the grid. A lesson this person covers is added to
+  // the cell (for that date only, with an apology); one of their own lessons
+  // that someone else covers says who.
+  const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const personName = (p) => (p ? `${p.first_name} ${p.last_name}` : '');
+  covers.forEach((cv) => {
+    const day = WEEKDAY_LABELS[new Date(`${cv.cover_date}T00:00:00`).getDay()];
+    if (!DAYS.includes(day) || cv.cover_date !== dateForDay(day)) return;
+    const key = `${day}-${cv.period_number}`;
+    if (cv.cover_staff_id === selectedStaffId) {
+      const entry = {
+        cover: true,
+        classId: cv.class_id,
+        classCode: cv.classes?.class_code,
+        subject: cv.classes?.subjects?.display_name || cv.classes?.subjects?.subject_name,
+        room: lessonRoom(cv.timetable_slots, cv.classes),
+        time: cv.timetable_slots ? formatTimeRange(cv.timetable_slots.start_time, cv.timetable_slots.end_time) : '',
+        coverFor: personName(cv.absent),
+        note: cv.note,
+        date: cv.cover_date,
+      };
+      cellMap[key] = cellMap[key] ? [...cellMap[key], entry] : [entry];
+    } else {
+      (cellMap[key] || []).forEach((e) => {
+        if (e.classId === cv.class_id && !e.cover) e.coveredBy = personName(cv.cover);
+      });
+    }
+  });
+  const upcomingCovers = covers.filter((cv) => cv.cover_staff_id === selectedStaffId && cv.cover_date >= schoolToday());
+
   function goToRegister(entry, dayLabel, periodNumber) {
-    const date = dateForDay(dayLabel);
+    const date = entry.date || dateForDay(dayLabel);
     if (entry.otherHalfActivityId) {
       router.push(`/other-half/register?activityId=${entry.otherHalfActivityId}&date=${date}`);
       return;
@@ -177,13 +240,14 @@ function StaffTimetable() {
       {mode === 'group' ? <GroupFreeTimes staffList={staffList} periods={periods} /> : <>
       <div className="card" style={{ marginBottom: '1rem' }}>
         <label style={{ display: 'block', marginBottom: '0.4rem' }}>
-          Viewing timetable for:
+          {coverMode && canCover ? 'Teacher who is absent:' : 'Viewing timetable for:'}
         </label>
         <select
           value={selectedStaffId ?? ''}
           onChange={(e) => setSelectedStaffId(e.target.value ? Number(e.target.value) : null)}
           style={{ width: '100%', marginBottom: '0.4rem' }}
         >
+          {selectedStaffId == null && <option value="">Choose a member of staff…</option>}
           {staffList.map((s) => (
             <option key={s.staff_id} value={s.staff_id}>
               {s.first_name} {s.last_name}
@@ -191,12 +255,46 @@ function StaffTimetable() {
             </option>
           ))}
         </select>
-        {profile?.staff_id && !isOwnTimetable && (
-          <button onClick={() => setSelectedStaffId(profile.staff_id)}>
-            ← Back to my timetable
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {profile?.staff_id && !isOwnTimetable && (
+            <button onClick={() => { setSelectedStaffId(profile.staff_id); setCoverMode(false); }}>
+              ← Back to my timetable
+            </button>
+          )}
+          {canCover && selectedStaffId && !isOwnTimetable && !coverMode && (
+            <button className="secondary" onClick={() => setCoverMode(true)}>Arrange cover</button>
+          )}
+        </div>
       </div>
+
+      {canCover && coverMode && selectedStaffId && !isOwnTimetable && (
+        <CoverPanel
+          staffName={personName(staffList.find((s) => s.staff_id === selectedStaffId))}
+          classes={classes}
+          periods={periods}
+          onChanged={() => setCoverReload((r) => r + 1)}
+        />
+      )}
+
+      {upcomingCovers.length > 0 && (
+        <div className="card" style={{ marginBottom: '1rem', borderColor: 'var(--brand-600)', background: 'var(--brand-050)' }}>
+          <strong>{isOwnTimetable ? 'Cover you have been asked to do' : 'Cover this person has been asked to do'}</strong>
+          <ul style={{ margin: '0.4rem 0', paddingLeft: '1.2rem' }}>
+            {upcomingCovers.map((cv) => (
+              <li key={cv.cover_id}>
+                {new Date(`${cv.cover_date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                {', '}{periods.find((p) => p.period_number === cv.period_number)?.period_name}
+                {': '}<strong>{cv.classes?.class_code}</strong> for {personName(cv.absent)}
+                {lessonRoom(cv.timetable_slots, cv.classes) ? ` in ${lessonRoom(cv.timetable_slots, cv.classes)}` : ''}
+                {cv.note ? <span style={{ opacity: 0.75 }}> · {cv.note}</span> : null}
+              </li>
+            ))}
+          </ul>
+          {isOwnTimetable && (
+            <div style={{ fontStyle: 'italic' }}>Sorry for the extra work, and thank you for helping.</div>
+          )}
+        </div>
+      )}
 
       {isOwnTimetable && myMissingCount > 0 && (
         <div className="card" style={{ marginBottom: '1rem', borderColor: '#c0392b' }}>
@@ -235,12 +333,25 @@ function StaffTimetable() {
                               <div
                                 key={i}
                                 onClick={() => goToRegister(e, d, p.period_number)}
-                                style={{ marginBottom: entries.length > 1 ? '0.3rem' : 0 }}
+                                style={{
+                                  marginBottom: entries.length > 1 ? '0.3rem' : 0,
+                                  ...(e.cover ? { background: 'var(--brand-100)', borderLeft: '3px solid var(--brand-700)', padding: '0.2rem 0.3rem' } : {}),
+                                }}
                                 title="Open register for this class"
                               >
+                                {e.cover && <div style={{ fontWeight: 700, color: 'var(--brand-800)' }}>COVER for {e.coverFor}</div>}
                                 {e.classCode ? <><strong>{e.classCode}</strong><br /></> : ''}
                                 {e.subject}<br /><span style={{ opacity: 0.6 }}>{e.room}</span><br />
                                 <span style={{ opacity: 0.6, fontSize: '0.85em' }}>{e.time}</span>
+                                {e.cover && (
+                                  <div style={{ fontStyle: 'italic', fontSize: '0.85em', marginTop: '0.2rem' }}>
+                                    {e.note ? <>{e.note}<br /></> : null}
+                                    Sorry for the extra work, and thank you.
+                                  </div>
+                                )}
+                                {e.coveredBy && (
+                                  <div style={{ fontWeight: 600, color: 'var(--brand-800)', fontSize: '0.85em' }}>Covered by {e.coveredBy}</div>
+                                )}
                               </div>
                             )
                           )

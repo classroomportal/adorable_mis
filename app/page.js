@@ -371,8 +371,14 @@ const TABS = [
   },
   {
     key: 'timetable', label: 'Timetable', icon: '🗓️', accent: 'school',
-    description: 'Timetable imports, bell times, class allocation and printing.',
-    items: ({ hasAccess }) => [
+    description: 'Cover, timetable imports, bell times, class allocation and printing.',
+    items: ({ hasAccess, staffRoles }) => [
+      // Cover for absent teachers (migration 374): SMT only, on the Timetable
+      // page's own grant. A view of that page, not a copy of the My Timetable tile.
+      (staffRoles || []).includes('smt') && {
+        href: '/staff/timetable?cover=1', resource: '/staff/timetable', label: 'Cover',
+        desc: "Give an absent teacher's lessons to staff who are free.",
+      },
       { href: '/admin/block-allocation', label: 'Class Allocation', desc: "Put students into classes, block by block." },
       // Whole-school Nova-T re-import stays admin-only — HoDs get the tab for
       // Class Allocation, not this.
@@ -381,7 +387,7 @@ const TABS = [
       { href: '/admin/import-staff-commitments', label: 'Import Meetings', desc: "Upload staff meetings and non-working periods." },
       { href: '/admin/bell-times', label: 'Bell Times', desc: "Which periods run each day, and their times." },
       { href: '/admin/print-timetables', label: 'Print Timetables', desc: "Print student timetables for a year group." },
-    ].filter((it) => hasAccess(it.href)),
+    ].filter((it) => it && hasAccess(it.resource || it.href)),
   },
   {
     key: 'otherhalf', label: 'The Other Half', icon: '🎭', accent: 'myinfo',

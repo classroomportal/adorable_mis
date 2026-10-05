@@ -386,6 +386,15 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - A student's form must be a real mentor group, and their mentor group follows it automatically (102).
 - Staff commitments (meetings and part-time non-working periods, from NCLASS.DAT) block only that person's own timetable slot. They have no register.
 
+**Cover for absent teachers** (374, 5 Oct 2026)
+- Only SMT arrange or cancel cover (admin alone is not enough), from **Cover** on the Timetable card or **Arrange cover** on someone's timetable.
+- Cover is set lesson by lesson for one date, today or later. The absent teacher is taken from the lesson itself, never chosen.
+- Only staff who are free then can be chosen: no lesson, meeting or Other Half activity of their own, and not covering something else. The list shows how many covers each person has done this term; someone being covered for elsewhere that day is flagged, not blocked.
+- One cover per lesson. The covering teacher gets an inbox message with SMT's note and an apology, and the lesson shows on their timetable for that date only. The absent teacher's timetable says who is covering.
+- Covers are cancelled, never deleted (a past cover can't be cancelled). Cancelling tells the covering teacher.
+- The class's teacher and register don't change; any member of staff can take any register.
+- Not yet: Registers Not Done and the register reminder pop-up still go to the class's own teacher, not the covering teacher.
+
 ---
 
 ## 7. Tuckshop
