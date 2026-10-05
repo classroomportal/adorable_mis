@@ -297,6 +297,8 @@ const TABS = [
       { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
       { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
       { href: '/pastoral/behaviour-totals', label: 'Behaviour Totals', desc: "Running totals of positive and negative points, by student and by mentor group." },
+      { href: '/rewards', label: 'Reward Store', desc: "Students' requests to spend merit points: approve, decline, mark used." },
+      { href: '/rewards/items', label: 'Rewards & Prices', desc: "What students can buy with merit points, and the rules for each." },
       { href: '/behaviour/review', label: 'Behaviour Review', desc: "Check serious incidents (office) and behaviour pictures (SMT) before parents can see them." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
       { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },

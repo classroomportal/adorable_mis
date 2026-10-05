@@ -521,6 +521,15 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - Statuses are scheduled, attended, missed and cancelled. Whoever has the `/detention` page can mark them attended or missed (240), but **only SMT can cancel one** (319, the principal, 2 Oct 2026). The date and student can't be changed. Detentions still cancel automatically when an event's category is corrected below the thresholds or an appeal is upheld.
 - **The student** (not parents) gets an email and a Formwork inbox notice when a detention is booked, a reminder at **7:30pm on Thursday**, and a notice if it is cancelled. Replies go to SMT.
 
+**Reward Store** (migration 370, the principal, 5 Oct 2026; design in `docs/reward-store-design.md`)
+- Students spend merit points on rewards from the **Reward Store** tile on their portal (shown only while the store is open; it was closed with every reward retired on 5 Oct 2026 until the principal adds more). To begin with: Mufti day (40 points, once a half term), Extra tuckshop visit (25, once a fortnight) and Assistant for a day (100, once a term, one student a day across the school).
+- **The merit total doesn't change.** Spending is kept separately, so certificates, Behaviour Totals and reports count every merit as before. Points to spend are this school year's merits (from 1 Sept 2026) less what the student has bought; negative points don't reduce them. They start again each September.
+- Points are taken when the student buys, and come back if the request is declined or cancelled. A student can cancel their own request until it is decided. If a merit is later removed, points to spend can drop below zero; nothing is taken back, but the student can't buy until it is above the price again.
+- Each reward has a day rule (mufti and assistant: a school day, Mon–Fri in term, not a holiday; tuckshop visit: any day in term), chosen up to 28 days ahead, plus its limits. "Half term" splits a term at its mid-term break in the calendar.
+- **Who approves:** set per reward. Mufti: pastoral or head of boarding. Tuckshop visit: the tuckshop. Assistant for a day: SMT, who choose the member of staff the student will help. Admins can approve any reward. Nobody can decide a request for their own child. Approvers can also cancel an approved reward (with a reason) and mark it used from its day onwards. The student gets an inbox message for each decision; for an assistant day, so does the member of staff.
+- **Pages:** `/rewards` (requests, and a printable day list, e.g. who is in mufti) for SMT, pastoral, head of boarding and the tuckshop; `/rewards/items` (rewards, prices, limits, approvers, the store open or closed) for SMT and pastoral, as Add and Edit ticks on `reward_items` at `/admin/permissions`. Rewards are retired, never deleted; requests are declined or cancelled, never deleted. A price change applies only to later purchases.
+- Every change is logged in Change History under "rewards". Parents don't see purchases yet (stage 2); assistant days aren't yet recorded in attendance (stage 3).
+
 ---
 
 ## 9. Assessment, results and reports

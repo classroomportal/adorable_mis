@@ -1991,3 +1991,27 @@ nav button.help-button span {
 .perm-branch-title { font-weight: 700; font-size: 1.05rem; flex: 1; }
 .perm-branch-summary { font-size: 0.85rem; white-space: nowrap; }
 .perm-branch-body { padding: 0.25rem 1.1rem 1rem; border-top: 1px solid var(--slate-200); }
+
+/* Reward Store (migration 370): students spend merit points */
+.reward-points {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem;
+  padding: 0.75rem 1rem; margin-bottom: 0.75rem;
+  background: var(--yellow-100); border: 1px solid var(--yellow-200); border-radius: 10px;
+}
+.reward-points > div { text-align: center; min-width: 7rem; }
+.reward-points p { flex: 1 1 16rem; margin: 0; }
+.reward-points-number { font-size: 2.2rem; font-weight: 700; line-height: 1.1; color: var(--ink); }
+.reward-status { padding: 0.5rem 0.75rem; background: var(--brand-050); border-radius: 8px; }
+.reward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; }
+.reward-card {
+  display: flex; flex-direction: column; padding: 0.75rem 0.9rem;
+  border: 1px solid var(--slate-200); border-radius: 10px; background: #fff;
+}
+.reward-card-off { background: var(--slate-50); }
+.reward-card-head { display: flex; gap: 0.6rem; align-items: center; }
+.reward-icon { font-size: 1.8rem; line-height: 1; }
+.reward-cost { font-size: 0.9rem; font-weight: 600; color: var(--red-800); }
+.reward-problem { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--ink-soft); font-style: italic; }
+.reward-buy { margin-top: 0.5rem; }
+.reward-buy label { flex: none; }
+.reward-card > button { align-self: flex-start; }
