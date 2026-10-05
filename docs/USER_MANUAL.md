@@ -670,6 +670,17 @@ Your week: lessons, mentor registration, Other Half activities and meetings. Cli
 
 ![A teacher's week](manual-images/10-timetable.jpg)
 
+#### Finding when a group is free
+
+Use **When is a group free?** at the top of the Timetable page to find a time when several people are all free, for example every Head of Department for a meeting.
+
+1. Press **When is a group free?**.
+2. Choose **Add everyone with a role…** (for example Head of Dept), then use **Add a person…** to add anyone else. Press × on a name to remove that person, or **Clear** to start again.
+3. Read the week. A green period says **All free**. A yellow one says how many are free (for example "3 of 7 free") and names them when four or fewer are free. A grey period has nobody free.
+4. Tap a period to see who is free and who is busy, and why: the class they teach, a meeting from Nova-T, or their Other Half activity this term.
+
+The box above the grid lists every period when the whole group is free. Tick **Show only periods when everyone is free** to hide the rest. Anyone with no lessons on the timetable shows as free all week, and Formwork names them so you can check.
+
 ### Taking a register (/attendance)
 
 1. Open the register from your timetable, or choose **Date**, **Period** and **Class / group** on the Attendance page.
