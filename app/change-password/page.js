@@ -11,6 +11,21 @@ function ChangePasswordInner() {
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [signOutStatus, setSignOutStatus] = useState(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Ends every sign-in on this account except this one, on phones and
+  // computers alike. Anyone still holding a short-lived pass from before
+  // can use it for at most an hour; after that they must sign in again.
+  async function handleSignOutOthers() {
+    setSignOutStatus(null);
+    setSigningOut(true);
+    const { error } = await supabase.auth.signOut({ scope: 'others' });
+    setSigningOut(false);
+    setSignOutStatus(error
+      ? { ok: false, text: `Couldn't sign out the other devices: ${error.message}` }
+      : { ok: true, text: 'Done. Every other device has been signed out. This one stays signed in.' });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -57,6 +72,13 @@ function ChangePasswordInner() {
         {error && <p style={{ color: '#a3232c' }}>{error}</p>}
         {status && <p>{status}</p>}
       </form>
+
+      <h2 style={{ marginTop: '2rem' }}>Other devices</h2>
+      <p>If you think someone else is signed in as you, sign out every other phone and computer. You stay signed in here.</p>
+      <button type="button" onClick={handleSignOutOthers} disabled={signingOut}>
+        {signingOut ? 'Signing out...' : 'Sign out all other devices'}
+      </button>
+      {signOutStatus && <p style={signOutStatus.ok ? undefined : { color: '#a3232c' }}>{signOutStatus.text}</p>}
     </div>
   );
 }
