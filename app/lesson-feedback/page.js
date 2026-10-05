@@ -7,7 +7,7 @@
 // lesson_feedback_summary(), which holds back a class's figures until it has
 // at least 3 responses in the dates chosen. Only SMT also get the named
 // responses (the table's own select policy), so someone can follow up a
-// student who was red or asked for extra help.
+// student who was red.
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -95,12 +95,9 @@ function LessonFeedbackInner() {
   // has answers in the dates shown.
   const answered = new Set(rows.flatMap((r) => (r.questions || []).map((q) => q.question_id)));
   const columns = questions.filter((q) => q.active || answered.has(q.question_id));
-  const neutralIds = new Set(questions.filter((q) => q.good_answer == null).map((q) => q.question_id));
 
-  // Named list (SMT): red, or Yes to a question that isn't good or bad
-  // ("Would you like extra help?").
-  const needsFollowUp = (f) => f.understanding === 'red'
-    || (f.lesson_feedback_answers || []).some((a) => a.answer && neutralIds.has(a.question_id));
+  // Named list (SMT): by default only students who were red.
+  const needsFollowUp = (f) => f.understanding === 'red';
   const namedShown = followUpOnly ? named.filter(needsFollowUp) : named;
 
   const shown = rows.filter((r) => r.responses >= MIN_RESPONSES);
@@ -187,7 +184,7 @@ function LessonFeedbackInner() {
           <h3 style={{ marginTop: 0 }}>Named responses (SMT only)</h3>
           <label style={{ display: 'block', marginBottom: '0.5rem' }}>
             <input type="checkbox" checked={followUpOnly} onChange={(e) => setFollowUpOnly(e.target.checked)} />
-            {' '}Only students who were red or asked for extra help
+            {' '}Only students who were red
           </label>
           {loading ? <p>Loading…</p> : namedShown.length === 0 ? <p>None in these dates.</p> : (
             <div className="table-scroll">
