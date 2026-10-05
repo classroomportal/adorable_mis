@@ -76,6 +76,23 @@ function TabButton({ active, onClick, children }) {
   );
 }
 
+// One branch of the Pages / What they can do trees: a heading that opens and
+// closes, with a summary on the right so a closed branch still says what's in it.
+function TreeBranch({ open, onToggle, title, summary, children }) {
+  return (
+    <div className="card perm-branch" style={{ marginBottom: '0.6rem' }}>
+      <div className="perm-branch-head">
+        <button type="button" className="perm-branch-toggle" aria-expanded={open} onClick={onToggle}>
+          <span className="perm-branch-arrow">{open ? '▾' : '▸'}</span>
+          <span className="perm-branch-title">{title}</span>
+          <span className="perm-branch-summary">{summary}</span>
+        </button>
+      </div>
+      {open && <div className="perm-branch-body">{children}</div>}
+    </div>
+  );
+}
+
 function PermissionsInner() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
@@ -96,6 +113,15 @@ function PermissionsInner() {
   const [tickable, setTickable] = useState(new Set()); // tables whose abilities are ticks (migration 329)
   const [locks, setLocks] = useState({}); // 'table:action' -> reason it can't be ticked
   const [saving, setSaving] = useState(null);
+  const [openBranches, setOpenBranches] = useState(new Set()); // 'pages:<section>' / 'abilities:<area>'
+
+  function toggleBranch(key) {
+    setOpenBranches((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
 
   async function load() {
     const { data: r } = await supabase.from('roles').select('*').order('role_name');
@@ -251,6 +277,17 @@ function PermissionsInner() {
     (n, a) => n + a.rows.filter((r) => r.add !== 'no' || r.edit !== 'no' || r.delete !== 'no').length, 0,
   );
 
+  // Every branch key on the current tab, for Open all / Close all.
+  const branchKeys = tab === 'pages'
+    ? sections.map((s) => `pages:${s}`)
+    : [...abilityAreas.map((a) => `abilities:${a.area}`), 'abilities:Core Data'];
+  const treeTools = (
+    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0 0 0.75rem' }}>
+      <button type="button" className="secondary" onClick={() => setOpenBranches((prev) => new Set([...prev, ...branchKeys]))}>Open all</button>
+      <button type="button" className="secondary" onClick={() => setOpenBranches((prev) => new Set([...prev].filter((k) => !branchKeys.includes(k))))}>Close all</button>
+    </div>
+  );
+
   return (
     <div>
       <h1>Permissions</h1>
@@ -300,6 +337,7 @@ function PermissionsInner() {
         <>
           <p style={{ color: 'var(--ink-soft)', fontSize: '0.9rem' }}>
             Tick the pages {role ? roleTitle(role.role_name) : 'this role'} can open. Changes save instantly.
+            Their home page follows: a card appears as soon as one of its pages is ticked, and goes when none is.
             {selectedRole === 'admin' && ' Admin can open every page whatever is ticked here.'}
           </p>
           <input
@@ -309,39 +347,43 @@ function PermissionsInner() {
             onChange={(e) => setSearch(e.target.value)}
             style={{ maxWidth: 320, marginBottom: '1rem' }}
           />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', alignItems: 'start' }}>
-            {sections.map((section) => {
-              const items = resources.filter((r) => r.section === section);
-              const shown = items.filter(matches);
-              if (shown.length === 0) return null;
-              const ticked = items.filter((r) => selectedGrants.has(r.resource_key)).length;
-              return (
-                <div className="card" key={section} style={{ marginBottom: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.4rem' }}>
-                    <h2 style={{ margin: 0 }}>{section}</h2>
-                    <span style={{ fontSize: '0.8rem', color: ticked ? 'var(--brand-700)' : 'var(--ink-soft)', fontWeight: 600 }}>
-                      {ticked} of {items.length}
-                    </span>
+          {treeTools}
+          {sections.map((section) => {
+            const items = resources.filter((r) => r.section === section);
+            const shown = items.filter(matches);
+            if (shown.length === 0) return null;
+            const ticked = items.filter((r) => selectedGrants.has(r.resource_key)).length;
+            const key = `pages:${section}`;
+            return (
+              <TreeBranch
+                key={section}
+                open={!!q || openBranches.has(key)}
+                onToggle={() => toggleBranch(key)}
+                title={section}
+                summary={(
+                  <span style={{ color: ticked ? 'var(--brand-700)' : 'var(--ink-soft)', fontWeight: 600 }}>
+                    {ticked} of {items.length}
+                  </span>
+                )}
+              >
+                {shown.map((r) => (
+                  <div key={r.resource_key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.3rem 0 0.3rem 1.6rem', borderTop: '1px solid var(--slate-100)' }}>
+                    <input
+                      type="checkbox"
+                      id={`res-${r.resource_key}`}
+                      checked={selectedGrants.has(r.resource_key)}
+                      onChange={(e) => toggleGrant(r.resource_key, e.target.checked)}
+                      style={{ marginTop: '0.2rem' }}
+                    />
+                    <label htmlFor={`res-${r.resource_key}`} style={{ display: 'block', flex: 1, color: 'var(--ink)', fontSize: '0.9rem', cursor: 'pointer' }}>
+                      {r.label}
+                      <span style={{ display: 'block', color: '#9aa3b0', fontSize: '0.75rem' }}>{r.resource_key}</span>
+                    </label>
                   </div>
-                  {shown.map((r) => (
-                    <div key={r.resource_key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', padding: '0.3rem 0', borderTop: '1px solid var(--slate-100)' }}>
-                      <input
-                        type="checkbox"
-                        id={`res-${r.resource_key}`}
-                        checked={selectedGrants.has(r.resource_key)}
-                        onChange={(e) => toggleGrant(r.resource_key, e.target.checked)}
-                        style={{ marginTop: '0.2rem' }}
-                      />
-                      <label htmlFor={`res-${r.resource_key}`} style={{ display: 'block', flex: 1, color: 'var(--ink)', fontSize: '0.9rem', cursor: 'pointer' }}>
-                        {r.label}
-                        <span style={{ display: 'block', color: '#9aa3b0', fontSize: '0.75rem' }}>{r.resource_key}</span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
+                ))}
+              </TreeBranch>
+            );
+          })}
         </>
       )}
 
@@ -373,14 +415,27 @@ function PermissionsInner() {
 
           {rulesError && <p style={{ color: '#a3232c' }}>Couldn&apos;t read the database rules: {rulesError}</p>}
           {!policies && !rulesError && <p>Reading the database rules…</p>}
+          {policies && tables && treeTools}
 
           {abilityAreas.map(({ area, rows }) => {
             // Tickable records always show, so an ability can be given to a role that has none.
             const shown = hideNone ? rows.filter((r) => tickable.has(r.table) || ACTIONS.some((a) => r[a] !== 'no')) : rows;
             if (shown.length === 0) return null;
+            const sees = rows.filter((r) => r.view !== 'no').length;
+            const changes = rows.filter((r) => r.add !== 'no' || r.edit !== 'no' || r.delete !== 'no').length;
+            const branchKey = `abilities:${area}`;
             return (
-              <div className="card" key={area}>
-                <h2 style={{ marginTop: 0 }}>{area}</h2>
+              <TreeBranch
+                key={area}
+                open={openBranches.has(branchKey)}
+                onToggle={() => toggleBranch(branchKey)}
+                title={area}
+                summary={(
+                  <span style={{ color: sees || changes ? 'var(--brand-700)' : 'var(--ink-soft)' }}>
+                    sees <strong>{sees}</strong> · changes <strong>{changes}</strong> of {rows.length}
+                  </span>
+                )}
+              >
                 <div className="table-scroll" style={{ marginTop: 0, boxShadow: 'none' }}>
                   <table>
                     <thead>
@@ -432,12 +487,20 @@ function PermissionsInner() {
                     Editing a student is further limited field by field — see Student Core Data fields below.
                   </p>
                 )}
-              </div>
+              </TreeBranch>
             );
           })}
 
-          <div className="card">
-            <h2 style={{ marginTop: 0 }}>Student Core Data fields</h2>
+          <TreeBranch
+            open={openBranches.has('abilities:Core Data')}
+            onToggle={() => toggleBranch('abilities:Core Data')}
+            title="Student Core Data fields"
+            summary={(
+              <span style={{ color: 'var(--ink-soft)' }}>
+                edits <strong>{selectedRole === 'admin' ? STUDENT_CORE_FIELDS.length : selectedFieldGrants.size}</strong> of {STUDENT_CORE_FIELDS.length}
+              </span>
+            )}
+          >
             {selectedRole === 'admin' ? (
               <p>Admin can always edit every field.</p>
             ) : (
@@ -470,7 +533,7 @@ function PermissionsInner() {
                 </div>
               </>
             )}
-          </div>
+          </TreeBranch>
         </>
       )}
 

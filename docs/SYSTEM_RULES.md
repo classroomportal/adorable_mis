@@ -54,7 +54,7 @@ Where a rule has changed several times, only the current version is given. Migra
 
 **Tuckshop roles:** `tuckshop` and `tuckshop_owner` open only the `/tuckshop` pages (231).
 
-**Bursar:** a bursar who isn't an admin sees a home page with only the Fees and Tuckshop tiles.
+**Bursar:** a bursar who isn't an admin sees a plainer home page (no top rows of tiles); like everyone else's, its cards follow the pages the bursar's roles can open, so ticking a page at Permissions makes its card appear.
 
 **Server routes**
 - Formwork has four: the backup route, the two AI comment routes, and the parents' calendar feed.

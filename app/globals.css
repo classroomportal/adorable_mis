@@ -1977,3 +1977,17 @@ nav button.help-button span {
 .lf-chip.lf-red { background: #f8d4d2; color: #8a1f1a; }
 .lf-key { columns: 2 22rem; font-size: 0.85rem; margin: 0 0 0.75rem; padding-left: 1.6rem; }
 .lf-key li { break-inside: avoid; margin-bottom: 0.15rem; }
+
+/* /admin/permissions: Pages and What they can do as opening branches. */
+.perm-branch { padding: 0; }
+.perm-branch-head { display: flex; align-items: center; }
+.perm-branch-toggle {
+  flex: 1; display: flex; align-items: center; gap: 0.6rem; text-align: left;
+  background: none; color: var(--ink); border: none; border-radius: 0; box-shadow: none;
+  padding: 0.75rem 1.1rem; font: inherit; cursor: pointer;
+}
+.perm-branch-toggle:hover { background: var(--slate-100); }
+.perm-branch-arrow { color: var(--ink-soft); width: 1rem; flex: none; }
+.perm-branch-title { font-weight: 700; font-size: 1.05rem; flex: 1; }
+.perm-branch-summary { font-size: 0.85rem; white-space: nowrap; }
+.perm-branch-body { padding: 0.25rem 1.1rem 1rem; border-top: 1px solid var(--slate-200); }
