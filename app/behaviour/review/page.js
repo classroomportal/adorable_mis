@@ -7,6 +7,7 @@ import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
 import EventCommentEditor from '../../components/EventCommentEditor';
+import BehaviourBrowser from '../../components/BehaviourBrowser';
 
 // What gets checked here before parents see it (migrations 238-239):
 //   - any event with a picture (migration 209): SMT and admin;
@@ -31,6 +32,9 @@ import EventCommentEditor from '../../components/EventCommentEditor';
 // While returned it counts 0 points and its future detention is cancelled,
 // and each return is tallied against the teacher (migration 337,
 // behaviour_event_returns, SMT and admin only).
+// The "All events" tab (migration 376, app/components/BehaviourBrowser.js)
+// lists every event so the reviewers can look through comments and
+// categories, and change a category with a note to the teacher.
 const EVENT_FIELDS = 'event_id, event_date, type, category, points, description, student_id, staff_id, photo_id, visible_to_parents, protocol_reviewed_at, returned_at, return_note, returner:staff!behaviour_events_returned_by_fkey(first_name, last_name), students!behaviour_events_student_id_fkey(first_name, last_name), staff!behaviour_events_staff_id_fkey(first_name, last_name)';
 
 const PICTURE_STATUS = { pending: 'Waiting', approved: 'Sent', rejected: 'Not sent' };
@@ -61,6 +65,7 @@ function ReviewInner() {
   const [returning, setReturning] = useState({}); // item key -> note being written, when open
   const [busyKey, setBusyKey] = useState(null);
   const [status, setStatus] = useState(null);
+  const [tab, setTab] = useState('review');
   const { serious_event_points: seriousPoints } = useBehaviourRules();
 
   async function load() {
@@ -391,9 +396,37 @@ function ReviewInner() {
     && (!it.events.length || !it.events.every((e) => e.protocol_reviewed_at) || it.photo?.status === 'pending'));
   const keptHidden = items.filter((it) => !isReturned(it) && !waiting.includes(it));
 
+  const tabs = (
+    <div className="hr-tabs" role="tablist" style={{ marginBottom: '1rem' }}>
+      {[{ key: 'review', label: 'To review' }, { key: 'all', label: 'All events' }].map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          role="tab"
+          aria-selected={tab === t.key}
+          className={`hr-tab ${tab === t.key ? 'is-active' : ''}`}
+          onClick={() => setTab(t.key)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (tab === 'all') {
+    return (
+      <div>
+        <h1>Behaviour Review</h1>
+        {tabs}
+        <BehaviourBrowser />
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1>Behaviour Review</h1>
+      {tabs}
       <p style={{ color: '#555' }}>
         {reviewsPictures && `You review ${seriousPoints} events and every event with a picture. `}
         {reviewsText && !reviewsPictures && `You review ${seriousPoints} events without a picture. SMT review any event with a picture. `}
