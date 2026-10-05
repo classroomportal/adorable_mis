@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 4 October 2026 (database migrations up to 364). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 5 October 2026 (database migrations up to 367). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -80,7 +80,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 
 Two further roles exist only to approve fee prices (FR-10.10): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either.
 
-**Students** see their own timetable, grades, behaviour (and appeal), tuckshop ordering, OH choices and documents. **Parents** see each linked child's timetable, results (after the delay set on Lookups, FR-7.34), released behaviour, attendance, published fees, tuckshop balance and documents.
+**Students** see their own timetable, grades, behaviour (and appeal), tuckshop ordering, OH choices, documents and lesson feedback (FR-7.35). **Parents** see each linked child's timetable, results (after the delay set on Lookups, FR-7.34), released behaviour, attendance, published fees, tuckshop balance and documents.
 
 **Two layers of access:**
 
@@ -151,6 +151,7 @@ Every member of staff can read the whole student record; what each role can chan
 | Timetable, with Other Half activity | Yes | Yes |
 | Grades against targets | Yes | Yes |
 | Mark appeals | Appeal own marks from the last 5 days; 5 credits a year (FR-7.24) | No |
+| Lesson feedback | Give feedback on today's and yesterday's lessons; never see others' (FR-7.35) | No |
 | Behaviour | Own events (not voided); can appeal negatives | Only events released to parents |
 | Attendance | No | Yes, including today lesson by lesson |
 | CAT4 / NGRT scores | No | Yes |
@@ -263,6 +264,13 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.26** The register shows the code already filled in, tagged "planned". Once a teacher saves that register the mark is theirs, whether or not they change the code. A planned-absence mark doesn't count as the register being taken (FR-4.8). \[DB; the tag is Page\]
 - **FR-4.27** End early (the day the student is back) removes the marks it filled in from that day on; Cancel removes all of them. Marks a teacher has saved stay. \[DB\]
 - **FR-4.28** The note is staff-only; parents see only the code on their child's attendance. Planned absences, and marks removed by ending or cancelling one, are logged in Change History under Registers. \[DB\]
+
+**Register-not-taken pop-up for teachers** (migration 367)
+
+- **FR-4.29** A full-screen, flashing pop-up appears on whatever Formwork page a teacher has open when one of their own lessons today started at least 10 minutes ago and has no register. Their lessons are the ones they teach (a lesson's own teacher first, FR-4.9) and Other Half activities they are staff on. It follows the FR-4.8 rule, 5 minutes earlier, except that a day with a holiday on the calendar gives no pop-up. Marks filled in by a planned absence don't count as the register being taken. \[DB rule; Page display\]
+- **FR-4.30** Each lesson shows the class, room, period and how many minutes ago it started, with a "Take register now" button that opens that register for today. \[Page\]
+- **FR-4.31** Earlier lessons today stay on the pop-up until their register is taken. Saving the register clears it by itself; there is no "seen" button and nothing is stored. "Remind me in 5 minutes" hides it on that screen; a lesson newly overdue still shows at once. It is never shown on the register pages themselves (/attendance, /other-half/register). \[DB; hiding is Page\]
+- **FR-4.32** Every member of staff with a staff record gets it for their own lessons only; there is no permission switch. The database works out who they are from their sign-in. The page checks every minute, flashes the browser tab's title, and beeps when a lesson is added once someone has clicked on the page. \[DB\]
 
 ## 8. FR-5 The Other Half
 
@@ -435,6 +443,15 @@ Teachers enter percentage scores for their own classes against result sets; each
 **When parents see marks** (Lookups, migration 360, the principal, 4 Oct 2026)
 
 - **FR-7.34** Parents see a mark only once it is a set number of hours old, counted from when it was first entered, so a wrong number can be put right (or appealed by the student, FR-7.24) before families see it. It covers every mark parents see: ReLPs, Teacher Assessments and all other results. The hours (0 to 168) are set on Lookups (When parents see marks) by anyone with that page; 0 means at once, which is where it started. A correction doesn't restart the clock, and the time a mark was entered can't be changed from the app. Students and staff see marks at once; staff viewing the parent portal, including staff who are parents, see every mark straight away. \[DB\]
+
+**Lesson feedback** (/lesson-feedback, migrations 365–366, the principal, 5 October 2026)
+
+- **FR-7.35** Students give feedback on a lesson from the timetable on their portal: a Give feedback button on each lesson that has ended today or yesterday, and the same lessons listed above the timetable. They choose green (understood it and could do the work alone), amber (understood some of it) or red (didn't understand, need help), then answer Yes or No to every question; it can't be sent until all are answered. There is no comment box. \[DB / Page\]
+- **FR-7.36** Feedback opens when the lesson ends and closes at the end of the next day. It is given once per lesson and can't be changed. Only teaching lessons count (not Mentor, Prep, Personal Study or the Other Half), in term and not on a holiday, in a class the student had joined. A student marked absent for that lesson can't give feedback; a register not yet taken doesn't stop them. The database checks every rule when it is sent. \[DB\]
+- **FR-7.37** The ten questions (5 October 2026), with the good answer: the lesson started on time (Yes); knew what to learn by the end (Yes); pace about right (Yes); too easy (No); too hard (No); bored (No); could explain the main idea to a friend (Yes); got help when needed (Yes); classroom calm enough to concentrate (Yes); book has been marked (Yes). "Would you like extra help?" was dropped before launch because no time is set aside to give it. \[DB\]
+- **FR-7.38** The questions are listed on Lookups (Lesson feedback questions), where anyone with that page can add, reorder and reword them, set which answer is good (Yes, No or neither) and retire them. Once students have answered a question, the database won't let its wording or good answer change: it is retired and a new one added. Questions are never deleted, and retired ones keep their answers. \[DB\]
+- **FR-7.39** Lesson Feedback (/lesson-feedback, Students card; granted to teacher, head\_of\_department and smt) shows a summary for each class over the dates chosen: number of responses, the green, amber and red split, and the share answering Yes to each question (numbered Q1, Q2… with the questions listed above), green where most gave the good answer and red where most didn't. Teachers see the lessons they taught, Heads of Department their department's classes, SMT every class. A class's figures appear only once it has at least 3 responses in those dates; below that only the count shows. Teachers and Heads of Department never see names. \[DB\]
+- **FR-7.40** Only SMT see named responses, below the summary, by default only students who chose red; admin alone is not enough. Parents and other students see nothing, and no email or inbox message is sent. \[DB\]
 
 ## 11. FR-8 Reports, transcripts and documents
 
@@ -624,7 +641,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /admin/permissions | Tick which pages each role opens and which student fields it can edit | Admin (write) |
 | /staff/roles | Assign staff roles; warns when a houseparent has no house | HR, admin |
 | /staff/mentor-groups | Assign one or two staff to each mentor group | Granted roles |
-| /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals, mark appeal days and credits (FR-7.30), hours before parents see a mark (FR-7.34). Every section starts folded closed and opens when clicked (4 Oct 2026) | Admin, SMT, HR |
+| /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals, mark appeal days and credits (FR-7.30), hours before parents see a mark (FR-7.34), lesson feedback questions (FR-7.38). Every section starts folded closed and opens when clicked (4 Oct 2026) | Admin, SMT, HR |
 | /admin/student-numbers | Boys, girls and unknown by year, mentor group, boarding house and room (rooms counted within their house), restaurant and class | Granted roles |
 | /admin/class-lists | Print class rosters by year, subject or class | HR, school office, admin |
 | /admin/bell-times | Sessions and times for each weekday | Admin |
@@ -764,6 +781,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 - **FR-16.8** Anything before the September 2026 import from SIMS, including class and subject-choice changes. \[Data\]
 - **FR-16.9** Who added a student, and changes to student records, before 30 September 2026 (logged from migration 286). \[Data\]
 - **FR-16.10** A student ticking homework done or unticking it. The tick keeps its own time, but unticking leaves no trace. \[DB\]
+- **FR-16.11** Changes to the lesson feedback questions. Feedback itself can't be changed once sent, so it needs no log. \[DB\]
 
 ## 20. FR-17 Homework
 

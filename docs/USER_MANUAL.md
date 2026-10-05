@@ -49,6 +49,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Set or mark homework | [Setting homework](#setting-homework) · [Marking](#marking-the-mark-book) |
 | Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
 | Appeal a mark, or decide a student's appeal | [Mark appeals](#mark-appeals-grade-appeals) |
+| Give feedback on a lesson, or see what students said | [Lesson feedback](#lesson-feedback) |
 | Record or track reading ages | [Reading ages](#reading-ages-reading-ages) |
 | Write or check report comments | [Reports and documents](#6-reports-and-documents) |
 | Update a student's or parent's details | [Editing a record](#editing-a-record) · [Parents and leavers](#parents-and-leavers) |
@@ -64,7 +65,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 
 ## About this manual
 
-This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 4 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
+This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 5 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
 
 **How it is organised.** It starts with How each person uses Formwork: a guide for each role (teachers, mentors, leaders, the office, specialist roles, students and parents) to what they do each day, week and term. Two short sections follow it for everyone: Using Formwork to raise achievement, and Safeguarding and keeping students safe. After that, each chapter covers one area of the school's work. It says who can use the pages, walks through the common tasks step by step, and lists the rules the system enforces so you know why something is refused. Where a page is only open to some roles, the chapter says so at the top.
 
@@ -134,6 +135,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 
 - Enter the short test: Enter Results, choose your class and the week's result set, and type each percentage. The grade appears as you type. Use **Find missing grades by class** to check nobody is left without a mark.
 - Glance at **Class Progress** (or your classes on Weekly Results) to see who is falling below target.
+- Look at **Lesson Feedback** (Students card) for what your classes said about their lessons. A class shows figures once 3 students have answered; names are never shown.
 
 **Each term**
 
@@ -334,6 +336,7 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 - **At the start of term, in Evening Prep (19:00–21:00)**: choose your Other Half activity for each weekday. Choices close on the date shown. If a day says "Placed by the school", you can't change it.
 - **Twice a week**: order from the **Tuckshop** while the window is open (Monday 5pm to Tuesday 9am for Wednesday; Wednesday 7pm to Thursday 11pm for Saturday). Up to 2 of any item and 2 food items a day; you pay when it's handed out.
 - **When you get a behaviour point you think is unfair**: open **Behaviour** and appeal it once, explaining why. Pastoral staff decide. If a test mark doesn't match your marked paper, appeal it within 5 days under Assessment, Appeal a mark; your teacher checks the paper.
+- **After a lesson, by the end of the next day**: tap **Give feedback** on it on your **Timetable**. Choose green, amber or red for how well you understood it and answer every question. Your teacher sees the class's answers together, never your name.
 - **At the end of term**: download your report and transcripts from **Assessment**.
 
 **Parents**
@@ -692,6 +695,15 @@ On the register:
 
 **Rules.** Any member of staff can mark any register (the school's decision). You cannot save a register for a future date; past dates ask for confirmation. Taking a register is not logged, but every later change or deletion of a mark is kept permanently in Change History.
 
+**If you haven't taken it after 10 minutes.** A flashing, full-screen reminder appears on whatever Formwork page you have open, listing each of your lessons today (Other Half included) with no register yet: the class, room, period and how long ago it started.
+
+- **Take register now** opens that register for today. Saving it clears the reminder by itself.
+- **Remind me in 5 minutes** hides it on your screen; it comes back if the register still isn't taken.
+- An earlier lesson stays on the reminder until its register is taken, so take a missed one late rather than leave it.
+- It never appears while you are on a register page, and not on a day with a holiday on the calendar.
+
+The browser tab flashes too and, once you have clicked on the page, a beep sounds when a lesson is added. Five minutes later the lesson also shows on Registers Not Done for pastoral staff.
+
 ### Registers Not Done (/pastoral/registers-not-done)
 
 Lists every lesson today that started more than 15 minutes ago and has no marks, with the lesson's own teacher. It stays listed for the rest of the day until the register is taken. Open to pastoral staff, houseparents, SMT and admins.
@@ -940,6 +952,34 @@ A student who thinks a mark doesn't match their marked paper can appeal it, as t
 ![Mark Appeals: two appeals waiting and one decided](manual-images/38-mark-appeals.jpg)
 
 The student gets the outcome in their inbox, and so does the Head of Department, who can follow their department's appeals on the same page but can't decide them. SMT, assessment managers and admins see every appeal. Appeals are never deleted. Please decide promptly: a waiting appeal holds one of the student's credits, and nobody else can decide it if you are away. The 5 days and 5 credits are set on Lookups (chapter 14).
+
+### Lesson feedback
+
+Students tell the school how each lesson went: how well they understood it, and ten Yes or No questions about the lesson. Teachers see what their classes said, but never who said it.
+
+**What the student does.** On their **Timetable**, every lesson that has finished today or yesterday has a **Give feedback** button, and the same lessons are listed in a box above the timetable. A lesson they have already answered shows **✓ Feedback given**.
+
+![A student's timetable with lessons to give feedback on](manual-images/38b-lesson-feedback-timetable.png)
+
+1. Tap **Give feedback** on the lesson.
+2. Choose **Green** (understood it and could do the work alone), **Amber** (understood some of it) or **Red** (didn't understand it, need help).
+3. Tap **Yes** or **No** for every question. **Send feedback** stays grey until all are answered.
+4. Press **Send feedback**. It can't be changed afterwards.
+
+![The feedback form on a phone](manual-images/38c-lesson-feedback-form.png)
+
+Feedback can be given from the end of the lesson until the end of the next day, once per lesson. Mentor, Prep, Personal Study and the Other Half aren't included, and a student marked absent for the lesson can't give feedback. There is no comment box.
+
+**Seeing what your classes said.** Open **Lesson Feedback** on the Students card (teachers, Heads of Department and SMT). Choose the dates, or press **This week**, **Last week** or **Last 4 weeks**. Each class shows how many students responded, the green, amber and red split, and the share answering Yes to each question. The questions are numbered Q1 to Q10 and listed above the table. A figure is green where most students gave the good answer and red where most didn't; for "too easy", "too hard" and "bored", No is the good answer. Hover over a figure for the counts.
+
+![Lesson Feedback: one teacher's classes over four weeks](manual-images/38d-lesson-feedback-staff.png)
+
+- A teacher sees the lessons they taught; a Head of Department sees their department's classes; SMT see every class.
+- A class's figures only appear once it has at least 3 responses in the dates chosen, so nobody can work out one student's answers. Classes with fewer are listed underneath with their count.
+- Only SMT see names, in **Named responses** below the summary, set to show students who chose red. Untick the box to see everyone.
+- Parents see nothing, and no emails are sent.
+
+**Changing the questions.** Anyone with Lookups opens **Lesson feedback questions** there to reword, reorder, add or retire a question and say whether Yes, No or neither is the good answer. Once students have answered a question its wording can't be changed: retire it and add a new one. Retired questions keep their past answers.
 
 ### Reading ages (/reading-ages)
 
@@ -1511,6 +1551,7 @@ Students and parents see only their own information: a student their own record,
 | Groups | Groups shown to students | Groups shown to parents |
 | Inbox | Yes | Yes |
 | Mark appeals | Appeal own marks from the last 5 days (5 credits a year) | No |
+| Lesson feedback | Give feedback on today's and yesterday's lessons | No |
 
 ### The student portal
 
@@ -1520,7 +1561,7 @@ After signing in, a student sees big tiles (in the order set at /admin/tile-orde
 
 ![The student portal](manual-images/111-portal.jpg)
 
-**Timetable** shows the week with teachers and rooms, the student's Other Half activity, and homework on the lesson it's due in. **Assessment** shows the latest grade in each subject beside the target (green above, amber on, red below), downloadable term test scores and transcripts, and documents published by the school. **Behaviour** lists their events; a negative one can be appealed once, with a reason. Under Assessment, Appeal a mark lists marks from the last 5 days that can be appealed (chapter 5, Mark appeals).
+**Timetable** shows the week with teachers and rooms, the student's Other Half activity, and homework on the lesson it's due in; lessons that ended today or yesterday have a Give feedback button (chapter 5, Lesson feedback). **Assessment** shows the latest grade in each subject beside the target (green above, amber on, red below), downloadable term test scores and transcripts, and documents published by the school. **Behaviour** lists their events; a negative one can be appealed once, with a reason. Under Assessment, Appeal a mark lists marks from the last 5 days that can be appealed (chapter 5, Mark appeals).
 
 ![A student's timetable with homework and the Other Half](manual-images/112-portal-tt.jpg)
 
