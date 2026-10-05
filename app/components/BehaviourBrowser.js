@@ -216,7 +216,7 @@ export default function BehaviourBrowser() {
           )}
         </div>
         {chosen?.description && (
-          <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{chosen.description}</span>
+          <div className="bl-category-note"><strong>About {chosen.name}</strong>{chosen.description}</div>
         )}
         {becomingSerious && (
           <div className="bl-serious">

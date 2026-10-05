@@ -1341,6 +1341,12 @@ form.behaviour-log label { flex: 0 0 auto; }
 .bl-points.positive { color: #1d6b3a; }
 .bl-points.negative { color: var(--red-700); }
 .bl-hint { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 0.3rem; }
+/* What a behaviour category is for, shown when it is picked: big enough to read on a phone. */
+.bl-category-note {
+  border-left: 4px solid var(--brand-600); background: var(--brand-050, #f2f6fc); border-radius: 6px;
+  padding: 0.6rem 0.85rem; font-size: 1rem; line-height: 1.45; color: var(--ink); white-space: pre-wrap;
+}
+.bl-category-note strong { display: block; font-size: 0.85rem; color: var(--brand-800); margin-bottom: 0.15rem; }
 .bl-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
 .bl-chip {
   display: flex; flex-direction: row; align-items: center; gap: 0.3rem;
