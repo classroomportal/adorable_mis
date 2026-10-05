@@ -556,10 +556,13 @@ export default function Home() {
     );
   }
 
-  // Bursar staff get a dedicated finance-only landing page instead of the full
-  // multi-role staff dashboard, unless they also hold a broader role (admin).
+  // Bursar staff get a plainer landing page (no top rows) instead of the full
+  // staff dashboard, unless they also hold a broader role (admin). Its cards
+  // follow the pages ticked at /admin/permissions like everyone else's (the
+  // principal, 5 Oct 2026): it used to show Fees & Bills and Tuckshop only,
+  // so a page given to the bursar elsewhere never appeared.
   if (!isAdmin && (staffRoles || []).includes('bursar')) {
-    const bursarTabs = sortTiles(TABS.filter((t) => t.key === 'fees' || t.key === 'tuckshop'), moduleOrder);
+    const bursarTabs = sortTiles(TABS, moduleOrder);
     return (
       <div>
         <h1>Welcome — Bursar</h1>
