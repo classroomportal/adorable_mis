@@ -1975,3 +1975,5 @@ nav button.help-button span {
 .lf-chip.lf-green { background: #d8f0de; color: #1f5f31; }
 .lf-chip.lf-amber { background: #fdebc8; color: #7a4d00; }
 .lf-chip.lf-red { background: #f8d4d2; color: #8a1f1a; }
+.lf-key { columns: 2 22rem; font-size: 0.85rem; margin: 0 0 0.75rem; padding-left: 1.6rem; }
+.lf-key li { break-inside: avoid; margin-bottom: 0.15rem; }

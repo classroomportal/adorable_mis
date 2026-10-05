@@ -134,6 +134,16 @@ function LessonFeedbackInner() {
           good answer and red where most didn&apos;t (for &ldquo;too easy&rdquo;, &ldquo;too hard&rdquo; and &ldquo;bored&rdquo;, No is the good answer).
           Hover over a figure for the counts.
         </p>
+        {!loading && shown.length > 0 && (
+          <ol className="lf-key">
+            {columns.map((q) => (
+              <li key={q.question_id}>
+                {q.question}{' '}
+                <span style={soft}>({q.good_answer == null ? 'neither' : q.good_answer ? 'Yes is good' : 'No is good'}{q.active ? '' : ', retired'})</span>
+              </li>
+            ))}
+          </ol>
+        )}
         {loading ? <p>Loading…</p> : shown.length === 0 ? (
           <p>No class has {MIN_RESPONSES} or more responses in these dates yet.</p>
         ) : (
@@ -145,7 +155,7 @@ function LessonFeedbackInner() {
                   <th>Teacher</th>
                   <th>Responses</th>
                   <th>Understanding</th>
-                  {columns.map((q) => <th key={q.question_id} style={{ minWidth: '7rem', fontWeight: 500, fontSize: '0.8rem' }}>{q.question}</th>)}
+                  {columns.map((q, i) => <th key={q.question_id} title={q.question} style={{ textAlign: 'center' }}>Q{i + 1}</th>)}
                 </tr>
               </thead>
               <tbody>
