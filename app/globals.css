@@ -2015,3 +2015,31 @@ nav button.help-button span {
 .reward-buy { margin-top: 0.5rem; }
 .reward-buy label { flex: none; }
 .reward-card > button { align-self: flex-start; }
+
+/* Lesson Feedback summary table: department, teacher and class rows in one
+   table, narrow fixed columns so it fits without sideways scrolling on a
+   laptop or tablet, and a header that stays at the top while scrolling.
+   The header can only stick when the table isn't in a sideways-scrolling
+   box, so that box is used on phones only. */
+.lf-table-wrap { margin-top: 0.5rem; }
+@media (max-width: 760px) {
+  .lf-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+table.lf-table { table-layout: fixed; min-width: 640px; border-collapse: separate; border-spacing: 0; }
+.lf-table .lf-col-name { width: 11rem; }
+.lf-table .lf-col-n { width: 2.6rem; }
+.lf-table .lf-col-bar { width: 6.5rem; }
+.lf-table th, .lf-table td { padding: 0.35rem 0.3rem; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; }
+.lf-table th { position: sticky; top: 0; z-index: 2; text-align: center; font-size: 0.7rem; padding: 0.45rem 0.2rem; white-space: normal; vertical-align: bottom; }
+.lf-table th:first-child { text-align: left; }
+.lf-table td:nth-child(n+4) { text-align: center; }
+.lf-table .lf-bar { min-width: 0; height: 0.7rem; }
+.lf-table .lf-bar + div { font-size: 0.7rem; white-space: nowrap; }
+.lf-row-dept, .lf-row-teacher { cursor: pointer; }
+tbody tr.lf-row-dept td { background: #e3eef8; border-top: 2px solid var(--slate-200); }
+.lf-row-dept:hover td, .lf-row-teacher:hover td { filter: brightness(0.97); }
+tbody tr.lf-row-teacher td { background: #f1f5f9; }
+.lf-row-teacher td:first-child { padding-left: 1rem; }
+tbody tr.lf-row-class td { background: white; }
+.lf-row-class td:first-child { padding-left: 2rem; }
+.lf-caret { display: inline-block; width: 0.9em; color: var(--ink-soft); }
