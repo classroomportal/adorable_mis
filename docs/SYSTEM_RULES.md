@@ -260,7 +260,7 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 **Planned absences** (`/attendance/planned-absences`, migration 318)
 
 One attendance code for a student over a run of whole days, entered once instead of in every register.
-- Open to school office, attendance officer, pastoral, SMT and admin (Pastoral card). All staff can see the list. The checks happen in the database.
+- Adding one and ending or cancelling one are ticks at `/admin/permissions` (Planned absences: Add, Edit; migration 365), starting with school office, attendance officer, pastoral, SMT and admin. The page is on the Pastoral card for those roles. All staff can see the list. Planned absences are never deleted (that cell stays padlocked). The checks happen in the database.
 - Only authorised codes: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and **X, Excluded from school** (new in 318, counted as an authorised absence).
 - It fills in every period the student has on each day: their timetabled lessons (registration and Evening Prep included) and their Other Half activity. Days outside term dates and days with a holiday on the calendar are skipped.
 - Past days and today are filled in as soon as it is saved; later days at 05:30 each morning. The rule that no mark can be saved for a future date still holds.
