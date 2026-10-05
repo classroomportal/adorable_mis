@@ -81,6 +81,12 @@ Where a rule has changed several times, only the current version is given. Migra
 - An unknown Google or Gmail account gets no session at all. The login page tells the person they are "not set up in Formwork yet".
 - Parents sign in with email and password only.
 
+**Sign-in safeguards** (372)
+- Every login also has a Formwork password, even when the person signs in with Google. Changing a Google password doesn't change it.
+- A login can be set to **Google only**: a password sign-in is then refused, even with the right password. The principal's login is set this way (5 Oct 2026). It is set in the database, never from the app, so a signed-in admin can't switch it off.
+- A login can get a **new-device email**: the first sign-in from a phone or browser it hasn't used before emails its owner (time, device, network, how they signed in). The principal's login has this. A browser update counts as a new device.
+- Anyone can end every other sign-in on their account with **Sign out all other devices** on the Change Password page. A device signed out this way can carry on for up to an hour on the pass it already holds.
+
 **Parents**
 - Welcome letters are sent by year group from `/parents/welcome-emails`, by admins and the school office, up to 500 per send (172, 299). Each parent gets one letter. Only admins can pause or resume all parent emails.
 - The letter sets the first password to the oldest current child's date of birth (`DDMMYYYY`) and forces a change at first sign-in (160).

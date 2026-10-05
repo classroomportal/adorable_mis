@@ -80,7 +80,12 @@ export default function LoginPage() {
       : parentEmail.trim();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) setError(error.message);
+    // A login set to Google only (migration 372) is refused by the database
+    // once the password has been checked, which Supabase reports as a
+    // database error.
+    if (error) setError(/database error|google_only/i.test(error.message)
+      ? 'This account signs in with Google only. Use "Sign in with Google".'
+      : error.message);
     else router.push('/');
   }
 
