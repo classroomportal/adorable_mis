@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 5 October 2026 (database migrations up to 373). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 5 October 2026 (database migrations up to 377). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -216,6 +216,14 @@ The timetable comes from Nova-T and is imported by admins; Formwork never invent
 - **FR-3.13** Staff see their own week, with lessons, OH activities and commitments; clicking a lesson opens its register. Students and parents see the student's week with their OH choice. \[Page\]
 - **FR-3.14** Printed timetables: every active student in a year, 8 to an A4 page. Class lists print by year, subject or class. \[Page\]
 
+**Cover for absent teachers** (migrations 374–375, the principal, 5 October 2026)
+
+- **FR-3.15** When a teacher is absent, a member of SMT gives each of their lessons to a teacher who is free then. They start from Cover on the dashboard's Timetable card (an SMT-only link) or Arrange cover on that teacher's timetable. Only SMT can arrange or cancel cover; being an admin is not enough. \[DB\]
+- **FR-3.16** The absent teacher is worked out from the lesson (its own teacher if Nova-T gives one, FR-4.9, else the class's), never taken from the page. The cover teacher must be free: no lesson, Nova-T commitment or Other Half activity of their own then, and not covering another lesson then. The list of free staff shows how many covers each has done this term, so the load can be shared, and warns about anyone being covered for at another period that day, without blocking them. \[DB\]
+- **FR-3.17** A cover is for one date and one lesson; a lesson can have only one live cover. Covers are cancelled, never deleted, and past covers can't be cancelled. Who arranged and who cancelled a cover are recorded from the sign-in. \[DB\]
+- **FR-3.18** The cover teacher gets an inbox message with an apology for the extra work, and another if the cover is cancelled. The cover shows on their timetable for that date only, with a list of lessons they have been asked to cover; the absent teacher's timetable shows "Covered by". The class, its lesson and its teacher are otherwise unchanged. \[DB / Page\]
+- **FR-3.19** A Nova-T re-import that re-creates lessons empties a cover's link to the lesson; the class, date and period still identify it. \[DB\]
+
 ## 7. FR-4 Registers and attendance
 
 Registers are taken lesson by lesson, and any lesson whose register isn't taken 15 minutes after it starts is flagged.
@@ -275,6 +283,8 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.30** Each lesson shows the class, room, period and how many minutes ago it started, with a "Take register now" button that opens that register for today. \[Page\]
 - **FR-4.31** Earlier lessons today stay on the pop-up until their register is taken. Saving the register clears it by itself; there is no "seen" button and nothing is stored. "Remind me in 5 minutes" hides it on that screen; a lesson newly overdue still shows at once. It is never shown on the register pages themselves (/attendance, /other-half/register). \[DB; hiding is Page\]
 - **FR-4.32** Every member of staff with a staff record gets it for their own lessons only; there is no permission switch. The database works out who they are from their sign-in. The page checks every minute, flashes the browser tab's title, and beeps when a lesson is added once someone has clicked on the page. \[DB\]
+
+* **FR-4.33** A covered lesson's register belongs to the cover teacher (migration 375). The registers-not-taken list, the register alert, the overdue count on My Timetable and the 10-minute pop-up (shown as "\<class> (cover)") all go to the cover teacher, and the absent teacher no longer gets them. \[DB\]
 
 ## 8. FR-5 The Other Half
 
@@ -398,6 +408,14 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.34** The Rewards card on the staff dashboard (migration 371) holds Orders (/rewards: accept or decline orders, cancel, mark used, and a printable day list such as who is in mufti; granted to smt, pastoral, head\_of\_boarding, tuckshop and tuckshop\_owner), Rewards & Prices (/rewards/items: rewards, prices, limits, who accepts each, and whether the store is open; smt and pastoral) and Certificates, moved from the Pastoral card. The card shows how many orders are waiting for the viewer to accept. Who can add and change rewards is the Add and Edit ticks on reward\_items at /admin/permissions. \[DB / Page\]
 - **FR-6.35** Nothing in the Reward Store is deleted: rewards are retired, orders declined or cancelled. A price change applies only to later orders. Every change is logged in Change History under rewards. Orders are written only through database functions that take the student from the sign-in, never from the request. \[DB\]
 - **FR-6.36** Not built yet: parents seeing purchases (read-only, stage 2) and assistant days recorded in attendance (stage 3). \[Planned\]
+
+**All events: changing a category or cancelling an event** (migrations 376–377, the principal, 5 October 2026)
+
+- **FR-6.37** Behaviour Review has two tabs: To review (FR-6.9, FR-6.27) and All events. All events lists every behaviour event, positive and negative, with its date, student and year, category, points, who logged it and the comment. It starts on the last 7 days and filters by dates, type, category and year, with a search of student, teacher or comment; up to 2,000 events load at a time. Cancelled and withdrawn events show only when Show cancelled is ticked. \[Page\]
+- **FR-6.38** Only the reviewers can change or cancel from this list: admins, and SMT or school office staff who hold the Behaviour Review page (the principal's PA). Other school office staff and teachers are refused by the database. \[DB\]
+- **FR-6.39** Change category: a reviewer picks a new category of the same type (negative stays negative) and must give a reason. The change is made as any edit is (FR-6.6): the points come from the new category, detentions are added or cancelled to match, the comment is unchanged and a returned Stage 5 stops being returned. Moving an event up to Stage 5 shows the guidance and needs the tick (FR-6.24, FR-6.25) and an explanation. Each change is kept permanently, with the old and new category and points, the reason, who and when, and is shown under the event on the list. \[DB\]
+- **FR-6.40** Cancel event, for one that shouldn't have been logged at all (the wrong student, a duplicate): the reviewer must give a reason. The event is withdrawn as an upheld appeal withdraws one: it stays on the student's record crossed out, its points become 0 (the original kept), and it stops counting in totals, detentions and reward points; students and parents no longer see it. Its detention, and the week's total detention if the week no longer reaches the threshold, is cancelled if not yet held, and the student is told. The student's profile shows "Cancelled by" the reviewer, the date and the reason. A cancelled event can't be edited, changed or cancelled again, and can't be brought back from the app. Deleting an event is still SMT's only. \[DB\]
+- **FR-6.41** For both, the teacher who logged the event gets the reason in their Formwork inbox, with the old and new category or the cancellation, and whether a detention changed; no message when the reviewer logged it themselves. If the teacher has no login, the page says so, to tell them in person. \[DB\]
 
 ## 10. FR-7 Assessment, results and targets
 
@@ -770,6 +788,8 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 - **FR-16.4** "Created by", "recorded by" and "saved by" columns (payments, charge batches, tuckshop sales, hand-out locks, admission records, places allowed) are stamped from the signed-in account, overwriting whatever the page sent. \[DB\]
 - **FR-16.5** Stage 5 events returned to the teacher are also kept in their own record (FR-6.28): teacher, reviewer, time, note, and the category and points before the return. Only the return step can add to it, and the app can't change or delete it. SMT and admins read it as a count per teacher on Behaviour Review; the event's own changes are in Change History (behaviour). \[DB\]
 
+* **FR-16.12** Category changes and cancellations made at Behaviour Review (FR-6.39, FR-6.40) are kept in their own records: the event, the teacher who logged it, the reviewer, the time, the reason, and the category and points before (and, for a change, after). Only those two steps can add to them, and the app can't change or delete them. The reviewers read category changes; all staff read cancellations, so the student's profile can say who cancelled an event and why. The event's own changes are also in Change History (behaviour). \[DB\]
+
 **What can be seen, where, and by whom**
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
@@ -785,6 +805,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 | Tuckshop hand-out locks | Every save and unlock, numbers given and value | /tuckshop/hand-out | Tuckshop, tuckshop owner | Yes |
 | Register alerts | Every register not taken 15 minutes after the start | /admin/register-alerts | HR, school office, admin | Yes |
 | Behaviour event edits | Old and new comment and category for every edit | No screen yet | Database only | Recorded, not viewable |
+| Behaviour category changes and cancellations | Each category changed or event cancelled at Behaviour Review: before and after, the reason, who and when (migrations 376–377) | Behaviour Review → All events (under each event); cancellations also on the student's profile | Changes: the reviewers. Cancellations: all staff | Yes |
 | Missed-lesson alerts seen | Who pressed "Seen" on each missed-lesson alert, when, and their note (migration 309) | No screen yet | Database only | Recorded, not viewable |
 | Login devices | For logins with the new-device email (FR-1.16), each phone or browser seen, first and last sign-in | No screen; the owner gets an email for each new one | Database only | Recorded, not viewable |
 
