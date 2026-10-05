@@ -9,6 +9,7 @@ import { useAuth } from '../../../lib/AuthContext';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday } from '../../../lib/schoolTime';
 import { loadOtherHalfSlots, loadCurrentOtherHalfTermId } from '../../../lib/otherHalf';
+import GroupFreeTimes from '../../components/GroupFreeTimes';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -24,6 +25,7 @@ function StaffTimetable() {
   const [ohSlots, setOhSlots] = useState({ byDay: {} });
   const [loading, setLoading] = useState(true);
   const [myMissingCount, setMyMissingCount] = useState(0);
+  const [mode, setMode] = useState('person'); // 'person' | 'group'
 
   useEffect(() => {
     async function loadStatic() {
@@ -167,6 +169,12 @@ function StaffTimetable() {
     <div>
       <h1>Timetable</h1>
 
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <button className={mode === 'person' ? undefined : 'secondary'} onClick={() => setMode('person')}>One person</button>
+        <button className={mode === 'group' ? undefined : 'secondary'} onClick={() => setMode('group')}>When is a group free?</button>
+      </div>
+
+      {mode === 'group' ? <GroupFreeTimes staffList={staffList} periods={periods} /> : <>
       <div className="card" style={{ marginBottom: '1rem' }}>
         <label style={{ display: 'block', marginBottom: '0.4rem' }}>
           Viewing timetable for:
@@ -245,6 +253,7 @@ function StaffTimetable() {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 }
