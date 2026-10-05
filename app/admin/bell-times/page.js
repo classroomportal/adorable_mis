@@ -47,9 +47,52 @@ function BellTimesInner() {
   const [copyTo, setCopyTo] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState(null);
+  // One-day swaps (migration 373): "on <date>, run that day on <weekday>'s times".
+  const [swaps, setSwaps] = useState([]);
+  const [swapDate, setSwapDate] = useState('');
+  const [swapUse, setSwapUse] = useState('Fri');
+  const [swapNote, setSwapNote] = useState('');
+  const [swapStatus, setSwapStatus] = useState(null);
+
+  async function loadSwaps() {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
+    const { data } = await supabase
+      .from('bell_time_swaps')
+      .select('id, swap_on, day_of_week, use_day, note, applied_at, restored_at')
+      .is('cancelled_at', null)
+      .gte('swap_on', today)
+      .order('swap_on');
+    setSwaps(data || []);
+  }
+
+  async function bookSwap() {
+    if (!swapDate) { setSwapStatus('Choose a date.'); return; }
+    setSwapStatus('Saving...');
+    const { error } = await supabase.rpc('add_bell_time_swap', { p_date: swapDate, p_use_day: swapUse, p_note: swapNote });
+    if (error) { setSwapStatus(`Not saved: ${error.message}`); return; }
+    setSwapDate(''); setSwapNote('');
+    await Promise.all([loadSwaps(), load()]);
+    setSwapStatus('Booked. The usual times come back automatically the next morning.');
+  }
+
+  async function cancelSwap(id) {
+    setSwapStatus('Saving...');
+    const { error } = await supabase.rpc('cancel_bell_time_swap', { p_id: id });
+    if (error) { setSwapStatus(`Not cancelled: ${error.message}`); return; }
+    await Promise.all([loadSwaps(), load()]);
+    setSwapStatus('Cancelled. That day is back on its usual times.');
+  }
+
+  const swapDayOf = (iso) => {
+    if (!iso) return null;
+    const d = new Date(`${iso}T12:00:00Z`).getUTCDay(); // 0 = Sunday
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d];
+  };
+  const fmtDate = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   async function load() {
     setLoading(true);
+    loadSwaps();
     const [{ data: periodRows }, { data: bellRows }, slots] = await Promise.all([
       supabase.from('periods').select('period_number, period_name, short_label').order('period_number'),
       supabase.from('bell_times').select('day_of_week, period_number, start_time, end_time, period_name, short_label'),
@@ -311,6 +354,58 @@ function BellTimesInner() {
           </>
         )}
         {status && <p>{status}</p>}
+      </div>
+
+      <div className="card">
+        <h2>Run one day on another day&apos;s times</h2>
+        <p>
+          For a single date only, e.g. a Monday on Friday&apos;s shorter times. Every class&apos;s lessons that day
+          move to the other day&apos;s times (periods that run on both days), and the usual times come back
+          automatically early the next morning. Booking today takes effect straight away.
+        </p>
+        {(() => {
+          const dayOf = swapDayOf(swapDate);
+          const weekend = dayOf === 'Sat' || dayOf === 'Sun';
+          return (
+            <p>
+              <label style={{ marginRight: '1rem', whiteSpace: 'nowrap' }}>
+                Date{' '}
+                <input type="date" value={swapDate} onChange={(e) => setSwapDate(e.target.value)} />
+              </label>
+              <label style={{ marginRight: '1rem', whiteSpace: 'nowrap' }}>
+                use the times of{' '}
+                <select value={swapUse} onChange={(e) => setSwapUse(e.target.value)}>
+                  {WEEKDAYS.filter((d) => d !== dayOf).map((d) => <option key={d} value={d}>{DAY_NAMES[d]}</option>)}
+                </select>
+              </label>
+              <label style={{ marginRight: '1rem', whiteSpace: 'nowrap' }}>
+                Reason{' '}
+                <input type="text" value={swapNote} placeholder="optional" onChange={(e) => setSwapNote(e.target.value)} style={{ width: '12rem' }} />
+              </label>
+              <button onClick={bookSwap} disabled={!swapDate || weekend || swapUse === dayOf}>
+                {swapDate && !weekend ? `Run ${DAY_NAMES[dayOf]} ${fmtDate(swapDate)} on ${DAY_NAMES[swapUse]}'s times` : 'Book'}
+              </button>
+              {weekend && <span style={{ marginLeft: '0.5rem', color: '#8a5a00' }}>Choose a weekday.</span>}
+            </p>
+          );
+        })()}
+        {swaps.length > 0 && (
+          <div className="table-scroll"><table>
+            <thead><tr><th>Date</th><th>Runs on</th><th>Reason</th><th>Now</th><th></th></tr></thead>
+            <tbody>
+              {swaps.map((s) => (
+                <tr key={s.id}>
+                  <td>{fmtDate(s.swap_on)}</td>
+                  <td>{DAY_NAMES[s.use_day]}&apos;s times</td>
+                  <td>{s.note || ''}</td>
+                  <td>{s.applied_at && !s.restored_at ? 'In effect' : 'Booked'}</td>
+                  <td><button className="secondary" onClick={() => cancelSwap(s.id)}>Cancel</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        )}
+        {swapStatus && <p>{swapStatus}</p>}
       </div>
     </div>
   );
