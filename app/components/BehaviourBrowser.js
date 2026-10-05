@@ -11,6 +11,10 @@ import { GuidanceText, SeriousConfirmTick } from './SeriousEventGuidance';
 // and must say why; recategorise_behaviour_event() makes the change as any
 // edit would (points from the category, detentions to match), keeps it in
 // behaviour_category_changes and sends the note to the teacher's inbox.
+// A reviewer can also cancel a wrongly logged event (migration 377,
+// cancel_behaviour_event()): it stays on the record crossed out, its points
+// stop counting, a detention not yet held is cancelled, and the teacher gets
+// the reason. Cancelled events are listed only when asked for.
 
 const MAX_ROWS = 2000;
 
@@ -47,15 +51,18 @@ export default function BehaviourBrowser() {
   const [category, setCategory] = useState('');
   const [year, setYear] = useState('');
   const [search, setSearch] = useState('');
+  const [showCancelled, setShowCancelled] = useState(false);
   const [events, setEvents] = useState([]);
   const [changes, setChanges] = useState({}); // event_id -> [change, ...] newest first
+  const [cancellations, setCancellations] = useState({}); // event_id -> cancellation
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // The row being changed: { eventId, category, note, confirmed }
+  // The row being changed: { eventId, mode: 'category' | 'cancel', category, note, confirmed }
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [messages, setMessages] = useState({}); // event_id -> outcome text
+  const [notice, setNotice] = useState(null); // shown above the list (a cancelled row may leave it)
 
   useEffect(() => {
     supabase.from('behaviour_categories').select('name, type, default_points, description').order('name')
@@ -67,8 +74,7 @@ export default function BehaviourBrowser() {
     setError(null);
     let q = supabase
       .from('behaviour_events')
-      .select('event_id, event_date, event_time, type, category, points, description, staff_id, visible_to_parents, returned_at, students!behaviour_events_student_id_fkey(first_name, last_name, year_group), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
-      .is('voided_at', null)
+      .select('event_id, event_date, event_time, type, category, points, voided_points, voided_at, description, staff_id, visible_to_parents, returned_at, students!behaviour_events_student_id_fkey(first_name, last_name, year_group), staff!behaviour_events_staff_id_fkey(first_name, last_name)')
       .gte('event_date', from)
       .lte('event_date', to)
       .order('event_date', { ascending: false })
@@ -76,12 +82,18 @@ export default function BehaviourBrowser() {
       .limit(MAX_ROWS);
     if (type) q = q.eq('type', type);
     if (category) q = q.eq('category', category);
-    const [{ data, error: err }, { data: ch }] = await Promise.all([
+    if (!showCancelled) q = q.is('voided_at', null);
+    const [{ data, error: err }, { data: ch }, { data: cx }] = await Promise.all([
       q,
       supabase
         .from('behaviour_category_changes')
         .select('event_id, changed_at, old_category, old_points, new_category, new_points, note, changer:staff!behaviour_category_changes_changed_by_fkey(first_name, last_name)')
         .order('changed_at', { ascending: false })
+        .limit(1000),
+      supabase
+        .from('behaviour_event_cancellations')
+        .select('event_id, cancelled_at, note, canceller:staff!behaviour_event_cancellations_cancelled_by_fkey(first_name, last_name)')
+        .order('cancelled_at', { ascending: false })
         .limit(1000),
     ]);
     if (err) setError(err.message);
@@ -89,10 +101,13 @@ export default function BehaviourBrowser() {
     const byEvent = {};
     (ch || []).forEach((c) => { (byEvent[c.event_id] ||= []).push(c); });
     setChanges(byEvent);
+    const cancelled = {};
+    (cx || []).forEach((c) => { cancelled[c.event_id] ||= c; });
+    setCancellations(cancelled);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, [from, to, type, category]);
+  useEffect(() => { load(); }, [from, to, type, category, showCancelled]);
 
   const years = useMemo(
     () => [...new Set(events.map((e) => e.students?.year_group).filter((y) => y != null))].sort((a, b) => a - b),
@@ -131,6 +146,49 @@ export default function BehaviourBrowser() {
     setMessages({ ...messages, [ev.event_id]: outcome(data, fullName(ev.staff)) });
     setEditing(null);
     load();
+  }
+
+  async function cancelEvent(ev) {
+    if (!editing.note.trim()) { setMessages({ ...messages, [ev.event_id]: 'Say why, so the teacher knows.' }); return; }
+    setSaving(true);
+    const { data, error: err } = await supabase.rpc('cancel_behaviour_event', { p_event_id: ev.event_id, p_note: editing.note });
+    setSaving(false);
+    if (err) { setMessages({ ...messages, [ev.event_id]: `Couldn't cancel it: ${err.message}` }); return; }
+    const parts = ['Event cancelled: its points no longer count.'];
+    if (data?.detentions_cancelled) parts.push('Its detention has been cancelled — the student has been told.');
+    if (data?.own_event) parts.push('You logged this event, so no message was sent.');
+    else if (data?.notified) parts.push(`${fullName(ev.staff)} has your note in their inbox.`);
+    else parts.push(`${fullName(ev.staff)} has no Formwork login to send the note to, so please tell them.`);
+    setNotice(`${fullName(ev.students)}, ${ev.category ?? ev.type} on ${formatUKDate(ev.event_date)}: ${parts.join(' ')}`);
+    setEditing(null);
+    load();
+  }
+
+  function renderCancel(ev) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <span style={{ fontSize: '0.85rem' }}>
+          Cancel this event? It stays on the student&apos;s record crossed out, its points stop counting
+          {ev.type === 'negative' && ' and a detention not yet held is cancelled'}. This can&apos;t be undone here.
+        </span>
+        <textarea
+          rows={2}
+          value={editing.note}
+          onChange={(e) => setEditing({ ...editing, note: e.target.value })}
+          placeholder={`Why? e.g. Logged against the wrong student. ${fullName(ev.staff)} gets this note in their inbox.`}
+          style={{ font: 'inherit', width: '100%' }}
+          autoFocus
+        />
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button type="button" disabled={saving || !editing.note.trim()} onClick={() => cancelEvent(ev)} style={{ width: 'fit-content', background: 'var(--red-700, #b91c1c)', borderColor: 'var(--red-700, #b91c1c)' }}>
+            {saving ? 'Cancelling…' : 'Cancel event and tell the teacher'}
+          </button>
+          <button type="button" className="secondary" disabled={saving} onClick={() => setEditing(null)} style={{ width: 'fit-content' }}>
+            Keep it
+          </button>
+        </div>
+      </div>
+    );
   }
 
   function renderEditor(ev) {
@@ -193,8 +251,9 @@ export default function BehaviourBrowser() {
     <div>
       <p style={{ color: '#555', marginTop: 0 }}>
         Every behaviour event, with its category and comment. If an event is under the wrong category, use
-        <em> Change category</em> and say why: the points and any detention follow the new category, and the
-        teacher who logged it gets your note in their inbox.
+        <em> Change category</em> and say why: the points and any detention follow the new category. If it
+        shouldn&apos;t have been logged at all, use <em>Cancel event</em>: it stays on the record crossed out
+        and stops counting. Either way the teacher who logged it gets your note in their inbox.
       </p>
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '0.75rem' }}>
         <label style={{ flex: '0 1 10rem' }}>From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
@@ -220,12 +279,17 @@ export default function BehaviourBrowser() {
             {years.map((y) => <option key={y} value={String(y)}>Year {y}</option>)}
           </select>
         </label>
+        <label style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.4rem' }}>
+          <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} style={{ width: 'auto' }} />
+          Show cancelled
+        </label>
         <label style={{ flex: '1 1 14rem' }}>Search
           <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Student, teacher or words in the comment" />
         </label>
       </div>
 
       {error && <p style={{ color: 'var(--red-700)' }}>Error: {error}</p>}
+      {notice && <p><strong>{notice}</strong></p>}
       {loading ? <p>Loading…</p> : (
         <>
           <p style={{ color: '#555' }}>
@@ -239,27 +303,47 @@ export default function BehaviourBrowser() {
                 {shown.map((ev) => {
                   const history = changes[ev.event_id] || [];
                   const isEditing = editing?.eventId === ev.event_id;
+                  const cancelled = !!ev.voided_at;
+                  const cancellation = cancellations[ev.event_id];
+                  const strike = (v) => (cancelled ? <s>{v}</s> : v);
                   return (
-                    <tr key={ev.event_id}>
+                    <tr key={ev.event_id} style={cancelled ? { color: 'var(--ink-soft)' } : undefined}>
                       <td style={{ whiteSpace: 'nowrap' }}>{formatUKDate(ev.event_date)}</td>
                       <td>{fullName(ev.students)}{ev.students?.year_group != null && <span style={{ color: '#666' }}> · Y{ev.students.year_group}</span>}</td>
                       <td>
-                        {ev.category ?? '—'}
-                        {!isEditing && (
-                          <button
-                            type="button"
-                            className="secondary"
-                            onClick={() => setEditing({ eventId: ev.event_id, category: '', note: '', confirmed: false })}
-                            style={{ display: 'block', marginTop: '0.3rem', padding: '0.15rem 0.55rem', fontSize: '0.8rem', width: 'fit-content' }}
-                          >
-                            Change category
-                          </button>
+                        {strike(ev.category ?? '—')}
+                        {!isEditing && !cancelled && (
+                          <span style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.3rem' }}>
+                            <button
+                              type="button"
+                              className="secondary"
+                              onClick={() => setEditing({ eventId: ev.event_id, mode: 'category', category: '', note: '', confirmed: false })}
+                              style={{ padding: '0.15rem 0.55rem', fontSize: '0.8rem', width: 'fit-content' }}
+                            >
+                              Change category
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary"
+                              onClick={() => setEditing({ eventId: ev.event_id, mode: 'cancel', note: '' })}
+                              style={{ padding: '0.15rem 0.55rem', fontSize: '0.8rem', width: 'fit-content' }}
+                            >
+                              Cancel event
+                            </button>
+                          </span>
                         )}
                       </td>
-                      <td>{signed(ev.points)}</td>
+                      <td>{strike(signed(cancelled ? (ev.voided_points ?? ev.points) : ev.points))}</td>
                       <td>{fullName(ev.staff)}</td>
                       <td style={{ minWidth: '16rem' }}>
-                        <span style={{ whiteSpace: 'pre-wrap', color: ev.description ? 'inherit' : '#666' }}>{ev.description || 'No comment.'}</span>
+                        <span style={{ whiteSpace: 'pre-wrap', color: ev.description ? 'inherit' : '#666' }}>{strike(ev.description || 'No comment.')}</span>
+                        {cancelled && (
+                          <span style={{ display: 'block', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                            <strong>{cancellation ? 'Cancelled' : 'Withdrawn on appeal'}</strong>
+                            {cancellation && ` by ${fullName(cancellation.canceller)}`} on {formatUKDate(ev.voided_at.slice(0, 10))}
+                            {cancellation && `: ${cancellation.note}`}
+                          </span>
+                        )}
                         {ev.returned_at && <span style={{ display: 'block', fontSize: '0.8rem', color: '#b45309' }}>Returned to the teacher.</span>}
                         {history.map((c) => (
                           <span key={c.changed_at} style={{ display: 'block', fontSize: '0.8rem', color: '#555', marginTop: '0.25rem' }}>
@@ -269,7 +353,7 @@ export default function BehaviourBrowser() {
                         {messages[ev.event_id] && (
                           <span style={{ display: 'block', fontSize: '0.85rem', marginTop: '0.25rem' }}>{messages[ev.event_id]}</span>
                         )}
-                        {isEditing && renderEditor(ev)}
+                        {isEditing && (editing.mode === 'cancel' ? renderCancel(ev) : renderEditor(ev))}
                       </td>
                     </tr>
                   );
