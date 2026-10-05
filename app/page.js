@@ -199,6 +199,8 @@ const CARD_COUNTS = {
     // everyone except admin logins (cs@ is admin by role, not login).
     field: 'behaviour_alerts', href: '/behaviour/alerts', resource: '/behaviour', label: 'Behaviour alerts (7 days)', title: 'Behaviour alerts',
   },
+  // Migration 371: orders the viewer can accept.
+  rewards: { field: 'reward_orders', href: '/rewards', label: 'Orders waiting', title: 'Reward orders waiting to be accepted' },
 };
 
 // The cards on one dashboard share a single request.
@@ -283,8 +285,9 @@ const TABS = [
       // Shares the /results grant rather than having a resource of its own.
       { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
       { href: '/results/subject-overview', label: 'Review Results', desc: "A student's exam results in each subject against the cohort average." },
-      // Detentions, Certificates and Behaviour Appeals live on the Pastoral
-      // card only (the principal, 30 Sept 2026: one place for each link).
+      // Detentions and Behaviour Appeals live on the Pastoral card only, and
+      // Certificates on the Rewards card (the principal, 30 Sept 2026: one
+      // place for each link; migration 371).
     ].filter((it) => hasAccess(it.resource || it.href)),
   },
   {
@@ -295,10 +298,7 @@ const TABS = [
     // still see it there, because a card shows whatever links a person has.
     items: ({ hasAccess }) => [
       { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
-      { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
       { href: '/pastoral/behaviour-totals', label: 'Behaviour Totals', desc: "Running totals of positive and negative points, by student and by mentor group." },
-      { href: '/rewards', label: 'Reward Store', desc: "Students' requests to spend merit points: approve, decline, mark used." },
-      { href: '/rewards/items', label: 'Rewards & Prices', desc: "What students can buy with merit points, and the rules for each." },
       { href: '/behaviour/review', label: 'Behaviour Review', desc: "Check serious incidents (office) and behaviour pictures (SMT) before parents can see them." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
       { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
@@ -308,6 +308,18 @@ const TABS = [
       { href: '/pastoral/birthdays', label: 'Birthdays', desc: "Staff and students with a birthday in the next 7 days." },
       { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
       { href: '/staff/mentor-groups', label: 'Mentor Groups', desc: "Assign staff to each mentor group." },
+    ].filter((it) => hasAccess(it.href)),
+  },
+  {
+    // Migration 371 (the principal, 5 Oct 2026): merits and what they earn in
+    // one place. Certificates and the Reward Store pages moved here from the
+    // Pastoral card; the count is orders waiting for the viewer to accept.
+    key: 'rewards', label: 'Rewards', icon: '🎁', accent: 'school',
+    description: 'Accept reward orders, set rewards and prices, and print merit certificates.',
+    items: ({ hasAccess }) => [
+      { href: '/rewards', label: 'Orders', desc: "Accept or decline students' reward orders, mark them used, and print the day list." },
+      { href: '/rewards/items', label: 'Rewards & Prices', desc: "What students can buy with merit points, the rules for each, and opening the store." },
+      { href: '/certificates', label: 'Certificates', desc: "Students due a Bronze, Silver or Gold certificate." },
     ].filter((it) => hasAccess(it.href)),
   },
   {

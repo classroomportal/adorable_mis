@@ -1,6 +1,6 @@
 'use client';
 
-// Reward Store requests (migration 370). Students spend merit points on
+// Reward Orders (migration 370; on the Rewards card since migration 371). Students spend merit points on
 // rewards from their portal; the points are held as soon as they buy. Here the
 // reward's approvers (set per reward on /rewards/items: mufti — pastoral and
 // head of boarding; tuckshop visit — tuckshop; assistant for a day — SMT;
@@ -23,8 +23,8 @@ const soft = { fontSize: '0.85em', color: 'var(--ink-soft)' };
 
 const VIEWS = {
   todo: { label: 'To do', statuses: ['requested', 'approved'] },
-  requested: { label: 'Waiting for approval', statuses: ['requested'] },
-  approved: { label: 'Approved', statuses: ['approved'] },
+  requested: { label: 'Waiting to be accepted', statuses: ['requested'] },
+  approved: { label: 'Accepted', statuses: ['approved'] },
   done: { label: 'Used', statuses: ['used'] },
   closed: { label: 'Declined or cancelled', statuses: ['declined', 'cancelled'] },
   all: { label: 'Everything', statuses: null },
@@ -108,13 +108,13 @@ function RewardsInner() {
       setChosenStaff('');
       return;
     }
-    run(r.purchase_id, 'decide_reward', { p_purchase_id: r.purchase_id, p_approve: true }, 'Approved. The student has been told.');
+    run(r.purchase_id, 'decide_reward', { p_purchase_id: r.purchase_id, p_approve: true }, 'Accepted. The student has been told.');
   }
 
   function approveWithStaff(r) {
     if (!chosenStaff) { setStatus('Choose the member of staff the student will help.'); return; }
     run(r.purchase_id, 'decide_reward', { p_purchase_id: r.purchase_id, p_approve: true, p_staff_id: Number(chosenStaff) },
-      'Approved. The student and the member of staff have been told.');
+      'Accepted. The student and the member of staff have been told.');
   }
 
   function decline(r) {
@@ -138,10 +138,10 @@ function RewardsInner() {
   return (
     <div>
       <div className="no-print">
-        <h1>Reward Store</h1>
+        <h1>Reward Orders</h1>
         <p style={soft}>
           Students spend merit points here; their merit total for certificates and reports doesn't change.
-          Points are held when a student buys and come back if a request is declined or cancelled.
+          Points are held when a student orders and come back if the order is declined or cancelled.
           Rewards, prices and who approves each one are on <a href="/rewards/items">Rewards &amp; Prices</a>.
         </p>
 
@@ -163,7 +163,7 @@ function RewardsInner() {
             {mineExists && (
               <label style={{ flex: 'none', flexDirection: 'row', alignItems: 'center', gap: '0.4rem' }}>
                 <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} />
-                Only rewards I approve
+                Only rewards I accept
               </label>
             )}
           </div>
@@ -206,13 +206,13 @@ function RewardsInner() {
                               </select>
                             </label>
                             <div className="appeal-form-buttons">
-                              <button onClick={() => approveWithStaff(r)} disabled={isBusy}>Approve</button>
+                              <button onClick={() => approveWithStaff(r)} disabled={isBusy}>Accept</button>
                               <button className="secondary" onClick={() => setApproving(null)}>Back</button>
                             </div>
                           </div>
                         ) : r.status === 'requested' ? (
                           <div className="appeal-form-buttons">
-                            <button onClick={() => approve(r)} disabled={isBusy}>Approve</button>
+                            <button onClick={() => approve(r)} disabled={isBusy}>Accept</button>
                             <button className="secondary" onClick={() => decline(r)} disabled={isBusy}>Decline</button>
                           </div>
                         ) : r.status === 'approved' ? (

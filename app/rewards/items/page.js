@@ -95,7 +95,7 @@ function ItemForm({ initial, roles, onSave, onCancel, saving }) {
         </div>
       </fieldset>
       <fieldset style={{ flex: '1 1 100%', border: 'none', padding: 0, margin: 0 }}>
-        <legend style={soft}>Who approves it (admins always can)</legend>
+        <legend style={soft}>Who accepts orders for it (admins always can)</legend>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
           {roles.map((r) => (
             <label key={r} style={{ flex: 'none', flexDirection: 'row', alignItems: 'center', gap: '0.3rem' }}>
@@ -172,8 +172,8 @@ function RewardItemsInner() {
       <h1>Rewards &amp; Prices</h1>
       <p style={soft}>
         What students can buy with merit points, from the Reward Store tile on their portal. Spending never changes a
-        student's merit total. A new price applies only to purchases made after it. Requests are handled on
-        the <a href="/rewards">Reward Store</a> page.
+        student's merit total. A new price applies only to purchases made after it. Orders are accepted on
+        the <a href="/rewards">Orders</a> page.
       </p>
       {status && <p>{status}</p>}
 
@@ -203,7 +203,7 @@ function RewardItemsInner() {
           <ItemForm initial={BLANK} roles={roles} saving={saving} onSave={(v) => save('new', v)} onCancel={() => setEditing(null)} />
         )}
         <div className="table-scroll" style={{ marginTop: '0.75rem' }}><table>
-          <thead><tr><th>Reward</th><th>Points</th><th>Day</th><th>Limits</th><th>Years</th><th>Approved by</th><th></th></tr></thead>
+          <thead><tr><th>Reward</th><th>Points</th><th>Day</th><th>Limits</th><th>Years</th><th>Accepted by</th><th></th></tr></thead>
           <tbody>
             {items.map((item) => (
               editing === item.item_id ? (
