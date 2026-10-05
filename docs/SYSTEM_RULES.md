@@ -393,7 +393,7 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - One cover per lesson. The covering teacher gets an inbox message with SMT's note and an apology, and the lesson shows on their timetable for that date only. The absent teacher's timetable says who is covering.
 - Covers are cancelled, never deleted (a past cover can't be cancelled). Cancelling tells the covering teacher.
 - The class's teacher and register don't change; any member of staff can take any register.
-- Not yet: Registers Not Done and the register reminder pop-up still go to the class's own teacher, not the covering teacher.
+- The register is the covering teacher's job that day (375): Registers Not Done lists the lesson against them, marked "(cover)", the register alert and the overdue banner go to them, and they get the 10-minute pop-up instead of the absent teacher.
 
 ---
 

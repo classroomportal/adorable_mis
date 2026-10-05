@@ -681,6 +681,19 @@ Use **When is a group free?** at the top of the Timetable page to find a time wh
 
 The box above the grid lists every period when the whole group is free. Tick **Show only periods when everyone is free** to hide the rest. Anyone with no lessons on the timetable shows as free all week, and Formwork names them so you can check.
 
+#### Cover for an absent teacher (SMT)
+
+When a teacher is absent, a member of SMT gives each of their lessons to someone who is free then. Only SMT can arrange or cancel cover.
+
+1. On the dashboard, open the **Timetable** card and press **Cover**. You can also press **Arrange cover** when viewing any teacher's timetable.
+2. Under **Teacher who is absent**, choose the teacher, then choose the **Date**: today or later.
+3. Each of their lessons that day is listed. Open its list and choose who covers it. Only staff who are free then are offered: no lesson, meeting or Other Half activity of their own, and not covering something else. The number beside each name is how many covers they have done this term, and the lowest comes first, so share the load. "(absent today?)" means someone is covering one of that person's own lessons that day.
+4. Add a note if it helps (for example "Worksheets are on the desk"), then press **Add cover**. Staff with no lessons on the timetable, such as office staff, are only listed if you tick **Include staff with no lessons on the timetable**.
+
+To undo a cover, press **Cancel cover** beside it. The teacher is told. Covers can't be deleted, and a past cover can't be cancelled.
+
+**For the teacher covering.** You get an inbox message with the note and an apology. The lesson appears on your timetable for that day only, marked **COVER for** the absent teacher; tap it to take the register. A box above your timetable lists every cover still to come. The register is yours that day: you get the 10-minute reminder, and if it isn't taken the lesson shows on Registers Not Done under your name, marked "(cover)". The absent teacher's timetable shows **Covered by** your name.
+
 ### Taking a register (/attendance)
 
 1. Open the register from your timetable, or choose **Date**, **Period** and **Class / group** on the Attendance page.
@@ -709,6 +722,8 @@ On the register:
 **Rules.** Any member of staff can mark any register (the school's decision). You cannot save a register for a future date; past dates ask for confirmation. Taking a register is not logged, but every later change or deletion of a mark is kept permanently in Change History.
 
 **If you haven't taken it after 10 minutes.** A flashing, full-screen reminder appears on whatever Formwork page you have open, listing each of your lessons today (Other Half included) with no register yet: the class, room, period and how long ago it started.
+
+A lesson you have been asked to cover shows with "(cover)" after the class; the absent teacher doesn't get the reminder for it.
 
 - **Take register now** opens that register for today. Saving it clears the reminder by itself.
 - **Remind me in 5 minutes** hides it on your screen; it comes back if the register still isn't taken.
