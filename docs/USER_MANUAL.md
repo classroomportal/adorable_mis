@@ -662,7 +662,7 @@ Registers are taken lesson by lesson. Any lesson whose register is not taken 15 
 
 ### The school day
 
-There are nine sessions: Registration (M), Lessons 1–6 (L1–L6), The Other Half (OH) and Evening Prep (EP). Bell times are set per weekday at /admin/bell-times (admins). Sunday has an Evening Prep time only, since prep runs Sunday to Friday; it is listed on Bell Times but not in "make these days the same". The timetable itself comes from Nova-T and is imported by admins (chapter 14); a single lesson can have its own teacher or room, different from its class.
+There are nine sessions: Registration (M), Lessons 1–6 (L1–L6), The Other Half (OH) and Evening Prep (EP). Bell times are set per weekday at /admin/bell-times (admins). Sunday has an Evening Prep time only, since prep runs Sunday to Friday; it is listed on Bell Times but not in "make these days the same". When one date runs on another day's times (for example a Monday on Friday's shorter times), book it on Bell Times under **Run one day on another day's times**: choose the date, the day whose times to use and a reason, then press **Run … on …'s times**. Every class's lessons that day move to those times, and the usual times come back automatically early the next morning; booking today takes effect at once. **Cancel** on the booking puts the usual times back straight away. The timetable itself comes from Nova-T and is imported by admins (chapter 14); a single lesson can have its own teacher or room, different from its class.
 
 ### My Timetable (/staff/timetable)
 
@@ -972,12 +972,12 @@ Students tell the school how each lesson went: how well they understood it, and 
 
 Feedback can be given from the end of the lesson until the end of the next day, once per lesson. Mentor, Prep, Personal Study and the Other Half aren't included, and a student marked absent for the lesson can't give feedback. There is no comment box.
 
-**Seeing what your classes said.** Open **Lesson Feedback** on the Students card (teachers, Heads of Department and SMT). Choose the dates, or press **This week**, **Last week** or **Last 4 weeks**. Each class shows how many students responded, the green, amber and red split, and the share answering Yes to each question. The questions are numbered Q1 to Q10 and listed above the table. A figure is green where most students gave the good answer and red where most didn't; for "too easy", "too hard" and "bored", No is the good answer. Hover over a figure for the counts.
+**Seeing what your classes said.** Open **Lesson Feedback** on the Students card (teachers, Heads of Department and SMT). Choose the dates, or press **This week**, **Last week** or **Last 4 weeks**. The table is grouped by department, then teacher, then class. Tap a department or teacher to open or close it; its row adds up the classes beneath it. A teacher sees their own classes already open; Heads of Department and SMT start with the department totals, and **Open all and Close all** do every section at once. Each row shows how many students responded, the green, amber and red split, and the share answering Yes to each question. The column headings stay at the top of the screen as you scroll down. The questions are numbered Q1 to Q10 and listed above the table. A figure is green where most students gave the good answer and red where most didn't; for "too easy", "too hard" and "bored", No is the good answer. Hover over a figure for the counts.
 
-![Lesson Feedback: one teacher's classes over four weeks](manual-images/38d-lesson-feedback-staff.png)
+![Lesson Feedback grouped by department and teacher, with Mathematics and one teacher open](manual-images/38d-lesson-feedback-staff.png)
 
 - A teacher sees the lessons they taught; a Head of Department sees their department's classes; SMT see every class.
-- A class's figures only appear once it has at least 3 responses in the dates chosen, so nobody can work out one student's answers. Classes with fewer are listed underneath with their count.
+- A class's figures only appear once it has at least 3 responses in the dates chosen, so nobody can work out one student's answers. Classes with fewer are listed under their teacher with their count, and are left out of the teacher's and department's totals.
 - Only SMT see names, in **Named responses** below the summary, set to show students who chose red. Untick the box to see everyone.
 - Parents see nothing, and no emails are sent.
 
@@ -1655,7 +1655,7 @@ The lists and settings the rest of Formwork uses: boarding houses, sports houses
 
 ### Timetable setup
 
-- **Bell Times** (/admin/bell-times): which sessions run each day and their times. Saving moves every lesson in that period; a session can't be removed while lessons use it.
+- **Bell Times** (/admin/bell-times): which sessions run each day and their times. Saving moves every lesson in that period; a session can't be removed while lessons use it. One date can also be booked to run on another weekday's times (chapter 3, The school day).
 - **Import Nova-T** (/admin/import-classes): upload Nova-T's .DAT files. Every change is previewed before it's applied; classes missing from the file are offered for deletion. A lesson's subject comes only from the subject code in the group name; Other Half (Oh) and Sports Academy (Sa) groups are skipped.
 - **Import Meetings** (/admin/import-staff-commitments): staff meetings and non-working periods, which block that person's slot.
 - **Class Allocation** (/admin/block-allocation): choose a year and block, then tick which class each student is in. Open to admins, Heads of Department and pastoral staff.
