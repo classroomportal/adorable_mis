@@ -9,7 +9,7 @@
 // responses (the table's own select policy), so someone can follow up a
 // student who was red.
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
@@ -52,6 +52,45 @@ function QuestionCell({ q }) {
   return <td className={cls} title={`Yes ${q.yes}, No ${q.no}`}>{p}%</td>;
 }
 
+// Question counts keyed by question id, from a summary row's questions list.
+function questionCounts(questions) {
+  return new Map((questions || []).map((q) => [q.question_id, q]));
+}
+
+// Adds up classes for a teacher or department row: responses, the three
+// colours, and Yes/No per question. Only classes whose figures are shown
+// (3 or more responses) count, so a total never reveals a smaller class.
+function addUp(rows) {
+  const stats = { responses: 0, green: 0, amber: 0, red: 0, questions: new Map() };
+  for (const r of rows) {
+    stats.responses += r.responses;
+    stats.green += r.green || 0;
+    stats.amber += r.amber || 0;
+    stats.red += r.red || 0;
+    for (const q of r.questions || []) {
+      const t = stats.questions.get(q.question_id) || { ...q, yes: 0, no: 0 };
+      t.yes += q.yes;
+      t.no += q.no;
+      stats.questions.set(q.question_id, t);
+    }
+  }
+  return stats;
+}
+
+function SummaryRow({ level, label, sub, stats, columns, open, onToggle }) {
+  return (
+    <tr className={`lf-row-${level}`} onClick={onToggle} aria-expanded={open}>
+      <td>
+        <span className="lf-caret">{open ? '▾' : '▸'}</span> <strong>{label}</strong>
+        <div style={soft}>{sub}</div>
+      </td>
+      <td>{stats.responses}</td>
+      <td><RagBar green={stats.green} amber={stats.amber} red={stats.red} /></td>
+      {columns.map((q) => <QuestionCell key={q.question_id} q={stats.questions.get(q.question_id)} />)}
+    </tr>
+  );
+}
+
 function LessonFeedbackInner() {
   const { staffRoles } = useAuth();
   const isSmt = staffRoles.includes('smt');
@@ -64,6 +103,8 @@ function LessonFeedbackInner() {
   const [followUpOnly, setFollowUpOnly] = useState(true);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState(null);
+  const [deptByClass, setDeptByClass] = useState({}); // class_id -> department name
+  const [openKeys, setOpenKeys] = useState(new Set());
 
   useEffect(() => {
     loadFeedbackQuestions({ includeRetired: true }).then(({ questions: q }) => setQuestions(q));
@@ -75,6 +116,13 @@ function LessonFeedbackInner() {
     const { data, error } = await supabase.rpc('lesson_feedback_summary', { p_from: from, p_to: to });
     if (error) setStatus(`Error: ${error.message}`);
     setRows(data || []);
+    const classIds = [...new Set((data || []).map((r) => r.class_id))];
+    if (classIds.length) {
+      const { data: cls } = await supabase.from('classes').select('class_id, subjects(department_name)').in('class_id', classIds);
+      const map = {};
+      (cls || []).forEach((c) => { map[c.class_id] = c.subjects?.department_name || 'No department'; });
+      setDeptByClass(map);
+    }
     if (isSmt) {
       const { data: n, error: nErr } = await supabase
         .from('lesson_feedback')
@@ -104,6 +152,48 @@ function LessonFeedbackInner() {
   const held = rows.filter((r) => r.responses < MIN_RESPONSES);
   const thisWeek = weekStartOf(today);
 
+  // Department → teacher → class. Held-back classes are listed under their
+  // teacher by name and count only.
+  const deptMap = new Map();
+  for (const r of rows) {
+    const dName = deptByClass[r.class_id] || 'No department';
+    if (!deptMap.has(dName)) deptMap.set(dName, new Map());
+    const tKey = String(r.staff_id ?? 'none');
+    const teachers = deptMap.get(dName);
+    if (!teachers.has(tKey)) teachers.set(tKey, { key: `t:${dName}:${tKey}`, name: r.teacher_name || 'No teacher', classes: [], held: [] });
+    const t = teachers.get(tKey);
+    (r.responses >= MIN_RESPONSES ? t.classes : t.held).push(r);
+  }
+  const groups = [...deptMap.entries()]
+    .map(([name, teachers]) => {
+      const ts = [...teachers.values()]
+        .filter((t) => t.classes.length > 0 || t.held.length > 0)
+        .map((t) => ({ ...t, stats: addUp(t.classes) }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return { key: `d:${name}`, name, teachers: ts, stats: addUp(ts.flatMap((t) => t.classes)) };
+    })
+    .sort((a, b) => (a.name === 'No department') - (b.name === 'No department') || a.name.localeCompare(b.name));
+  const allKeys = groups.flatMap((d) => [d.key, ...d.teachers.map((t) => t.key)]);
+  // A teacher (one department, one teacher) sees everything open; with more
+  // groups they start closed, so the department totals show first.
+  const groupShape = groups.map((d) => `${d.key}:${d.teachers.length}`).join('|');
+  useEffect(() => {
+    if (groups.length === 1) {
+      const d = groups[0];
+      setOpenKeys(new Set(d.teachers.length === 1 ? [d.key, d.teachers[0].key] : [d.key]));
+    } else {
+      setOpenKeys(new Set());
+    }
+  }, [groupShape]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggle(key) {
+    setOpenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
   return (
     <div>
       <div className="card">
@@ -125,54 +215,91 @@ function LessonFeedbackInner() {
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>By class</h3>
+        <h3 style={{ marginTop: 0 }}>By department, teacher and class</h3>
         <p style={{ ...soft, marginTop: 0 }}>
           Understanding is green · amber · red. Each question shows the share who answered Yes, in green where most gave the
           good answer and red where most didn&apos;t (for &ldquo;too easy&rdquo;, &ldquo;too hard&rdquo; and &ldquo;bored&rdquo;, No is the good answer).
-          Hover over a figure for the counts.
+          Tap a department or teacher to open or close it; their rows add up the classes beneath. Hover over a figure for the counts.
         </p>
         {!loading && shown.length > 0 && (
-          <ol className="lf-key">
-            {columns.map((q) => (
-              <li key={q.question_id}>
-                {q.question}{' '}
-                <span style={soft}>({q.good_answer == null ? 'neither' : q.good_answer ? 'Yes is good' : 'No is good'}{q.active ? '' : ', retired'})</span>
-              </li>
-            ))}
-          </ol>
+          <>
+            <ol className="lf-key">
+              {columns.map((q) => (
+                <li key={q.question_id}>
+                  {q.question}{' '}
+                  <span style={soft}>({q.good_answer == null ? 'neither' : q.good_answer ? 'Yes is good' : 'No is good'}{q.active ? '' : ', retired'})</span>
+                </li>
+              ))}
+            </ol>
+            {groups.length > 1 && (
+              <p style={{ margin: '0 0 0.5rem' }}>
+                <button type="button" className="secondary" onClick={() => setOpenKeys(new Set(allKeys))}>Open all</button>{' '}
+                <button type="button" className="secondary" onClick={() => setOpenKeys(new Set())}>Close all</button>
+              </p>
+            )}
+          </>
         )}
         {loading ? <p>Loading…</p> : shown.length === 0 ? (
           <p>No class has {MIN_RESPONSES} or more responses in these dates yet.</p>
         ) : (
-          <div className="table-scroll">
-            <table>
+          <div className="lf-table-wrap">
+            <table className="lf-table">
+              <colgroup>
+                <col className="lf-col-name" />
+                <col className="lf-col-n" />
+                <col className="lf-col-bar" />
+                {columns.map((q) => <col key={q.question_id} className="lf-col-q" />)}
+              </colgroup>
               <thead>
                 <tr>
-                  <th>Class</th>
-                  <th>Teacher</th>
-                  <th>Responses</th>
-                  <th>Understanding</th>
-                  {columns.map((q, i) => <th key={q.question_id} title={q.question} style={{ textAlign: 'center' }}>Q{i + 1}</th>)}
+                  <th>Department / teacher / class</th>
+                  <th title="Responses">No.</th>
+                  <th title="Understanding: green · amber · red">Understood</th>
+                  {columns.map((q, i) => <th key={q.question_id} title={q.question}>Q{i + 1}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {shown.map((r) => {
-                  const byQ = new Map((r.questions || []).map((q) => [q.question_id, q]));
+                {groups.map((d) => {
+                  const dOpen = openKeys.has(d.key);
                   return (
-                    <tr key={`${r.class_id}-${r.staff_id}`}>
-                      <td><strong>{r.class_code}</strong><div style={soft}>{r.subject_name}</div></td>
-                      <td>{r.teacher_name || '—'}</td>
-                      <td>{r.responses}</td>
-                      <td><RagBar green={r.green} amber={r.amber} red={r.red} /></td>
-                      {columns.map((q) => <QuestionCell key={q.question_id} q={byQ.get(q.question_id)} />)}
-                    </tr>
+                    <Fragment key={d.key}>
+                      <SummaryRow level="dept" label={d.name} sub={`${d.teachers.length} teacher${d.teachers.length === 1 ? '' : 's'}`}
+                        stats={d.stats} columns={columns} open={dOpen} onToggle={() => toggle(d.key)} />
+                      {dOpen && d.teachers.map((t) => {
+                        const tOpen = openKeys.has(t.key);
+                        return (
+                          <Fragment key={t.key}>
+                            <SummaryRow level="teacher" label={t.name} sub={`${t.classes.length} class${t.classes.length === 1 ? '' : 'es'}`}
+                              stats={t.stats} columns={columns} open={tOpen} onToggle={() => toggle(t.key)} />
+                            {tOpen && t.classes.map((r) => {
+                              const byQ = questionCounts(r.questions);
+                              return (
+                                <tr key={`${r.class_id}-${r.staff_id}`} className="lf-row-class">
+                                  <td><strong>{r.class_code}</strong><div style={soft}>{r.subject_name}</div></td>
+                                  <td>{r.responses}</td>
+                                  <td><RagBar green={r.green} amber={r.amber} red={r.red} /></td>
+                                  {columns.map((q) => <QuestionCell key={q.question_id} q={byQ.get(q.question_id)} />)}
+                                </tr>
+                              );
+                            })}
+                            {tOpen && t.held.length > 0 && (
+                              <tr className="lf-row-class">
+                                <td colSpan={3 + columns.length} style={soft}>
+                                  Not enough responses yet: {t.held.map((r) => `${r.class_code} (${r.responses})`).join(', ')}
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </Fragment>
                   );
                 })}
               </tbody>
             </table>
           </div>
         )}
-        {!loading && held.length > 0 && (
+        {!loading && shown.length === 0 && held.length > 0 && (
           <p style={soft}>
             Not enough responses yet to show: {held.map((r) => `${r.class_code} (${r.responses})`).join(', ')}.
           </p>
