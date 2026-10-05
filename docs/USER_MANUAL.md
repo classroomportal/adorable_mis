@@ -25,7 +25,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
-| Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
+| Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, reward store, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
 | Care and conduct | [8. The Other Half and student groups](#8-the-other-half-and-student-groups) | Activity registers, the programme, student choices, groups, building a group from a rule | All staff; SMT; pastoral |
 | Care and conduct | [9. Calendar, messages and email](#9-calendar-messages-and-email) | The calendar, sending messages, the inbox, where replies go | SMT, office, pastoral |
 | School business | [10. Fees and bills](#10-fees-and-bills) | Payments, charging, fee items, discounts, debtors, price approval, the SMT dashboard | Bursar, SMT, principal, college secretary |
@@ -50,6 +50,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
 | Appeal a mark, or decide a student's appeal | [Mark appeals](#mark-appeals-grade-appeals) |
 | Give feedback on a lesson, or see what students said | [Lesson feedback](#lesson-feedback) |
+| Accept a student's reward order, or change rewards and prices | [Reward Store](#reward-store-rewards) |
 | Record or track reading ages | [Reading ages](#reading-ages-reading-ages) |
 | Write or check report comments | [Reports and documents](#6-reports-and-documents) |
 | Update a student's or parent's details | [Editing a record](#editing-a-record) · [Parents and leavers](#parents-and-leavers) |
@@ -335,6 +336,7 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 - **After doing homework**: tick **Done** as a reminder for yourself. It isn't a hand-in; teachers still mark it. Grades appear once your teacher releases them.
 - **At the start of term, in Evening Prep (19:00–21:00)**: choose your Other Half activity for each weekday. Choices close on the date shown. If a day says "Placed by the school", you can't change it.
 - **Twice a week**: order from the **Tuckshop** while the window is open (Monday 5pm to Tuesday 9am for Wednesday; Wednesday 7pm to Thursday 11pm for Saturday). Up to 2 of any item and 2 food items a day; you pay when it's handed out.
+- **When the Reward Store is open**: spend your merit points on a reward from the **Reward Store** tile. Your merit total doesn't go down; only your points to spend do.
 - **When you get a behaviour point you think is unfair**: open **Behaviour** and appeal it once, explaining why. Pastoral staff decide. If a test mark doesn't match your marked paper, appeal it within 5 days under Assessment, Appeal a mark; your teacher checks the paper.
 - **After a lesson, by the end of the next day**: tap **Give feedback** on it on your **Timetable**. Choose green, amber or red for how well you understood it and answer every question. Your teacher sees the class's answers together, never your name.
 - **At the end of term**: download your report and transcripts from **Assessment**.
@@ -550,7 +552,7 @@ Everyone signs in at misform.work. Staff and students use their school Google ac
 
 **If sign-in is refused.** Google only links to a login Formwork already made. If you see "not set up in Formwork yet", ask the school office or an administrator; nobody can create their own account. A student who leaves is signed out at once and cannot sign in again unless they return.
 
-**Passwords.** Use **Change Password** at the top right at any time. A new password must be at least 8 characters. Staff and students who sign in with their school account have no Formwork password to forget. A parent who forgets theirs presses **Forgot your password?** on the sign-in page, enters the email the school holds and follows the link emailed to them; it can take a few minutes and may land in spam or junk. If nothing arrives within 15 minutes, the school office can resend their welcome letter.
+**Passwords.** Use **Change Password** at the top right at any time. A new password must be at least 8 characters. Staff and students who sign in with their school account have no Formwork password to forget. A parent who forgets theirs presses **Forgot your password?** on the sign-in page, enters the email the school holds and follows the link emailed to them; it can take a few minutes and may land in spam or junk. If nothing arrives within 15 minutes, the school office can resend their welcome letter. If you think someone else has used your account, press \*\*Sign out all other devices\*\* on Change Password: every other phone or browser is signed out (one may carry on for up to an hour). The principal's login can only be used with Google and emails a warning whenever it signs in on a new device.
 
 ### The staff dashboard
 
@@ -568,7 +570,7 @@ A teacher with the mentor and Head of Department roles sees far fewer cards:
 
 ![A teacher's dashboard](manual-images/03-dashboard-teacher.jpg)
 
-Hover over (or tab to) a link on a card to see a one-line description of the page. The numbers on the Students, Staff & Access and Pastoral cards (active students, staff, behaviour alerts in the last 7 days) are links to those pages.
+Hover over (or tab to) a link on a card to see a one-line description of the page. The numbers on the Students, Staff & Access and Pastoral cards (active students, staff, behaviour alerts in the last 7 days) are links to those pages. The Rewards card shows how many reward orders are waiting for you to accept.
 
 ### Roles and what they open
 
@@ -1140,6 +1142,27 @@ A student can appeal their own negative event once, from their portal; parents c
 
 Certificates are awarded at cumulative points milestones (currently Bronze 100, Silver 200, Gold 500). The page lists students ready for each level: **Print certificate**, or **Mark awarded (no print)**. Each student gets each level once.
 
+Certificates is on the **Rewards** card on your home page, with the Reward Store pages.
+
+### Reward Store (/rewards)
+
+Students spend merit points on rewards. Spending never lowers their merit total: certificates, Behaviour Totals and reports still count every merit. The store was closed on 5 October 2026 until the principal adds rewards; while it is closed, students don't see its tile.
+
+**Points to spend** are the student's merits this school year (from 1 September) less what they have ordered. Negative points don't reduce them, and they start again each September. Points are taken when the student orders and come back if the order is declined or cancelled.
+
+**What the student does.** On the **Reward Store** tile, they choose a reward and a day (up to 28 days ahead) and press order. They can cancel it until someone decides it, and they get an inbox message when it is accepted or declined.
+
+**Accepting orders.** Open **Orders** on the Rewards card. The card shows how many orders are waiting for you.
+
+1. Each order shows the student, the reward, the day and the student's points.
+2. Press **Accept** or **Decline**. For Assistant for a day, choose the member of staff the student will help; they get an inbox message too.
+3. On the day, press **Mark used**. An accepted order can still be cancelled, with a reason, and the points go back.
+4. **Day list** prints who has which reward on a day, for example who is in mufti.
+
+Who accepts each reward is set on the reward: to start with, Mufti day by pastoral or the head of boarding, Extra tuckshop visit by the tuckshop, and Assistant for a day by SMT. Admins can accept any order, but nobody can decide an order for their own child.
+
+**Rewards & Prices** (SMT and pastoral): add a reward, set its price in points, how often a student can have it, which days it can be taken, and who accepts it; open or close the store; retire a reward. A price change applies only to later orders. Rewards are retired, never deleted, and every change and order is in Change History under rewards. Parents don't see orders yet.
+
 ![Certificates ready to award](manual-images/56-certificates.jpg)
 
 ### Behaviour Totals (/pastoral/behaviour-totals)
@@ -1324,7 +1347,7 @@ Nobody reads mis@abc.sch.ng, so each kind of email carries a Reply-To. SMT and a
 
 The bursar runs invoices, charges, payments and discounts. Prices change only when both the principal and the college secretary approve, and parents see a term's fees only once SMT publishes that term.
 
-The bursar's home page shows only the Fees & Bills and Tuckshop cards.
+The bursar's home page has no top rows of tiles. Like everyone else's, it shows a card for every page the bursar's roles can open, so ticking a page for the bursar at Permissions makes its card appear.
 
 ![The bursar's home page](manual-images/80-bursar-home.jpg)
 
@@ -1608,6 +1631,8 @@ Choose a role from the list at the top. Beside it you see what the role is for, 
 - **What they can do**: for each kind of record (registers, behaviour events, results, payments and so on), whether the role can **View**, **Add**, **Edit** and **Delete** it. **Yes** means any record, **Own only** means only records tied to the person (their own classes, events they logged), and **No** means not at all. Click a row to see the names of the database rules that allow it. This is read from the database itself, so it is always current: tick a page and any access that depends on it changes straight away. Below the table, give the role Read or Edit on each student Core Data field.
 - **Compare roles**: every page against every role in one grid, to check at a glance who can open what. Click a role's name to open it on the Pages tab.
 
+On **Pages** and **What they can do**, each section is a branch: click its heading to open or close it. A closed heading says what is inside (how many pages are ticked; which records are seen or changed). **Open all** and **Close all** do every branch at once, and typing in the search box opens every branch that matches.
+
 **Changing what a role can do.** Some records have tick boxes beside View, Add, Edit and Delete: certificates, certificate levels, the BMI table and grade boundaries, and (since 3 Oct 2026) behaviour, attendance, reports, results, homework, students and families, staff and HR, the tuckshop, The Other Half, student groups, admissions, fees (fee prices stay with the two approvers), the timetable, the calendar and next year's plan. Staff roles, page permissions and logins have no tick boxes, so a tick can never hand out admin powers. A record whose rows belong to someone (a teacher's own report comments, a checker's report period) keeps that rule whatever is ticked: the tick decides who sees or changes everyone's. Tick or untick a box and Formwork lists the people who would gain or lose that ability, by name, before it saves; press **OK** to go ahead. Every change is kept in Change History. Medical and sick-bay records show padlocks instead: only the nurse and the DSL can see them, and that can't be changed here.
 
 A padlock (🔒) means the cell can't be changed here by anyone, admin included. These are the principal's own decisions: only the school office adds students; Grade History and Change History can't be edited; fee prices need the principal and the college secretary. Some things everyone signed in can read also have a padlock. Hover over the padlock to see why.
@@ -1672,7 +1697,7 @@ Drag tiles (or use the arrows) into order and **Save order**, for students' tile
 
 ### Change History (/admin/change-history, SMT and admins)
 
-The permanent log of sensitive changes: register changes and deletions, fees and prices, behaviour events, roles, permissions and logins, parent links, email settings, admissions, student groups and student records. Each entry shows when, the area, the student, what changed (old → new) and who did it. Filter by dates, area, student, person and action, and download as CSV. Nobody can edit or delete an entry; changes made directly in the database show as "Principal (direct)". The bursar can't read it.
+The permanent log of sensitive changes: register changes and deletions, fees and prices, behaviour events, roles, permissions and logins, parent links, email settings, admissions, student groups, student records and the Reward Store. Each entry shows when, the area, the student, what changed (old → new) and who did it. Filter by dates, area, student, person and action, and download as CSV. Nobody can edit or delete an entry; changes made directly in the database show as "Principal (direct)". The bursar can't read it.
 
 ![Change History](manual-images/126-change-history.jpg)
 
