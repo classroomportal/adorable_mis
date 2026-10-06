@@ -24,7 +24,7 @@ Generated: 30 September 2026, after migration 275. Project ref: `drjtcegtucovhby
   - `process-email-outbox` — `15 seconds` — `select public.process_email_outbox();`
   - `detention-thursday-reminder` — `30 18 * * 4` (UTC) — `select public.send_detention_reminders();`
 - `staff_roles.role_name` values actually assigned to staff: admin, admissions, assessment_manager, assessment_user, bursar, college_secretary, head_of_department, houseparent, hr, mentor, nurse, pastoral, principal, school_office, smt, teacher, tuckshop, tuckshop_owner.
-- Views: all are `security_invoker=true` except `message_read_status` (see Known gaps).
+- Views: all are `security_invoker=true`. `message_read_status` (since migration 385) is a `security_invoker` view over the `SECURITY DEFINER` function `message_read_status_rows()`, which keeps its access rule (admin, the message's sender, or smt/pastoral/school_office).
 - Every table carries the statement-level `a_backup_mode_guard` trigger (added automatically to new tables by the `guard_new_tables()` event trigger), so writes pause while backup mode is on. That trigger is listed under each table below.
 
 ## What changed since the 22 September 2026 snapshot
@@ -78,7 +78,7 @@ Generated: 30 September 2026, after migration 275. Project ref: `drjtcegtucovhby
 
 ## Known gaps / dead ends (so nobody re-discovers these the hard way)
 
-- **`message_read_status`** (view) is still **`SECURITY DEFINER`** — it has no `security_invoker` reloption, so it runs with the owner's privileges and bypasses RLS. It exposes recipient email addresses and names for staff, students and parents. Its own `WHERE` clause is the only thing scoping it (`is_admin()`, sender, or `smt`/`pastoral`/`school_office`). The other eight views are `security_invoker=true`; this one still isn't (checked 30 Sept 2026). Worth closing the same way.
+- ~~`message_read_status` was a `SECURITY DEFINER` view~~ — **closed** by migration 385 (6 Oct 2026, flagged CRITICAL by the Supabase advisor). It is now `security_invoker`, reading `message_read_status_rows()`. Don't just flip a view like this to `security_invoker`: `message_recipients`/`profiles`/`students`/`parents` RLS would have cut Message history's read receipts from 443 rows to 11–46.
 - ~~Four `SECURITY DEFINER` functions hardcode a Supabase JWT~~ — **closed** (checked 27 Sept 2026). No function contains a JWT any more. Only `process_email_outbox()` calls the edge function, and it reads the key from Vault through `send_workspace_email_key()` (migration 169).
 - **`house_assignments`** — has real FKs (`houseparent_staff_id → staff`) but 0 rows, 0 RLS policies (so RLS-enabled and unreadable), and nothing reads or writes it. Houseparent-to-house scoping actually works through `staff_roles.scope_value` (`scope_type='house'`) read by `my_house_scope()`, mirroring `my_department_scope()` for Heads of Department. Treat `house_assignments` as superseded/dead, not a gap to fill.
 - **`behaviour_event_audit`** has no RLS policies, so the app can't read it. `edit_behaviour_event()` writes to it on every edit; the readable record of behaviour changes is `change_history` (area `behaviour`).
