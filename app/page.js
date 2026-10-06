@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { canHandOut } from '../lib/tuckshopHandout';
@@ -512,6 +513,14 @@ export default function Home() {
   // Order of the larger tiles, set at /admin/tile-order (migration 282).
   const moduleOrder = useTileOrder('staff_modules');
   const [showSplash, setShowSplash] = useState(false);
+  const router = useRouter();
+
+  // Signed-out visitors go straight to the sign-in page; there is no public
+  // welcome page (the principal, 6 Oct 2026). null = signed out; undefined =
+  // still checking, so wait rather than bounce someone who is signed in.
+  useEffect(() => {
+    if (session === null) router.replace('/login');
+  }, [session, router]);
 
   useEffect(() => {
     if (session && !sessionStorage.getItem('splashShown')) {
@@ -524,15 +533,7 @@ export default function Home() {
     return <SplashScreen onDone={() => setShowSplash(false)} />;
   }
 
-  if (!session) {
-    return (
-      <div className="welcome-card">
-        <h1>Formwork</h1>
-        <p>School management information system for Adorable British College.</p>
-        <a href="/login"><button>Sign in</button></a>
-      </div>
-    );
-  }
+  if (!session) return null;
 
   if (profile?.role === 'student') {
     return <StudentHome />;
