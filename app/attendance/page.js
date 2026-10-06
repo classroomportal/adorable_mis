@@ -26,6 +26,9 @@ function AttendanceInner() {
   const [marks, setMarks] = useState({}); // student_id -> code
   const [lateMinutes, setLateMinutes] = useState({}); // student_id -> minutes late, as typed
   const [planned, setPlanned] = useState({}); // student_id -> true when the mark came from a planned absence (318)
+  // student_id -> 'code|minutes' as loaded or last saved, so Save sends only
+  // the marks that changed and doesn't put this teacher's name on the rest.
+  const [saved, setSaved] = useState({});
   const [slot, setSlot] = useState(null); // {start_time, end_time} of this class's slot in this period
   const [todaySoFar, setTodaySoFar] = useState({}); // student_id -> [{period_number, code, status}]
   const [lastGrades, setLastGrades] = useState({}); // student_id -> {grade, week_start_date}, for this class's subject
@@ -77,15 +80,23 @@ function AttendanceInner() {
         .eq('attend_date', date)
         .eq('period_number', periodNumber)
         .in('student_id', ids);
-      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id');
+      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id, other_half_activity_id');
       // Until migration 318 is run there's no planned_absence_id column; the
       // register must still show the marks already taken.
       if (existingError) ({ data: existing } = await existingMarks('student_id, code, minutes_late'));
       const prefill = {};
       const prefillMinutes = {};
       const plannedIds = {};
+      const savedNow = {};
       (existing || []).forEach((row) => {
         if (row.code) prefill[row.student_id] = row.code;
+        // A mark from an Other Half register is re-saved as this lesson's,
+        // even unchanged, so it stops counting as OH attendance (385).
+        // So is a planned-absence mark: saving the register makes it the
+        // teacher's, so ending the absence leaves it alone (318).
+        savedNow[row.student_id] = row.other_half_activity_id || row.planned_absence_id
+          ? 'resave'
+          : `${row.code || ''}|${row.minutes_late ?? ''}`;
         if (row.planned_absence_id) plannedIds[row.student_id] = true;
         if (row.minutes_late !== null && row.minutes_late !== undefined) {
           prefillMinutes[row.student_id] = String(row.minutes_late);
@@ -94,6 +105,7 @@ function AttendanceInner() {
       setMarks(prefill);
       setLateMinutes(prefillMinutes);
       setPlanned(plannedIds);
+      setSaved(savedNow);
 
       const { data: today } = await supabase
         .from('attendance_today')
@@ -132,6 +144,7 @@ function AttendanceInner() {
       setMarks({});
       setLateMinutes({});
       setPlanned({});
+      setSaved({});
       setTodaySoFar({});
       setLastGrades({});
     }
@@ -258,7 +271,9 @@ function AttendanceInner() {
     // batch must carry the same keys, which holds: it's one teacher saving.
     const attributeTo = profile?.staff_id ? { staff_id: profile.staff_id } : {};
 
-    const rows = marked.map(([student_id, code]) => {
+    const changed = marked.filter(([student_id, code]) =>
+      saved[student_id] !== `${code}|${isLateCode(code) ? (lateMinutes[student_id] ?? '') : ''}`);
+    const rows = changed.map(([student_id, code]) => {
       const late = isLateCode(code);
       const typed = Number(lateMinutes[student_id]);
       return {
@@ -271,11 +286,16 @@ function AttendanceInner() {
         // a fat-fingered "700" to null would quietly lose the fact of lateness,
         // so let the error surface instead.
         minutes_late: late && Number.isFinite(typed) ? Math.round(typed) : null,
+        other_half_activity_id: null,
         ...attributeTo,
       };
     });
-    if (rows.length === 0) {
+    if (marked.length === 0) {
       setStatus('Mark at least one student.');
+      return;
+    }
+    if (rows.length === 0) {
+      setStatus('Nothing has changed since it was saved.');
       return;
     }
     // A mis-click on the timetable once saved a whole register five days in
@@ -291,8 +311,16 @@ function AttendanceInner() {
     }
     setStatus('Saving...');
     const { error } = await supabase.from('attendance').upsert(rows, { onConflict: 'student_id,attend_date,period_number' });
-    if (error) setStatus(`Error: ${error.message}`);
-    else setStatus(`Saved ${rows.length} marks.`);
+    if (error) {
+      setStatus(`Error: ${error.message}`);
+      return;
+    }
+    setSaved((prev) => {
+      const next = { ...prev };
+      rows.forEach((r) => { next[r.student_id] = `${r.code}|${r.minutes_late ?? ''}`; });
+      return next;
+    });
+    setStatus(`Saved ${rows.length} mark${rows.length === 1 ? '' : 's'}.`);
   }
 
   return (

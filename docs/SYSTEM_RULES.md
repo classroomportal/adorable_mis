@@ -198,7 +198,7 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 | Create, edit, retire or delete activities; set room, staff, year groups and capacity | SMT, the `other_half` coordinator role, admins |
 | Open or close student choices for a term, and set a closing time | Same |
 | Place, move or remove any student's choice, at any time | Same, at `/other-half/choices`. Not limited to Evening Prep |
-| Take an OH register | Any member of staff |
+| Take an OH register | Any member of staff, one person at a time. Once it is taken, only the person who took it, the school office, the attendance officer and SMT can change it (385) |
 | See activities and choice windows | Everyone signed in. Students see their own choices; parents see their children's |
 
 Pages: `/other-half` and its register page are for teaching and pastoral staff. The Activities, Choices and Absentees pages are for SMT, the coordinator and admins. **At present nobody holds the `other_half` coordinator role**, so only SMT and admins can manage OH.
@@ -239,6 +239,12 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 - The register lists the students who chose the activity.
 - Marks go into the normal attendance record, at the OH period, tagged with the activity.
 - A student already marked in another activity that day can't be marked again.
+- **A timetabled lesson always beats the Other Half** (385, the principal, 6 Oct 2026). A student who has a lesson in the OH period that day (Year 12 have science lessons there on Tuesdays and Wednesdays) shows as "In lesson: 12a/Bi1 (Maurice Ekpo)" and can't be marked on an OH register, whichever teacher saves first. Mentor, Prep and Personal Study don't count as lessons here.
+- **One person takes the register** (385). Most activities have two or more staff, and the second person used to save over the first one's marks. Now:
+  - While someone has the register open, anyone else who opens it sees "Bessie Maduekwe is taking this register (opened 15:02)" and can only view it. It is let go when they save or leave the page, or after 10 minutes without any marking, so a forgotten tab can't block it.
+  - Once saved, it belongs to the person who took it. Only they, the school office, the attendance officer and SMT can change it (for example a late arrival). The activity's other staff see it read-only, with the reason.
+  - The database enforces both, so an old open tab gets the same answer when it saves.
+- Saving sends only the marks that changed, so re-saving doesn't put your name on marks someone else took.
 - Registers can't be taken for a future date.
 
 **Absentees** (248)
@@ -258,7 +264,8 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 ## 5. Registers and attendance
 
 **Who can mark**
-- **Any member of staff can mark any register** (the school's decision, 27 Sept 2026).
+- **Any member of staff can mark any register** (the school's decision, 27 Sept 2026). The exception is Other Half registers, which one person takes and only they or office/SMT can then change (see §4).
+- Saving a register sends only the marks that changed, so the name on an untouched mark stays that of whoever took it (385). Planned-absence marks are still re-saved, so saving makes them the teacher's as before.
 - Parents can read their own children's attendance. Students can't read attendance.
 
 **Rules for marks**
