@@ -5,9 +5,12 @@
 // names (the principal, 5 Oct 2026). Teachers see the lessons they taught,
 // Heads of Department their department, SMT every class, all through
 // lesson_feedback_summary(), which holds back a class's figures until it has
-// at least 3 responses in the dates chosen. Only SMT also get the named
-// responses (the table's own select policy), so someone can follow up a
-// student who was red.
+// at least 3 responses in the dates chosen. SMT and the Lesson Feedback
+// Reviewer (migration 382) see every class's summary and the individual
+// responses, grouped by subject, through lesson_feedback_responses(), which
+// adds the student's name only for SMT, so someone can follow up a student
+// who was red; the reviewer sees enough to know the class and take it up
+// with the Head of Department or SMT.
 
 import { Fragment, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -94,13 +97,16 @@ function SummaryRow({ level, label, sub, stats, columns, open, onToggle }) {
 function LessonFeedbackInner() {
   const { staffRoles } = useAuth();
   const isSmt = staffRoles.includes('smt');
+  const isReviewer = staffRoles.includes('lesson_feedback_reviewer');
+  const seesResponses = isSmt || isReviewer;
   const today = schoolToday();
   const [from, setFrom] = useState(addDays(today, -27));
   const [to, setTo] = useState(today);
   const [rows, setRows] = useState([]);
   const [questions, setQuestions] = useState([]);
-  const [named, setNamed] = useState([]);
+  const [responses, setResponses] = useState([]);
   const [followUpOnly, setFollowUpOnly] = useState(true);
+  const [openSubjects, setOpenSubjects] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState(null);
   const [deptByClass, setDeptByClass] = useState({}); // class_id -> department name
@@ -123,30 +129,37 @@ function LessonFeedbackInner() {
       (cls || []).forEach((c) => { map[c.class_id] = c.subjects?.department_name || 'No department'; });
       setDeptByClass(map);
     }
-    if (isSmt) {
-      const { data: n, error: nErr } = await supabase
-        .from('lesson_feedback')
-        .select('feedback_id, lesson_date, period_number, understanding, created_at, students(first_name, last_name, year_group), classes(class_code), staff(first_name, last_name), lesson_feedback_answers(question_id, answer)')
-        .gte('lesson_date', from)
-        .lte('lesson_date', to)
-        .order('lesson_date', { ascending: false })
-        .order('period_number')
-        .limit(1000);
+    if (seesResponses) {
+      const { data: n, error: nErr } = await supabase.rpc('lesson_feedback_responses', { p_from: from, p_to: to, p_red_only: followUpOnly });
       if (nErr) setStatus(`Error: ${nErr.message}`);
-      setNamed(n || []);
+      setResponses(n || []);
     }
     setLoading(false);
   }
-  useEffect(() => { load(); }, [from, to, isSmt]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [from, to, seesResponses, followUpOnly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Question columns: the active questions, plus any retired one that still
   // has answers in the dates shown.
   const answered = new Set(rows.flatMap((r) => (r.questions || []).map((q) => q.question_id)));
   const columns = questions.filter((q) => q.active || answered.has(q.question_id));
 
-  // Named list (SMT): by default only students who were red.
-  const needsFollowUp = (f) => f.understanding === 'red';
-  const namedShown = followUpOnly ? named.filter(needsFollowUp) : named;
+  // Individual responses (SMT and the reviewer), by subject; the database
+  // sends them sorted by subject, class, then newest lesson first.
+  const bySubject = [];
+  for (const f of responses) {
+    const name = f.subject_name || 'No subject';
+    let g = bySubject[bySubject.length - 1];
+    if (!g || g.name !== name) { g = { name, rows: [] }; bySubject.push(g); }
+    g.rows.push(f);
+  }
+  const questionById = new Map(questions.map((q) => [q.question_id, q]));
+  function toggleSubject(name) {
+    setOpenSubjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  }
 
   const shown = rows.filter((r) => r.responses >= MIN_RESPONSES);
   const held = rows.filter((r) => r.responses < MIN_RESPONSES);
@@ -202,7 +215,8 @@ function LessonFeedbackInner() {
           Students give feedback on a lesson from their timetable, from the end of the lesson until the end of the next day.
           This page shows a summary for each class, never students&apos; names. A class&apos;s figures appear once it has at
           least {MIN_RESPONSES} responses in the dates chosen.
-          {isSmt ? ' As SMT you also see the named responses below.' : ''}
+          {isSmt ? ' As SMT you also see the individual responses, with names, below.' : ''}
+          {!isSmt && isReviewer ? ' As Lesson Feedback Reviewer you see every class and the individual responses below, without names.' : ''}
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <label>From<br /><input type="date" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} /></label>
@@ -306,44 +320,80 @@ function LessonFeedbackInner() {
         )}
       </div>
 
-      {isSmt && (
+      {seesResponses && (
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Named responses (SMT only)</h3>
+          <h3 style={{ marginTop: 0 }}>Individual responses by subject{isSmt ? '' : ' (no names)'}</h3>
+          <p style={{ ...soft, marginTop: 0 }}>
+            {isSmt
+              ? 'Names are shown to SMT only. The Lesson Feedback Reviewer sees this list without them.'
+              : 'Students\u2019 names are shown to SMT only. Take a concern up with the Head of Department or SMT.'}
+            {' '}Tap a subject to open or close it. Answers listed are the ones that weren&apos;t the good answer.
+          </p>
           <label style={{ display: 'block', marginBottom: '0.5rem' }}>
             <input type="checkbox" checked={followUpOnly} onChange={(e) => setFollowUpOnly(e.target.checked)} />
             {' '}Only students who were red
           </label>
-          {loading ? <p>Loading…</p> : namedShown.length === 0 ? <p>None in these dates.</p> : (
+          {bySubject.length > 1 && (
+            <p style={{ margin: '0 0 0.5rem' }}>
+              <button type="button" className="secondary" onClick={() => setOpenSubjects(new Set(bySubject.map((g) => g.name)))}>Open all</button>{' '}
+              <button type="button" className="secondary" onClick={() => setOpenSubjects(new Set())}>Close all</button>
+            </p>
+          )}
+          {loading ? <p>Loading…</p> : responses.length === 0 ? <p>None in these dates.</p> : (
             <div className="table-scroll">
               <table>
                 <thead>
-                  <tr><th>Lesson</th><th>Student</th><th>Class</th><th>Teacher</th><th>Understanding</th><th>Answers</th></tr>
+                  <tr>
+                    <th>Subject / lesson</th><th>Class</th><th>Teacher</th>
+                    {isSmt && <th>Student</th>}
+                    <th>Understanding</th><th>Answers</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {namedShown.map((f) => {
-                    const u = UNDERSTANDING.find((x) => x.key === f.understanding);
-                    const byId = new Map(questions.map((q) => [q.question_id, q]));
-                    const flagged = (f.lesson_feedback_answers || [])
-                      .map((a) => ({ a, q: byId.get(a.question_id) }))
-                      .filter(({ a, q }) => q && answerTone(q.good_answer, a.answer) !== 'good' && (q.good_answer != null || a.answer));
+                  {bySubject.map((g) => {
+                    const open = openSubjects.has(g.name);
+                    const red = g.rows.filter((f) => f.understanding === 'red').length;
+                    const classes = new Set(g.rows.map((f) => f.class_code)).size;
                     return (
-                      <tr key={f.feedback_id}>
-                        <td>{formatUKDate(f.lesson_date, { weekday: true })}<div style={soft}>lesson {f.period_number}</div></td>
-                        <td>{f.students ? `${f.students.first_name} ${f.students.last_name}` : '—'}<div style={soft}>Year {f.students?.year_group}</div></td>
-                        <td>{f.classes?.class_code}</td>
-                        <td>{f.staff ? `${f.staff.first_name} ${f.staff.last_name}` : '—'}</td>
-                        <td><span className={`lf-chip lf-${f.understanding}`}>{u?.label}</span></td>
-                        <td style={{ fontSize: '0.85em' }}>
-                          {flagged.length === 0 ? <span style={soft}>All good answers</span> : flagged.map(({ a, q }) => (
-                            <div key={q.question_id}>{q.question} <strong>{a.answer ? 'Yes' : 'No'}</strong></div>
-                          ))}
-                        </td>
-                      </tr>
+                      <Fragment key={g.name}>
+                        <tr className="lf-row-dept" onClick={() => toggleSubject(g.name)} aria-expanded={open}>
+                          <td colSpan={isSmt ? 6 : 5}>
+                            <span className="lf-caret">{open ? '▾' : '▸'}</span> <strong>{g.name}</strong>
+                            <span style={soft}>
+                              {' '}· {g.rows.length} response{g.rows.length === 1 ? '' : 's'} in {classes} class{classes === 1 ? '' : 'es'}
+                              {followUpOnly ? '' : ` · ${red} red`}
+                            </span>
+                          </td>
+                        </tr>
+                        {open && g.rows.map((f, i) => {
+                          const u = UNDERSTANDING.find((x) => x.key === f.understanding);
+                          const flagged = (f.answers || [])
+                            .map((a) => ({ a, q: questionById.get(a.question_id) }))
+                            .filter(({ a, q }) => q && answerTone(q.good_answer, a.answer) !== 'good' && (q.good_answer != null || a.answer));
+                          return (
+                            <tr key={`${g.name}-${i}`}>
+                              <td>{formatUKDate(f.lesson_date, { weekday: true })}<div style={soft}>lesson {f.period_number}</div></td>
+                              <td>{f.class_code}</td>
+                              <td>{f.teacher_name || '—'}</td>
+                              {isSmt && <td>{f.student_name || '—'}<div style={soft}>Year {f.student_year}</div></td>}
+                              <td><span className={`lf-chip lf-${f.understanding}`}>{u?.label}</span></td>
+                              <td style={{ fontSize: '0.85em' }}>
+                                {flagged.length === 0 ? <span style={soft}>All good answers</span> : flagged.map(({ a, q }) => (
+                                  <div key={q.question_id}>{q.question} <strong>{a.answer ? 'Yes' : 'No'}</strong></div>
+                                ))}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </Fragment>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+          )}
+          {!loading && responses.length >= 2000 && (
+            <p style={soft}>Only the first 2,000 responses are listed. Choose fewer dates to see the rest.</p>
           )}
         </div>
       )}
