@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 5 October 2026 (database migrations up to 377). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 6 October 2026 (database migrations up to 379). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -330,6 +330,8 @@ Staff log behaviour by category, points come only from the category, and a −5 
 
 - **FR-6.1** Any member of staff can log a positive or negative event for one or several students; students and parents can't. \[DB\]
 - **FR-6.2** Every event needs a category, and its points come from the category (−1 to −5, +1 to +5). Staff can't type points. Only admins set categories and points, at /admin/lookups. \[DB\]
+- **FR-6.42** An event's points are fixed when it is logged (migration 378, the principal, 5 October 2026). Changing a category's points at Lookups applies only to new events and to events moved into that category, never to events already logged; editing an event's comment no longer re-prices it or adds or cancels detentions. A returned Stage 5 that the teacher keeps as it is gets back the points it had when it was returned, not today's category points. \[DB\]
+- **FR-6.43** Categories are retired, not removed, once any event uses them (migration 378). A retired category is left off every list for logging or changing a category, and the database refuses it on a new event or a category change; its old events keep it, can still be edited, and filters still show it, marked retired. It can be brought back. A category any event uses can't be deleted, renamed or changed between positive and negative: retire it and add a new one. Retiring is an edit (the Edit tick on /admin/permissions; admins today). \[DB\]
 - **FR-6.3** "Logged by" is always the signed-in person. The event's class is worked out from the class the teacher shares with the student. \[DB\]
 - **FR-6.4** A −5 (serious) event can't be saved without a written explanation. \[DB\]
 - **FR-6.5** One picture can be attached per logging, on positive events only, shrunk in the browser and under about 150 KB. The page shows the picture field only for positive events, and the database refuses a picture on a negative event (migration 297, the principal's decision, 30 Sept 2026). The six negative events that already had a picture were all declined, so no parent saw them; they are kept. \[DB\]
@@ -454,8 +456,10 @@ Teachers enter percentage scores for their own classes against result sets; each
 **Reading ages** (/reading-ages and /reading-ages/record, Assessment card, migrations 323–324, 2 Oct 2026; literacy is a school improvement target)
 
 - **FR-7.16** A reading age is kept in years and months with the date it was tested. The gap is the reading age minus the student's age on that day, from their date of birth; a minus means reading below their age. The age and gap are worked out each time they are read, never stored, so correcting a date of birth corrects every gap. \[DB\]
-- **FR-7.17** A student's readings come from three places, shown together: the paper test at the admissions interview (once the applicant is enrolled; only the reading, its date and the test name pass across, the rest of the interview stays with admissions), the school's own tests, and NGRT imports (59 students, today's Years 11 and 12, tested 2021–2023). \[DB\]
-- **FR-7.18** Recording a test (/reading-ages/record): a test name and the usual date for a year group, form or named student, then a reading age per student; blanks are skipped. A student who sat it on another day gets their own date on their row. One reading per student, date and test; saving again updates it. A test can't be dated after today. Teachers, Heads of Department, assessment managers, SMT and admins can record, correct and remove school tests. Interview and NGRT readings are corrected where they were entered. \[DB / Page\]
+- **FR-7.17** A student's readings come from four places, shown together: the test taken when the child applies (FR-14.22) and the paper test at the admissions interview (both once the applicant is enrolled; only the reading, its date and the test name pass across, the rest of the application and interview stays with admissions), the school's own tests, and NGRT imports (59 students, today's Years 11 and 12, tested 2021–2023). \[DB\]
+- **FR-7.18** Recording a test (/reading-ages/record): a test name and the usual date for a year group, form or named student, then a reading age per student; blanks are skipped. A student who sat it on another day gets their own date on their row. One reading per student, date and test; saving again updates it. A test can't be dated after today. Teachers, Heads of Department, assessment managers, SMT, the school office (ticked by 6 October 2026) and admins can record, correct and remove school tests. Application, interview and NGRT readings are corrected where they were entered. \[DB / Page\]
+- **FR-7.41** On Record a reading test, a student's name opens a line under their row with their full name (middle name included), their Admitted/letter date and a link to their profile (the principal, 6 October 2026). The name opens only when there is something more to show (a middle name or a letter date); otherwise it is plain text and a missing date is left out. \[Page\]
+- **FR-7.42** Once a student's reading is saved, they drop off the list for that test and usual date for the rest of the visit, so the person entering sees who is left; a refresh keeps them hidden, a new tab or another day starts with the full list. "Show them" brings saved students back to correct or remove a reading, and the page says when everyone on the list has been saved (the principal, 6 October 2026). \[Page\]
 - **FR-7.19** The tracker (/reading-ages) is open to teachers, Heads of Department, mentors, pastoral staff, assessment managers, SMT and admins. For the whole school, a year group or a form it shows how many have a reading, the average latest gap, the share reading below their age, how many are in each band (2+ years below, 1–2 years below, up to a year below, at or above; the principal agreed these on 2 Oct 2026), and how many have closed the gap since their first reading. \[Page\]
 - **FR-7.20** Change over time: the average gap at each sitting, as a chart and a table, where a sitting is a term (or the school year, for readings before terms were recorded). Each student counts once per sitting, and the table shows how many were tested each time. \[Page\]
 - **FR-7.21** The student list puts those furthest behind first and shows the first and latest reading with the change since the first and since the last. A row opens a chart of reading age against actual age over time, and the list downloads as CSV. The same chart and history are on the student's profile (Reading Age tile). \[Page\]
@@ -715,6 +719,7 @@ Admissions tracks each applicant from enquiry to deposit paid through fixed stag
 **Interview**
 
 - **FR-14.11** One interview per applicant: date, interviewer, reading age (36–240 months, entered as years and months), reading test, interests (19 fixed plus free text), languages, strengths, concerns, recommendation (offer, waitlist or reject) and comments. \[DB / Page\]
+- **FR-14.22** A reading age can be recorded when the child applies (migration 379, the principal, 6 October 2026): years and months (36–240 months), the date tested and the test used, on the New application form and in the applicant's Details, which show the difference from the child's age on the day. A reading needs its date, and the date can't be after today. It is separate from the interview reading (FR-14.11), because the Interview section only appears once the child is invited and saving an interview moves the applicant to Interviewed. Changes are logged in Change History under admissions. \[DB / Page\]
 
 **Stages**
 
@@ -756,7 +761,7 @@ Admissions tracks each applicant from enquiry to deposit paid through fixed stag
   - **Total:** next year's confirmed and predicted roll. \[Page\]
 - **FR-14.21** Predictions count 100% of offers and 50% of applicants still in process by default; staff can change both percentages on the page. Places over the limit show in red. \[Page\]
 
-**Designed, not built yet:** enrolling an accepted applicant as a student (admission number, UPN, login, parent records, CAT4), removing old applicants' personal data, and showing interests to the Other Half coordinator. Until enrolment is built, an applicant's interview reading age doesn't reach their reading-age history as a student (FR-7.17).
+**Designed, not built yet:** enrolling an accepted applicant as a student (admission number, UPN, login, parent records, CAT4), removing old applicants' personal data, and showing interests to the Other Half coordinator. Until enrolment is built, an applicant's application and interview reading ages don't reach their reading-age history as a student (FR-7.17).
 
 ## 18. FR-15 Academic years and next year setup
 
