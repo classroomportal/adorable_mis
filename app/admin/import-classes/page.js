@@ -6,6 +6,7 @@ import RequireAuth from "../../RequireAuth";
 import RequireResource from "../../RequireResource";
 import { decodeNovaTSlot, slotKey } from "../../../lib/novaTSlots";
 import { classGroupKey } from "../../../lib/blockGroups";
+import { loadOtherHalfSlots, loadOtherHalfYearDays } from "../../../lib/otherHalf";
 
 // --- Parsing -----------------------------------------------------------
 // Nova-T TBTRA.DAT .. TBTRF.DAT rows (one file per year group), CSV-ish:
@@ -285,7 +286,24 @@ function ImportClassesInner() {
 
     setBusy(true);
     try {
-      const { classes: parsedClasses, skippedOtherHalf, ignoredLines } = await parseFiles(files);
+      const parsed = await parseFiles(files);
+      const { skippedOtherHalf, ignoredLines } = parsed;
+      // Other Half Days (migration 386): a lesson in the OH period on a day
+      // its year has the Other Half is left out (the database would refuse
+      // it), and a class with nothing else is left out whole. 109/Pr1, the
+      // Sports block's Prep group on Tuesday, was one: that Prep is the OH
+      // activity Prep.
+      const [ohSlots, ohYearDays] = await Promise.all([loadOtherHalfSlots(), loadOtherHalfYearDays()]);
+      const skippedOhLessons = [];
+      const parsedClasses = [];
+      for (const c of parsed.classes) {
+        const clash = c.slots.filter((t) => t.period_number === ohSlots.periodNumber
+          && ohYearDays[c.year_group]?.includes(t.day_of_week));
+        if (clash.length === 0) { parsedClasses.push(c); continue; }
+        const kept = c.slots.filter((t) => !clash.includes(t));
+        skippedOhLessons.push({ class_code: c.class_code, year_group: c.year_group, days: clash.map((t) => t.day_of_week), wholeClass: kept.length === 0 });
+        if (kept.length > 0) parsedClasses.push({ ...c, slots: kept });
+      }
 
       const [
         { data: existingClasses, error: cErr },
@@ -603,6 +621,7 @@ function ImportClassesInner() {
       setPreview({
         totalParsed: parsedClasses.length,
         skippedOtherHalf,
+        skippedOhLessons,
         ignoredLines,
         updates: updatesWithStudentCounts,
         unchangedCount: unchanged.length,
@@ -1010,6 +1029,15 @@ function ImportClassesInner() {
               <li>
                 Skipped {preview.skippedOtherHalf.length} Other Half / Sports Academy group{preview.skippedOtherHalf.length === 1 ? "" : "s"} ({preview.skippedOtherHalf.join(", ")}) —
                 the Other Half is managed at <a href="/other-half/activities">Activity Programme</a>, not Nova-T.
+              </li>
+            )}
+            {preview.skippedOhLessons?.length > 0 && (
+              <li>
+                Left out {preview.skippedOhLessons.length} class{preview.skippedOhLessons.length === 1 ? "" : "es"} with lessons in the Other Half period
+                on a day their year has the Other Half:{" "}
+                {preview.skippedOhLessons.map((c) => `${c.class_code} (${c.days.join(", ")}${c.wholeClass ? ", whole class" : ""})`).join("; ")}.
+                Those students are in the Other Half then. If a year really has lessons in that period, untick the day at{" "}
+                <a href="/other-half/year-days">Other Half Days</a> and upload again.
               </li>
             )}
             {preview.ignoredLines.length > 0 && (
