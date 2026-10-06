@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
+import { SCHOOL_TIMEZONE } from '../../lib/schoolTime';
 
 // Full-screen pop-up on the school office's screens (migration 309): a
 // student marked present earlier today has been marked absent, without a
@@ -9,7 +10,9 @@ import { useAuth } from '../../lib/AuthContext';
 // page for anyone whose role is granted /office/missed-lesson-alerts; the
 // database decides that (office_missed_lesson_alerts() returns null for
 // everyone else, and this stops asking). "Seen" clears it from every office
-// screen; a corrected mark clears it by itself.
+// screen; a corrected mark clears it by itself. Each alert also shows the
+// student's marks today and who took each register, and what other staff
+// have answered to their own pop-up (MissingStudentStaffAlerts, 382).
 
 const POLL_MS = 60000;
 const SNOOZE_MS = 2 * 60000;
@@ -35,6 +38,60 @@ function beep() {
     });
     setTimeout(() => ctx.close(), 1000);
   } catch { /* no sound available */ }
+}
+
+const STATUS_LABEL = { present: 'Present', late: 'Late', absent: 'Absent', not_taken: 'Not taken yet' };
+const STATUS_COLOUR = { present: '#067647', late: '#b54708', absent: '#b42318', not_taken: '#5b6472' };
+
+// Staff answers to the all-staff pop-up: "sent" first and prominent.
+function ResponseList({ responses }) {
+  if (!responses || responses.length === 0) {
+    return <div style={{ color: '#5b6472', marginTop: '0.35rem' }}>All staff have been asked. No one has answered yet.</div>;
+  }
+  const sent = responses.filter((r) => r.response === 'sent');
+  const notWithMe = responses.filter((r) => r.response === 'not_with_me');
+  const at = (r) => new Date(r.responded_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: SCHOOL_TIMEZONE });
+  return (
+    <div style={{ marginTop: '0.35rem' }}>
+      {sent.map((r) => (
+        <div key={`s-${r.staff_name}-${r.responded_at}`} style={{ color: '#067647', fontWeight: 700 }}>
+          ✓ {r.staff_name} has sent them to the lesson ({at(r)}){r.note ? `: “${r.note}”` : ''}
+        </div>
+      ))}
+      {notWithMe.length > 0 && (
+        <div style={{ color: '#5b6472' }}>
+          Not with: {notWithMe.map((r) => `${r.staff_name}${r.note ? ` (“${r.note}”)` : ''}`).join(', ')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The student's registers today, period by period, with who marked each.
+function DayMarks({ marks }) {
+  if (!marks || marks.length === 0) return null;
+  return (
+    <details style={{ marginTop: '0.35rem' }} open>
+      <summary style={{ cursor: 'pointer' }}>Today’s registers</summary>
+      <table style={{ width: '100%', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+        <thead>
+          <tr><th align="left">Period</th><th align="left">Lesson</th><th align="left">Mark</th><th align="left">Marked by</th></tr>
+        </thead>
+        <tbody>
+          {marks.map((m) => (
+            <tr key={m.period_number}>
+              <td>{m.short_label || m.period_name} <span style={{ color: '#5b6472' }}>{String(m.start_time).slice(0, 5)}</span></td>
+              <td>{m.lesson || '—'}{m.teacher ? <span style={{ color: '#5b6472' }}> ({m.teacher})</span> : ''}</td>
+              <td style={{ color: STATUS_COLOUR[m.status] || 'inherit', fontWeight: 600 }}>
+                {STATUS_LABEL[m.status] || m.status}{m.code && m.status !== 'present' ? ` (${m.code_description || m.code})` : ''}
+              </td>
+              <td>{m.marked_by || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  );
 }
 
 export default function MissedLessonAlerts() {
@@ -141,6 +198,8 @@ export default function MissedLessonAlerts() {
                 Last seen: {a.last_seen_period}
                 {' '}· Marked absent{a.code ? ` (${a.code})` : ''}{a.marked_by ? ` by ${a.marked_by}` : ''}
               </div>
+              <ResponseList responses={a.responses} />
+              <DayMarks marks={a.day_marks} />
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                 <input
                   type="text"

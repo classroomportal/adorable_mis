@@ -314,12 +314,24 @@ A full-screen flashing pop-up, on whatever Formwork page is open, for anyone who
 - the same student was marked **present or late at an earlier period** today.
 
 How it behaves:
-- It shows who, their year, mentor group and house, the lesson, teacher and room they should be in, where they were last seen, and who marked them absent.
+- It shows who, their year, mentor group and house, the lesson, teacher (the cover teacher if the lesson is covered) and room they should be in, where they were last seen, and who marked them absent.
+- It also shows **today's registers** for that student, period by period: the lesson and its teacher, the mark (present, late, absent with its code, or not taken yet) and **who marked it** (migration 382, the principal, 6 Oct 2026).
+- And it shows what other staff have answered to their own pop-up (below): "X has sent them to the lesson" with the time and where they were, and who has said "Not with me".
 - **Seen: dealing with it** (with an optional note) clears that student and period from every office screen and records who saw it and when.
 - If the teacher corrects the mark (to present, late or an authorised absence), the alert disappears by itself.
 - **Hide for 2 minutes** hides the alerts showing on that screen only; a new alert still appears at once.
 - It checks every minute, flashes the browser tab's title, and beeps when a new alert arrives (once someone has clicked on the page; browsers block sound before that).
 - Being admin does not give the pop-up; only a role with the grant does. The checks happen in the database.
+
+**"Do you know where this student is?" pop-up on all staff screens** (migration 382, the principal, 6 Oct 2026)
+
+At the same moment the office's pop-up appears, every member of staff signed in to Formwork gets a flashing pop-up: the student's name, photo, year, mentor group and house, and "Please send them to <lesson>, room <room> (<teacher>)".
+- Everyone on staff gets it, except the people who get the office pop-up (they have their own) and the person who marked the student absent. Students and parents never see it.
+- **I've sent them** (with an optional note of where they were) clears it from every staff screen and shows on the office's pop-up.
+- **Not with me** clears it from that person's screen only; the office sees who has said so.
+- It stays until the period ends, even after the office has pressed Seen (the office usually presses Seen straight away, which would otherwise take it off everyone's screen before anyone had read it). A corrected mark clears it at once.
+- **Hide for 2 minutes**, the beep and the one-minute check work as on the office pop-up.
+- Answers are kept (who, when, the note). The checks happen in the database (`staff_missing_student_alerts()`, `respond_missing_student_alert()`).
 
 **Register-not-taken pop-up on teachers' screens** (migration 367)
 
