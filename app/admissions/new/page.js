@@ -7,6 +7,7 @@ import RequireResource from '../../RequireResource';
 import { formatUKDate } from '../../../lib/formatDate';
 import { YEAR_GROUPS, STATUS_LABELS, applicantName, loadAcademicYears, errorText } from '../../../lib/admissions';
 import { PreviousSchoolPicker, SiblingPicker } from '../../components/AdmissionPickers';
+import ApplicantReadingAgeFields, { EMPTY_READING, readingToRow } from '../../components/ApplicantReadingAge';
 
 const EMPTY_CONTACT = { name: '', relationship: '', email: '', phone: '' };
 
@@ -22,6 +23,7 @@ function NewApplicationInner() {
     heard_about_us: '', notes: '',
   });
   const [sibling, setSibling] = useState(null);
+  const [reading, setReading] = useState({ ...EMPTY_READING });
   const [contacts, setContacts] = useState([{ ...EMPTY_CONTACT }]);
   const [primaryIndex, setPrimaryIndex] = useState(0);
   const [duplicates, setDuplicates] = useState([]);
@@ -71,6 +73,8 @@ function NewApplicationInner() {
     const filled = contacts.map((c, i) => ({ ...c, i })).filter((c) => c.name.trim() || c.email.trim() || c.phone.trim());
     if (filled.length === 0) { setStatus('Add at least one parent or guardian.'); return; }
     if (filled.some((c) => !c.name.trim())) { setStatus('Every contact needs a name.'); return; }
+    const readingRow = readingToRow(reading);
+    if (readingRow.error) { setStatus(readingRow.error); return; }
 
     setSaving(true);
     setStatus('Saving...');
@@ -89,6 +93,7 @@ function NewApplicationInner() {
       sibling_student_id: sibling?.student_id ?? null,
       heard_about_us: form.heard_about_us.trim() || null,
       notes: form.notes.trim() || null,
+      ...readingRow,
     };
     const { data, error } = await supabase.from('applicants').insert(row).select('applicant_id').single();
     if (error) { setStatus(errorText(error)); setSaving(false); return; }
@@ -186,6 +191,14 @@ function NewApplicationInner() {
               <textarea rows={3} value={form.notes} onChange={(e) => set('notes', e.target.value)} />
             </label>
           </div>
+        </div>
+
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>Reading age</h2>
+          <p style={{ color: '#666', marginTop: 0 }}>
+            If the child was tested when they applied. It comes across to their reading age history when they are enrolled.
+          </p>
+          <ApplicantReadingAgeFields value={reading} onChange={setReading} dob={form.dob} />
         </div>
 
         <div className="card">

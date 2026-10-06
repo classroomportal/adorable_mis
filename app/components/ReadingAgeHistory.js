@@ -13,7 +13,7 @@ import {
 // only shows the buttons). Interview and NGRT readings are changed where
 // they were entered: the applicant's page and the CAT4/NGRT section.
 
-const SOURCE_COLOUR = { interview: '#7a3fa8', school: '#2f6fa8', ngrt: '#b06a00' };
+const SOURCE_COLOUR = { application: '#7a3fa8', interview: '#7a3fa8', school: '#2f6fa8', ngrt: '#b06a00' };
 
 function timeOf(iso) {
   return new Date(`${iso}T00:00:00Z`).getTime();
