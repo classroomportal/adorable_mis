@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
@@ -27,6 +27,10 @@ function addDays(iso, n) {
   return d.toISOString().slice(0, 10);
 }
 const fullName = (s) => `${s.first_name} ${s.last_name}`;
+// The whole name, middle name included, for telling students apart.
+const wholeName = (s) => [s.first_name, s.middle_name, s.last_name].filter(Boolean).join(' ');
+// A name is clickable only when there's something more to show.
+const hasDetails = (s) => !!(s.middle_name?.trim() || s.admitted_letter_date);
 
 function RecordInner() {
   const today = schoolToday();
@@ -40,11 +44,12 @@ function RecordInner() {
   const [saved, setSaved] = useState([]); // this test's readings around the usual date
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [openId, setOpenId] = useState(null); // student whose details are shown under their row
 
   useEffect(() => {
     (async () => {
       const [{ data: s }, { data: t }] = await Promise.all([
-        supabase.from('students').select('student_id, first_name, last_name, year_group, form_class, dob')
+        supabase.from('students').select('student_id, first_name, middle_name, last_name, year_group, form_class, dob, admitted_letter_date')
           .eq('status', 'active').order('last_name'),
         supabase.from('reading_age_tests').select('test_name'),
       ]);
@@ -189,9 +194,20 @@ function RecordInner() {
                   const age = s.dob && day ? ageInMonths(s.dob, day) : null;
                   const ownDate = !!rowDates[s.student_id] && rowDates[s.student_id] !== testedOn;
                   const typed = e.years !== '' || e.months !== '';
+                  const open = openId === s.student_id && hasDetails(s);
                   return (
-                    <tr key={s.student_id}>
-                      <td>{fullName(s)}</td>
+                    <Fragment key={s.student_id}>
+                    <tr>
+                      <td>
+                        {hasDetails(s) ? (
+                          <button type="button" aria-expanded={open}
+                            title="Show full name and admission letter date"
+                            style={{ background: 'none', border: 'none', padding: 0, color: '#1f5fa8', cursor: 'pointer', font: 'inherit', textAlign: 'left' }}
+                            onClick={() => setOpenId(open ? null : s.student_id)}>
+                            {fullName(s)}
+                          </button>
+                        ) : fullName(s)}
+                      </td>
                       <td>{s.form_class || `Year ${s.year_group}`}</td>
                       <td>
                         <input type="date" value={day} max={today} aria-label={`${fullName(s)} test date`}
@@ -217,6 +233,18 @@ function RecordInner() {
                         )}
                       </td>
                     </tr>
+                    {open && (
+                      <tr>
+                        <td colSpan={7} style={{ background: '#f4f7fb', fontSize: '0.9em' }}>
+                          <strong>Full name:</strong> {wholeName(s)}
+                          {s.admitted_letter_date && (
+                            <span style={{ marginLeft: '1.5rem' }}><strong>Admitted/letter date:</strong> {formatUKDate(s.admitted_letter_date)}</span>
+                          )}
+                          <Link href={`/students/${s.student_id}`} style={{ marginLeft: '1.5rem' }}>Open profile</Link>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>
