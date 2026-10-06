@@ -20,6 +20,7 @@ import { GapBadge } from '../../components/ReadingAgeHistory';
 // future dates and stamps who entered each one.
 
 const DEFAULT_TEST = 'School reading test';
+const DONE_KEY = 'reading-ages-record-done';
 
 function addDays(iso, n) {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -45,6 +46,13 @@ function RecordInner() {
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
   const [openId, setOpenId] = useState(null); // student whose details are shown under their row
+  // Students saved during this visit drop off the list, per test and usual
+  // date, so the person entering can see who is left. Kept for the browser
+  // tab (sessionStorage) so a refresh doesn't bring them all back.
+  const [done, setDone] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem(DONE_KEY) || '{}'); } catch { return {}; }
+  });
+  const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -78,11 +86,15 @@ function RecordInner() {
   const forms = [...new Set(students.filter((s) => !filter.year || String(s.year_group) === filter.year)
     .map((s) => s.form_class).filter(Boolean))].sort();
   const name = filter.name.trim().toLowerCase();
-  const shown = (filter.year || filter.form || name)
+  const sittingKey = `${testName.trim() || DEFAULT_TEST}|${testedOn}`;
+  const doneIds = new Set(done[sittingKey] || []);
+  const matching = (filter.year || filter.form || name)
     ? students.filter((s) => (!filter.year || String(s.year_group) === filter.year)
       && (!filter.form || s.form_class === filter.form)
       && (!name || fullName(s).toLowerCase().includes(name)))
     : [];
+  const doneCount = matching.filter((s) => doneIds.has(s.student_id)).length;
+  const shown = showDone ? matching : matching.filter((s) => !doneIds.has(s.student_id));
 
   const toSave = useMemo(() => Object.entries(entries)
     .filter(([, e]) => e.years !== '' || e.months !== '')
@@ -122,6 +134,9 @@ function RecordInner() {
     const otherDays = rows.filter((r) => r.tested_on !== testedOn).length;
     setStatus(`Saved ${rows.length} reading age${rows.length === 1 ? '' : 's'}${otherDays ? `, ${otherDays} on their own date` : ` for ${formatUKDate(testedOn)}`}.`);
     if (!testNames.includes(testName.trim())) setTestNames([...testNames, testName.trim()].sort());
+    const next = { ...done, [sittingKey]: [...new Set([...doneIds, ...rows.map((r) => r.student_id)])] };
+    setDone(next);
+    try { sessionStorage.setItem(DONE_KEY, JSON.stringify(next)); } catch { /* list just won't survive a refresh */ }
     setEntries({});
     loadExisting();
   }
@@ -180,6 +195,18 @@ function RecordInner() {
           </p>
         )}
       </div>
+
+      {doneCount > 0 && (
+        <p style={{ fontSize: '0.9em', color: '#5b6472' }}>
+          {doneCount} student{doneCount === 1 ? '' : 's'} saved this visit {showDone ? 'shown' : 'hidden'}.{' '}
+          <button type="button" className="secondary" onClick={() => setShowDone(!showDone)}>
+            {showDone ? 'Hide them' : 'Show them'}
+          </button>
+        </p>
+      )}
+      {matching.length > 0 && shown.length === 0 && (
+        <p>Everyone on this list has been saved.</p>
+      )}
 
       {shown.length > 0 && (
         <div className="card">
