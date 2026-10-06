@@ -29,6 +29,8 @@ function addDays(iso, n) {
 const fullName = (s) => `${s.first_name} ${s.last_name}`;
 // The whole name, middle name included, for telling students apart.
 const wholeName = (s) => [s.first_name, s.middle_name, s.last_name].filter(Boolean).join(' ');
+// A name is clickable only when there's something more to show.
+const hasDetails = (s) => !!(s.middle_name?.trim() || s.admitted_letter_date);
 
 function RecordInner() {
   const today = schoolToday();
@@ -192,17 +194,19 @@ function RecordInner() {
                   const age = s.dob && day ? ageInMonths(s.dob, day) : null;
                   const ownDate = !!rowDates[s.student_id] && rowDates[s.student_id] !== testedOn;
                   const typed = e.years !== '' || e.months !== '';
-                  const open = openId === s.student_id;
+                  const open = openId === s.student_id && hasDetails(s);
                   return (
                     <Fragment key={s.student_id}>
                     <tr>
                       <td>
-                        <button type="button" aria-expanded={open}
-                          title="Show full name and admission letter date"
-                          style={{ background: 'none', border: 'none', padding: 0, color: '#1f5fa8', cursor: 'pointer', font: 'inherit', textAlign: 'left' }}
-                          onClick={() => setOpenId(open ? null : s.student_id)}>
-                          {fullName(s)}
-                        </button>
+                        {hasDetails(s) ? (
+                          <button type="button" aria-expanded={open}
+                            title="Show full name and admission letter date"
+                            style={{ background: 'none', border: 'none', padding: 0, color: '#1f5fa8', cursor: 'pointer', font: 'inherit', textAlign: 'left' }}
+                            onClick={() => setOpenId(open ? null : s.student_id)}>
+                            {fullName(s)}
+                          </button>
+                        ) : fullName(s)}
                       </td>
                       <td>{s.form_class || `Year ${s.year_group}`}</td>
                       <td>
@@ -233,7 +237,9 @@ function RecordInner() {
                       <tr>
                         <td colSpan={7} style={{ background: '#f4f7fb', fontSize: '0.9em' }}>
                           <strong>Full name:</strong> {wholeName(s)}
-                          <span style={{ marginLeft: '1.5rem' }}><strong>Admitted/letter date:</strong> {formatUKDate(s.admitted_letter_date) || 'Not recorded'}</span>
+                          {s.admitted_letter_date && (
+                            <span style={{ marginLeft: '1.5rem' }}><strong>Admitted/letter date:</strong> {formatUKDate(s.admitted_letter_date)}</span>
+                          )}
                           <Link href={`/students/${s.student_id}`} style={{ marginLeft: '1.5rem' }}>Open profile</Link>
                         </td>
                       </tr>
