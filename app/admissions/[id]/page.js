@@ -12,6 +12,7 @@ import {
 } from '../../../lib/admissions';
 import { generateAdmissionLetterPdf } from '../../../lib/generateAdmissionLetterPdf';
 import { PreviousSchoolPicker, SiblingPicker, schoolLabel } from '../../components/AdmissionPickers';
+import ApplicantReadingAgeFields, { readingFromApplicant, readingToRow } from '../../components/ApplicantReadingAge';
 
 // <input type="datetime-local"> works in the device's zone; the school is on
 // Lagos time (UTC+1, no DST), so convert explicitly rather than trusting it.
@@ -233,6 +234,7 @@ function ApplicantInner() {
       entry_year_group: String(a.entry_year_group), previous_school_id: a.previous_school_id,
       previous_school_year: a.previous_school_year || '', heard_about_us: a.heard_about_us || '',
       notes: a.notes || '',
+      ...readingFromApplicant(a),
     });
     setDetailsSibling(sibling);
     setDetailsMsg(null);
@@ -241,6 +243,8 @@ function ApplicantInner() {
   async function saveDetails(e) {
     e.preventDefault();
     const d = editDetails;
+    const readingRow = readingToRow(d);
+    if (readingRow.error) { setDetailsMsg(readingRow.error); return; }
     const row = {
       first_name: d.first_name.trim(),
       middle_name: strOrNull(d.middle_name),
@@ -254,6 +258,7 @@ function ApplicantInner() {
       sibling_student_id: detailsSibling?.student_id ?? null,
       heard_about_us: strOrNull(d.heard_about_us),
       notes: strOrNull(d.notes),
+      ...readingRow,
     };
     // Only send the entry year and year group if they changed: the database
     // refuses changing them once the test is booked.
@@ -522,6 +527,8 @@ function ApplicantInner() {
               />
               <SiblingPicker value={detailsSibling} onChange={setDetailsSibling} />
               <label>Notes<textarea rows={3} value={editDetails.notes} onChange={(e) => setEditDetails({ ...editDetails, notes: e.target.value })} /></label>
+              <h3 style={{ margin: '0.5rem 0 0' }}>Reading age at application</h3>
+              <ApplicantReadingAgeFields value={editDetails} onChange={(v) => setEditDetails(v)} dob={editDetails.dob} />
             </div>
             <Msg text={detailsMsg} />
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
@@ -542,6 +549,15 @@ function ApplicantInner() {
                 <tr><th>Sibling at the school</th><td>{sibling ? <a href={`/students/${sibling.student_id}`}>{sibling.first_name} {sibling.last_name}</a> : '—'}{sibling ? ` · ${sibling.form_class || `Year ${sibling.year_group}`}` : ''}</td></tr>
                 <tr><th>Heard about us</th><td>{a.heard_about_us || '—'}</td></tr>
                 <tr><th>Notes</th><td style={{ whiteSpace: 'pre-wrap' }}>{a.notes || '—'}</td></tr>
+                <tr><th>Reading age at application</th><td>{a.reading_age_months != null ? (
+                  <>
+                    {formatMonths(a.reading_age_months)}, tested {formatUKDate(a.reading_tested_on)}{a.reading_test_name ? ` (${a.reading_test_name})` : ''}
+                    {a.dob && a.reading_tested_on && (() => {
+                      const gap = a.reading_age_months - ageInMonths(a.dob, a.reading_tested_on);
+                      return <> · difference <strong style={{ color: gap < 0 ? '#a3232c' : '#1a7a3d' }}>{formatGap(gap)}</strong></>;
+                    })()}
+                  </>
+                ) : '—'}</td></tr>
               </tbody>
             </table></div>
             <Msg text={detailsMsg} />
