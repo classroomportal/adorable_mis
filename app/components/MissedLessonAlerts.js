@@ -83,7 +83,7 @@ function DayMarks({ marks }) {
               <td>{m.short_label || m.period_name} <span style={{ color: '#5b6472' }}>{String(m.start_time).slice(0, 5)}</span></td>
               <td>{m.lesson || '—'}{m.teacher ? <span style={{ color: '#5b6472' }}> ({m.teacher})</span> : ''}</td>
               <td style={{ color: STATUS_COLOUR[m.status] || 'inherit', fontWeight: 600 }}>
-                {STATUS_LABEL[m.status] || m.status}{m.code && m.status !== 'present' ? ` (${m.code_description || m.code})` : ''}
+                {STATUS_LABEL[m.status] || m.status}{m.code && m.status === 'absent' ? ` (${m.code_description || m.code})` : ''}
               </td>
               <td>{m.marked_by || '—'}</td>
             </tr>
