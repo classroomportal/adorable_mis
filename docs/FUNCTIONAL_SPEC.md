@@ -134,7 +134,7 @@ Every member of staff can read the whole student record; what each role can chan
 - **FR-2.7** Photos are stored on the student record, shrunk to 400 px in the browser. Admins can bulk-import them. \[Page\]
 - **FR-2.8** The Students list loads nothing until asked, since the whole school with photos is slow. Typing a name searches straight away, and after two letters up to eight matching students appear under the search box as blue buttons (name, form, year); choosing one opens that student. The list follows the Status, Year and Form filters and a houseparent's house. \[Page\]
 - **FR-2.9** Every student added records who added them and when, taken from the signed-in person whatever the page sends, and it can't be changed afterwards. Students added before 30 September 2026 have no record, except the two added through the app that day (Victory NNAMOKO, from Supabase's request logs). \[DB\]
-- **FR-2.10** Names are tidied on every save, for students, applicants, parents and staff: spaces at the start or end are removed and double spaces become single. Tidying a stored name never counts as a name change for someone only allowed to edit other fields. \[DB\]
+- **FR-2.21** Names are tidied on every save, for students, applicants, parents and staff: spaces at the start or end are removed and double spaces become single. Tidying a stored name never counts as a name change for someone only allowed to edit other fields. \[DB\]
 
 **Parents**
 
