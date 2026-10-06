@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 6 October 2026 (database migrations up to 379). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 6 October 2026 (database migrations up to 381). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -181,6 +181,7 @@ Every member of staff can read the whole student record; what each role can chan
 
 - **FR-2.17** Every student's gender is required and is Male or Female, chosen from a list on the New Student page and the student record. It can't be blanked by an edit or a CSV re-import; the import converts Male/Female and refuses a new student without one. \[DB\]
 - **FR-2.18** Only the school office can add a new student, at /students/new or /students/import; holding admin is not enough. Admins can still see, correct and delete student records. Someone who holds both admin and school\_office adds students through their office role, so to stop a person adding students, remove their school\_office role (migration 275). Until migration 328 any admin login could still add a student, because the rule's role check lets every admin through (known issue 32). \[DB\]
+- **FR-2.20** Sports Houses (/students/sports-houses, on the Students card, migration 380, 6 Oct 2026) lists active students with no sports house. Each row shows year and form, boy or girl, date joined, brothers' and sisters' houses, and a suggested house: the one with the fewest of that student's sex in their year. A table shows boys and girls in each house (Citrine, Diamond, Garnet, Sapphire) for every year and the whole school, counting choices not yet saved. "Fill with suggestions" takes girls and boys in turn; the list prints as a choice sheet with tick boxes. Saving uses the sports-house field permission (FR-2.1: the school office and admins) and only fills a house that is still empty. The page is open to school\_office, smt and pastoral. When built, 77 active students had no house: all 49 in Year 7 and 28 in Years 8–10. The house "Saphire" was renamed "Sapphire" the same day (migration 381); its 46 students followed automatically. \[DB / Page\]
 
 ## 6. FR-3 Timetable, classes and Nova-T imports
 

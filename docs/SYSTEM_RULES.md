@@ -156,6 +156,8 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 
 **Names are tidied when saved** (286): spaces at the start or end of a name are removed, and double spaces inside a name become one, for students, applicants, parents and staff.
 
+**Sports houses** (380, `/students/sports-houses` on the Students card): lists current students with no sports house and shows how many boys and girls each house has in each year, counting choices not yet saved. It suggests the house with the fewest of that student's sex in their year. The school office, SMT and pastoral can open it; only those allowed to edit the sports-house field (the school office and admins) can save, and saving never overwrites a house someone has already given. The houses are Citrine, Diamond, Garnet and Sapphire (spelled "Saphire" until 381).
+
 **Student groups** (284, `/groups` under Administration; design in `docs/student-groups-design.md`)
 - A group is a list of students for an activity, a club, the prefects, marks or messages. Only **SMT, pastoral, the school office and admins** can create a group, change it, archive it, or add and remove students and the staff who run it. Teachers can open `/groups` and look groups up but not change them.
 - All staff can see every group and who is in it.
