@@ -1840,6 +1840,39 @@ button.hw-sheet-link:hover { background: none; color: var(--brand-900); }
   .missed-alert-overlay { animation: none; }
 }
 
+/* Stage 5 "collect from lesson" pop-up (migration 383,
+   app/components/Stage5CollectionAlerts.js): purple, so it is never confused
+   with the red missed-lesson pop-up above. Sits above it if both show. */
+.stage5-alert-overlay {
+  position: fixed; inset: 0; z-index: 1001;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 5vh 16px; overflow-y: auto;
+  background: rgba(83, 56, 158, 0.35);
+  animation: stage5-alert-flash 1s ease-in-out 0s 6 alternate;
+}
+.stage5-alert-box {
+  background: white; border: 4px solid #6941c6; border-radius: 10px;
+  padding: 0 1.25rem 1.25rem; width: 100%; max-width: 640px; overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+.stage5-alert-band {
+  margin: 0 -1.25rem; padding: 0.5rem 1.25rem;
+  background: #6941c6; color: white; font-weight: 800; letter-spacing: 0.06em;
+}
+.stage5-alert-card {
+  border: 1px solid #d9d6fe; background: #f4f3ff; border-radius: 8px;
+  padding: 0.75rem; margin-top: 0.75rem;
+}
+button.stage5-alert-button { background: #6941c6; border-color: #6941c6; color: white; }
+button.stage5-alert-button:hover { background: #53389e; }
+@keyframes stage5-alert-flash {
+  from { background: rgba(83, 56, 158, 0.15); }
+  to { background: rgba(83, 56, 158, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage5-alert-overlay { animation: none; }
+}
+
 /* ---- In-app Help (app/components/HelpButton.js) ---- */
 nav button.help-button {
   background: white;
