@@ -7,7 +7,7 @@ import { formatUKDate } from '../../../lib/formatDate';
 import { formatTimeRange } from '../../../lib/formatTime';
 import {
   OH_DAYS, OH_DAY_NAMES, formatYearGroups, loadOtherHalfSlots, loadCurrentOtherHalfTermId,
-  staffByActivity, staffNames,
+  staffByActivity, staffNames, loadOtherHalfYearDays, yearHasOtherHalfOn,
 } from '../../../lib/otherHalf';
 
 const EMPTY_FORM = {
@@ -39,6 +39,7 @@ function ActivitiesInner() {
   const [slots, setSlots] = useState({ days: [], byDay: {} });
   const [staff, setStaff] = useState([]);
   const [yearOptions, setYearOptions] = useState([]);
+  const [yearDays, setYearDays] = useState({}); // year -> OH days (386)
   const [activities, setActivities] = useState([]);
   const [staffMap, setStaffMap] = useState({});
   const [taken, setTaken] = useState({});
@@ -59,13 +60,15 @@ function ActivitiesInner() {
 
   useEffect(() => {
     async function loadStatic() {
-      const [{ data: t }, s, { data: st }, { data: yrs }, currentTerm] = await Promise.all([
+      const [{ data: t }, s, { data: st }, { data: yrs }, currentTerm, yd] = await Promise.all([
         supabase.from('terms').select('*').order('start_date'),
         loadOtherHalfSlots(),
         supabase.from('staff').select('staff_id, first_name, last_name, staff_code').order('last_name'),
         supabase.from('students').select('year_group').eq('status', 'active'),
         loadCurrentOtherHalfTermId(),
+        loadOtherHalfYearDays(),
       ]);
+      setYearDays(yd);
       setTerms(t || []);
       setSlots(s);
       setStaff(st || []);
@@ -112,7 +115,8 @@ function ActivitiesInner() {
   }
 
   function startNew(day) {
-    setForm({ ...EMPTY_FORM, anchor: day, day_of_week: day || slots.days[0] || 'Mon', year_groups: [...yearOptions] });
+    const d = day || slots.days[0] || 'Mon';
+    setForm({ ...EMPTY_FORM, anchor: day, day_of_week: d, year_groups: yearOptions.filter((y) => yearHasOtherHalfOn(yearDays, y, d)) });
     setStaffFilter('');
     setStatus(null);
   }
@@ -274,7 +278,7 @@ function ActivitiesInner() {
         <div className="form-grid">
           <label>
             Day
-            <select value={form.day_of_week} onChange={(e) => setForm({ ...form, day_of_week: e.target.value })}>
+            <select value={form.day_of_week} onChange={(e) => setForm({ ...form, day_of_week: e.target.value, year_groups: form.year_groups.filter((y) => yearHasOtherHalfOn(yearDays, y, e.target.value)) })}>
               {days.map((d) => <option key={d} value={d}>{OH_DAY_NAMES[d]}</option>)}
             </select>
           </label>
@@ -299,13 +303,20 @@ function ActivitiesInner() {
         <fieldset style={{ marginTop: '0.75rem', border: '1px solid #ddd', borderRadius: 6, padding: '0.5rem 0.75rem' }}>
           <legend>Open to</legend>
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            {yearOptions.map((y) => (
-              <label key={y} style={{ display: 'flex', flexDirection: 'row', flex: '0 0 auto', gap: '0.3rem', alignItems: 'center' }}>
-                <input type="checkbox" style={{ width: 'auto' }} checked={form.year_groups.includes(y)} onChange={() => setForm({ ...form, year_groups: toggleIn(form.year_groups, y) })} />
-                Year {y}
-              </label>
-            ))}
+            {yearOptions.map((y) => {
+              const allowed = yearHasOtherHalfOn(yearDays, y, form.day_of_week);
+              return (
+                <label key={y} style={{ display: 'flex', flexDirection: 'row', flex: '0 0 auto', gap: '0.3rem', alignItems: 'center', color: allowed ? undefined : '#999' }}
+                  title={allowed ? undefined : `Year ${y} doesn't have the Other Half on ${OH_DAY_NAMES[form.day_of_week]}s`}>
+                  <input type="checkbox" style={{ width: 'auto' }} disabled={!allowed && !form.year_groups.includes(y)} checked={form.year_groups.includes(y)} onChange={() => setForm({ ...form, year_groups: toggleIn(form.year_groups, y) })} />
+                  Year {y}{allowed ? '' : ' (no OH that day)'}
+                </label>
+              );
+            })}
           </div>
+          <p style={{ margin: '0.4rem 0 0', fontSize: '0.85em', color: '#666' }}>
+            Only years with the Other Half on {OH_DAY_NAMES[form.day_of_week]}s can be ticked. Which years have it on which days is set at <a href="/other-half/year-days">Other Half Days</a>.
+          </p>
         </fieldset>
 
         <fieldset style={{ marginTop: '0.75rem', border: '1px solid #ddd', borderRadius: 6, padding: '0.5rem 0.75rem' }}>

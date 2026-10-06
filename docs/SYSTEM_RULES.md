@@ -184,12 +184,17 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 
 **OH is run in Formwork, not Nova-T** (156)
 - Activities, staff, rooms, year groups and student choices live only in Formwork.
-- The Nova-T importer skips any group coded `Oh` or `Sa`, so an import can never change OH. Sports Academy is an OH activity students choose.
+- The Nova-T importer skips any group coded `Oh` or `Sa`, so an import can never change OH. Sports Academy is an OH activity students choose, and so is Prep for those who don't do sports (386).
 - Nova-T's old whole-year OH and Sports Academy groups were deleted (158).
 
-**Days each year group has OH** (384)
-- Year 12 have OH on **Mondays and Thursdays only**: on Tuesdays and Wednesdays they have timetabled lessons in the OH period (the principal, 6 Oct 2026).
-- The database refuses an activity opened to Year 12 on another day, and refuses a Year 12 choice or group placement on another day. The rule is a row in `other_half_year_days` (year group and days), changed in the SQL editor; a year group with no row can have OH on any day.
+**Days each year group has OH** (384, 386)
+- A tick grid at **Other Half Days** (`/other-half/year-days`, linked from the Timetable card) says which year groups have OH on which days (the principal, 6 Oct 2026). As set up: Years 7–11 Monday to Thursday; Year 12 **Mondays and Thursdays only**, because on Tuesdays and Wednesdays they have science lessons in the OH period. Friday has an OH slot in the bell times but no activities, so nobody has it ticked.
+- SMT and the Other Half coordinator change it. It refuses to untick a day while that year still has activities or choices on it, and refuses to tick a day on which that year has lessons in the OH period. Changes are logged in Change History under Other Half.
+- The grid is checked in three places:
+  - **Activities:** an activity can only be opened to the years ticked for its day (the Activities form greys out the others), and a student can only choose, or be placed in, an activity on a ticked day.
+  - **The Nova-T import** leaves out any lesson in the OH period on a day its year has OH, and lists it on the preview. A class with no other lessons is left out whole. The database refuses such a lesson too, however it is added.
+  - **Registers:** a student in a lesson then can't be marked on an OH register (385, below).
+- Prep for students who don't do sports is the OH activity **Prep**, not a Nova-T class. Nova-T's Sports block puts a Prep group in Year 10's Tuesday OH period (109/Pr1). It was removed on 6 Oct 2026, and the import now leaves it out.
 
 **Who can do what**
 

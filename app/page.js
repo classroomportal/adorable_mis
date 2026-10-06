@@ -387,6 +387,7 @@ const TABS = [
       { href: '/admin/next-year', label: 'Next Year Setup', desc: "Next year's mentor groups, then its Nova-T timetable, planned without touching this year." },
       { href: '/admin/import-staff-commitments', label: 'Import Meetings', desc: "Upload staff meetings and non-working periods." },
       { href: '/admin/bell-times', label: 'Bell Times', desc: "Which periods run each day, and their times." },
+      { href: '/other-half/year-days', label: 'Other Half Days', desc: "Which year groups have the Other Half on which days; the Nova-T import is checked against it." },
       { href: '/admin/print-timetables', label: 'Print Timetables', desc: "Print student timetables for a year group." },
     ].filter((it) => it && hasAccess(it.resource || it.href)),
   },
