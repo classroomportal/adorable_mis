@@ -13,6 +13,11 @@ import BehaviourPhoto from '../components/BehaviourPhoto';
 import { useBehaviourRules } from '../../lib/behaviourRules';
 import { InvolvedStudentsPicker, saveInvolvedStudents } from '../components/InvolvedStudents';
 import { GuidanceText, SeriousConfirmTick } from '../components/SeriousEventGuidance';
+import { OH_DAY_NAMES, loadCurrentOtherHalfTermId } from '../../lib/otherHalf';
+
+// Other Half activities share the class picker; their values carry this
+// prefix so they can't be mistaken for a class_id.
+const OH_PREFIX = 'oh:';
 
 // boarding_room_number is text, so a plain sort puts "10" before "2". Sort the
 // numeric ones by value and leave anything non-numeric (e.g. "3A") after them.
@@ -35,6 +40,7 @@ function BehaviourPageInner() {
 
   const [mentorClasses, setMentorClasses] = useState([]);
   const [myClasses, setMyClasses] = useState([]); // timetabled lessons this person teaches
+  const [myActivities, setMyActivities] = useState([]); // Other Half activities this person runs
   const [allStudents, setAllStudents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
@@ -49,11 +55,14 @@ function BehaviourPageInner() {
   // this class"). That class is a timetabled lesson, not a mentor group, and
   // the link has to survive the Houseparent defaults below — arriving from a
   // lesson means the viewer is teaching, not on house duty.
-  const linkedClassId = searchParams.get('classId') || '';
+  // The OH register links here as ?ohActivityId=<activity>&date=<date>.
+  const linkedActivityId = searchParams.get('ohActivityId') || '';
+  const linkedClassId = searchParams.get('classId') || (linkedActivityId ? `${OH_PREFIX}${linkedActivityId}` : '');
 
   const [groupType, setGroupType] = useState(searchParams.get('groupType') || (linkedClassId ? 'mentor' : ''));
   const [classId, setClassId] = useState(linkedClassId); // mentor group or timetabled lesson class_id
   const [linkedClass, setLinkedClass] = useState(null); // the linked lesson, when it is not a mentor group
+  const [linkedActivity, setLinkedActivity] = useState(null); // the linked OH activity
   const [boardingHouse, setBoardingHouse] = useState('');
   const [restaurant, setRestaurant] = useState('');
   const [yearFilter, setYearFilter] = useState('');
@@ -127,7 +136,11 @@ function BehaviourPageInner() {
   // cover lesson), so it is offered even when it is in neither list.
   const knownClass = (id) => myClasses.some((c) => c.class_id === id) || mentorClasses.some((c) => c.class_id === id);
   const extraClasses = linkedClass && !knownClass(linkedClass.class_id) ? [linkedClass] : [];
-  const hasClassOptions = myClasses.length + mentorClasses.length + extraClasses.length > 0;
+  // Likewise an OH activity followed in from its register (a colleague's).
+  const extraActivities = linkedActivity && !myActivities.some((a) => a.activity_id === linkedActivity.activity_id) ? [linkedActivity] : [];
+  const hasClassOptions = myClasses.length + mentorClasses.length + myActivities.length + extraClasses.length + extraActivities.length > 0;
+  const activityLabel = (a) => `${a.activity_name} (OH, ${OH_DAY_NAMES[a.day_of_week] || a.day_of_week})`;
+  const isActivity = classId.startsWith(OH_PREFIX);
   const classLabel = (c) => (c.subjects?.subject_name ? `${c.class_code} — ${c.subjects.subject_name}` : c.class_code || `Class ${c.class_id}`);
 
   function toggleRoom(room) {
@@ -153,6 +166,20 @@ function BehaviourPageInner() {
       setMyClasses(allClasses.filter((cl) => cl.staff_id === profile?.staff_id
         && cl.curriculum_blocks?.block_name !== 'Mentor'));
 
+      // The Other Half activities this person runs this OH term. OH lives in
+      // its own tables, not classes (migration 156), so it needs its own list.
+      if (profile?.staff_id) {
+        const ohTermId = await loadCurrentOtherHalfTermId();
+        const { data: oh } = await supabase
+          .from('other_half_activity_staff')
+          .select('other_half_activities!inner(activity_id, activity_name, day_of_week, term_id, is_active)')
+          .eq('staff_id', profile.staff_id)
+          .eq('other_half_activities.term_id', ohTermId ?? -1)
+          .eq('other_half_activities.is_active', true);
+        setMyActivities((oh || []).map((r) => r.other_half_activities).filter(Boolean)
+          .sort((x, y) => x.activity_name.localeCompare(y.activity_name)));
+      }
+
       const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, boarding_room_number, restaurant, year_group').eq('status', 'active').order('last_name');
       const list = s || [];
       setAllStudents(list);
@@ -177,7 +204,14 @@ function BehaviourPageInner() {
       // A timetabled lesson is not in mentorClasses, so without this the
       // dropdown would show "Select..." while the roster below loaded the
       // right students — looking broken. Fetch it and offer it by name.
-      if (linkedClassId) {
+      if (linkedActivityId) {
+        const { data: act } = await supabase
+          .from('other_half_activities')
+          .select('activity_id, activity_name, day_of_week')
+          .eq('activity_id', linkedActivityId)
+          .maybeSingle();
+        if (act) setLinkedActivity(act);
+      } else if (linkedClassId) {
         const { data: linked } = await supabase
           .from('classes')
           .select('class_id, class_code')
@@ -194,6 +228,22 @@ function BehaviourPageInner() {
   }, [profile?.staff_id]);
 
   async function loadRoster() {
+    if (groupType === 'mentor' && classId.startsWith(OH_PREFIX)) {
+      // Everyone who has chosen (or been placed in) the activity now.
+      setLoadingRoster(true);
+      const { data: ch } = await supabase
+        .from('other_half_choices')
+        .select('students(student_id, first_name, last_name, status)')
+        .eq('activity_id', Number(classId.slice(OH_PREFIX.length)));
+      const studentList = (ch || [])
+        .map((row) => row.students)
+        .filter((s) => s && s.status === 'active')
+        .sort((a, b) => a.last_name.localeCompare(b.last_name));
+      setRoster(studentList);
+      setSelected(new Set(studentList.map((s) => s.student_id)));
+      setLoadingRoster(false);
+      return;
+    }
     if (groupType === 'mentor' && classId) {
       setLoadingRoster(true);
       const { data: sc } = await supabase
@@ -348,7 +398,7 @@ function BehaviourPageInner() {
       description: form.description || null,
       // The lesson or mentor group picked, so parents can see the subject
       // (migration 145 works it out from the timetable otherwise).
-      class_id: groupType === 'mentor' && classId ? Number(classId) : null,
+      class_id: groupType === 'mentor' && classId && !isActivity ? Number(classId) : null,
       photo_id: photoId,
     }));
     // A student can't be both the subject and another student in the event.
@@ -416,7 +466,7 @@ function BehaviourPageInner() {
             Log for
             <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)}>
               <option value="">One student</option>
-              <option value="mentor">My lesson or mentor group</option>
+              <option value="mentor">My lesson, OH activity or mentor group</option>
               <option value="boarding">Boarding house</option>
               <option value="restaurant">Restaurant</option>
             </select>
@@ -436,7 +486,7 @@ function BehaviourPageInner() {
 
           {groupType === 'mentor' && (
             <label>
-              Class or mentor group
+              Class, activity or mentor group
               <select value={classId} onChange={(e) => setClassId(e.target.value)}>
                 <option value="">Select...</option>
                 {extraClasses.map((c) => (
@@ -446,6 +496,16 @@ function BehaviourPageInner() {
                   <optgroup label="My lessons">
                     {myClasses.map((c) => (
                       <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {extraActivities.map((a) => (
+                  <option key={a.activity_id} value={`${OH_PREFIX}${a.activity_id}`}>{activityLabel(a)}</option>
+                ))}
+                {myActivities.length > 0 && (
+                  <optgroup label="My Other Half activities">
+                    {myActivities.map((a) => (
+                      <option key={a.activity_id} value={`${OH_PREFIX}${a.activity_id}`}>{activityLabel(a)}</option>
                     ))}
                   </optgroup>
                 )}
@@ -459,7 +519,7 @@ function BehaviourPageInner() {
               </select>
               {!hasClassOptions && (
                 <span style={{ color: '#5a6b8c', fontSize: '0.85rem' }}>
-                  You have no timetabled lessons or mentor groups.
+                  You have no timetabled lessons, Other Half activities or mentor groups.
                 </span>
               )}
             </label>
