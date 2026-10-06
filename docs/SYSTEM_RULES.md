@@ -333,6 +333,16 @@ At the same moment the office's pop-up appears, every member of staff signed in 
 - **Hide for 2 minutes**, the beep and the one-minute check work as on the office pop-up.
 - Answers are kept (who, when, the note). The checks happen in the database (`staff_missing_student_alerts()`, `respond_missing_student_alert()`).
 
+**Stage 5 "collect from lesson" pop-up on the office's screens** (migration 383, the principal, 6 Oct 2026)
+
+A full-screen flashing **purple** pop-up (purple so it is never confused with the red missed-lesson pop-up), on whatever Formwork page is open, for anyone whose role is granted **Stage 5 collection pop-ups** at Permissions (the school office to start with). It says "Please go and collect this student from their lesson", with the student, the lesson or Other Half activity, the room, the teacher, the period, the category and the teacher's explanation.
+- It appears when a teacher logs a Stage 5 (a negative event at or below the serious-event points) for today **while they are teaching that student**: in a lesson running right now that they teach (the lesson's own teacher, or the cover teacher when it is covered), or in the student's Other Half activity running now where they are one of its staff. An event moved up to Stage 5 during the lesson counts too.
+- A Stage 5 logged later about something earlier, or by someone not teaching the student at that moment, raises nothing: the student is somewhere else by then.
+- The teacher sees "The office has been asked to come and collect the student from your lesson" when they save.
+- **Going to collect** (with an optional note, e.g. who is going) clears it from every office screen and records who and when. If the event is voided, deleted or stops being a Stage 5 first, it disappears by itself. Unanswered alerts disappear at the end of the day.
+- **Hide for 2 minutes**, the flashing tab title and the beep (a different, rising sound) work as on the missed-lesson pop-up; it checks every 30 seconds.
+- Being admin does not give the pop-up; only a role with the grant does. The checks happen in the database (`office_stage5_collection_alerts()`, `acknowledge_stage5_collection()`). It never stops a behaviour event being saved.
+
 **Register-not-taken pop-up on teachers' screens** (migration 367)
 
 The same kind of full-screen flashing pop-up, for a teacher whose own lesson today started **at least 10 minutes ago** and has no register yet (five minutes before it reaches Registers Not Done).
