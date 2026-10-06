@@ -32,6 +32,71 @@ import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
 // ever wanted, make it fail loudly (a non-2xx status) rather than
 // returning ok, or callers will record a send that never happened.
 
+// denomailer writes a non-ASCII subject as one quoted-printable encoded-word
+// and then wraps it every 74 characters with "=" + line break, as it would a
+// body. A line break inside a header ends the header block, so any long
+// subject with a dash or a name like "Adébáyọ̀" (6 Oct 2026: "Behaviour alert:
+// … — Straight Stage 5 …") arrived with every header after Subject shown as
+// the message text. So the subject handed to denomailer is always ASCII:
+// common typographic characters become their ASCII forms, and anything else
+// is sent as our own base64 encoded-words (each under 75 characters, joined
+// by spaces, which readers drop between encoded-words). The leading space
+// stops denomailer re-encoding a value that starts with "=?"; it is legal
+// folding white space after "Subject:".
+const TYPOGRAPHIC: Record<string, string> = {
+  "\u2014": "-", "\u2013": "-", "\u2012": "-", "\u2010": "-", "\u2011": "-", "\u2212": "-",
+  "\u2018": "'", "\u2019": "'", "\u201A": "'", "\u2032": "'",
+  "\u201C": '"', "\u201D": '"', "\u201E": '"', "\u2033": '"',
+  "\u2026": "...", "\u00A0": " ", "\u202F": " ", "\u2009": " ", "\u2022": "*", "\u00B7": "*",
+};
+
+function encodeSubject(subject: string): string {
+  const flat = subject
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[\u2010-\u2014\u2212\u2018\u2019\u201A\u2032\u201C-\u201E\u2033\u2026\u00A0\u202F\u2009\u2022\u00B7]/g, (c) => TYPOGRAPHIC[c] ?? c)
+    .replace(/ {2,}/g, " ")
+    .trim();
+  // deno-lint-ignore no-control-regex
+  if (!/[^\u0000-\u007f]/.test(flat) && !flat.startsWith("=?")) return flat;
+
+  // Up to 45 bytes per word (60 base64 characters + 12 of wrapper), never
+  // splitting a character, since each word must decode on its own.
+  const encoder = new TextEncoder();
+  const words: string[] = [];
+  let chunk = "";
+  for (const ch of Array.from(flat)) {
+    if (chunk && encoder.encode(chunk + ch).length > 45) {
+      words.push(chunk);
+      chunk = "";
+    }
+    chunk += ch;
+  }
+  if (chunk) words.push(chunk);
+  const b64 = (str: string) => btoa(String.fromCharCode(...encoder.encode(str)));
+  return " " + words.map((w) => `=?utf-8?B?${b64(w)}?=`).join(" ");
+}
+
+// The plain-text part when only HTML is given: keep the line breaks the HTML
+// makes (the 6 Oct alert read "alert.A single severe event" with tags simply
+// removed) and turn the common entities back into characters.
+function htmlToText(html: string): string {
+  return html
+    .replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|tr|table|ul|ol|blockquote)>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "\n- ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
@@ -89,10 +154,10 @@ Deno.serve(async (req: Request) => {
       to,
       ...(cc && cc.length ? { cc } : {}),
       ...(replyTo.length ? { headers: { "Reply-To": replyTo.join(", ") } } : {}),
-      subject,
+      subject: encodeSubject(subject),
       // denomailer requires plain-text `content` even for an HTML send —
-      // fall back to a stripped version of the HTML when only html is given.
-      content: text ?? html!.replace(/<[^>]+>/g, ""),
+      // fall back to a text version of the HTML when only html is given.
+      content: text ?? htmlToText(html!),
       ...(html ? { html } : {}),
     });
   } catch (err) {
