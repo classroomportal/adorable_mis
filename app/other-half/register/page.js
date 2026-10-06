@@ -230,6 +230,9 @@ function RegisterInner() {
             </SaveBar>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
               <button type="button" className="secondary" onClick={markAllPresent}>Mark the rest present</button>
+              <a href={`/behaviour?ohActivityId=${activity.activity_id}&date=${date}`} className="secondary" style={{ width: 'fit-content', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '0.5rem 0.65rem', borderRadius: '6px', fontSize: '1rem', lineHeight: 'normal' }}>
+                Log behaviour for this activity
+              </a>
               <span style={{ color: '#666' }}>{roster.length} student{roster.length === 1 ? '' : 's'}{unmarked ? ` · ${unmarked} not marked yet` : ''}</span>
             </div>
             <div className="table-scroll"><table>
