@@ -1011,7 +1011,7 @@ Feedback can be given from the end of the lesson until the end of the next day, 
 
 ### Reading ages (/reading-ages)
 
-Literacy is one of the school's improvement targets, so every student's reading age is tracked against their actual age from the admissions interview onwards. The **gap** is the reading age minus the student's age on the day of the test: **−1 y 2 m** means reading 14 months below their age, **+8 m** means 8 months above. Formwork works out the age and the gap from the date of birth and the test date; nobody types them.
+Literacy is one of the school's improvement targets, so every student's reading age is tracked against their actual age from admission (the application and the interview) onwards. The **gap** is the reading age minus the student's age on the day of the test: **−1 y 2 m** means reading 14 months below their age, **+8 m** means 8 months above. Formwork works out the age and the gap from the date of birth and the test date; nobody types them.
 
 Open **Reading Ages** from the Assessment card. Teachers, Heads of Department, mentors, pastoral staff, assessment managers and SMT can see it. Choose a **Year group** (and a **Form** if you want one).
 
@@ -1024,9 +1024,9 @@ Open **Reading Ages** from the Assessment card. Teachers, Heads of Department, m
 
 ![A student's readings, opened from the list](manual-images/34c-reading-student.jpg)
 
-In the chart the blue line is the reading age and the dashed line is the student's actual age; the bar between them at each test is the gap (red below their age, green above). Purple dots are the admissions interview, blue dots the school's tests.
+In the chart the blue line is the reading age and the dashed line is the student's actual age; the bar between them at each test is the gap (red below their age, green above). Purple dots are the admissions application and interview, blue dots the school's tests.
 
-**Recording a test** (Record a reading test, /reading-ages/record; teachers, Heads of Department, assessment managers and SMT):
+**Recording a test** (Record a reading test, /reading-ages/record; teachers, Heads of Department, assessment managers, SMT and the school office):
 
 1. Type the **Test** name (for example *Entry test*) and the **Usual test date**, the day most students sat it.
 2. Choose the **Year group** and **Form**, or find one student by name.
@@ -1036,7 +1036,9 @@ In the chart the blue line is the reading age and the dashed line is the student
 
 ![Recording an entry test for Year 7, one student tested on another day](manual-images/34d-reading-record.jpg)
 
-You can come back to the same test and date to add more students; readings already saved are filled in. A test can't be dated after today. To correct or remove a saved reading, open the student in Reading Ages (or the Reading Age tile on their profile) and press **Edit** or **Remove**. The interview reading is corrected on the applicant's page, and NGRT scores in the CAT4 / NGRT section. Every school test added, changed or removed is kept in Change History.
+Once you save, the students you have just saved drop off the list, so you can see who is left; when everyone in the form is done the page says so. They stay hidden for that test and date until you close the tab, even if you refresh. Press **Show them** to bring them back to check or correct a reading. Press a student's name (shown in blue) to see their full name, including any middle name, and their Admitted/letter date, with a link to their profile; a name in plain black has nothing more to show.
+
+You can come back to the same test and date to add more students; readings already saved are filled in. A test can't be dated after today. To correct or remove a saved reading, open the student in Reading Ages (or the Reading Age tile on their profile) and press **Edit** or **Remove**. The application and interview readings are corrected on the applicant's page, and NGRT scores in the CAT4 / NGRT section. Every school test added, changed or removed is kept in Change History.
 
 **What parents see.** A parent sees their child's readings, with the chart, on the **Reading Age** tile in the parent portal, but only once the child has two readings from the school's tests or the interview. A single reading is not yet a trend, and old NGRT scores don't count towards the two. Students don't see reading ages.
 
@@ -1518,7 +1520,7 @@ Filter by **Entry year**, year group, status and name. The coloured buttons coun
 
 ### A new application (/admissions/new)
 
-Record the child (names, date of birth, gender, nationality, entry year and year group, previous school and class, a sibling at the school, how they heard of us, notes) and one or two contacts, one of them the main contact who receives letters. First and last name are required. A new application always starts as an enquiry; the page warns if the same name, date of birth and entry year already exist. Previous schools come from a shared list, merged at /admissions/schools.
+Record the child (names, date of birth, gender, nationality, entry year and year group, previous school and class, a sibling at the school, how they heard of us, notes) and one or two contacts, one of them the main contact who receives letters. First and last name are required. A new application always starts as an enquiry; the page warns if the same name, date of birth and entry year already exist. Previous schools come from a shared list, merged at /admissions/schools. If the child's reading was tested when they applied, fill in the Reading age card: years and months, the date tested (today is filled in once you type an age) and the test used; the page shows the difference from the child's age. It can be added or changed later under Details on the applicant's page, and reaches the child's reading-age history once they are enrolled.
 
 ![A new application](manual-images/102-new.jpg)
 
@@ -1544,6 +1546,7 @@ The page holds the details, parents and guardians (up to four contacts), payment
 
 ![An applicant's details, contacts and payments](manual-images/101a-applicant.jpg)
 
+- **Details**: the child's record, including **Reading age at application** (the reading taken when they applied, its date and test, and the difference from their age). Press **Edit** to add or change it. The Interview section only appears once the child is invited to interview, so record an early reading here, not there.
 - **Entrance test**: the booked test day, English and Maths scores (each 0 to the paper's maximum), worked out as percentages with the average against the pass mark (50% by default), and CAT4 SAS scores. The pass mark only guides; nothing blocks inviting a child below it.
 - **Interview**: date, interviewer, reading age (years and months), reading test, interests, languages, strengths, concerns, recommendation and comments.
 - **Status and decision**: only the moves allowed from the current stage are offered.
@@ -1675,7 +1678,7 @@ Add staff (name, code, email: a login is created automatically from the email) a
 
 ### Lookups (/admin/lookups)
 
-The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, admission fee proposals, the mark appeal rules (days to appeal and credits a year, for each school year), and When parents see marks: how many hours (0 to 168) a new mark waits before parents can see it, counted from when it was first entered. 0 means parents see marks as soon as they are entered. Every section starts folded closed: click its title to open it. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
+The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only; changing a category's points affects new events only, and to stop using a category that has been used, press Retire: it is no longer offered for new events, its old events keep it, and Bring back restores it), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, admission fee proposals, the mark appeal rules (days to appeal and credits a year, for each school year), and When parents see marks: how many hours (0 to 168) a new mark waits before parents can see it, counted from when it was first entered. 0 means parents see marks as soon as they are entered. Every section starts folded closed: click its title to open it. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
 
 ![Lookups, every section closed except Mark appeals](manual-images/122-lookups.jpg)
 
