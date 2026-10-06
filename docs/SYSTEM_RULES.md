@@ -187,6 +187,10 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 - The Nova-T importer skips any group coded `Oh` or `Sa`, so an import can never change OH. Sports Academy is an OH activity students choose.
 - Nova-T's old whole-year OH and Sports Academy groups were deleted (158).
 
+**Days each year group has OH** (384)
+- Year 12 have OH on **Mondays and Thursdays only**: on Tuesdays and Wednesdays they have timetabled lessons in the OH period (the principal, 6 Oct 2026).
+- The database refuses an activity opened to Year 12 on another day, and refuses a Year 12 choice or group placement on another day. The rule is a row in `other_half_year_days` (year group and days), changed in the SQL editor; a year group with no row can have OH on any day.
+
 **Who can do what**
 
 | Action | Who |
