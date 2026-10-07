@@ -7,6 +7,7 @@ import { addDays, weekStartOf, loadMyHomework, isOutstanding } from '../../lib/h
 import { useTileOrder, sortTiles } from '../../lib/tileOrder';
 import { loadPortalGroups } from '../../lib/studentGroups';
 import { useRewardPoints } from './RewardStore';
+import { useSchoolRating } from './SchoolRating';
 
 // A student's home page: the same big tiles as their portal, in the
 // school-wide order set at /admin/tile-order (migration 280). Homework only
@@ -23,6 +24,8 @@ export default function StudentHome() {
   const [groups, setGroups] = useState([]);
   // Reward Store (migration 370).
   const [rewardPoints, , rewardsOpen] = useRewardPoints(studentId);
+  // School rating (migration 394), only while a round is open.
+  const [ratingRound] = useSchoolRating(studentId);
 
   useEffect(() => { loadPortalGroups(studentId).then(setGroups); }, [studentId]);
 
@@ -56,6 +59,10 @@ export default function StudentHome() {
       sub: rewardPoints ? `${rewardPoints.balance} point${rewardPoints.balance === 1 ? '' : 's'} to spend` : 'Spend your merits',
     },
     { key: 'messages', href: '/inbox', label: 'Messages', icon: '📬', accent: 'family', sub: 'Your inbox' },
+    ratingRound && {
+      key: 'rating', href: '/portal#rating', label: 'Rate the School', icon: '⭐', accent: 'school',
+      sub: ratingRound.done ? 'Done, thank you' : 'Tell us what you think',
+    },
     // Migration 391.
     { key: 'worries', href: '/portal#worries', label: 'Worry Box', icon: '💌', accent: 'clinic', sub: 'Tell us what’s worrying you' },
     groups.length > 0 && {

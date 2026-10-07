@@ -28,6 +28,7 @@ import LessonFeedbackForm from '../components/LessonFeedbackForm';
 import { loadFeedbackLessons, feedbackKey } from '../../lib/lessonFeedback';
 import RewardStore, { useRewardPoints } from '../components/RewardStore';
 import WorryBox from '../components/WorryBox';
+import SchoolRating, { useSchoolRating } from '../components/SchoolRating';
 
 
 // Which of these events have a picture this viewer may see. Row-level
@@ -94,6 +95,8 @@ function PortalInner() {
   const tileOrder = useTileOrder('student');
   // Reward Store (migration 370): merit points to spend, shown on its tile.
   const [rewardPoints, reloadRewardPoints, rewardsOpen] = useRewardPoints(studentId);
+  // School rating (migration 394): the tile shows only while a round is open.
+  const [ratingRound, reloadRating] = useSchoolRating(studentId);
   // Groups shown to students (migration 300); the tile appears only if there are any.
   const [groups, setGroups] = useState([]);
   const [hwError, setHwError] = useState(null);
@@ -357,7 +360,7 @@ function PortalInner() {
   const firstName = studentName.split(' ')[0];
 
   // Sections that open on this page; the other tiles link to their own pages.
-  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour', 'rewards', 'groups', 'worries'];
+  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour', 'rewards', 'groups', 'worries', 'rating'];
 
   // Homework tile badge and lists.
   const today = schoolToday();
@@ -441,6 +444,12 @@ function PortalInner() {
             ) },
             { key: 'messages', el: <DashboardTile key="messages" label="Messages" icon="📬" sub="View inbox" href="/inbox" /> },
             // Migration 391: read by the DSL and the principal only.
+            ratingRound && { key: 'rating', el: (
+              <DashboardTile
+                key="rating" label="Rate the School" icon="⭐" onClick={() => openView('rating')}
+                sub={ratingRound.done ? 'Done, thank you' : 'Tell us what you think'}
+              />
+            ) },
             { key: 'worries', el: <DashboardTile key="worries" label="Worry Box" icon="💌" sub="Tell us what's worrying you" onClick={() => openView('worries')} /> },
             groups.length > 0 && { key: 'groups', el: (
               <DashboardTile
@@ -571,6 +580,13 @@ function PortalInner() {
       <div className="card">
         <h2>Reward Store</h2>
         <RewardStore studentId={studentId} points={rewardPoints} onPointsChange={reloadRewardPoints} />
+      </div>
+      )}
+
+      {activeView === 'rating' && (
+      <div className="card">
+        <h2>Rate the School</h2>
+        <SchoolRating round={ratingRound} onDone={reloadRating} />
       </div>
       )}
 

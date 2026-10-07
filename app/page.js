@@ -51,7 +51,7 @@ function useIsStaffParent() {
 // Worry Box for the DSL and the principal (391). The numbers that used to sit
 // here are on their module cards (292–293). Order set at /admin/tile-order.
 function DashboardStats({ hasAccess }) {
-  const { session } = useAuth();
+  const { session, staffRoles } = useAuth();
   const [unread, setUnread] = useState(null);
   const [missed, setMissed] = useState(null);
   const order = useTileOrder('staff_stats');
@@ -111,6 +111,11 @@ function DashboardStats({ hasAccess }) {
       key: 'worry_box', href: '/worry-box', label: 'Worry Box', icon: '💌', accent: 'clinic',
       sub: worries.urgent > 0 ? `${worries.urgent} urgent, ${worries.new} new`
         : worries.new > 0 ? `${worries.new} new` : `${worries.open} open`,
+    },
+    // Migration 394: the DSL and the principal (on the roles, not admin).
+    (staffRoles || []).some((r) => r === 'dsl' || r === 'principal') && {
+      key: 'school_rating', href: '/school-rating', label: 'School Rating', icon: '⭐', accent: 'school',
+      sub: 'What students think of the school',
     },
     wellbeing && {
       key: 'wellbeing', href: '/wellbeing', label: 'Wellbeing', icon: '🌱', accent: 'clinic',

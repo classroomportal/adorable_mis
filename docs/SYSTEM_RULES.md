@@ -760,6 +760,10 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - Only the DSL and the principal see the answers, with names. Admins, SMT, teachers and parents see nothing; the student sees only "thank you".
 - A check-in with an answer that needs a look (set per question) or a comment is flagged. The DSL and the principal get an inbox message for each, and an email at most once an hour, with no names or answers. They mark each flagged check-in followed up, with a note. Nothing is deleted.
 
+**School rating** (394, 7 Oct 2026; `/school-rating`, the "Rate the School" portal tile)
+- About once a term the DSL or the principal opens a school rating (opening time and closing day). While it is open, students rate 10 areas of school life from 1 to 5 and can add one thing the school does well and one it could do better. Once per rating.
+- **Anonymous:** the DSL and the principal see only totals: each area's average and spread, by year group or boarding house once at least 3 students in it have answered, and the comments without names once 3 students have answered. Nobody can see one student's answers. Parents and other staff see nothing.
+
 **Staff HR records** (`/staff/records`)
 - HR and SMT can read them. Only HR (and admin) can edit.
 - Nationality must be Nigerian, British or Other.
