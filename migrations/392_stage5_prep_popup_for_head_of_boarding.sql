@@ -1,4 +1,4 @@
--- Migration 388: a Stage 5 given during prep sends the purple "collect"
+-- Migration 392: a Stage 5 given during prep sends the purple "collect"
 -- pop-up to the Head of Boarding.
 --
 -- Why (the principal, 7 Oct 2026): two Stage 5s logged by a houseparent for
@@ -29,6 +29,9 @@
 -- stage5_collection_alerts gets `kind` ('lesson' / 'prep'); a prep alert
 -- has no period. stage5_collection_requested() is unchanged; the new
 -- stage5_collection_requested_kinds() lets Log behaviour say who was asked.
+
+-- Numbered 388 when written and applied (7 Oct 2026); renumbered 392 because
+-- the automatic missed-lesson negative applied earlier that day already used 388.
 
 set local formwork.change_note = 'Principal (direct)';
 
@@ -87,7 +90,7 @@ begin
              new.staff_id, st.first_name || ' ' || st.last_name, 'lesson'
         from staff st where st.staff_id = new.staff_id
       on conflict (event_id) do nothing;
-    -- Migration 388: during prep, the Head of Boarding collects.
+    -- Migration 392: during prep, the Head of Boarding collects.
     elsif stage5_in_prep_at(new.student_id, school_now()) then
       insert into stage5_collection_alerts
         (event_id, student_id, alert_date, period_number, lesson, room, logged_by_staff_id, logged_by_name, kind)

@@ -1,4 +1,4 @@
--- Migration 389: the teacher who marked the absence is asked to confirm it.
+-- Migration 391: the teacher who marked the absence is asked to confirm it.
 --
 -- Why (the principal, 7 Oct 2026, the evening 388 was first run): "the
 -- teachers should get an email - to say are they confirming that x was not in
@@ -27,6 +27,9 @@
 -- for each event it makes; no grants. The 11 events recorded by hand on
 -- 7 Oct (run early, at the principal's request) are notified at the end of
 -- this migration.
+
+-- Numbered 389 when written and applied (7 Oct 2026); renumbered 391 because
+-- another change applied the same day already used 389.
 
 set local formwork.change_note = 'Principal (direct)';
 
@@ -234,7 +237,7 @@ begin
     on conflict (student_id, attend_date, period_number) do nothing
     returning id into v_link_id;
 
-    -- Migration 389: ask the teacher who marked it to confirm. An email
+    -- Migration 391: ask the teacher who marked it to confirm. An email
     -- problem never stops the event being recorded.
     if v_link_id is not null then
       begin

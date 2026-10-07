@@ -415,7 +415,7 @@ function BehaviourPageInner() {
       }
       // A Stage 5 in the teacher's own lesson or OH activity asks the office
       // to collect the student (migration 383), and one during prep asks the
-      // Head of Boarding (388); say so.
+      // Head of Boarding (392); say so.
       if (!error && isSerious && saved?.length) {
         const { data: asked } = await supabase.rpc('stage5_collection_requested_kinds', { p_event_ids: saved.map((r) => r.event_id) });
         collecting = (asked || []).filter((a) => a.kind !== 'prep').length;

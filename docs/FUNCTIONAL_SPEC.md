@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 7 October 2026 (database migrations up to 388). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 7 October 2026 (database migrations up to 392). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -274,14 +274,22 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 
 **Planned absences** (/attendance/planned-absences, Pastoral card, migration 318, 2 Oct 2026)
 
-- **FR-4.21** School office, attendance officer, pastoral, SMT and admin can give a student one attendance code for a run of whole days, with an optional note. All staff can see the list. \[DB\]
+- **FR-4.21** School office, attendance officer, pastoral, SMT and admin can give a student one attendance code for a run of days, from a chosen lesson on the first day to a chosen lesson on the last if needed (no lesson chosen means the whole day; migration 389), with an optional note. All staff can see the list. \[DB\]
 - **FR-4.22** Only authorised codes can be planned: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and X, Excluded from school. X was added by migration 318 and counts as an authorised absence, so it never shows in Missed Lessons or the pop-up. \[DB\]
 - **FR-4.23** Every period the student has on each day is filled in: their timetabled lessons (registration and Evening Prep included) and their Other Half activity. A class joined later counts only from the day they joined. Days outside term dates and days with a holiday on the calendar are skipped. \[DB\]
 - **FR-4.24** Past days and today are filled in as soon as the absence is saved; later days at 05:30 each morning, so FR-4.3 still holds. A mark already in a register is never overwritten (the principal's decision). \[DB\]
-- **FR-4.25** A student can't have two planned absences over the same days. \[DB\]
-- **FR-4.26** The register shows the code already filled in, tagged "planned". Once a teacher saves that register the mark is theirs, whether or not they change the code. A planned-absence mark doesn't count as the register being taken (FR-4.8). \[DB; the tag is Page\]
-- **FR-4.27** End early (the day the student is back) removes the marks it filled in from that day on; Cancel removes all of them. Marks a teacher has saved stay. \[DB\]
+- **FR-4.25** A student can't have two planned absences over the same lessons; two on one day are fine if their lessons don't overlap. \[DB\]
+- **FR-4.26** The register shows the code already filled in, tagged "planned". Only the school office, the attendance officer and admin can change or delete it (migration 389, the principal, 7 October 2026); for teachers it is read-only, and once the office changes one it becomes an ordinary mark. A planned-absence mark doesn't count as the register being taken (FR-4.8), unless every student in the lesson has a mark (a whole class on a visit). \[DB; the tag is Page\]
+- **FR-4.27** End early (the day, and if needed the lesson, the student is back) removes the marks it filled in from that day on; Cancel removes all of them. Marks the office has changed stay. \[DB\]
 - **FR-4.28** The note is staff-only; parents see only the code on their child's attendance. Planned absences, and marks removed by ending or cancelling one, are logged in Change History under Registers. \[DB\]
+
+* **FR-4.42** Change code: the school office, the attendance officer and admin can change an existing planned absence's code, and every mark it filled in changes with it. Pastoral and SMT keep adding, ending and cancelling. \[DB\]
+
+**Student Marks** (/attendance/student-marks, migration 390, the principal, 7 October 2026)
+
+- **FR-4.43** The school office, the attendance officer and admin choose a student and up to 62 days, and see every lesson on the student's timetable each day (registration, the Other Half and Evening Prep included), with the mark and who gave it. Days outside term and holidays are left out; a mark on a lesson no longer on the timetable is shown too. \[DB\]
+- **FR-4.44** They can change one mark, give several ticked lessons the same code, add a missing mark or remove one. A changed mark shows the office member as the person who gave it, and a planned-absence mark changed here becomes an ordinary mark; unchanged marks aren't touched. Nobody else can use the page or its functions. \[DB\]
+- **FR-4.45** No mark can be entered for a day that hasn't happened. Correcting an absent mark here withdraws its automatic missed-lesson negative, as on a register (FR-4.40). Every change and removal is logged in Change History under Registers. \[DB\]
 
 **Register-not-taken pop-up for teachers** (migration 367)
 
@@ -298,6 +306,8 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.38** It is recorded at the end of the lesson: the database checks every 5 minutes for periods that have ended today. A student who skipped Period 1 and is marked present at Period 3 is recorded once that mark is saved. Only today is checked (see section 24, Known issues). \[DB\]
 - **FR-4.39** The event is the school's, not a teacher's: it has no "logged by" teacher, and its writing names the lesson, the code and who marked the student absent. At −5 it is serious: it gives its own detention, sends the behaviour alert, and parents see it only after the review (FR-6.9). It never raises the Stage 5 collection pop-up (FR-6.46). \[DB\]
 - **FR-4.40** Correcting the mark (to present, late or an authorised absence) or deleting it withdraws the event, as an upheld appeal does, and cancels its detention if not yet held. Each student gets one event at most per day and period, ever, so one SMT delete or the review returns is not made again. If the category is retired or renamed, nothing is recorded. \[DB\]
+
+* **FR-4.41** The member of staff who saved the absent mark is asked to confirm it (migration 391, the principal, 7 October 2026). They get an email and a Formwork inbox message naming the student, year, lesson or activity, period, date and code, the −5 and the detention date, and asking "Was \<name> really not in your lesson?". If not, they do nothing; if the student was there, they correct the register from the link and FR-4.40 withdraws the event. There is no confirm button. Replies go to the attendance officer (FR-12, Email). \[DB\]
 
 ## 8. FR-5 The Other Half
 
@@ -447,6 +457,8 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.46** When a teacher logs a Stage 5 (an event at the serious level) for a student they are teaching right now (their lesson, a lesson they cover, or the student's Other Half activity they run), the school office gets a full-screen, flashing purple pop-up: "Please go and collect this student from their lesson", with the student, the lesson or activity, room, teacher, period, category and explanation. It is purple so it is never confused with the red missed-lesson pop-up. \[DB rule; Page display\]
 - **FR-6.47** The lesson and room are stored when the event is logged. A Stage 5 logged later about something earlier, or by someone not teaching the student at that moment, raises nothing. One alert per event, ever. "Going to collect" records who and when and clears it from every office screen; it also goes if the event is deleted, withdrawn or moved below serious. The teacher sees on Log behaviour that the office has been asked. \[DB\]
 - **FR-6.48** It goes to roles granted "Stage 5 collection pop-ups" at /admin/permissions (school\_office to start with); being admin is not enough. Hide for 2 minutes, the flashing tab title and a rising beep work as on FR-4.20; it checks every 30 seconds. \[DB\]
+
+* **FR-6.49** During prep the pop-up goes to the Head of Boarding instead (migration 392, the principal, 7 October 2026). A Stage 5 logged today by anyone while the student's year group is in prep (one of its prep days, between its prep times, in term, not a holiday or blocked day) gives the same purple pop-up, saying "collect from prep", to everyone holding head\_of\_boarding (admin is not enough), not the office. Either one pressing Going to collect clears it for both, and the person logging it is told the Head of Boarding has been asked. \[DB\]
 
 ## 10. FR-7 Assessment, results and targets
 
@@ -680,6 +692,7 @@ Every email goes through one queue from mis@abc.sch.ng with a Reply-To chosen by
 | Behaviour alert | guardian.counselling@ |
 | Detention notices | All SMT |
 | Mark appeal (to the teacher, Head of Department in cc) | sro@ |
+| Missed lesson: please confirm (to the teacher who marked the absence) | guardian.counselling@ |
 | Anything else | sro@ |
 
 - **FR-12.7** One admin switch pauses every email to parents; inbox copies are still delivered. It is currently off (emails are sent). \[DB\]
@@ -846,7 +859,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 | Missing-student answers | Each staff answer to "Do you know where this student is?" (I've sent them / Not with me), who, when and the note (migration 382) | The office's missed-lesson pop-up, while it is live | School office, attendance officer | Yes |
 | Stage 5 collection alerts | Each alert: the event, lesson, room, who logged it, and who went to collect and when (migration 383) | No screen after the day | Database only | Recorded, not viewable |
 | Other Half register holders | Per activity and day: who has the register open, and who took it and when (migration 385) | The OH register page, as the reason it is read-only | Staff opening that register | Yes |
-| Automatic missed-lesson negatives | Which register mark made which behaviour event, and when it was withdrawn (migration 388) | No screen; the events themselves show in behaviour | Database only | Recorded, not viewable |
+| Automatic missed-lesson negatives | Which register mark made which behaviour event, when the teacher was asked to confirm, and when it was withdrawn (migrations 388 and 391) | No screen; the events themselves show in behaviour | Database only | Recorded, not viewable |
 | Login devices | For logins with the new-device email (FR-1.16), each phone or browser seen, first and last sign-in | No screen; the owner gets an email for each new one | Database only | Recorded, not viewable |
 
 **What is not recorded**

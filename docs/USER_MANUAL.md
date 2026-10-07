@@ -780,12 +780,14 @@ From 8 October 2026, a student who was in school that day (marked present or lat
 - If the mark was wrong, correct it on the register (present, late or an authorised absence). The event is withdrawn and its detention cancelled if it hasn't happened yet.
 - Only the day's registers are checked, so take registers on the day.
 
+**The teacher is asked to confirm.** Whoever marked the student absent gets an email and a Formwork inbox message: the student, the lesson or activity, the code, the −5 and the detention date, and "Was \<name> really not in your lesson?". If they weren't there, do nothing. If they were, or were away for a reason, correct the mark from the link in the message; the −5 and the detention are withdrawn at once. Replies go to the attendance officer.
+
 ### Planned absences (/attendance/planned-absences)
 
-When a student will be away for several days, or has been excluded, enter it once here instead of marking every register. Open to the school office, the attendance officer, pastoral staff, SMT and admins, from the Pastoral card.
+When a student will be away for several days or for some lessons, or has been excluded, enter it once here instead of marking every register. Open to the school office, the attendance officer, pastoral staff, SMT and admins, from the Pastoral card.
 
 1. Type part of the student's name (and pick a year if needed), then click the student.
-2. Choose the **First day** and **Last day** (whole days), the **Code**, and a **Note** if it helps. The note is for staff only; parents never see it.
+2. Choose the **First day** and **Last day** (for part of a day, also the From lesson on the first day and the To lesson on the last; leave them on Whole day otherwise: one day, Period 3 to Period 5, works), the **Code**, and a **Note** if it helps. The note is for staff only; parents never see it.
 3. Press **Save planned absence**. The page says how many register marks it has filled in so far.
 
 ![Adding a planned absence, with the current and upcoming list below](manual-images/16-planned.jpg)
@@ -799,13 +801,26 @@ What it fills in:
 
 Only authorised codes can be planned: I (illness), M (medical or dental appointment), H (authorised holiday), E (educational visit), C (other authorised absence) and **X (excluded from school)**.
 
-**On the register.** The teacher sees the code already filled in, marked "planned", and saves the register as usual. If the student turns up after all, the teacher changes the code to present or late and saves. Once a teacher has saved the register, the mark is theirs.
+**On the register.** The teacher sees the code already filled in, marked "planned", and saves the register as usual. Teachers can't change or remove it. If the student turns up after all, tell the school office or the attendance officer: they change it on the register or on Student Marks (below), and it then becomes an ordinary mark. A lesson where every student already has a mark (a whole class on a visit) counts as taken.
 
 ![A register with a planned absence filled in and marked "planned"](manual-images/16b-register-planned.jpg)
 
-**Back early, or entered by mistake.** In the list, choose the **Back on** day and press **End early**: the marks from that day on are removed. **Cancel** removes the whole absence and all its marks. Marks a teacher has already saved are left as they are.
+**Back early, or entered by mistake.** In the list, choose the **Back on** day and press **End early**: the marks from that day on are removed. **Cancel** removes the whole absence and all its marks. Back on can also take a lesson, for a student back part-way through a day. Marks the office has changed are left as they are.
 
-A student can have only one planned absence on any day. Every planned absence, and every mark removed by ending or cancelling one, is kept in Change History.
+**Wrong code.** The school office and the attendance officer can press **Change code** on an absence in the list and choose a **New code**; every mark it filled in changes with it.
+
+A student can't have two planned absences over the same lessons; two on one day are fine if their lessons don't overlap. Every planned absence, and every mark removed by ending or cancelling one, is kept in Change History.
+
+### Student Marks (/attendance/student-marks)
+
+For the school office and the attendance officer: put right one student's marks, lesson by lesson, without opening each register. For example, a student was at the dentist for two lessons last Tuesday and in sick bay for one on Thursday.
+
+1. Find the student, choose the **First day** and **Last day** (up to 62 days, not after today) and press **Show lessons**.
+2. Each day lists every lesson on their timetable (registration, the Other Half and Evening Prep included) with the **Mark now** and who gave it. A mark on a lesson no longer on their timetable is shown too.
+3. Choose a code in **Change to** for any lesson, or **Remove the mark**. To give several lessons the same code, tick them, choose the code and press **Give ticked lessons this code**.
+4. Press **Save changes**. **Undo changes** clears what you haven't saved.
+
+A changed mark shows you as the person who gave it; a planned-absence mark changed here becomes an ordinary mark. Correcting an absent mark withdraws its automatic missed-lesson negative, as on a register. Every change is kept in Change History.
 
 ### Attendance summaries
 
@@ -1141,7 +1156,7 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 **If your Stage 5 comes back.** The reviewer can return a Stage 5 that doesn't look serious enough. You get a message in your inbox with their reason, and the note shows on the event. Its points stop counting straight away, and its detention is cancelled if it hasn't happened yet. Press **Edit** on the event: choose the right category if it isn't a Stage 5 (its points then count), or keep Stage 5 and improve the explanation, which brings back the −5 and its detention and sends it back for review. Every return is counted against the teacher who logged the event, and SMT can see the count.
 
-**A Stage 5 during your lesson.** If you log a Stage 5 for a student you are teaching right now (your lesson, a lesson you are covering, or your Other Half activity), the school office gets a purple pop-up asking them to collect the student from your room, and Log behaviour tells you the office has been asked. The office presses **Going to collect**, which clears it from every office screen. A Stage 5 logged later, or for a student you aren't teaching at that moment, raises no pop-up.
+**A Stage 5 during your lesson.** If you log a Stage 5 for a student you are teaching right now (your lesson, a lesson you are covering, or your Other Half activity), the school office gets a purple pop-up asking them to collect the student from your room, and Log behaviour tells you the office has been asked. The office presses **Going to collect**, which clears it from every office screen. A Stage 5 logged later, or for a student you aren't teaching at that moment, raises no pop-up. During prep, a Stage 5 logged by anyone sends the pop-up to the Head of Boarding instead, to collect the student from prep, and Log behaviour says so.
 
 ![Logging a serious event, with the Stage 5 guidance and the confirmation tick](manual-images/50-log.jpg)
 
