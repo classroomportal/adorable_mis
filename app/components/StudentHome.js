@@ -12,7 +12,8 @@ import { useRewardPoints } from './RewardStore';
 // school-wide order set at /admin/tile-order (migration 280). Homework only
 // appears once one of their classes has it switched on (migration 278),
 // Groups once they are in a group shown to students (migration 300). The
-// Reward Store (migration 370) shows their points to spend.
+// Reward Store (migration 370) shows their points to spend. The Worry Box
+// (migration 391) is always there.
 export default function StudentHome() {
   const { profile } = useAuth();
   const studentId = profile?.student_id;
@@ -55,6 +56,8 @@ export default function StudentHome() {
       sub: rewardPoints ? `${rewardPoints.balance} point${rewardPoints.balance === 1 ? '' : 's'} to spend` : 'Spend your merits',
     },
     { key: 'messages', href: '/inbox', label: 'Messages', icon: '📬', accent: 'family', sub: 'Your inbox' },
+    // Migration 391.
+    { key: 'worries', href: '/portal#worries', label: 'Worry Box', icon: '💌', accent: 'clinic', sub: 'Tell us what’s worrying you' },
     groups.length > 0 && {
       key: 'groups', href: '/portal#groups', label: 'Groups', icon: '👥', accent: 'students',
       sub: `${groups.length} group${groups.length === 1 ? '' : 's'}`,
