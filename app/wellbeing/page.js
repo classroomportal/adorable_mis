@@ -54,6 +54,53 @@ function downloadCsv(filename, rows) {
   URL.revokeObjectURL(url);
 }
 
+// A printed sheet for a follow-up meeting with counselling and the
+// houseparents (the principal, 8 Oct 2026): the students on the current
+// list, one table per house, red first, with names and areas of concern only
+// (never the answers), and blank columns for who will talk to them.
+function MeetingSheet({ title, rows, onBack }) {
+  const houses = [...new Set(rows.map((r) => r.house))].sort((a, b) => (a === 'No house') - (b === 'No house') || a.localeCompare(b));
+  const cell = { border: '1px solid #999', padding: '4px 6px', verticalAlign: 'top' };
+  return (
+    <div>
+      <div className="no-print" style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <button onClick={() => window.print()}>Print</button>
+        <button className="secondary" onClick={onBack}>&larr; Back to the list</button>
+      </div>
+      <h1 style={{ margin: '0 0 0.25rem' }}>{title}</h1>
+      <p style={{ margin: '0 0 0.75rem', fontSize: '0.9rem' }}>
+        {rows.length} student{rows.length === 1 ? '' : 's'}. Confidential: for the follow-up meeting only. Names and areas of concern only; the
+        answers stay with the DSL and the Principal. Red: the DSL or the Principal see the student. Amber: a conversation with the person agreed here.
+      </p>
+      {houses.map((h) => {
+        const these = rows.filter((r) => r.house === h);
+        return (
+          <div key={h} style={{ breakInside: 'avoid-page', marginBottom: '1rem' }}>
+            <h2 style={{ margin: '0.5rem 0 0.25rem', fontSize: '1.1rem' }}>{h} ({these.length})</h2>
+            <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ ...cell, width: '4.5rem' }}>Priority</th><th style={cell}>Student</th><th style={{ ...cell, width: '2.5rem' }}>Year</th>
+                  <th style={cell}>Areas of concern</th><th style={{ ...cell, width: '20%' }}>Who will talk to them</th><th style={{ ...cell, width: '22%' }}>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {these.map((r) => (
+                  <tr key={r.id}>
+                    <td style={{ ...cell, color: TIERS[r.tier]?.fg, fontWeight: 600 }}>{TIERS[r.tier]?.label || ''}</td>
+                    <td style={cell}>{r.name}</td><td style={cell}>{r.year}</td><td style={cell}>{r.areas}</td>
+                    <td style={cell} /><td style={cell} />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function addMonths(iso, n) {
   const d = new Date(`${iso}T12:00:00Z`);
   d.setUTCMonth(d.getUTCMonth() + n);
@@ -102,6 +149,7 @@ function WellbeingInner() {
   const [show, setShow] = useState('flagged');
   const [issue, setIssue] = useState('');
   const [tierFilter, setTierFilter] = useState('');
+  const [meeting, setMeeting] = useState(false);
   const [open, setOpen] = useState(null);
   const [note, setNote] = useState('');
   const [status, setStatus] = useState(null);
@@ -215,6 +263,19 @@ function WellbeingInner() {
     loadRounds();
   }
 
+  if (meeting) {
+    const label = [round?.name, issue && ISSUES.find((i) => i.key === issue)?.label, tierFilter && `${TIERS[tierFilter].label} only`]
+      .filter(Boolean).join(' · ');
+    const rows = listed.map((c) => {
+      const info = sorted.get(c.check_in_id) || {};
+      return {
+        id: c.check_in_id, name: name(c.students), year: c.year_group, house: c.boarding_house || 'No house', tier: info.tier,
+        areas: (info.issues || []).map((k) => ISSUES.find((i) => i.key === k)?.label).join(', '),
+      };
+    });
+    return <MeetingSheet title={`Wellbeing follow-up: ${label}`} rows={rows} onBack={() => setMeeting(false)} />;
+  }
+
   return (
     <div>
       <div className="card">
@@ -304,6 +365,7 @@ function WellbeingInner() {
             <>
               <button className="secondary" onClick={() => download(false)} title="Name, year, house, priority and issues">Download names ({listed.length})</button>
               <button className="secondary" onClick={() => download(true)} title="Also the answers needing a look in this issue">Download with answers</button>
+              <button onClick={() => setMeeting(true)} title="One table per house, names and areas of concern only, to print for the follow-up meeting">Meeting sheet ({listed.length})</button>
             </>
           )}
         </div>
