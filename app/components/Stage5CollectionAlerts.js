@@ -12,7 +12,7 @@ import { useAuth } from '../../lib/AuthContext';
 // /office/stage5-collection-alerts; the database decides that
 // (office_stage5_collection_alerts() returns null for everyone else, and
 // this stops asking). "Going to collect" clears it from every office screen.
-// A Stage 5 given during prep (migration 388) goes to the Head of Boarding
+// A Stage 5 given during prep (migration 392) goes to the Head of Boarding
 // instead (kind 'prep'), on the same purple pop-up, saying "from prep".
 
 const POLL_MS = 30000;
