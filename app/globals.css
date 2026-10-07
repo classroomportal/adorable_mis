@@ -2069,3 +2069,28 @@ tbody tr.lf-row-teacher td { background: #f1f5f9; }
 tbody tr.lf-row-class td { background: white; }
 .lf-row-class td:first-child { padding-left: 2rem; }
 .lf-caret { display: inline-block; width: 0.9em; color: var(--ink-soft); }
+
+/* Wellbeing check-in pop-up (migration 392, app/components/WellbeingCheckIn.js):
+   calm blue, no flashing, unlike the staff alert pop-ups. */
+.wellbeing-overlay {
+  position: fixed; inset: 0; z-index: 990;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 4vh 16px; overflow-y: auto;
+  background: rgba(47, 111, 168, 0.35);
+}
+.wellbeing-box {
+  background: white; border: 3px solid #2f6fa8; border-radius: 10px;
+  padding: 1.25rem; width: 100%; max-width: 640px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+.wellbeing-question { padding: 0.6rem 0; border-top: 1px solid #e7eaee; }
+.wellbeing-scale { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.wellbeing-scale button {
+  min-width: 2.75rem; padding: 0.45rem 0.6rem;
+  background: #f1f5f9; color: #1f2937; border: 1px solid #cbd5e1;
+}
+.wellbeing-scale button.chosen { background: #2f6fa8; color: white; border-color: #2f6fa8; }
+.wellbeing-scale-labels {
+  display: flex; justify-content: space-between; max-width: 16rem;
+  font-size: 0.8rem; color: var(--ink-soft); margin-top: 0.2rem;
+}

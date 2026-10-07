@@ -755,6 +755,11 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - Paper slips from the box in school are typed in on the same page, with or without a name. They don't appear on the student's portal.
 - Opening a new worry marks it read. Staff add notes (only the DSL and the principal see them), or a reply that the student sees on their portal (the student gets an inbox message saying there's a reply, without its text). Worries are closed and reopened, never deleted; notes can't be changed. Worries aren't in Change History, because SMT and admins read that.
 
+**Wellbeing check-in** (392, 7 Oct 2026; `/wellbeing`, a pop-up for students)
+- About every two months the DSL or the principal opens a check-in (opening time and closing day). While it is open, every active student who hasn't answered gets a pop-up of 15 questions (nine 1–5 scales and six Yes/No, about mood, sleep, eating, coping with work and tests, pressure to succeed, rest, being away from home, the boarding house, friends, feeling safe, having an adult to talk to, unkindness, letting family down, feeling low, wanting to talk), plus an optional comment. All questions must be answered. "Not now" hides it until the next morning. Once only per check-in; answers can't be changed.
+- Only the DSL and the principal see the answers, with names. Admins, SMT, teachers and parents see nothing; the student sees only "thank you".
+- A check-in with an answer that needs a look (set per question) or a comment is flagged. The DSL and the principal get an inbox message for each, and an email at most once an hour, with no names or answers. They mark each flagged check-in followed up, with a note. Nothing is deleted.
+
 **Staff HR records** (`/staff/records`)
 - HR and SMT can read them. Only HR (and admin) can edit.
 - Nationality must be Nigerian, British or Other.

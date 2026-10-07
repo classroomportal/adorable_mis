@@ -64,6 +64,13 @@ function DashboardStats({ hasAccess }) {
     if (!canOpenWorries) return;
     supabase.rpc('worry_box_counts').then(({ data }) => setWorries(data ?? null));
   }, [canOpenWorries]);
+  // Wellbeing check-ins (migration 392), the same people.
+  const canOpenWellbeing = hasAccess('/wellbeing');
+  const [wellbeing, setWellbeing] = useState(null);
+  useEffect(() => {
+    if (!canOpenWellbeing) return;
+    supabase.rpc('wellbeing_counts').then(({ data }) => setWellbeing(data ?? null));
+  }, [canOpenWellbeing]);
 
   // Students in school today who have missed a lesson (migration 308).
   useEffect(() => {
@@ -104,6 +111,10 @@ function DashboardStats({ hasAccess }) {
       key: 'worry_box', href: '/worry-box', label: 'Worry Box', icon: '💌', accent: 'clinic',
       sub: worries.urgent > 0 ? `${worries.urgent} urgent, ${worries.new} new`
         : worries.new > 0 ? `${worries.new} new` : `${worries.open} open`,
+    },
+    wellbeing && {
+      key: 'wellbeing', href: '/wellbeing', label: 'Wellbeing', icon: '🌱', accent: 'clinic',
+      sub: wellbeing.to_follow_up > 0 ? `${wellbeing.to_follow_up} check-in${wellbeing.to_follow_up === 1 ? '' : 's'} to follow up` : 'Check-in answers',
     },
   ].filter((l) => l && hasAccess(l.href)), order);
   return <TileRow tiles={tiles} />;
