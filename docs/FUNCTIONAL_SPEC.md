@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 6 October 2026 (database migrations up to 381). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 7 October 2026 (database migrations up to 388). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -77,6 +77,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | nurse | School nurses: nurse10@, nurse12@, nurse13@, hoc@ | Clinic and medical records: view, add, edit and delete (FR-11.6). The only role that can delete them. |
 | dsl | Designated Safeguarding Lead: cs@ (Uju MBA), from 4 Oct 2026 (migration 363) | Clinic and medical records: view, add and edit, not delete (FR-11.6). The only role that can mark a sick-bay entry as safeguarding and read its hidden details (FR-11.10–11.11). |
 | other\_half | OH coordinator | Manages OH activities and choices. Nobody holds it at present. |
+| lesson\_feedback\_reviewer | Nobody yet (created 6 Oct 2026, migration 382) | Lesson Feedback for every class, and the individual responses without students' names (FR-7.41). |
 
 Two further roles exist only to approve fee prices (FR-10.10): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either.
 
@@ -134,7 +135,7 @@ Every member of staff can read the whole student record; what each role can chan
 - **FR-2.7** Photos are stored on the student record, shrunk to 400 px in the browser. Admins can bulk-import them. \[Page\]
 - **FR-2.8** The Students list loads nothing until asked, since the whole school with photos is slow. Typing a name searches straight away, and after two letters up to eight matching students appear under the search box as blue buttons (name, form, year); choosing one opens that student. The list follows the Status, Year and Form filters and a houseparent's house. \[Page\]
 - **FR-2.9** Every student added records who added them and when, taken from the signed-in person whatever the page sends, and it can't be changed afterwards. Students added before 30 September 2026 have no record, except the two added through the app that day (Victory NNAMOKO, from Supabase's request logs). \[DB\]
-- **FR-2.10** Names are tidied on every save, for students, applicants, parents and staff: spaces at the start or end are removed and double spaces become single. Tidying a stored name never counts as a name change for someone only allowed to edit other fields. \[DB\]
+- **FR-2.21** Names are tidied on every save, for students, applicants, parents and staff: spaces at the start or end are removed and double spaces become single. Tidying a stored name never counts as a name change for someone only allowed to edit other fields. \[DB\]
 
 **Parents**
 
@@ -267,6 +268,10 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.19** "Seen: dealing with it", with an optional note, clears the alert from every screen and records who saw it and when; only a live alert can be marked seen. A corrected mark (present, late or an authorised absence) clears the alert by itself. "Hide for 2 minutes" hides the current alerts on that screen only; a new alert still shows at once. \[DB; hiding is Page\]
 - **FR-4.20** It goes to anyone whose role is granted "Missed-lesson pop-ups" at /admin/permissions: school\_office and attendance\_officer to start with. Being admin is not enough. The page checks every minute, flashes the browser tab's title, and beeps on a new alert once someone has clicked on the page. \[DB\]
 
+* **FR-4.34** At the same moment as the office pop-up, every other member of staff signed in gets a flashing pop-up, "Do you know where this student is?": the student's name, photo, year, mentor group and house, and "Please send them to \<lesson>, room \<room> (\<teacher>)" (migration 382, the principal, 6 October 2026). The office staff who get FR-4.17 and the person who marked the student absent don't get it; students and parents never do. \[DB rule; Page display\]
+* **FR-4.35** "I've sent them", with an optional note of where they were, clears it from every staff screen; "Not with me" clears it from that person's screen only. It stays until the period ends, even after the office presses Seen, and a corrected mark clears it at once. Every answer is kept: who, when and the note. Hide for 2 minutes, the beep and the one-minute check work as on FR-4.20. \[DB\]
+* **FR-4.36** The office pop-up also shows the student's registers today, period by period (lesson, teacher, mark and who marked it), and what staff have answered to FR-4.34. \[Page; DB data\]
+
 **Planned absences** (/attendance/planned-absences, Pastoral card, migration 318, 2 Oct 2026)
 
 - **FR-4.21** School office, attendance officer, pastoral, SMT and admin can give a student one attendance code for a run of whole days, with an optional note. All staff can see the list. \[DB\]
@@ -287,6 +292,13 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 
 * **FR-4.33** A covered lesson's register belongs to the cover teacher (migration 375). The registers-not-taken list, the register alert, the overdue count on My Timetable and the 10-minute pop-up (shown as "\<class> (cover)") all go to the cover teacher, and the absent teacher no longer gets them. \[DB\]
 
+**Automatic negative for a missed lesson** (migration 388, the principal, 7 October 2026)
+
+- **FR-4.37** From 8 October 2026, a student who was in school that day (present or late at any period, before or after) and is marked absent without a reason (N or O) at a lesson, an Other Half activity or Evening Prep gets one behaviour event in "Missing a lesson activity" (−5) for each period missed. Registration doesn't count. Authorised absences, planned absences included, never count. A student away all day gets none. \[DB\]
+- **FR-4.38** It is recorded at the end of the lesson: the database checks every 5 minutes for periods that have ended today. A student who skipped Period 1 and is marked present at Period 3 is recorded once that mark is saved. Only today is checked (see section 24, Known issues). \[DB\]
+- **FR-4.39** The event is the school's, not a teacher's: it has no "logged by" teacher, and its writing names the lesson, the code and who marked the student absent. At −5 it is serious: it gives its own detention, sends the behaviour alert, and parents see it only after the review (FR-6.9). It never raises the Stage 5 collection pop-up (FR-6.46). \[DB\]
+- **FR-4.40** Correcting the mark (to present, late or an authorised absence) or deleting it withdraws the event, as an upheld appeal does, and cancels its detention if not yet held. Each student gets one event at most per day and period, ever, so one SMT delete or the review returns is not made again. If the category is retired or renamed, nothing is recorded. \[DB\]
+
 ## 8. FR-5 The Other Half
 
 The Other Half (OH) is the after-lessons activity programme, run entirely in Formwork; students choose one activity per weekday, only during Evening Prep.
@@ -299,6 +311,9 @@ The Other Half (OH) is the after-lessons activity programme, run entirely in For
 - **FR-5.4** A retired activity can't be chosen and drops off staff timetables and Registers Not Done. An activity can't be deleted while any student has it chosen. \[DB\]
 - **FR-5.5** A new term can be started as a copy of another term's programme (activities and staff, not choices), offered only when the term is empty. \[Page\]
 - **FR-5.6** Only admins can delete a term, because that also deletes its OH programme and choices. \[DB\]
+
+* **FR-5.18** Which year groups have the Other Half on which days is a tick grid at /other-half/year-days, linked from the Timetable card (migrations 384 and 386, the principal, 6 October 2026). Years 7–11 have Monday to Thursday; Year 12 Monday and Thursday (their science lessons are in the OH period on Tuesday and Wednesday); Friday is unticked. Only those who manage the Other Half change it, and changes are logged (FR-16). \[DB\]
+* **FR-5.19** The grid is checked everywhere. An activity can't be opened to a year on a day it has no OH, and a student can't choose or be placed in one. A lesson can't be put in the OH period on a ticked day; the Nova-T import leaves such lessons out and lists them. A day can't be unticked while that year has activities or choices on it, or ticked while it has lessons in the OH period. \[DB\]
 
 **Student choice (/portal/other-half)**
 
@@ -315,9 +330,13 @@ The Other Half (OH) is the after-lessons activity programme, run entirely in For
 
 **Registers and absentees**
 
-- **FR-5.10** Any member of staff can take an OH register. It lists the students who chose the activity, and marks go into normal attendance at the OH period, tagged with the activity. A student already marked in another activity that day can't be marked again. \[DB / Page\]
+- **FR-5.10** Any member of staff can open an OH register, but one person takes it (FR-5.20). It lists the students who chose the activity, and marks go into normal attendance at the OH period, tagged with the activity. A student already marked in another activity that day can't be marked again. \[DB / Page\]
 - **FR-5.11** /other-half/absentees shows, for one day: students marked absent in OH (with whether they were in school earlier — "find these first"), students not yet marked, and students with no activity chosen. For SMT, the coordinator and admins. \[Page\]
 - **FR-5.12** An OH activity appears in Registers Not Done 15 minutes after that day's OH start, if at least one student chose it and nobody has been marked. Each member of staff on it gets their own register alert. \[DB\]
+
+* **FR-5.20** One person takes an OH register (migration 385, the principal, 6 October 2026). While someone has it open, nobody else can mark it: the page shows "\<name> is taking this register (opened 15:02)" and goes read-only. It is let go on saving, on leaving the page, or after 10 minutes without activity. Once saved it belongs to whoever took it: only they, the school office, the attendance officer and SMT can change it. Lesson registers are unchanged: any member of staff can mark any of them. \[DB\]
+* **FR-5.21** A lesson beats the Other Half. A student with a teaching lesson in that period that day (not Mentor, Prep or Personal Study) can't be marked from an OH register at all, whichever teacher saves first. \[DB\]
+* **FR-5.22** Both register pages save only the marks that changed (plus planned-absence marks), so re-saving a register never re-stamps other people's marks. \[Page\]
 
 **Timetables**
 
@@ -347,8 +366,11 @@ Staff log behaviour by category, points come only from the category, and a −5 
 
 **Release to parents (/behaviour/review)**
 
-- **FR-6.8** Positive events are always visible to parents. Negative events are hidden until reviewed. \[DB\]
-- **FR-6.9** Events with a picture: SMT or admin send the text with the picture, the text alone, or decline. −5 events without a picture: the school office, SMT or admin release the text (SMT since migration 336; in practice the principal's PA and SMT, the only reviewers the principal wants). −1 to −4 events without a picture never go to parents. SMT get an inbox notice for each picture to check. \[DB\]
+- **FR-6.8** Any event with writing in it, positive or negative, is hidden from parents until it is approved; the whole event waits, points included (migration 387, the principal, 7 October 2026). A merit without writing goes home at once. A −1 to −4 event without writing never goes home. Students see their own events at once. \[DB\]
+- **FR-6.9** Events with a picture: SMT or admin send the text with the picture, the text alone, or decline. −5 events without a picture: the school office, SMT or admin release the text (SMT since migration 336; in practice the principal's PA and SMT, the only reviewers the principal wants). −1 to −4 events with writing go home once approved (FR-6.44); without writing they never go to parents. SMT get an inbox notice for each picture to check. \[DB\]
+
+* **FR-6.44** The school office and SMT (SMT for a picture) approve writing at /behaviour/review. Merits and Stage 1–4 events with writing are approved in bulk under "Writing to approve", several hundred in one go. \[DB / Page\]
+* **FR-6.45** Changing an event's writing takes it away from parents and clears its review, so the new words are approved again, whoever edits it. Removing the writing leaves the event as it was, except that a merit not yet reviewed goes home like any merit without writing. Events already with parents on 7 October 2026 stay with them. \[DB\]
 
 **Alerts**
 
@@ -420,6 +442,12 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.40** Cancel event, for one that shouldn't have been logged at all (the wrong student, a duplicate): the reviewer must give a reason. The event is withdrawn as an upheld appeal withdraws one: it stays on the student's record crossed out, its points become 0 (the original kept), and it stops counting in totals, detentions and reward points; students and parents no longer see it. Its detention, and the week's total detention if the week no longer reaches the threshold, is cancelled if not yet held, and the student is told. The student's profile shows "Cancelled by" the reviewer, the date and the reason. A cancelled event can't be edited, changed or cancelled again, and can't be brought back from the app. Deleting an event is still SMT's only. \[DB\]
 - **FR-6.41** For both, the teacher who logged the event gets the reason in their Formwork inbox, with the old and new category or the cancellation, and whether a detention changed; no message when the reviewer logged it themselves. If the teacher has no login, the page says so, to tell them in person. \[DB\]
 
+**Stage 5: collect from lesson** (migration 383, the principal, 6 October 2026)
+
+- **FR-6.46** When a teacher logs a Stage 5 (an event at the serious level) for a student they are teaching right now (their lesson, a lesson they cover, or the student's Other Half activity they run), the school office gets a full-screen, flashing purple pop-up: "Please go and collect this student from their lesson", with the student, the lesson or activity, room, teacher, period, category and explanation. It is purple so it is never confused with the red missed-lesson pop-up. \[DB rule; Page display\]
+- **FR-6.47** The lesson and room are stored when the event is logged. A Stage 5 logged later about something earlier, or by someone not teaching the student at that moment, raises nothing. One alert per event, ever. "Going to collect" records who and when and clears it from every office screen; it also goes if the event is deleted, withdrawn or moved below serious. The teacher sees on Log behaviour that the office has been asked. \[DB\]
+- **FR-6.48** It goes to roles granted "Stage 5 collection pop-ups" at /admin/permissions (school\_office to start with); being admin is not enough. Hide for 2 minutes, the flashing tab title and a rising beep work as on FR-4.20; it checks every 30 seconds. \[DB\]
+
 ## 10. FR-7 Assessment, results and targets
 
 Teachers enter percentage scores for their own classes against result sets; each score is graded from the subject's boundaries and compared with the student's target.
@@ -487,8 +515,10 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.36** Feedback opens when the lesson ends and closes at the end of the next day. It is given once per lesson and can't be changed. Only teaching lessons count (not Mentor, Prep, Personal Study or the Other Half), in term and not on a holiday, in a class the student had joined. A student marked absent for that lesson can't give feedback; a register not yet taken doesn't stop them. The database checks every rule when it is sent. \[DB\]
 - **FR-7.37** The ten questions (5 October 2026), with the good answer: the lesson started on time (Yes); knew what to learn by the end (Yes); pace about right (Yes); too easy (No); too hard (No); bored (No); could explain the main idea to a friend (Yes); got help when needed (Yes); classroom calm enough to concentrate (Yes); book has been marked (Yes). "Would you like extra help?" was dropped before launch because no time is set aside to give it. \[DB\]
 - **FR-7.38** The questions are listed on Lookups (Lesson feedback questions), where anyone with that page can add, reorder and reword them, set which answer is good (Yes, No or neither) and retire them. Once students have answered a question, the database won't let its wording or good answer change: it is retired and a new one added. Questions are never deleted, and retired ones keep their answers. \[DB\]
-- **FR-7.39** Lesson Feedback (/lesson-feedback, Students card; granted to teacher, head\_of\_department and smt) shows a summary for each class over the dates chosen, in one table grouped by department (from the class's subject) and then teacher. A department or teacher row opens and closes and adds up the classes beneath it, counting only classes whose figures are shown, so a total can't reveal a smaller class; a teacher with one department and one teacher sees everything open, others start with the department totals. The column headings stay at the top of the window while scrolling, and the table fits a laptop or tablet without sideways scrolling (5 Oct 2026). Each row shows the number of responses, the green, amber and red split, and the share answering Yes to each question (numbered Q1, Q2… with the questions listed above), green where most gave the good answer and red where most didn't. Teachers see the lessons they taught, Heads of Department their department's classes, SMT every class. A class's figures appear only once it has at least 3 responses in those dates; below that only the count shows. Teachers and Heads of Department never see names. \[DB\]
-- **FR-7.40** Only SMT see named responses, below the summary, by default only students who chose red; admin alone is not enough. Parents and other students see nothing, and no email or inbox message is sent. \[DB\]
+- **FR-7.39** Lesson Feedback (/lesson-feedback, Students card; granted to teacher, head\_of\_department, smt and lesson\_feedback\_reviewer) shows a summary for each class over the dates chosen, in one table grouped by department (from the class's subject) and then teacher. A department or teacher row opens and closes and adds up the classes beneath it, counting only classes whose figures are shown, so a total can't reveal a smaller class; a teacher with one department and one teacher sees everything open, others start with the department totals. The column headings stay at the top of the window while scrolling, and the table fits a laptop or tablet without sideways scrolling (5 Oct 2026). Each row shows the number of responses, the green, amber and red split, and the share answering Yes to each question (numbered Q1, Q2… with the questions listed above), green where most gave the good answer and red where most didn't. Teachers see the lessons they taught, Heads of Department their department's classes, SMT and the Lesson Feedback Reviewer every class. A class's figures appear only once it has at least 3 responses in those dates; below that only the count shows. Teachers and Heads of Department never see names. \[DB\]
+- **FR-7.40** Only SMT see the individual responses with the student's name and year, below the summary, by default only students who chose red; admin alone is not enough. Parents and other students see nothing, and no email or inbox message is sent. \[DB\]
+- **FR-7.41** The Lesson Feedback Reviewer (lesson\_feedback\_reviewer, migration 382, the principal, 6 October 2026; given at Staff Roles) sees the summary for every class, as SMT do, and the same individual responses without the student's name or year: lesson date and period, class, subject, teacher, green, amber or red, and the answers that weren't the good one. That is enough to know which class a concern is in and take it up with the Head of Department or SMT, never which student said it. The role has no access to the feedback tables themselves; it reads only through the database function that leaves the name out. \[DB\]
+- **FR-7.42** For SMT and the reviewer the individual responses are listed by subject, each subject closed until tapped, showing its number of responses and classes. At most 2,000 responses are loaded at a time. \[Page\]
 
 ## 11. FR-8 Reports, transcripts and documents
 
@@ -800,7 +830,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed), finance (funds, forecast numbers, term budgets, contingency releases, suppliers and requisitions), reward store (rewards, prices and every order), prep times and days with no homework | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed), finance (funds, forecast numbers, term budgets, contingency releases, suppliers and requisitions), reward store (rewards, prices and every order), prep times, days with no homework, and which years have the Other Half on which days | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Mark appeals | Every appeal: the mark appealed, the student's reason and claimed mark, the outcome, the corrected mark, the teacher's note, who decided and when; never deleted (the corrected mark is also in Grade History) | /grade-appeals (waiting and decided) | The teacher (their students), Heads of Department (their department), SMT, assessment managers, admin; the student their own | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
@@ -813,6 +843,10 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 | Behaviour event edits | Old and new comment and category for every edit | No screen yet | Database only | Recorded, not viewable |
 | Behaviour category changes and cancellations | Each category changed or event cancelled at Behaviour Review: before and after, the reason, who and when (migrations 376–377) | Behaviour Review → All events (under each event); cancellations also on the student's profile | Changes: the reviewers. Cancellations: all staff | Yes |
 | Missed-lesson alerts seen | Who pressed "Seen" on each missed-lesson alert, when, and their note (migration 309) | No screen yet | Database only | Recorded, not viewable |
+| Missing-student answers | Each staff answer to "Do you know where this student is?" (I've sent them / Not with me), who, when and the note (migration 382) | The office's missed-lesson pop-up, while it is live | School office, attendance officer | Yes |
+| Stage 5 collection alerts | Each alert: the event, lesson, room, who logged it, and who went to collect and when (migration 383) | No screen after the day | Database only | Recorded, not viewable |
+| Other Half register holders | Per activity and day: who has the register open, and who took it and when (migration 385) | The OH register page, as the reason it is read-only | Staff opening that register | Yes |
+| Automatic missed-lesson negatives | Which register mark made which behaviour event, and when it was withdrawn (migration 388) | No screen; the events themselves show in behaviour | Database only | Recorded, not viewable |
 | Login devices | For logins with the new-device email (FR-1.16), each phone or browser seen, first and last sign-in | No screen; the owner gets an email for each new one | Database only | Recorded, not viewable |
 
 **What is not recorded**
@@ -975,7 +1009,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 24. Known issues and open decisions
 
-36 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; six of them (6, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
+37 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; six of them (6, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -1015,6 +1049,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 34 | Behaviour | A reviewer's "return to teacher" note (FR-6.27) is stored on the event. The portals never show it, but a student can read their own events' data directly, so a technically minded student could read the note. It is cleared when the teacher edits the event, but stays if the reviewer sends the event to parents unchanged | Reviewers should keep notes factual (e.g. "this is Disruption in class, −2") | Open |
 | 35 | Results | A mark appeal (FR-7.27) waits until the student's teacher decides. Nobody else can decide it if the teacher is away or has left, and it holds one of the student's credits meanwhile | An appeal can wait with no end; no deadline or hand-over to the Head of Department yet | Open |
 | 36 | Behaviour | Two mentors on the timetable don't hold the mentor role (found 4 Oct 2026): Uche Isiani (UIS, 10C/Me) and Christopher Agunwa (CSA, 10D/Me), who are teachers only. Behaviour Totals (FR-6.29), Certificates and other pages granted to mentor are missing for them | They can't see their group's behaviour totals; both were given the mentor role on 4 Oct 2026, and every mentor group's mentor now holds it | Fixed |
+| 37 | Registers | The automatic missed-lesson negative (FR-4.37) only looks at today's registers. A register saved after midnight for an earlier day gives no event. The event has no teacher, so returning it at review sends nobody a message | A lesson missed on a day whose register is filled in late goes unrecorded; the reviewer tells anyone who needs to know in person | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
