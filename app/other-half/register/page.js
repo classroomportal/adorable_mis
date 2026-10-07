@@ -52,6 +52,10 @@ function RegisterInner() {
   const [marks, setMarks] = useState({});
   const [lateMinutes, setLateMinutes] = useState({});
   const [elsewhere, setElsewhere] = useState({}); // student_id -> activity name, when already marked in another activity
+  // Marks from a planned absence: only the school office and the attendance
+  // officer can change them (389), so for everyone else they're read-only.
+  const [planned, setPlanned] = useState(new Set());
+  const [isOffice, setIsOffice] = useState(false);
   // student_id -> {class_code, teacher_name}: a timetabled lesson in this
   // period, which always beats the Other Half (migration 385).
   const [inLesson, setInLesson] = useState({});
@@ -66,12 +70,14 @@ function RegisterInner() {
   useEffect(() => {
     async function loadStatic() {
       if (!activityId) { setLoading(false); return; }
-      const [{ data: a }, s, { data: cd }, { data: st }] = await Promise.all([
+      const [{ data: a }, s, { data: cd }, { data: st }, { data: office }] = await Promise.all([
         supabase.from('other_half_activities').select('*, terms(*)').eq('activity_id', activityId).maybeSingle(),
         loadOtherHalfSlots(),
         supabase.from('attendance_codes').select('*').order('code'),
         supabase.from('other_half_activity_staff').select('activity_id, staff_id, staff(staff_id, first_name, last_name)').eq('activity_id', activityId),
+        supabase.rpc('is_attendance_office'),
       ]);
+      setIsOffice(office === true);
       setActivity(a || null);
       setTerm(a?.terms || null);
       setSlots(s);
@@ -138,11 +144,9 @@ function RegisterInner() {
       setRoster(list);
       setMarks(prefill);
       setLateMinutes(prefillMinutes);
-      // Planned-absence marks are re-saved even unchanged, so saving the
-      // register makes them the teacher's, as before (318).
-      const savedNow = snapshot(prefill, prefillMinutes);
-      plannedIds.forEach((sid) => { savedNow[sid] = 'resave'; });
-      setSaved(savedNow);
+      // Planned-absence marks stay the absence's (389): not re-saved.
+      setSaved(snapshot(prefill, prefillMinutes));
+      setPlanned(plannedIds);
       setElsewhere(other);
       setStatus(null);
       setLoading(false);
@@ -329,7 +333,8 @@ function RegisterInner() {
                       ) : (
                         <select
                           value={marks[s.student_id] || ''}
-                          disabled={readOnly}
+                          disabled={readOnly || (planned.has(String(s.student_id)) && !isOffice)}
+                          title={planned.has(String(s.student_id)) ? 'From a planned absence. Only the school office or the attendance officer can change it.' : undefined}
                           onChange={(e) => setMark(s.student_id, e.target.value)}
                           aria-label={`Code — ${s.first_name} ${s.last_name}`}
                           style={{ width: '6.5rem' }}

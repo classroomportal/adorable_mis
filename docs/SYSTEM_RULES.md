@@ -270,7 +270,7 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 
 **Who can mark**
 - **Any member of staff can mark any register** (the school's decision, 27 Sept 2026). The exception is Other Half registers, which one person takes and only they or office/SMT can then change (see §4).
-- Saving a register sends only the marks that changed, so the name on an untouched mark stays that of whoever took it (385). Planned-absence marks are still re-saved, so saving makes them the teacher's as before.
+- Saving a register sends only the marks that changed, so the name on an untouched mark stays that of whoever took it (385). Planned-absence marks are never re-saved: they stay the absence's (389).
 - Parents can read their own children's attendance. Students can't read attendance.
 
 **Rules for marks**
@@ -281,18 +281,19 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 - Next to each student, the register shows their other marks today as coloured badges (M, L1–L6, OH, EP).
 - A subject class's register can show each student's last grade in that subject, but only after the teacher presses **Show last grades**. It is hidden by default because the register is often on the classroom screen **(page only)**.
 
-**Planned absences** (`/attendance/planned-absences`, migration 318)
+**Planned absences** (`/attendance/planned-absences`, migrations 318 and 389)
 
-One attendance code for a student over a run of whole days, entered once instead of in every register.
+One attendance code for a student over a run of days, entered once instead of in every register. It can start at a chosen lesson on the first day and end at a chosen lesson on the last (389): one day, Period 3 to Period 5, or "from Period 4 on Monday until Period 1 on Wednesday". No lesson chosen means the whole day.
 - Open to school office, attendance officer, pastoral, SMT and admin (Pastoral card). All staff can see the list. The checks happen in the database.
 - Only authorised codes: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and **X, Excluded from school** (new in 318, counted as an authorised absence).
 - It fills in every period the student has on each day: their timetabled lessons (registration and Evening Prep included) and their Other Half activity. Days outside term dates and days with a holiday on the calendar are skipped.
 - Past days and today are filled in as soon as it is saved; later days at 05:30 each morning. The rule that no mark can be saved for a future date still holds.
 - **It never overwrites a mark that is already there** (the principal's decision).
-- The register shows the code already filled in, marked "planned". Once a teacher saves that register the mark is theirs, whether they keep the code or change it (the student turned up after all).
-- A student can't have two planned absences over the same days.
-- **End early** (the day the student is back) removes the marks it filled in from that day on; **Cancel** removes all of them. Marks a teacher has saved are left alone.
-- A planned-absence mark doesn't count as the register being taken, so Registers Not Done still lists the lesson until the teacher takes it.
+- The register shows the code already filled in, marked "planned". **Only the school office and the attendance officer (and admin) can change or delete it** (the principal, 7 Oct 2026, migration 389); for teachers it is read-only, enforced in the database. If the student turns up, the office changes the mark; once the office changes one on a register it becomes an ordinary mark.
+- **Change code**: the school office and attendance officer can change an existing planned absence's code; every mark it filled in changes with it.
+- A student can't have two planned absences over the same lessons (two on the same day are fine if their lessons don't overlap).
+- **End early** (the day, and optionally the lesson, the student is back) removes the marks it filled in from then on; **Cancel** removes all of them. Marks the office has changed are left alone.
+- A planned-absence mark doesn't count as the register being taken, so Registers Not Done still lists the lesson until the teacher takes it, unless every student in it already has a mark (a whole class on a visit), when it counts as taken.
 - The note is staff-only; parents see only the code on their child's attendance.
 - Planned absences, and the marks removed by ending or cancelling one, are logged in Change History under Registers.
 
@@ -372,7 +373,7 @@ A full-screen flashing **purple** pop-up (purple so it is never confused with th
 **Register-not-taken pop-up on teachers' screens** (migration 367)
 
 The same kind of full-screen flashing pop-up, for a teacher whose own lesson today started **at least 10 minutes ago** and has no register yet (five minutes before it reaches Registers Not Done).
-- Their lessons are the ones they teach (a lesson's own teacher first) and Other Half activities they are staff on. Same rules as Registers Not Done, except that a day with a holiday on the calendar gives no pop-ups. Planned-absence marks don't count as the register being taken.
+- Their lessons are the ones they teach (a lesson's own teacher first) and Other Half activities they are staff on. Same rules as Registers Not Done, except that a day with a holiday on the calendar gives no pop-ups. Planned-absence marks don't count as the register being taken, unless every student in it has a mark.
 - It shows the class, room, period and how long ago it started, with a **Take register now** button that opens that register.
 - Earlier lessons today stay on it until their register is taken. Saving the register clears it by itself; there is no "seen" button.
 - **Remind me in 5 minutes** hides it on that screen; a newly overdue lesson still appears at once.
