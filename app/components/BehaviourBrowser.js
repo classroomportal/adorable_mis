@@ -65,7 +65,7 @@ export default function BehaviourBrowser() {
   const [notice, setNotice] = useState(null); // shown above the list (a cancelled row may leave it)
 
   useEffect(() => {
-    supabase.from('behaviour_categories').select('name, type, default_points, description, retired').order('name')
+    supabase.from('behaviour_categories').select('name, type, default_points, description, retired, system_only').order('name')
       .then(({ data }) => setCategories(data || []));
   }, []);
 
@@ -192,7 +192,7 @@ export default function BehaviourBrowser() {
   }
 
   function renderEditor(ev) {
-    const options = categories.filter((c) => c.type === ev.type && c.name !== ev.category && !c.retired);
+    const options = categories.filter((c) => c.type === ev.type && c.name !== ev.category && !c.retired && !c.system_only);
     const chosen = options.find((c) => c.name === editing.category);
     const becomingSerious = chosen && ev.type === 'negative' && chosen.default_points <= seriousPoints && ev.points > seriousPoints;
     return (

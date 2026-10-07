@@ -15,6 +15,11 @@ import { formatUKDate } from '../../../lib/formatDate';
 // for those lessons included), and the reason goes to the parents by email and
 // in their portal inbox. Nobody else can change an X mark. All of it is
 // checked in record_exclusion() / end_exclusion(); this page only asks.
+//
+// Migration 401: the exclusion also goes on the behaviour log (0 points), and
+// the person recording ticks which detentions not yet held it replaces
+// (cancelled, their points kept). The half term's Friday detentions and
+// exclusions are shown to help the decision, never to make it.
 
 const fullName = (s) => (s ? `${s.first_name} ${s.last_name}` : '');
 const MAX_MATCHES = 30;
@@ -24,6 +29,49 @@ function addDays(iso, n) {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
+}
+
+// What the student has had this half term, and the detentions the exclusion
+// can replace. Information only: the school decides (the principal).
+function HalfTermPanel({ context, cancelIds, setCancelIds }) {
+  if (!context) return <p style={{ margin: 0 }}>Loading this half term's detentions...</p>;
+  if (context.error) return <p style={{ margin: 0, color: '#b42318' }}>{context.error}</p>;
+  const today = schoolToday();
+  const thisHalf = (context.detentions || []).filter((d) => d.detention_date >= context.half_term_from && d.detention_date <= context.half_term_to);
+  const cancellable = (context.detentions || []).filter((d) => d.can_cancel);
+  const internal = context.internal_exclusions || [];
+  const external = context.external_exclusions || [];
+  const toggle = (id) => setCancelIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  return (
+    <div style={{ border: '1px solid var(--line, #ddd)', borderRadius: '6px', padding: '0.75rem' }}>
+      <strong>This half term</strong> ({formatUKDate(context.half_term_from)} to {formatUKDate(context.half_term_to)})
+      <ul style={{ margin: '0.35rem 0', paddingLeft: '1.2rem' }}>
+        <li>
+          Friday detentions: <strong>{thisHalf.length}</strong>
+          {thisHalf.length > 0 && ` (${thisHalf.map((d) => `${formatUKDate(d.detention_date)}${d.status === 'attended' ? ', held' : d.detention_date < today ? '' : ', to come'}`).join('; ')})`}
+          {thisHalf.length >= 2 && ' · two or more: may be considered for internal exclusion'}
+        </li>
+        <li>
+          Internal exclusions: <strong>{internal.length}</strong>
+          {internal.length >= 2 && ' · a third may lead to exclusion from school (your decision)'}
+        </li>
+        {external.length > 0 && <li>Exclusions from school: <strong>{external.length}</strong></li>}
+      </ul>
+      {cancellable.length === 0 ? (
+        <p style={{ margin: 0, fontSize: '0.9em' }}>No detentions still to be held.</p>
+      ) : (
+        <div>
+          <p style={{ margin: '0.35rem 0 0.25rem', fontSize: '0.9em' }}>Tick the detentions this exclusion replaces. They are cancelled; their points stay on the log.</p>
+          {cancellable.map((d) => (
+            <label key={d.detention_id} style={{ display: 'flex', flexDirection: 'row', flex: 'none', gap: '0.4rem', alignItems: 'flex-start', fontWeight: 'normal' }}>
+              <input type="checkbox" checked={cancelIds.includes(d.detention_id)} onChange={() => toggle(d.detention_id)} />
+              <span>{formatUKDate(d.detention_date, { weekday: true })}: {d.reason}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ExclusionsInner() {
@@ -47,6 +95,9 @@ function ExclusionsInner() {
   const [reason, setReason] = useState('');
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  const [context, setContext] = useState(null);
+  const [cancelIds, setCancelIds] = useState([]);
 
   const [backOn, setBackOn] = useState({});
   const [backPeriod, setBackPeriod] = useState({});
@@ -82,6 +133,15 @@ function ExclusionsInner() {
   }
   useEffect(() => { loadRows(); }, [showPast]);
 
+  // The chosen student's half term: detentions and exclusions (401).
+  useEffect(() => {
+    setContext(null);
+    setCancelIds([]);
+    if (!studentId) return;
+    supabase.rpc('exclusion_context', { p_student_id: Number(studentId) })
+      .then(({ data, error: e }) => setContext(e ? { error: e.message } : data));
+  }, [studentId]);
+
   const years = [...new Set(students.map((s) => s.year_group).filter(Boolean))].sort((a, b) => a - b);
   const name = filter.name.trim().toLowerCase();
   const matches = (name || filter.year)
@@ -113,7 +173,8 @@ function ExclusionsInner() {
       setStatus('The last lesson must be the same as or after the first lesson.'); return;
     }
     const who = fullName(chosen);
-    if (!window.confirm(`Record ${KIND_LABEL[kind].toLowerCase()} for ${who}? Their registers will be marked X and the reason emailed to their parents now.`)) return;
+    const detNote = cancelIds.length ? ` ${cancelIds.length} detention${cancelIds.length === 1 ? '' : 's'} will be cancelled (points kept).` : '';
+    if (!window.confirm(`Record ${KIND_LABEL[kind].toLowerCase()} for ${who}? Their registers will be marked X, it goes on their behaviour log, and the reason is emailed to their parents now.${detNote}`)) return;
     setSaving(true);
     setStatus('Saving...');
     const { data, error: e2 } = await supabase.rpc('record_exclusion', {
@@ -124,6 +185,7 @@ function ExclusionsInner() {
       p_reason: reason,
       p_start_period: startPeriod ? Number(startPeriod) : null,
       p_end_period: endPeriod ? Number(endPeriod) : null,
+      p_cancel_detention_ids: cancelIds,
     });
     setSaving(false);
     if (e2) { setStatus(`Not saved: ${e2.message}`); return; }
@@ -132,7 +194,9 @@ function ExclusionsInner() {
     const told = data?.parent_emails_paused
       ? `Parent emails are paused, so parents were told in their portal inbox only (${data?.parents_inboxed || 0}).`
       : `${data?.parents_emailed || 0} parent email${data?.parents_emailed === 1 ? '' : 's'} sent, ${data?.parents_inboxed || 0} portal inbox notice${data?.parents_inboxed === 1 ? '' : 's'}.`;
-    setStatus(`Recorded for ${who}. ${marks} register mark${marks === 1 ? '' : 's'} set to X so far.${later} ${told}`);
+    const dets = data?.detentions_cancelled || 0;
+    const detText = dets ? ` ${dets} detention${dets === 1 ? '' : 's'} cancelled (points kept).` : '';
+    setStatus(`Recorded for ${who} and added to their behaviour log. ${marks} register mark${marks === 1 ? '' : 's'} set to X so far.${later}${detText} ${told}`);
     setStudentId('');
     setFilter({ name: '', year: '' });
     setReason('');
@@ -181,7 +245,9 @@ function ExclusionsInner() {
         Record an internal exclusion (out of lessons, in school) or, for the principal only, an
         exclusion from school. Every lesson in that time is marked <strong>X</strong> in the
         registers, including any already taken, and the reason is emailed to the parents and put in
-        their portal inbox. Only the principal and the college secretary can change an X mark.
+        their portal inbox. It is added to the student's behaviour log (0 points), and you choose which
+        of their detentions it replaces. Only the principal and the college secretary can change an X
+        mark or an exclusion on the behaviour log.
       </p>
 
       <form onSubmit={handleRecord} className="card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
@@ -254,6 +320,8 @@ function ExclusionsInner() {
             </select>
           </label>
         </div>
+        {chosen && <HalfTermPanel context={context} cancelIds={cancelIds} setCancelIds={setCancelIds} />}
+
         <label style={{ flex: 'none' }}>
           Reason (sent to the parents as written)
           <textarea value={reason} rows={4} maxLength={2000} onChange={(e) => setReason(e.target.value)} required />
