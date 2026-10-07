@@ -349,6 +349,16 @@ At the same moment the office's pop-up appears, every member of staff signed in 
 - **Hide for 2 minutes**, the beep and the one-minute check work as on the office pop-up.
 - Answers are kept (who, when, the note). The checks happen in the database (`staff_missing_student_alerts()`, `respond_missing_student_alert()`).
 
+**Missing a lesson gives an automatic negative** (migration 388, the principal, 7 Oct 2026)
+
+From 8 Oct 2026, a student who was in school that day (marked present or late at any period, before or after) and is marked **absent without a reason** (No reason given or Unauthorised absence) at a lesson, an Other Half activity or Evening Prep gets a behaviour event in **Missing a lesson activity** (−5) for each period missed.
+- It is recorded at the end of the lesson: a check runs every 5 minutes for periods that have ended today. A student who skipped Period 1 and is marked present at Period 3 is recorded once the Period 3 mark is saved.
+- Registration doesn't count (absent at registration but present later is lateness to school). Authorised absences, including planned absences, never count. A student away all day gets nothing from this.
+- At −5 it is a serious event: it gives its own detention, sends the usual behaviour alert, and parents see it only after the office/SMT review, like any Stage 5.
+- The event is the school's, not a teacher's: it has no "logged by" teacher, and its writing says which lesson, which code and who marked the student absent.
+- If the teacher corrects the mark (to present, late or an authorised absence) or deletes it, the event is withdrawn and its detention cancelled if not yet held. One event per student per period per day, ever: one SMT delete or the review returns isn't made again.
+- If the category is retired or renamed, nothing is recorded.
+
 **Stage 5 "collect from lesson" pop-up on the office's screens** (migration 383, the principal, 6 Oct 2026)
 
 A full-screen flashing **purple** pop-up (purple so it is never confused with the red missed-lesson pop-up), on whatever Formwork page is open, for anyone whose role is granted **Stage 5 collection pop-ups** at Permissions (the school office to start with). It says "Please go and collect this student from their lesson", with the student, the lesson or Other Half activity, the room, the teacher, the period, the category and the teacher's explanation.
