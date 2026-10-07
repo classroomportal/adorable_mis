@@ -234,6 +234,21 @@ const CARD_COUNTS = {
   rewards: { field: 'reward_orders', href: '/rewards', label: 'Orders waiting', title: 'Reward orders waiting to be accepted' },
 };
 
+function showsCardCount(cardKey, hasAccess) {
+  const spec = CARD_COUNTS[cardKey];
+  return !!spec && hasAccess(spec.resource || spec.href);
+}
+
+// Where a card's number already links to a page, the card doesn't list that
+// page again (the principal, 7 Oct 2026): Core Data (Active students), Staff &
+// Roles (Staff) and Orders (Orders waiting). The bursar's home page has no
+// numbers, so it keeps the links.
+function withoutCountLink(cardKey, items, hasAccess) {
+  if (!showsCardCount(cardKey, hasAccess)) return items;
+  const href = CARD_COUNTS[cardKey].href;
+  return items.filter((it) => it.href !== href);
+}
+
 // The cards on one dashboard share a single request.
 let cardCountsPromise = null;
 function loadCardCounts() {
@@ -262,7 +277,8 @@ function CardCount({ cardKey }) {
 }
 
 function ModuleCard({ icon, label, accent, description, items, allowedHrefs, extra }) {
-  if (!items || items.length === 0) return null;
+  // A card whose only link is its number still shows, for the number.
+  if ((!items || items.length === 0) && !extra) return null;
   return (
     <div className={`module-card accent-${accent}`}>
       {extra ? (
@@ -649,10 +665,10 @@ export default function Home() {
             label={t.label}
             accent={t.accent}
             description={t.description}
-            items={t.items({ hasAccess, staffRoles, isAdmin })}
+            items={withoutCountLink(t.key, t.items({ hasAccess, staffRoles, isAdmin }), hasAccess)}
             extra={t.key === 'admissions' && hasAccess('/admissions') ? <AdmissionsCounts />
               : t.key === 'tuckshop' ? <TuckshopOrderingStatus />
-              : CARD_COUNTS[t.key] && hasAccess(CARD_COUNTS[t.key].resource || CARD_COUNTS[t.key].href) ? <CardCount cardKey={t.key} />
+              : showsCardCount(t.key, hasAccess) ? <CardCount cardKey={t.key} />
               : null}
           />
         ))}
