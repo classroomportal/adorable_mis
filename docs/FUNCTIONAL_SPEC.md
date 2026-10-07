@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 7 October 2026 (database migrations up to 388). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 7 October 2026 (database migrations up to 395). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -19,7 +19,7 @@ This specification describes what Formwork does as built on 7 October 2026 (data
 - **\[DB\]** — enforced by the database. It holds however someone reaches the data, including an edited browser request.
 - **\[Page\]** — enforced only by the web page. It guides normal use but is not a security boundary.
 
-Where behaviour differs from what a page suggests, it is listed in section 24, Known issues. An issue that is later fixed stays in that section, marked Fixed.
+Where behaviour differs from what a page suggests, it is listed in section 25, Known issues. An issue that is later fixed stays in that section, marked Fixed.
 
 ## 2. System overview
 
@@ -38,7 +38,7 @@ Every screen reads and writes the database directly under the signed-in person's
 | Scheduled jobs | pg\_cron in the database | Email queue every 15 seconds, register alerts every 15 minutes, detention reminders on Thursdays. |
 | Server routes | 3 routes in the web app | Nightly backup, and two AI helpers for report comments. Each checks the caller first. |
 | AI | Anthropic Claude API | Drafts and checks report comments. Never reads or writes the database. |
-| Backups | Nightly dump to private storage, plus Supabase's own daily backups | See section 23. |
+| Backups | Nightly dump to private storage, plus Supabase's own daily backups | See section 24. |
 
 **Where the data came from.** Formwork's data came from SIMS. Enough was extracted to run a working system, but it is a subset, not a full copy:
 
@@ -75,11 +75,11 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | tuckshop | Tuckshop staff | Tuckshop pages only, including Hand Out. |
 | tuckshop\_owner | cs@ (Uju MBA) | As tuckshop, plus the only role that can unlock a saved hand-out list. |
 | nurse | School nurses: nurse10@, nurse12@, nurse13@, hoc@ | Clinic and medical records: view, add, edit and delete (FR-11.6). The only role that can delete them. |
-| dsl | Designated Safeguarding Lead: cs@ (Uju MBA), from 4 Oct 2026 (migration 363) | Clinic and medical records: view, add and edit, not delete (FR-11.6). The only role that can mark a sick-bay entry as safeguarding and read its hidden details (FR-11.10–11.11). |
+| dsl | Designated Safeguarding Lead: cs@ (Uju MBA), from 4 Oct 2026 (migration 363) | Clinic and medical records: view, add and edit, not delete (FR-11.6). The only role that can mark a sick-bay entry as safeguarding and read its hidden details (FR-11.10–11.11). With the principal, reads the Worry Box, wellbeing check-ins and school rating (FR-20). |
 | other\_half | OH coordinator | Manages OH activities and choices. Nobody holds it at present. |
 | lesson\_feedback\_reviewer | Nobody yet (created 6 Oct 2026, migration 382) | Lesson Feedback for every class, and the individual responses without students' names (FR-7.41). |
 
-Two further roles exist only to approve fee prices (FR-10.10): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either.
+Two further roles exist only to approve fee prices (FR-10.10): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either. The principal role, with dsl, also reads the Worry Box, wellbeing check-ins and school rating (FR-20).
 
 **Students** see their own timetable, grades, behaviour (and appeal), tuckshop ordering, OH choices, documents and lesson feedback (FR-7.35). **Parents** see each linked child's timetable, results (after the delay set on Lookups, FR-7.34), released behaviour, attendance, published fees, tuckshop balance and documents.
 
@@ -156,6 +156,9 @@ Every member of staff can read the whole student record; what each role can chan
 | Grades against targets | Yes | Yes |
 | Mark appeals | Appeal own marks from the last 5 days; 5 credits a year (FR-7.24) | No |
 | Lesson feedback | Give feedback on today's and yesterday's lessons; never see others' (FR-7.35) | No |
+| Worry Box | Send worries to the DSL and the principal; see own worries and replies (FR-20.3–20.7) | No |
+| Wellbeing check-in | A pop-up while a check-in is open; nothing shown back but thank you (FR-20.8–20.11) | No |
+| Rate the School | While a rating is open, rate 10 areas once, anonymously (FR-20.13–20.14) | No |
 | Behaviour | Own events (not voided); can appeal negatives | Only events released to parents |
 | Attendance | No | Yes, including today lesson by lesson |
 | CAT4 / NGRT scores | No | Yes |
@@ -250,6 +253,7 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 
 - **FR-4.11** Every 15 minutes, outstanding registers are copied into a permanent alert list, once per lesson per day (once per activity per staff member for OH). An alert stays even if the register is taken later, until someone marks it resolved. \[DB\]
 - **FR-4.12** HR, the school office and admins see and resolve alerts. Nobody can create or delete them from the app. \[DB\]
+- **FR-4.46** Register Alerts (/admin/register-alerts, on the Attendance card) has a Staff drop-down listing each person with their number of alerts (7 Oct 2026). On All staff it shows one line per person: alerts, total minutes late and the latest date; choosing a person, or clicking their name, shows their alerts with the Resolved ticks. Show resolved works in both. \[Page\]
 
 **Attendance summary**
 
@@ -272,16 +276,24 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 * **FR-4.35** "I've sent them", with an optional note of where they were, clears it from every staff screen; "Not with me" clears it from that person's screen only. It stays until the period ends, even after the office presses Seen, and a corrected mark clears it at once. Every answer is kept: who, when and the note. Hide for 2 minutes, the beep and the one-minute check work as on FR-4.20. \[DB\]
 * **FR-4.36** The office pop-up also shows the student's registers today, period by period (lesson, teacher, mark and who marked it), and what staff have answered to FR-4.34. \[Page; DB data\]
 
-**Planned absences** (/attendance/planned-absences, Pastoral card, migration 318, 2 Oct 2026)
+**Planned absences** (/attendance/planned-absences, Attendance card, migration 318, 2 Oct 2026)
 
-- **FR-4.21** School office, attendance officer, pastoral, SMT and admin can give a student one attendance code for a run of whole days, with an optional note. All staff can see the list. \[DB\]
+- **FR-4.21** School office, attendance officer, pastoral, SMT and admin can give a student one attendance code for a run of days, from a chosen lesson on the first day to a chosen lesson on the last if needed (no lesson chosen means the whole day; migration 389), with an optional note. All staff can see the list. \[DB\]
 - **FR-4.22** Only authorised codes can be planned: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and X, Excluded from school. X was added by migration 318 and counts as an authorised absence, so it never shows in Missed Lessons or the pop-up. \[DB\]
 - **FR-4.23** Every period the student has on each day is filled in: their timetabled lessons (registration and Evening Prep included) and their Other Half activity. A class joined later counts only from the day they joined. Days outside term dates and days with a holiday on the calendar are skipped. \[DB\]
 - **FR-4.24** Past days and today are filled in as soon as the absence is saved; later days at 05:30 each morning, so FR-4.3 still holds. A mark already in a register is never overwritten (the principal's decision). \[DB\]
-- **FR-4.25** A student can't have two planned absences over the same days. \[DB\]
-- **FR-4.26** The register shows the code already filled in, tagged "planned". Once a teacher saves that register the mark is theirs, whether or not they change the code. A planned-absence mark doesn't count as the register being taken (FR-4.8). \[DB; the tag is Page\]
-- **FR-4.27** End early (the day the student is back) removes the marks it filled in from that day on; Cancel removes all of them. Marks a teacher has saved stay. \[DB\]
+- **FR-4.25** A student can't have two planned absences over the same lessons; two on one day are fine if their lessons don't overlap. \[DB\]
+- **FR-4.26** The register shows the code already filled in, tagged "planned". Only the school office, the attendance officer and admin can change or delete it (migration 389, the principal, 7 October 2026); for teachers it is read-only, and once the office changes one it becomes an ordinary mark. A planned-absence mark doesn't count as the register being taken (FR-4.8), unless every student in the lesson has a mark (a whole class on a visit). \[DB; the tag is Page\]
+- **FR-4.27** End early (the day, and if needed the lesson, the student is back) removes the marks it filled in from that day on; Cancel removes all of them. Marks the office has changed stay. \[DB\]
 - **FR-4.28** The note is staff-only; parents see only the code on their child's attendance. Planned absences, and marks removed by ending or cancelling one, are logged in Change History under Registers. \[DB\]
+
+* **FR-4.42** Change code: the school office, the attendance officer and admin can change an existing planned absence's code, and every mark it filled in changes with it. Pastoral and SMT keep adding, ending and cancelling. \[DB\]
+
+**Student Marks** (/attendance/student-marks, migration 390, the principal, 7 October 2026)
+
+- **FR-4.43** The school office, the attendance officer and admin choose a student and up to 62 days, and see every lesson on the student's timetable each day (registration, the Other Half and Evening Prep included), with the mark and who gave it. Days outside term and holidays are left out; a mark on a lesson no longer on the timetable is shown too. \[DB\]
+- **FR-4.44** They can change one mark, give several ticked lessons the same code, add a missing mark or remove one. A changed mark shows the office member as the person who gave it, and a planned-absence mark changed here becomes an ordinary mark; unchanged marks aren't touched. Nobody else can use the page or its functions. \[DB\]
+- **FR-4.45** No mark can be entered for a day that hasn't happened. Correcting an absent mark here withdraws its automatic missed-lesson negative, as on a register (FR-4.40). Every change and removal is logged in Change History under Registers. \[DB\]
 
 **Register-not-taken pop-up for teachers** (migration 367)
 
@@ -295,9 +307,11 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 **Automatic negative for a missed lesson** (migration 388, the principal, 7 October 2026)
 
 - **FR-4.37** From 8 October 2026, a student who was in school that day (present or late at any period, before or after) and is marked absent without a reason (N or O) at a lesson, an Other Half activity or Evening Prep gets one behaviour event in "Missing a lesson activity" (−5) for each period missed. Registration doesn't count. Authorised absences, planned absences included, never count. A student away all day gets none. \[DB\]
-- **FR-4.38** It is recorded at the end of the lesson: the database checks every 5 minutes for periods that have ended today. A student who skipped Period 1 and is marked present at Period 3 is recorded once that mark is saved. Only today is checked (see section 24, Known issues). \[DB\]
+- **FR-4.38** It is recorded at the end of the lesson: the database checks every 5 minutes for periods that have ended today. A student who skipped Period 1 and is marked present at Period 3 is recorded once that mark is saved. Only today is checked (see section 25, Known issues). \[DB\]
 - **FR-4.39** The event is the school's, not a teacher's: it has no "logged by" teacher, and its writing names the lesson, the code and who marked the student absent. At −5 it is serious: it gives its own detention, sends the behaviour alert, and parents see it only after the review (FR-6.9). It never raises the Stage 5 collection pop-up (FR-6.46). \[DB\]
 - **FR-4.40** Correcting the mark (to present, late or an authorised absence) or deleting it withdraws the event, as an upheld appeal does, and cancels its detention if not yet held. Each student gets one event at most per day and period, ever, so one SMT delete or the review returns is not made again. If the category is retired or renamed, nothing is recorded. \[DB\]
+
+* **FR-4.41** The member of staff who saved the absent mark is asked to confirm it (migration 391, the principal, 7 October 2026). They get an email and a Formwork inbox message naming the student, year, lesson or activity, period, date and code, the −5 and the detention date, and asking "Was \<name> really not in your lesson?". If not, they do nothing; if the student was there, they correct the register from the link and FR-4.40 withdraws the event. There is no confirm button. Replies go to the attendance officer (FR-12, Email). \[DB\]
 
 ## 8. FR-5 The Other Half
 
@@ -430,7 +444,7 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.31** Spending never changes a student's merit total: purchases are kept in their own record, so certificates, Behaviour Totals and reports count every merit as before. Points to spend are this school year's merits (from 1 September 2026) less the purchases that hold points (waiting, accepted, used); negative points don't reduce them, and they start again each school year. They are worked out each time, never stored, so a merit removed later lowers them at once; they can drop below zero, nothing is taken back, and the student can't buy until they are above the price again. \[DB\]
 - **FR-6.32** Points are taken when the student orders and come back if the order is declined or cancelled. A student can cancel their own order until it is decided. Each reward has a day rule (mufti and assistant: a school day, Monday to Friday in term, not a holiday; tuckshop visit: any day in term), can be chosen up to 28 days ahead, and has its own limits; "half term" splits a term at its mid-term break in the calendar. Two quick taps can't spend the same points twice. \[DB\]
 - **FR-6.33** Who accepts an order is set per reward: Mufti day, pastoral or head of boarding; tuckshop visit, the tuckshop; Assistant for a day, SMT, who name the member of staff the student will help. Admins can accept any order, and nobody can decide an order for their own child. Approvers can also cancel an accepted order (with a reason) and mark it used from its day onwards. The student gets an inbox message for each decision; for an assistant day, so does the member of staff. \[DB\]
-- **FR-6.34** The Rewards card on the staff dashboard (migration 371) holds Orders (/rewards: accept or decline orders, cancel, mark used, and a printable day list such as who is in mufti; granted to smt, pastoral, head\_of\_boarding, tuckshop and tuckshop\_owner), Rewards & Prices (/rewards/items: rewards, prices, limits, who accepts each, and whether the store is open; smt and pastoral) and Certificates, moved from the Pastoral card. The card shows how many orders are waiting for the viewer to accept. Who can add and change rewards is the Add and Edit ticks on reward\_items at /admin/permissions. \[DB / Page\]
+- **FR-6.34** The Rewards card on the staff dashboard (migration 371) holds Orders (/rewards: accept or decline orders, cancel, mark used, and a printable day list such as who is in mufti; granted to smt, pastoral, head\_of\_boarding, tuckshop and tuckshop\_owner), Rewards & Prices (/rewards/items: rewards, prices, limits, who accepts each, and whether the store is open; smt and pastoral) and Certificates, moved from the Pastoral card. The card shows how many orders are waiting for the viewer to accept; that number opens Orders, which isn't also listed as a link on the card (7 Oct 2026). Who can add and change rewards is the Add and Edit ticks on reward\_items at /admin/permissions. \[DB / Page\]
 - **FR-6.35** Nothing in the Reward Store is deleted: rewards are retired, orders declined or cancelled. A price change applies only to later orders. Every change is logged in Change History under rewards. Orders are written only through database functions that take the student from the sign-in, never from the request. \[DB\]
 - **FR-6.36** Not built yet: parents seeing purchases (read-only, stage 2) and assistant days recorded in attendance (stage 3). \[Planned\]
 
@@ -447,6 +461,8 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.46** When a teacher logs a Stage 5 (an event at the serious level) for a student they are teaching right now (their lesson, a lesson they cover, or the student's Other Half activity they run), the school office gets a full-screen, flashing purple pop-up: "Please go and collect this student from their lesson", with the student, the lesson or activity, room, teacher, period, category and explanation. It is purple so it is never confused with the red missed-lesson pop-up. \[DB rule; Page display\]
 - **FR-6.47** The lesson and room are stored when the event is logged. A Stage 5 logged later about something earlier, or by someone not teaching the student at that moment, raises nothing. One alert per event, ever. "Going to collect" records who and when and clears it from every office screen; it also goes if the event is deleted, withdrawn or moved below serious. The teacher sees on Log behaviour that the office has been asked. \[DB\]
 - **FR-6.48** It goes to roles granted "Stage 5 collection pop-ups" at /admin/permissions (school\_office to start with); being admin is not enough. Hide for 2 minutes, the flashing tab title and a rising beep work as on FR-4.20; it checks every 30 seconds. \[DB\]
+
+* **FR-6.49** During prep the pop-up goes to the Head of Boarding instead (migration 392, the principal, 7 October 2026). A Stage 5 logged today by anyone while the student's year group is in prep (one of its prep days, between its prep times, in term, not a holiday or blocked day) gives the same purple pop-up, saying "collect from prep", to everyone holding head\_of\_boarding (admin is not enough), not the office. Either one pressing Going to collect clears it for both, and the person logging it is told the Head of Boarding has been asked. \[DB\]
 
 ## 10. FR-7 Assessment, results and targets
 
@@ -680,6 +696,9 @@ Every email goes through one queue from mis@abc.sch.ng with a Reply-To chosen by
 | Behaviour alert | guardian.counselling@ |
 | Detention notices | All SMT |
 | Mark appeal (to the teacher, Head of Department in cc) | sro@ |
+| Missed lesson: please confirm (to the teacher who marked the absence) | guardian.counselling@ |
+| New worry in the Worry Box (to the DSL and the principal, no detail) | cs@ |
+| Wellbeing check-ins need a look (at most one an hour, no detail) | cs@ |
 | Anything else | sro@ |
 
 - **FR-12.7** One admin switch pauses every email to parents; inbox copies are still delivered. It is currently off (emails are sent). \[DB\]
@@ -698,7 +717,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 
 **Home dashboard**
 
-- **FR-13.5** Staff see a top row of big tiles (My Timetable, Calendar and, for staff who are also parents, My Children, and Class Progress for Heads of Department, SMT and admins, FR-7.15), a second row (Log behaviour, Inbox with its unread count, and Missed Lessons with today's count for those who can open it, FR-4.16, and Homework Monitor for SMT, FR-17.19), and module cards underneath. Three cards carry a number beside their icon that links to its page: active students on Students, staff on Staff & Access, behaviour alerts in the last 7 days on Pastoral, each shown only to those who can open that page (migrations 292–294; the alerts page shares the Behaviour page's permission, so the alerts count shows to everyone with it — until 1 Oct 2026 it showed only to admin logins, not to staff who are admin by role, such as cs@). Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions and Behaviour Appeals are on Pastoral, Certificates on the Rewards card (FR-6.34), Class Allocation on Timetable. A page with a big tile isn't also a link on a card (1 Oct 2026), so Missed Lessons and Homework Monitor are tiles only, and Class Progress stays on the Assessment card only for staff who don't get its tile. Students see big tiles (Timetable, Homework for students in a class with homework switched on, The Other Half, Assessment, Behaviour, Tuckshop, Messages, Groups when they are in a group shown to students, and the Reward Store while it is open, FR-6.30); parents go straight to their portal; a bursar who isn't an admin gets no top rows of tiles, and, like everyone else, a card for every page their roles can open, so ticking a page at Permissions makes its card appear (5 Oct 2026; until then only Fees and Tuckshop showed, whatever was ticked). The Budget card sits straight after Fees & Bills and the Rewards card after Pastoral (migrations 368 and 371); both can be moved at /admin/tile-order. \[Page\]
+- **FR-13.5** Staff see a top row of big tiles (My Timetable, Calendar and, for staff who are also parents, My Children, and Class Progress for Heads of Department, SMT and admins, FR-7.15), a second row (Log behaviour, Inbox with its unread count, and Missed Lessons with today's count for those who can open it, FR-4.16, and Homework Monitor for SMT, FR-17.19), and module cards underneath. Four cards carry a number beside their icon that links to its page: active students on Students, staff on Staff & Access, behaviour alerts in the last 7 days on Pastoral, orders waiting on Rewards, each shown only to those who can open that page (migrations 292–294; the alerts page shares the Behaviour page's permission, so the alerts count shows to everyone with it — until 1 Oct 2026 it showed only to admin logins, not to staff who are admin by role, such as cs@). Each card shows only the pages the person's roles can open, and each page is on one card only: Detentions and Behaviour Appeals are on Pastoral, Certificates on the Rewards card (FR-6.34), Class Allocation on Timetable, and everything about registers on the Attendance card: Take a Register (moved from Students), Missing Registers, Register Alerts, Planned Absences and Student Marks (moved from Pastoral; migration 395, 7 Oct 2026). A page that a card's number opens isn't also listed as a link on that card (7 Oct 2026): Core Data, Staff & Roles and Orders are reached through the number, on the bursar's home page too. The Students card has no Homework link: teachers set homework from the lesson's register, which links to the mark book (FR-17), and Heads of Department reach other teachers' lessons from their timetables. A page with a big tile isn't also a link on a card (1 Oct 2026), so Missed Lessons and Homework Monitor are tiles only, and Class Progress stays on the Assessment card only for staff who don't get its tile. Students see big tiles (Timetable, Homework for students in a class with homework switched on, The Other Half, Assessment, Behaviour, Tuckshop, Messages, Groups when they are in a group shown to students, and the Reward Store while it is open, FR-6.30); parents go straight to their portal; a bursar who isn't an admin gets no top rows of tiles, and, like everyone else, the card numbers and a card for every page their roles can open, so ticking a page at Permissions makes its card appear (5 Oct 2026; until then only Fees and Tuckshop showed, whatever was ticked). The Budget card sits straight after Fees & Bills, and the Attendance and Rewards cards after Pastoral, in that order (migrations 368, 371 and 395); all can be moved at /admin/tile-order. \[Page\]
 - **FR-13.8** The order of the big tiles on students' home page and of every row of the staff dashboard (the top row, the second row and the module cards, which the bursar's home page also uses) is set once for the whole school at /admin/tile-order (admins). Tiles not yet placed go after the ordered ones. The order never changes which tiles someone sees; page access and which classes have homework switched on still decide that. \[DB\]
 
 **Administration pages**
@@ -846,7 +865,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 | Missing-student answers | Each staff answer to "Do you know where this student is?" (I've sent them / Not with me), who, when and the note (migration 382) | The office's missed-lesson pop-up, while it is live | School office, attendance officer | Yes |
 | Stage 5 collection alerts | Each alert: the event, lesson, room, who logged it, and who went to collect and when (migration 383) | No screen after the day | Database only | Recorded, not viewable |
 | Other Half register holders | Per activity and day: who has the register open, and who took it and when (migration 385) | The OH register page, as the reason it is read-only | Staff opening that register | Yes |
-| Automatic missed-lesson negatives | Which register mark made which behaviour event, and when it was withdrawn (migration 388) | No screen; the events themselves show in behaviour | Database only | Recorded, not viewable |
+| Automatic missed-lesson negatives | Which register mark made which behaviour event, when the teacher was asked to confirm, and when it was withdrawn (migrations 388 and 391) | No screen; the events themselves show in behaviour | Database only | Recorded, not viewable |
 | Login devices | For logins with the new-device email (FR-1.16), each phone or browser seen, first and last sign-in | No screen; the owner gets an email for each new one | Database only | Recorded, not viewable |
 
 **What is not recorded**
@@ -858,6 +877,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 - **FR-16.9** Who added a student, and changes to student records, before 30 September 2026 (logged from migration 286). \[Data\]
 - **FR-16.10** A student ticking homework done or unticking it. The tick keeps its own time, but unticking leaves no trace. \[DB\]
 - **FR-16.11** Changes to the lesson feedback questions. Feedback itself can't be changed once sent, so it needs no log. \[DB\]
+- **FR-16.12** Worries, wellbeing check-ins and school ratings are not in Change History, because SMT and admins read it. A worry keeps its own notes (who opened, replied, closed and when), and none of these records can be changed or deleted. \[DB\]
 
 ## 20. FR-17 Homework
 
@@ -977,7 +997,37 @@ Fee income is shared into funds and spent through approved term budgets and requ
 - **FR-19.9** Every entry is practice or real, and the two never mix. In practice the principal can do every step and one approval completes a budget or supplier, so the process can be shown by one person. Clearing practice entries cancels or archives them all, recorded. \[DB / Page\]
 - **FR-19.10** Only the principal and the college secretary see the Budget tile and its pages: 1 Funds, 2 Fees, 3 Forecast, 4 Income, 5 Budget, 6 Suppliers, 7 Requests, 8 Approvals. Being an admin is not enough. What each of them may do there is still decided by the approval functions; in Practice the principal can still do every step, and only the principal clears practice entries. Opening it to the bursar and SMT needs a later migration. Every change goes through a database function (the tables can be read, never written directly) and is logged in Change History under finance. \[DB\]
 
-## 23. Non-functional requirements
+## 23. FR-20 Worry Box, wellbeing check-in and school rating
+
+Students can tell the school what worries them, answer a wellbeing check-in about every two months, and rate the school about once a term (migrations 391–394, the principal, 7 October 2026). Every worry and check-in, with the student's name, goes to the Designated Safeguarding Lead (cs@) and the principal (the ADSL), and to nobody else. The school rating is anonymous. Parents see none of it. The design is in docs/worry-box-design.md.
+
+**Who reads it**
+
+- **FR-20.1** Only holders of the dsl and principal roles read worries, check-ins and rating totals, checked on the roles themselves: admins, SMT, pastoral, houseparents and teachers see nothing, and being an admin is not enough. Every concern, of every kind (concerns about staff included), goes to both; nothing is routed to anyone else. \[DB\]
+- **FR-20.2** The tables can be read, never written directly: every change goes through a database function. Worries, notes, check-in answers and ratings are never deleted or changed afterwards. They are not logged in Change History, because SMT and admins read it; the worry's own notes are the record. \[DB\]
+
+**Worry Box (/worry-box, the portal's Worry Box tile)**
+
+- **FR-20.3** A student chooses what the worry is about (bullying or friendships; a member of staff; how they are feeling; home or family; the boarding house; equipment, rooms, food or facilities; something else), writes it (up to 2,000 characters) and can mark it urgent ("I don't feel safe, or I need to talk to someone soon"). At most 5 a day. The page tells them to speak to any member of staff straight away if they are in danger, and who will read it. \[DB / Page\]
+- **FR-20.4** A new worry sends the DSL and the principal an inbox message and an email that say only that a worry has come in and whether it is urgent: no name, kind or text. Replies to the email go to cs@ (Email Replies, "Worry Box"). \[DB\]
+- **FR-20.5** On the Worry Box page they see new, open and closed worries, by kind. Opening a new worry marks it read. They add notes (staff only) or a reply the student sees on their portal; the student gets an inbox message saying there is a reply, without its text. They close and reopen worries. \[DB\]
+- **FR-20.6** Paper slips from the box in school are typed in on the same page, with or without a student's name and with the date found. They don't appear on the student's portal. \[DB\]
+- **FR-20.7** The student sees what they sent, its status (Sent, Read by staff, Closed) and any reply, never the staff notes. \[DB\]
+
+**Wellbeing check-in (/wellbeing, a pop-up for students)**
+
+- **FR-20.8** The DSL or the principal opens a check-in with an opening time and a closing day, about every two months. While it is open, every active student who hasn't answered it gets a pop-up over any page. The first ran from 7 October 2026 to the end of Friday 9 October. \[DB / Page\]
+- **FR-20.9** "Not now" hides the pop-up until the next morning, but not from the check-in's must-answer day (the first: Thursday 8 October), when it can't be put off. Once only per check-in; answers can't be changed. \[DB\]
+- **FR-20.10** 15 questions, written for a boarding school with pressure to succeed: nine 1–5 scales (feeling in general, sleep, eating, coping with work and tests, pressure to get good results, time to rest, being away from home, the boarding house, friends) and six Yes/No (feel safe, an adult to talk to, anyone unkind, worry about letting family down, felt so low they stopped enjoying things, would like someone to talk to), plus an optional comment. All must be answered. The questions are data; their wording is fixed once answered. \[DB\]
+- **FR-20.11** Each question says which answers need a look (for example 1–2 on feeling in general, 5 on pressure, No to feeling safe, Yes to wanting to talk; letting family down doesn't alert). A check-in with any such answer, or a comment, is flagged: the DSL and the principal get an inbox message for each and an email at most once an hour, with no names or answers. \[DB\]
+- **FR-20.12** The Wellbeing page shows how many have answered, the flagged check-ins with what needs a look, every answer, totals for the school, "Mark followed up" with a note, and the dates of each check-in (add one, change its closing or must-answer day). \[DB / Page\]
+
+**School rating (/school-rating, the portal's Rate the School tile)**
+
+- **FR-20.13** The DSL or the principal opens a rating (opening time, closing day), about once a term. While it is open, students see a Rate the School tile and rate 10 areas from 1 (very poor) to 5 (excellent): lessons and teaching; help when struggling; feeling safe; being listened to; boarding house life; food; classrooms, labs and facilities; sport, clubs and The Other Half; knowing what is going on; and whether they would recommend the school to a friend. They can add one thing the school does well and one it could do better. Once per rating. \[DB\]
+- **FR-20.14** Anonymous: the student is stored only so they can't rate twice, and nobody can read the answers row by row. The DSL and the principal see each area's average and spread, by year group or boarding house only where at least 3 students answered, and the comments without names, in a mixed-up order, once 3 have answered. \[DB\]
+
+## 24. Non-functional requirements
 
 The database, not the browser, decides who someone is and what they may do; sensitive changes are logged permanently; the whole database is backed up nightly.
 
@@ -1007,9 +1057,9 @@ The database, not the browser, decides who someone is and what they may do; sens
 - **NFR-10** Sized for about 260 students, 60 staff and 1,000 parent logins. Email is sent at about 12 a minute. \[Design\]
 - **NFR-11** The reads every open page repeats are worked out in the database for the person asking: the overdue-register count on staff timetables, the dashboard card counts and the "is this member of staff also a parent" check. At 08:00 on 2 Oct 2026 they slowed every request to 20–90 seconds as staff signed in (migrations 315–316). \[DB\]
 
-## 24. Known issues and open decisions
+## 25. Known issues and open decisions
 
-37 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; six of them (6, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
+38 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; six of them (6, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -1050,10 +1100,11 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 35 | Results | A mark appeal (FR-7.27) waits until the student's teacher decides. Nobody else can decide it if the teacher is away or has left, and it holds one of the student's credits meanwhile | An appeal can wait with no end; no deadline or hand-over to the Head of Department yet | Open |
 | 36 | Behaviour | Two mentors on the timetable don't hold the mentor role (found 4 Oct 2026): Uche Isiani (UIS, 10C/Me) and Christopher Agunwa (CSA, 10D/Me), who are teachers only. Behaviour Totals (FR-6.29), Certificates and other pages granted to mentor are missing for them | They can't see their group's behaviour totals; both were given the mentor role on 4 Oct 2026, and every mentor group's mentor now holds it | Fixed |
 | 37 | Registers | The automatic missed-lesson negative (FR-4.37) only looks at today's registers. A register saved after midnight for an earlier day gives no event. The event has no teacher, so returning it at review sends nobody a message | A lesson missed on a day whose register is filled in late goes unrecorded; the reviewer tells anyone who needs to know in person | Open |
+| 38 | Worry Box | An urgent worry or a flagged wellbeing check-in (FR-20.4, FR-20.11) alerts only the DSL and the principal, by inbox and email. Nothing escalates if neither opens it, and there is no cover when both are away or after hours | A student who marks a worry urgent may wait until one of the two reads it; the page tells them to speak to any member of staff if they are in danger | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 
-## 25. Glossary
+## 26. Glossary
 
 | Term | Meaning |
 | --- | --- |
