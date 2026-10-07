@@ -21,7 +21,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Start here | [Safeguarding and keeping students safe](#safeguarding-and-keeping-students-safe) | What Formwork is and isn't for, finding a missing student, patterns to raise, what not to write, personal data | Everyone |
 | Everyday tasks | [1. Getting started](#1-getting-started) | Signing in, the dashboard, roles, using a phone | Everyone |
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
-| Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, planned absences | Teachers, office, pastoral |
+| Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, the automatic missed-lesson negative, planned absences | Teachers, office, pastoral |
 | Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
@@ -121,7 +121,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 
 1. Open **My Timetable** on the dashboard and click the lesson. The register opens with the class, period and date already chosen.
 2. Everyone starts as present. Change the code for anyone absent or late, adding minutes late. Press **Save** within the first 15 minutes; after that the lesson appears on Registers Not Done, and at 15-minute checks it becomes a register alert for HR and the office.
-3. If a student who was in an earlier lesson is missing, mark them N (no reason yet). The office gets a pop-up straight away and goes to find them. Don't wait to report it some other way.
+3. If a student who was in an earlier lesson is missing, mark them N (no reason yet). The office gets a pop-up straight away and goes to find them. Don't wait to report it some other way. At the end of the lesson Formwork also gives them an automatic −5 "Missing a lesson activity" event and its detention, so mark N or O only when they really aren't there, and correct a wrong mark at once: that withdraws the event.
 4. To praise or sanction during the lesson, press **Log behaviour for this class** on the register, pick the student(s) and the category, and save. A −5 event needs a written explanation of what happened, naming no other student, and a tick to confirm it really is a single serious incident; read the Stage 5 guidance shown first (chapter 7).
 5. For every teaching class, the **Homework** panel on the register shows what is due. Use **Set homework** there to set the next piece while you're with the class.
 
@@ -762,6 +762,24 @@ Staff whose role is granted **Missed-lesson pop-ups** (the school office and the
 
 The browser tab flashes and, once you have clicked on the page, a beep sounds for each new alert.
 
+The pop-up also shows the student's registers today, period by period, with who marked each, and what other staff have answered (below).
+
+**Do you know where this student is?** At the same moment, every other member of staff signed in gets a flashing pop-up with the student's name, photo, year, mentor group and house, and the lesson and room they should be in. The person who marked them absent doesn't get it.
+
+- If the student is with you, send them, then press **I've sent them** (add where they were if it helps). It clears from every staff screen and the office sees your answer.
+- If not, press **Not with me**. It clears from your screen only.
+- It stays until the period ends, even after the office presses Seen, and clears at once if the mark is corrected.
+
+### The automatic missed-lesson negative
+
+From 8 October 2026, a student who was in school that day (marked present or late at any period) and is marked N or O at a lesson, an Other Half activity or Evening Prep gets a **Missing a lesson activity** event (−5) for each period missed. It is recorded at the end of the lesson.
+
+- Nobody logs it by hand. It shows with no teacher, and its text says which lesson, which code and who marked the student absent.
+- At −5 it gives a detention and the behaviour alert, like any Stage 5, and waits for Behaviour Review before parents see it.
+- Registration doesn't count, and authorised absences never do. A student away all day gets nothing.
+- If the mark was wrong, correct it on the register (present, late or an authorised absence). The event is withdrawn and its detention cancelled if it hasn't happened yet.
+- Only the day's registers are checked, so take registers on the day.
+
 ### Planned absences (/attendance/planned-absences)
 
 When a student will be away for several days, or has been excluded, enter it once here instead of marking every register. Open to the school office, the attendance officer, pastoral staff, SMT and admins, from the Pastoral card.
@@ -998,13 +1016,13 @@ Students tell the school how each lesson went: how well they understood it, and 
 
 Feedback can be given from the end of the lesson until the end of the next day, once per lesson. Mentor, Prep, Personal Study and the Other Half aren't included, and a student marked absent for the lesson can't give feedback. There is no comment box.
 
-**Seeing what your classes said.** Open **Lesson Feedback** on the Students card (teachers, Heads of Department and SMT). Choose the dates, or press **This week**, **Last week** or **Last 4 weeks**. The table is grouped by department, then teacher, then class. Tap a department or teacher to open or close it; its row adds up the classes beneath it. A teacher sees their own classes already open; Heads of Department and SMT start with the department totals, and **Open all and Close all** do every section at once. Each row shows how many students responded, the green, amber and red split, and the share answering Yes to each question. The column headings stay at the top of the screen as you scroll down. The questions are numbered Q1 to Q10 and listed above the table. A figure is green where most students gave the good answer and red where most didn't; for "too easy", "too hard" and "bored", No is the good answer. Hover over a figure for the counts.
+**Seeing what your classes said.** Open **Lesson Feedback** on the Students card (teachers, Heads of Department, SMT and the Lesson Feedback Reviewer). Choose the dates, or press **This week**, **Last week** or **Last 4 weeks**. The table is grouped by department, then teacher, then class. Tap a department or teacher to open or close it; its row adds up the classes beneath it. A teacher sees their own classes already open; Heads of Department and SMT start with the department totals, and **Open all and Close all** do every section at once. Each row shows how many students responded, the green, amber and red split, and the share answering Yes to each question. The column headings stay at the top of the screen as you scroll down. The questions are numbered Q1 to Q10 and listed above the table. A figure is green where most students gave the good answer and red where most didn't; for "too easy", "too hard" and "bored", No is the good answer. Hover over a figure for the counts.
 
 ![Lesson Feedback grouped by department and teacher, with Mathematics and one teacher open](manual-images/38d-lesson-feedback-staff.png)
 
-- A teacher sees the lessons they taught; a Head of Department sees their department's classes; SMT see every class.
+- A teacher sees the lessons they taught; a Head of Department sees their department's classes; SMT and the Lesson Feedback Reviewer see every class.
 - A class's figures only appear once it has at least 3 responses in the dates chosen, so nobody can work out one student's answers. Classes with fewer are listed under their teacher with their count, and are left out of the teacher's and department's totals.
-- Only SMT see names, in **Named responses** below the summary, set to show students who chose red. Untick the box to see everyone.
+- SMT and the Lesson Feedback Reviewer also see the individual responses, in **Individual responses by subject** below the summary, set to show students who chose red; untick the box to see everyone. Each subject is closed until you tap it, and shows its number of responses and classes. Only SMT see the student's name and year; the reviewer sees the lesson, class, teacher and answers without them, enough to take a concern up with the Head of Department or SMT. The Lesson Feedback Reviewer role is given at Staff Roles.
 - Parents see nothing, and no emails are sent.
 
 **Changing the questions.** Anyone with Lookups opens **Lesson feedback questions** there to reword, reorder, add or retire a question and say whether Yes, No or neither is the good answer. Once students have answered a question its wording can't be changed: retire it and add a new one. Retired questions keep their past answers.
@@ -1116,12 +1134,14 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 1. **Log for**: one student, or a group chosen by class, house, room, restaurant or year.
 2. Choose the **Date**, **Positive** or **Negative**, and the **Category**. Points come from the category (−1 to −5, +1 to +5); you can't type them. Some categories show a line underneath saying when to use them.
-3. Add a comment. For a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty) an **Explanation** is required: say what happened in your own words and don't name any other student. First, a box asks "Is this really a Stage 5?" and lists what the school counts as one. If the incident isn't on that list, choose a lower category: repeated minor behaviour reaches a detention through the weekly total anyway. To save a Stage 5 you must tick "I confirm this is a single serious incident"; the button stays greyed out until you do. The same box and tick appear if you edit an event up to Stage 5 later.
+3. Add a comment. Anything you write, on a merit too, is checked by the school office or SMT before parents see the event; a merit with no comment goes home at once. For a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty) an **Explanation** is required: say what happened in your own words and don't name any other student. First, a box asks "Is this really a Stage 5?" and lists what the school counts as one. If the incident isn't on that list, choose a lower category: repeated minor behaviour reaches a detention through the weekly total anyway. To save a Stage 5 you must tick "I confirm this is a single serious incident"; the button stays greyed out until you do. The same box and tick appear if you edit an event up to Stage 5 later.
 4. On a serious event you can **+ Add a witness, someone involved or a target**, found by name, year and house. These links are staff-only and carry no points.
 5. Positive events can have one picture. Negative events can't.
 6. Press **Log event**.
 
 **If your Stage 5 comes back.** The reviewer can return a Stage 5 that doesn't look serious enough. You get a message in your inbox with their reason, and the note shows on the event. Its points stop counting straight away, and its detention is cancelled if it hasn't happened yet. Press **Edit** on the event: choose the right category if it isn't a Stage 5 (its points then count), or keep Stage 5 and improve the explanation, which brings back the −5 and its detention and sends it back for review. Every return is counted against the teacher who logged the event, and SMT can see the count.
+
+**A Stage 5 during your lesson.** If you log a Stage 5 for a student you are teaching right now (your lesson, a lesson you are covering, or your Other Half activity), the school office gets a purple pop-up asking them to collect the student from your room, and Log behaviour tells you the office has been asked. The office presses **Going to collect**, which clears it from every office screen. A Stage 5 logged later, or for a student you aren't teaching at that moment, raises no pop-up.
 
 ![Logging a serious event, with the Stage 5 guidance and the confirmation tick](manual-images/50-log.jpg)
 
@@ -1135,10 +1155,12 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 ### What parents see: Behaviour Review (/behaviour/review)
 
-- Positive events are always visible to parents.
-- Negative events are hidden until reviewed. −1 to −4 events without a picture never go to parents.
+- A merit with no writing goes home at once. Any event with writing, positive or negative, waits for review, and parents see none of it, points included, until it is sent.
+- −1 to −4 events without writing never go to parents; with writing they go once approved.
+- Merits and Stage 1–4 events with writing are listed under **Writing to approve**. Read each comment, use Edit to correct one, tick the ones to send, tick the confirmation, then press **Send to parents** (or **Keep at school**, and parents never see them).
 - −5 events without a picture: the principal's PA or SMT (or an admin) checks the text and sends it.
 - Events with a picture: SMT or an admin sends the text with the picture, the text alone, or declines.
+- If an event's writing is changed later, it is hidden again until the new words are approved.
 
 The reviewer ticks the confirmation that the text follows protocol, names no other student and is in good English, then presses **Send text** (or **Don't send yet**). An explanation that names a linked student is refused, with the word to reword. If an event isn't really a Stage 5, press "Not Stage 5: return to teacher", say why, and press "Return to" the teacher. They get your note in their inbox and see it on the event. Its points stop counting at once and its detention is cancelled if it hasn't happened yet (the student is told). The event moves to "Returned to the teacher", where it can't be sent: if they change the category it leaves the page, and if they keep Stage 5 and edit the explanation it comes back to "Waiting for review". Keep the note factual, e.g. "This is Disruption in class, −2." SMT see "Stage 5s returned, by teacher" lower down the page: how many each teacher has had returned, to see who needs more training.
 
@@ -1249,6 +1271,8 @@ The Other Half (OH) is the after-lessons activity programme, run entirely in For
 
 **Open register** lists the students who chose the activity. Mark them as for any register, or **Mark the rest present**. Marks go into normal attendance at the OH period, tagged with the activity. An activity with no marks 15 minutes after the OH start appears in Registers Not Done.
 
+**One person takes each register.** While you have it open, nobody else can mark it. Once you save it, it is yours: the activity's other staff see it read-only, with who took it. Only you, the school office, the attendance officer and SMT can change it afterwards. It is let go when you save, leave the page or go 10 minutes without doing anything. A student who has a lesson in that period that day can't be marked here: the lesson's register wins.
+
 ![An Other Half register](manual-images/64-oh-register.jpg)
 
 ### The programme (/other-half/activities)
@@ -1259,6 +1283,8 @@ SMT, the OH coordinator and admins manage the programme.
 2. **+ Add activity** on a weekday: name, description, room, staff (several can share), the year groups it is open to, and a capacity (blank for no limit).
 3. Tick **Students can choose** to open choices, and optionally set **Choices close**.
 4. **Retire** an activity to stop it being chosen; **Delete** is only possible while nobody has it chosen.
+
+**Other Half Days** (/other-half/year-days, on the Timetable card) is a tick grid of which year groups have the Other Half on which days: Years 7–11 Monday to Thursday, Year 12 Monday and Thursday (they have science lessons in that period on Tuesday and Wednesday). An activity can only be opened to a year on its ticked days, and students can't choose or be placed on another day. A day can't be unticked while that year has activities or choices on it, or ticked while it has lessons in the OH period.
 
 ![The activity programme](manual-images/61-oh-activities.jpg)
 
@@ -1768,7 +1794,7 @@ A full database backup runs every night. Admins can also run one before anything
 | assessment\_manager | Any result, target, CAT4/NGRT; transcript grades; recording reading tests; Grade History; publishing documents |
 | assessment\_user | Enter any result or target, but not delete |
 | bursar | Fees, invoices, payments, discounts, admission payments; tuckshop admin (not Hand Out) |
-| school\_office | Student records (all fields), adding students, parents and logins, welcome letters, register alerts, releasing −5 behaviour, messages, missed-lesson pop-ups |
+| school\_office | Student records (all fields), adding students, parents and logins, welcome letters, register alerts, releasing behaviour with writing, messages, missed-lesson and Stage 5 collection pop-ups |
 | attendance\_officer | Missed Lessons, the missed-lesson pop-up and Planned Absences |
 | admissions | Admissions pages |
 | tuckshop | Tuckshop pages, including Hand Out |
