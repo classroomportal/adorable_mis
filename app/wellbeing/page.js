@@ -6,6 +6,12 @@
 // Check-ins with an alert answer or a comment are flagged; the DSL or the
 // principal marks each one followed up. Rounds (about every two months) are
 // added here too. Every write is a database function.
+//
+// Too many are flagged for two people to see everyone (130 of 134 in the
+// first round), so each flagged check-in gets a priority (red, amber, green)
+// and is grouped by issue (migration 397, lib/wellbeing.js). The DSL and the
+// principal pick an issue, download its list and ask someone to discuss it;
+// what they pass on is their decision.
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -13,6 +19,7 @@ import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { schoolToday } from '../../lib/schoolTime';
 import { formatUKDate, formatUKDateTime } from '../../lib/formatDate';
+import { ISSUES, TIERS, checkInTier, checkInIssues, byTier } from '../../lib/wellbeing';
 
 const soft = { fontSize: '0.85em', color: 'var(--ink-soft)' };
 
@@ -24,6 +31,27 @@ function answerText(q, a) {
   if (!a) return '—';
   if (q.kind === 'scale') return `${a.score} (${a.score === 1 ? q.low_label : a.score === 5 ? q.high_label : `1 ${q.low_label} – 5 ${q.high_label}`})`;
   return a.answer ? 'Yes' : 'No';
+}
+
+function TierBadge({ tier }) {
+  if (!tier) return null;
+  const t = TIERS[tier];
+  return <span className="badge" style={{ background: t.bg, color: t.fg }} title={t.help}>{t.label}</span>;
+}
+
+function csvCell(v) {
+  const s = v == null ? '' : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadCsv(filename, rows) {
+  const text = rows.map((r) => r.map(csvCell).join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function addMonths(iso, n) {
@@ -72,6 +100,8 @@ function WellbeingInner() {
   const [answers, setAnswers] = useState([]);
   const [studentCount, setStudentCount] = useState(null);
   const [show, setShow] = useState('flagged');
+  const [issue, setIssue] = useState('');
+  const [tierFilter, setTierFilter] = useState('');
   const [open, setOpen] = useState(null);
   const [note, setNote] = useState('');
   const [status, setStatus] = useState(null);
@@ -120,10 +150,50 @@ function WellbeingInner() {
     return questions.filter((q) => used.has(q.question_id) || q.active);
   }, [questions, answers]);
 
+  // Priority and issues for each check-in (migration 397).
+  const sorted = useMemo(() => {
+    const m = new Map();
+    for (const c of checkIns) {
+      const mine = byCheckIn.get(c.check_in_id) || new Map();
+      m.set(c.check_in_id, { tier: checkInTier(c, mine, usedQuestions), issues: checkInIssues(c, mine, usedQuestions) });
+    }
+    return m;
+  }, [checkIns, byCheckIn, usedQuestions]);
+
   const round = rounds.find((r) => r.round_id === roundId);
   const flagged = checkIns.filter((c) => c.flagged);
   const toFollow = flagged.filter((c) => !c.followed_up_at);
-  const listed = show === 'flagged' ? toFollow : show === 'followed' ? flagged.filter((c) => c.followed_up_at) : checkIns;
+  const base = show === 'flagged' ? toFollow : show === 'followed' ? flagged.filter((c) => c.followed_up_at) : checkIns;
+  const listed = base
+    .filter((c) => !tierFilter || sorted.get(c.check_in_id)?.tier === tierFilter)
+    .filter((c) => !issue || sorted.get(c.check_in_id)?.issues.includes(issue))
+    .sort((a, b) => byTier(sorted.get(a.check_in_id)?.tier, sorted.get(b.check_in_id)?.tier));
+
+  const tierCount = (t) => toFollow.filter((c) => sorted.get(c.check_in_id)?.tier === t).length;
+  const houses = [...new Set(toFollow.map((c) => c.boarding_house || 'No house'))].sort();
+
+  // The answers needing a look that belong to the chosen issue (all of them
+  // when no issue is chosen).
+  function issueAnswers(c) {
+    const mine = byCheckIn.get(c.check_in_id) || new Map();
+    return usedQuestions
+      .filter((q) => mine.get(q.question_id)?.alert && (!issue || q.issue === issue))
+      .map((q) => `${q.question} ${answerText(q, mine.get(q.question_id))}`);
+  }
+
+  function download(withAnswers) {
+    const issueLabel = ISSUES.find((i) => i.key === issue)?.label || 'All issues';
+    const head = ['Student', 'Year', 'House', 'Priority', 'Issues'];
+    if (withAnswers) head.push('Answers needing a look', 'Comment');
+    const rows = listed.map((c) => {
+      const info = sorted.get(c.check_in_id) || {};
+      const r = [name(c.students), c.year_group, c.boarding_house, TIERS[info.tier]?.label || '',
+        (info.issues || []).map((k) => ISSUES.find((i) => i.key === k)?.label).join('; ')];
+      if (withAnswers) r.push(issueAnswers(c).join('; '), (!issue || issue === 'comment') ? (c.comment || '') : '');
+      return r;
+    });
+    downloadCsv(`Wellbeing ${round?.name || ''} - ${issueLabel}${tierFilter ? ` - ${TIERS[tierFilter].label}` : ''}.csv`, [head, ...rows]);
+  }
 
   async function followUp(id) {
     const { error } = await supabase.rpc('mark_wellbeing_followed_up', { p_check_in_id: id, p_note: note });
@@ -176,35 +246,99 @@ function WellbeingInner() {
       </div>
 
       <div className="card">
+        <h2 style={{ marginTop: 0 }}>To follow up, by priority and issue</h2>
+        <p style={soft}>
+          Red: you or the DSL see the student (doesn&apos;t feel safe, or feels 1 out of 5). Amber: a conversation with
+          someone you choose (wants to talk, no adult to talk to, feels 2 out of 5, many low answers, or a comment).
+          Green: no one-to-one follow-up; it counts towards the school-wide picture. Click an issue or a priority
+          to list those students, then download the list for the person you ask to discuss it.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.5rem 0' }}>
+          {['red', 'amber', 'green'].map((t) => (
+            <button key={t} type="button" onClick={() => { setShow('flagged'); setTierFilter(tierFilter === t ? '' : t); }}
+              style={{ background: TIERS[t].bg, color: TIERS[t].fg, border: tierFilter === t ? `2px solid ${TIERS[t].fg}` : '2px solid transparent' }}>
+              {TIERS[t].label}: {tierCount(t)}
+            </button>
+          ))}
+        </div>
+        <div className="table-scroll"><table>
+          <thead>
+            <tr>
+              <th>Issue</th><th>Students</th><th>Red</th><th>Amber</th><th>Green</th>
+              {houses.map((h) => <th key={h}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {ISSUES.map((i) => {
+              const these = toFollow.filter((c) => sorted.get(c.check_in_id)?.issues.includes(i.key));
+              const n = (t) => these.filter((c) => sorted.get(c.check_in_id)?.tier === t).length;
+              return (
+                <tr key={i.key} onClick={() => { setShow('flagged'); setIssue(issue === i.key ? '' : i.key); }}
+                  style={{ cursor: 'pointer', fontWeight: issue === i.key ? 600 : undefined, background: issue === i.key ? '#eef4fb' : undefined }}>
+                  <td>{i.label}<div style={soft}>{i.help}</div></td>
+                  <td><strong>{these.length}</strong></td>
+                  <td>{n('red') || ''}</td><td>{n('amber') || ''}</td><td>{n('green') || ''}</td>
+                  {houses.map((h) => <td key={h}>{these.filter((c) => (c.boarding_house || 'No house') === h).length || ''}</td>)}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table></div>
+        <p style={soft}>A student with several issues is counted under each of them.</p>
+      </div>
+
+      <div className="card">
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
           {[['flagged', `To follow up (${toFollow.length})`], ['followed', 'Followed up'], ['all', `Everyone (${checkIns.length})`]].map(([k, label]) => (
             <button key={k} className={show === k ? '' : 'secondary'} onClick={() => setShow(k)}>{label}</button>
           ))}
+          <select value={issue} onChange={(e) => setIssue(e.target.value)}>
+            <option value="">Every issue</option>
+            {ISSUES.map((i) => <option key={i.key} value={i.key}>{i.label}</option>)}
+          </select>
+          <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)}>
+            <option value="">Every priority</option>
+            {['red', 'amber', 'green'].map((t) => <option key={t} value={t}>{TIERS[t].label}</option>)}
+          </select>
+          {listed.length > 0 && (
+            <>
+              <button className="secondary" onClick={() => download(false)} title="Name, year, house, priority and issues">Download names ({listed.length})</button>
+              <button className="secondary" onClick={() => download(true)} title="Also the answers needing a look in this issue">Download with answers</button>
+            </>
+          )}
         </div>
+        {(issue || tierFilter) && (
+          <p style={soft}>
+            Showing {listed.length}{issue ? ` with ${ISSUES.find((i) => i.key === issue)?.label.toLowerCase()}` : ''}
+            {tierFilter ? `, ${TIERS[tierFilter].label.toLowerCase()} priority` : ''}.{' '}
+            <button type="button" className="secondary" onClick={() => { setIssue(''); setTierFilter(''); }}>Show all</button>
+          </p>
+        )}
         {listed.length === 0 ? <p>None.</p> : (
           <div className="table-scroll"><table>
-            <thead><tr><th>Student</th><th>Year</th><th>House</th><th>Answered</th><th>Needs a look</th><th></th></tr></thead>
+            <thead><tr><th>Priority</th><th>Student</th><th>Year</th><th>House</th><th>Answered</th><th>Needs a look</th><th></th></tr></thead>
             <tbody>
               {listed.map((c) => {
                 const mine = byCheckIn.get(c.check_in_id) || new Map();
-                const alerts = usedQuestions.filter((q) => mine.get(q.question_id)?.alert);
+                const alerts = usedQuestions.filter((q) => mine.get(q.question_id)?.alert && (!issue || q.issue === issue));
                 return (
                   <Fragment key={c.check_in_id}>
                     <tr>
+                      <td><TierBadge tier={sorted.get(c.check_in_id)?.tier} /></td>
                       <td><a href={`/students/${c.student_id}`}>{name(c.students)}</a></td>
                       <td>{c.year_group}</td>
                       <td>{c.boarding_house}</td>
                       <td>{formatUKDateTime(c.created_at)}</td>
                       <td>
                         {alerts.map((q) => <div key={q.question_id}>{q.question} <strong>{answerText(q, mine.get(q.question_id))}</strong></div>)}
-                        {c.comment && <div><em>Comment:</em> {c.comment}</div>}
+                        {c.comment && (!issue || issue === 'comment') && <div><em>Comment:</em> {c.comment}</div>}
                         {c.followed_up_at && <div style={soft}>Followed up {formatUKDateTime(c.followed_up_at)}{c.follow_up_note ? `: ${c.follow_up_note}` : ''}</div>}
                       </td>
                       <td><button className="secondary" onClick={() => setOpen(open === c.check_in_id ? null : c.check_in_id)}>{open === c.check_in_id ? 'Hide' : 'All answers'}</button></td>
                     </tr>
                     {open === c.check_in_id && (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={7}>
                           <table>
                             <tbody>
                               {usedQuestions.map((q) => {
