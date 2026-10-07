@@ -27,6 +27,7 @@ import { formatUKDate } from '../../lib/formatDate';
 import LessonFeedbackForm from '../components/LessonFeedbackForm';
 import { loadFeedbackLessons, feedbackKey } from '../../lib/lessonFeedback';
 import RewardStore, { useRewardPoints } from '../components/RewardStore';
+import WorryBox from '../components/WorryBox';
 
 
 // Which of these events have a picture this viewer may see. Row-level
@@ -356,7 +357,7 @@ function PortalInner() {
   const firstName = studentName.split(' ')[0];
 
   // Sections that open on this page; the other tiles link to their own pages.
-  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour', 'rewards', 'groups'];
+  const VIEWS = ['timetable', 'homework', 'assessment', 'behaviour', 'rewards', 'groups', 'worries'];
 
   // Homework tile badge and lists.
   const today = schoolToday();
@@ -439,6 +440,8 @@ function PortalInner() {
               />
             ) },
             { key: 'messages', el: <DashboardTile key="messages" label="Messages" icon="📬" sub="View inbox" href="/inbox" /> },
+            // Migration 391: read by the DSL and the principal only.
+            { key: 'worries', el: <DashboardTile key="worries" label="Worry Box" icon="💌" sub="Tell us what's worrying you" onClick={() => openView('worries')} /> },
             groups.length > 0 && { key: 'groups', el: (
               <DashboardTile
                 key="groups" label="Groups" icon="👥" onClick={() => openView('groups')}
@@ -568,6 +571,13 @@ function PortalInner() {
       <div className="card">
         <h2>Reward Store</h2>
         <RewardStore studentId={studentId} points={rewardPoints} onPointsChange={reloadRewardPoints} />
+      </div>
+      )}
+
+      {activeView === 'worries' && (
+      <div className="card">
+        <h2>Worry Box</h2>
+        <WorryBox studentId={studentId} />
       </div>
       )}
 

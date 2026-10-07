@@ -21,6 +21,16 @@ export default function RequireResource({ resourceKey, children }) {
       </main>
     );
   }
+  // The Worry Box (migration 391) is for the DSL and the principal only, on
+  // the roles themselves; admins get nothing from the database.
+  if (resourceKey === '/worry-box' && !(staffRoles || []).some((r) => r === 'dsl' || r === 'principal')) {
+    return (
+      <main style={{ padding: '1.25rem', maxWidth: 700, margin: '0 auto' }}>
+        <h1>Access not allowed</h1>
+        <p>The Worry Box is for the Designated Safeguarding Lead and the Principal only.</p>
+      </main>
+    );
+  }
   return children;
 }
 
