@@ -406,6 +406,7 @@ function BehaviourPageInner() {
     let error;
     let linkError = null;
     let collecting = 0;
+    let collectingPrep = 0;
     try {
       let saved;
       ({ data: saved, error } = await supabase.from('behaviour_events').insert(rows).select('event_id'));
@@ -413,10 +414,12 @@ function BehaviourPageInner() {
         ({ error: linkError } = await saveInvolvedStudents((saved || []).map((r) => r.event_id), others));
       }
       // A Stage 5 in the teacher's own lesson or OH activity asks the office
-      // to collect the student (migration 383); say so.
+      // to collect the student (migration 383), and one during prep asks the
+      // Head of Boarding (388); say so.
       if (!error && isSerious && saved?.length) {
-        const { data: asked } = await supabase.rpc('stage5_collection_requested', { p_event_ids: saved.map((r) => r.event_id) });
-        collecting = asked?.length || 0;
+        const { data: asked } = await supabase.rpc('stage5_collection_requested_kinds', { p_event_ids: saved.map((r) => r.event_id) });
+        collecting = (asked || []).filter((a) => a.kind !== 'prep').length;
+        collectingPrep = (asked || []).filter((a) => a.kind === 'prep').length;
       }
     } catch (err) {
       error = err;
@@ -431,6 +434,8 @@ function BehaviourPageInner() {
         ? `Saved ${rows.length} event${rows.length > 1 ? 's' : ''}, but the other students couldn't be added (${linkError.message}). Add them from the event below.`
         : `Saved ${rows.length} event${rows.length > 1 ? 's' : ''}.${collecting
           ? ` The office has been asked to come and collect ${collecting === 1 ? 'the student' : `${collecting} students`} from your lesson.`
+          : ''}${collectingPrep
+          ? ` The Head of Boarding has been asked to come and collect ${collectingPrep === 1 ? 'the student' : `${collectingPrep} students`} from prep.`
           : ''}`);
       setForm({ ...form, category: '', points: '', description: '' });
       setPhoto(null);
