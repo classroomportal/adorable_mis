@@ -20,9 +20,15 @@ The school has a paper worry box where students write about things that worry th
 - Nothing is deleted; notes can't be edited. Not in Change History (SMT and admins read it): `worry_notes` is the record.
 - At most 5 worries a day per student.
 
-## Stage 2: half-termly wellbeing check-in (not built)
+## Stage 2: wellbeing check-in (built, migration 392)
 
-Proposed: once a half term, a short check-in on the portal ("How are you feeling?" on five faces, plus one or two optional Yes/No questions such as "Is there an adult at school you could talk to?"). A low answer, or the same low answer twice running, would alert the DSL. It isn't shown to class teachers, and every screen points to a member of staff and the Worry Box. It helps the school notice who needs a conversation; it is not a diagnosis. Still to decide: the questions, who is alerted (the DSL alone, or the principal too), and whether students can skip it.
+The principal (7 Oct 2026): more questions, because it's a boarding school with a lot of pressure to succeed; a pop-up about every two months; a low answer alerts both the DSL and the principal; the first opens now and runs to Thursday 8 Oct, before Friday's big tests.
+
+- **Pop-up** over every page for a student who hasn't answered the open round. "Not now" hides it until the next morning; it stops when the round closes (end of the closing day). The first round, "October 2026", opened on the evening of 7 Oct and closes at the end of Friday 9 Oct; from Thursday 8 Oct it can't be put off (migration 393, `must_answer_from`: "it must be done by the end of the week").
+- **15 questions** (`wellbeing_questions`, data): nine 1–5 scales (feeling in general, sleep, eating, coping with work and tests, pressure to get good results (5 = far too much), time to rest, being away from home, the boarding house, friends) and six Yes/No (feel safe, an adult to talk to, anyone unkind, worry about letting family down, felt so low you stopped enjoying things, would like someone to talk to), plus an optional comment.
+- **Alerts:** each question says which answers need a look (for example 1–2 on feeling in general, 5 on pressure, No to feeling safe, Yes to wanting someone to talk to; worrying about letting family down is counted but doesn't alert, because it is so common). A check-in with any such answer, or a comment, is flagged. The DSL and the principal get an inbox message for each, and an email at most once an hour, with no names or answers.
+- **`/wellbeing`** (DSL and principal only; a Wellbeing tile on their dashboard): who has answered, the flagged check-ins with what needs a look, every answer, "Mark followed up" with a note, totals for the school, and the form to add the next round (it suggests two months after the last) or change a closing date.
+- Answers can't be changed or deleted. Students see nothing back but "thank you". Parents and other staff see nothing.
 
 ## Stage 3: school rating (not built)
 
