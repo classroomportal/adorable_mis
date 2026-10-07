@@ -26,6 +26,9 @@ function AttendanceInner() {
   const [marks, setMarks] = useState({}); // student_id -> code
   const [lateMinutes, setLateMinutes] = useState({}); // student_id -> minutes late, as typed
   const [planned, setPlanned] = useState({}); // student_id -> true when the mark came from a planned absence (318)
+  // Planned-absence marks can be changed only by the school office and the
+  // attendance officer (389); for everyone else they're read-only here.
+  const [isOffice, setIsOffice] = useState(false);
   // student_id -> 'code|minutes' as loaded or last saved, so Save sends only
   // the marks that changed and doesn't put this teacher's name on the rest.
   const [saved, setSaved] = useState({});
@@ -52,6 +55,9 @@ function AttendanceInner() {
 
       const { data: cd } = await supabase.from('attendance_codes').select('*').order('code');
       setCodes(cd || []);
+
+      const { data: office } = await supabase.rpc('is_attendance_office');
+      setIsOffice(office === true);
     }
     loadOptions();
   }, []);
@@ -91,10 +97,10 @@ function AttendanceInner() {
       (existing || []).forEach((row) => {
         if (row.code) prefill[row.student_id] = row.code;
         // A mark from an Other Half register is re-saved as this lesson's,
-        // even unchanged, so it stops counting as OH attendance (385).
-        // So is a planned-absence mark: saving the register makes it the
-        // teacher's, so ending the absence leaves it alone (318).
-        savedNow[row.student_id] = row.other_half_activity_id || row.planned_absence_id
+        // even unchanged, so it stops counting as OH attendance (385). A
+        // planned-absence mark isn't: it stays the absence's, and only the
+        // office can change it (389).
+        savedNow[row.student_id] = row.other_half_activity_id && !row.planned_absence_id
           ? 'resave'
           : `${row.code || ''}|${row.minutes_late ?? ''}`;
         if (row.planned_absence_id) plannedIds[row.student_id] = true;
@@ -243,9 +249,13 @@ function AttendanceInner() {
 
   function markAllPresent() {
     const all = {};
-    roster.forEach((s) => { all[s.student_id] = '/'; });
+    // Planned-absence marks are left as they are, even for the office: a
+    // student on a planned absence isn't present by default.
+    roster.forEach((s) => {
+      all[s.student_id] = planned[s.student_id] ? marks[s.student_id] : '/';
+    });
     setMarks(all);
-    setLateMinutes({});
+    setLateMinutes((lm) => Object.fromEntries(Object.entries(lm).filter(([sid]) => planned[sid])));
   }
 
   async function handleSubmit(e) {
@@ -460,6 +470,7 @@ function AttendanceInner() {
                           onChange={(e) => setMark(s.student_id, e.target.value)}
                           aria-label={`Code — ${s.first_name} ${s.last_name}`}
                           title={codes.find((c) => c.code === marks[s.student_id])?.description || ''}
+                          disabled={planned[s.student_id] && !isOffice}
                           style={{ width: '6.5rem' }}
                         >
                           <option value="">—</option>
@@ -467,9 +478,9 @@ function AttendanceInner() {
                             <option key={c.code} value={c.code}>{c.code} — {c.description}</option>
                           ))}
                         </select>
-                        {/* Filled in by the office (migration 318); saving the register makes it the teacher's mark. */}
+                        {/* Filled in by a planned absence (318); only the office can change it (389). */}
                         {planned[s.student_id] && (
-                          <span title="Filled in from a planned absence entered by the office" style={{ marginLeft: '0.35rem', fontSize: '0.75em', color: '#475569' }}>
+                          <span title="Filled in from a planned absence. Only the school office or the attendance officer can change it." style={{ marginLeft: '0.35rem', fontSize: '0.75em', color: '#475569' }}>
                             planned
                           </span>
                         )}
