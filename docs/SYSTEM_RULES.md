@@ -285,7 +285,7 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 
 One attendance code for a student over a run of days, entered once instead of in every register. It can start at a chosen lesson on the first day and end at a chosen lesson on the last (389): one day, Period 3 to Period 5, or "from Period 4 on Monday until Period 1 on Wednesday". No lesson chosen means the whole day.
 - Open to school office, attendance officer, pastoral, SMT and admin (Attendance card). All staff can see the list. The checks happen in the database.
-- Only authorised codes: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and **X, Excluded from school** (new in 318, counted as an authorised absence).
+- Only authorised codes: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment. **X, Excluded from school** is no longer offered here: exclusions are recorded on Exclusions (below, 396).
 - It fills in every period the student has on each day: their timetabled lessons (registration and Evening Prep included) and their Other Half activity. Days outside term dates and days with a holiday on the calendar are skipped.
 - Past days and today are filled in as soon as it is saved; later days at 05:30 each morning. The rule that no mark can be saved for a future date still holds.
 - **It never overwrites a mark that is already there** (the principal's decision).
@@ -296,6 +296,14 @@ One attendance code for a student over a run of days, entered once instead of in
 - A planned-absence mark doesn't count as the register being taken, so Registers Not Done still lists the lesson until the teacher takes it, unless every student in it already has a mark (a whole class on a visit), when it counts as taken.
 - The note is staff-only; parents see only the code on their child's attendance.
 - Planned absences, and the marks removed by ending or cancelling one, are logged in Change History under Registers.
+
+**Exclusions** (`/attendance/exclusions`, migration 396, the principal 7 Oct 2026)
+
+- Two kinds, both marked **X** (Excluded from school) in the registers: an **internal exclusion** (out of lessons, in school), recorded by the principal or the college secretary, and an **exclusion from school** (sent home), recorded by the principal only. Holding the role is what counts; being admin is not enough. The link is on the Attendance card for those two only.
+- Days and lessons are chosen as for a planned absence (whole days, or from a lesson on the first day to a lesson on the last; at most 90 days). Every lesson in that time is marked X, **including marks already taken** for those lessons (unlike a planned absence); later days are filled in at 05:30.
+- **The details go home**: every parent linked to the student is emailed the kind, the days and lessons, and the reason as written, and gets the same notice in their portal inbox (staff who follow a student through the parent portal as "Other" are left out). Replies go to whoever recorded it and to the principal (Email Replies, "Exclusion"). While parent emails are paused, parents get the inbox notice only. Ending an exclusion early or cancelling it removes the X marks from then on and tells the parents.
+- **Only the principal and the college secretary can enter, change or remove an X mark or an X planned absence**, anywhere: registers, Other Half registers, Student Marks and Planned Absences. Teachers, the office, pastoral and admins are refused by the database.
+- SMT and pastoral can see the list of exclusions; changes are logged in Change History under Exclusions.
 
 **Student Marks** (`/attendance/student-marks`, migration 390)
 - The school office and the attendance officer (and admins) choose a student and up to 62 days, and see every lesson on the student's timetable each day (registration, Other Half and Evening Prep included) with the mark entered and who entered it. Days outside term and holidays are left out; any mark on a lesson no longer on the timetable is shown too.
