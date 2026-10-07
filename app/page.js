@@ -241,8 +241,7 @@ function showsCardCount(cardKey, hasAccess) {
 
 // Where a card's number already links to a page, the card doesn't list that
 // page again (the principal, 7 Oct 2026): Core Data (Active students), Staff &
-// Roles (Staff) and Orders (Orders waiting). The bursar's home page has no
-// numbers, so it keeps the links.
+// Roles (Staff) and Orders (Orders waiting), on the bursar's home page too.
 function withoutCountLink(cardKey, items, hasAccess) {
   if (!showsCardCount(cardKey, hasAccess)) return items;
   const href = CARD_COUNTS[cardKey].href;
@@ -644,8 +643,10 @@ export default function Home() {
               label={t.label}
               accent={t.accent}
               description={t.description}
-              items={t.items({ hasAccess, staffRoles, isAdmin })}
-              extra={t.key === 'tuckshop' ? <TuckshopOrderingStatus /> : null}
+              items={withoutCountLink(t.key, t.items({ hasAccess, staffRoles, isAdmin }), hasAccess)}
+              extra={t.key === 'tuckshop' ? <TuckshopOrderingStatus />
+                : showsCardCount(t.key, hasAccess) ? <CardCount cardKey={t.key} />
+                : null}
             />
           ))}
         </div>
