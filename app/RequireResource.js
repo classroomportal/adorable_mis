@@ -21,13 +21,14 @@ export default function RequireResource({ resourceKey, children }) {
       </main>
     );
   }
-  // The Worry Box and wellbeing check-ins (migrations 391–392) are for the DSL and the principal only, on
+  // The Worry Box, wellbeing check-ins and the school rating (migrations
+  // 391–394) are for the DSL and the principal only, on
   // the roles themselves; admins get nothing from the database.
-  if ((resourceKey === '/worry-box' || resourceKey === '/wellbeing') && !(staffRoles || []).some((r) => r === 'dsl' || r === 'principal')) {
+  if (['/worry-box', '/wellbeing', '/school-rating'].includes(resourceKey) && !(staffRoles || []).some((r) => r === 'dsl' || r === 'principal')) {
     return (
       <main style={{ padding: '1.25rem', maxWidth: 700, margin: '0 auto' }}>
         <h1>Access not allowed</h1>
-        <p>The Worry Box and wellbeing check-ins are for the Designated Safeguarding Lead and the Principal only.</p>
+        <p>The Worry Box, wellbeing check-ins and the school rating are for the Designated Safeguarding Lead and the Principal only.</p>
       </main>
     );
   }

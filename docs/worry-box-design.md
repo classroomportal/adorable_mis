@@ -30,6 +30,11 @@ The principal (7 Oct 2026): more questions, because it's a boarding school with 
 - **`/wellbeing`** (DSL and principal only; a Wellbeing tile on their dashboard): who has answered, the flagged check-ins with what needs a look, every answer, "Mark followed up" with a note, totals for the school, and the form to add the next round (it suggests two months after the last) or change a closing date.
 - Answers can't be changed or deleted. Students see nothing back but "thank you". Parents and other staff see nothing.
 
-## Stage 3: school rating (not built)
+## Stage 3: school rating (built, migration 394)
 
-Proposed: a termly student-voice survey rating areas such as lessons, safety, food, boarding, facilities and being listened to (1–5), with an optional comment. Staff see totals by year and house only, with any group under 3 answers held back (the lesson-feedback rule). Still to decide: the areas, how often, and who sees the totals.
+The principal (7 Oct 2026): "now do the school rating". Choices made in building it, to confirm with the principal: about once a term; a portal tile, not a pop-up; the same two readers as worries; anonymous to them.
+
+- **Rounds** are opened on `/school-rating` by the DSL or the principal (opening time, closing day). None was opened by the migration, because the first wellbeing check-in runs that week.
+- **Students** get a "Rate the School" tile on their portal while a round is open and rate 10 areas from 1 (very poor) to 5 (excellent): lessons and teaching; help when struggling; feeling safe; being listened to; boarding house life; food; classrooms, labs and facilities; sport, clubs and The Other Half; knowing what is going on; and overall, would they recommend the school to a friend. Then, optionally, one thing the school does well and one it could do better. Once per round. They are told to use the Worry Box for worries.
+- **Anonymous to staff.** The student is stored only so they can't answer twice; nobody can read the rows. The DSL and the principal see totals through `school_rating_summary()`: each area's average and spread, by year group or boarding house (a group with fewer than 3 answers shows "under 3"), and the comments without names in a mixed-up order once the round has 3 answers.
+- The areas are data (`school_rating_areas`), fixed in wording once rated. Nothing is deleted. Parents see nothing.
