@@ -12,6 +12,8 @@ import { useAuth } from '../../lib/AuthContext';
 // /office/stage5-collection-alerts; the database decides that
 // (office_stage5_collection_alerts() returns null for everyone else, and
 // this stops asking). "Going to collect" clears it from every office screen.
+// A Stage 5 given during prep (migration 388) goes to the Head of Boarding
+// instead (kind 'prep'), on the same purple pop-up, saying "from prep".
 
 const POLL_MS = 30000;
 const SNOOZE_MS = 2 * 60000;
@@ -95,6 +97,10 @@ export default function Stage5CollectionAlerts() {
 
   if (visible.length === 0) return null;
 
+  const allPrep = visible.every((a) => a.kind === 'prep');
+  const anyPrep = visible.some((a) => a.kind === 'prep');
+  const from = allPrep ? 'prep' : anyPrep ? 'their lesson or prep' : 'their lesson';
+
   async function acknowledge(a) {
     setBusy(a.id);
     setError(null);
@@ -114,12 +120,12 @@ export default function Stage5CollectionAlerts() {
   return (
     <div className="stage5-alert-overlay" role="alertdialog" aria-modal="true" aria-labelledby="stage5-alert-title">
       <div className="stage5-alert-box">
-        <div className="stage5-alert-band">STAGE 5 · COLLECT FROM LESSON</div>
+        <div className="stage5-alert-band">STAGE 5 · COLLECT FROM {allPrep ? 'PREP' : anyPrep ? 'LESSON / PREP' : 'LESSON'}</div>
         <h2 id="stage5-alert-title" style={{ marginTop: '0.75rem', color: '#53389e' }}>
-          Please go and collect {visible.length === 1 ? 'this student' : `these ${visible.length} students`} from their lesson
+          Please go and collect {visible.length === 1 ? 'this student' : `these ${visible.length} students`} from {from}
         </h2>
         <p style={{ marginTop: 0 }}>
-          The teacher has just given a Stage 5 during the lesson.
+          {allPrep ? 'A Stage 5 has just been given during prep.' : 'The teacher has just given a Stage 5 during the lesson.'}
         </p>
         {error && <p style={{ color: '#b42318' }}>{error}</p>}
         {visible.map((a) => (
@@ -131,7 +137,7 @@ export default function Stage5CollectionAlerts() {
               </span>
             </div>
             <div style={{ fontSize: '1.05rem' }}>
-              Collect from <strong>{a.lesson}</strong>
+              Collect from <strong>{a.kind === 'prep' ? 'prep' : a.lesson}</strong>
               {a.room ? <>, room <strong>{a.room}</strong></> : ''}
               {a.logged_by ? ` (${a.logged_by})` : ''}
               {a.period_name ? ` · ${a.period_name}` : ''}
