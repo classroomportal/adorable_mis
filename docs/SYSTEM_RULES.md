@@ -271,6 +271,7 @@ Pages: `/other-half` and its register page are for teaching and pastoral staff. 
 **Who can mark**
 - **Any member of staff can mark any register** (the school's decision, 27 Sept 2026). The exception is Other Half registers, which one person takes and only they or office/SMT can then change (see §4).
 - Saving a register sends only the marks that changed, so the name on an untouched mark stays that of whoever took it (385). Planned-absence marks are never re-saved: they stay the absence's (389).
+- **An authorised absence the office enters on a register is locked to the office** (the principal, 7 Oct 2026, migration 390). When someone with the school office or attendance officer role saves a mark with an authorised-absence code (C, E, H, I, M, X and so on), only the school office, the attendance officer or an admin can change or delete it afterwards; teachers see it marked "office", read-only. Present, late and no-reason (N/O) marks the office saves stay ordinary, so a teacher can still correct a register the office took. When the office changes a locked mark to a code that isn't an authorised absence, it is no longer locked.
 - Parents can read their own children's attendance. Students can't read attendance.
 
 **Rules for marks**
