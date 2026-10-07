@@ -366,6 +366,7 @@ From 8 Oct 2026, a student who was in school that day (marked present or late at
 - The event is the school's, not a teacher's: it has no "logged by" teacher, and its writing says which lesson, which code and who marked the student absent.
 - If the teacher corrects the mark (to present, late or an authorised absence) or deletes it, the event is withdrawn and its detention cancelled if not yet held. One event per student per period per day, ever: one SMT delete or the review returns isn't made again.
 - If the category is retired or renamed, nothing is recorded.
+- **The teacher is asked to confirm** (migration 389, the principal, 7 Oct 2026). Whoever saved the absent mark gets an email and a Formwork inbox message: the student, the lesson or activity, the code, the −5 and the detention date, and "Was <name> really not in your lesson?". If they weren't there, the teacher does nothing. If they were, the teacher corrects the register from the link, and the event and detention are withdrawn. Replies go to the attendance officer (changeable at Email Replies).
 
 **Stage 5 "collect from lesson" pop-up on the office's screens** (migration 383, the principal, 6 Oct 2026)
 
