@@ -321,9 +321,10 @@ Resource `/homework`, granted to `teacher`, `head_of_department`, `smt` and
 - **My classes**: the classes from `loadStaffLessons()` (so single-lesson
   overrides are included), plus the department's classes for a HoD. Under
   each, its homework: upcoming, past, and how many are marked.
-- **Set homework**: class, title, instructions, deadline (a date picker
-  offering the class's next few lessons as one-click choices, which fills
-  `due_slot_id`), grading scheme, and "out of" when the scheme needs it.
+- **Set homework**: class, title, instructions, deadline (one of the
+  class's lessons over the next five weeks, chosen with one click, which fills
+  `due_on` and `due_slot_id`; the free date picker was removed on 7 Oct 2026,
+  the principal's decision), grading scheme, and "out of" when the scheme needs it.
   There is also a "Set for several classes" option, for a teacher with parallel sets.
   It creates one row per class.
 - **Mark book** for one homework: the class list with one input per student

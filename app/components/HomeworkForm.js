@@ -15,22 +15,25 @@ import { loadPrepCheck, loadPrepBlocks, minutesLabel, HOMEWORK_MINUTE_CHOICES } 
 
 export const btnSmall = { padding: '0.3rem 0.6rem', fontSize: '0.85rem' };
 
-// The class's next few lessons from tomorrow, as one-click deadlines,
-// leaving out days the year has no homework (migration 353).
-function nextLessons(slots, blocked = {}, count = 6) {
+// The class's lessons from tomorrow over the next five weeks, leaving out
+// days the year has no homework (migration 353). Homework is always due in
+// one of these: there is no free date picker.
+function nextLessons(slots, blocked = {}, days = 35) {
   const out = [];
   const start = addDays(schoolToday(), 1);
-  for (let i = 0; i < 21 && out.length < count; i += 1) {
+  for (let i = 0; i < days; i += 1) {
     const date = addDays(start, i);
     const k = dayKey(date);
     if (blocked[date]) continue;
     (slots || [])
       .filter((s) => s.day_of_week === k)
       .sort((a, b) => a.period_number - b.period_number)
-      .forEach((slot) => { if (out.length < count) out.push({ date, slot }); });
+      .forEach((slot) => out.push({ date, slot }));
   }
   return out;
 }
+
+const FIRST_LESSONS = 6;
 
 export function schemeLabel(scheme, outOf) {
   if (!scheme) return '';
@@ -118,10 +121,15 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
   const scheme = schemes.find((s) => String(s.scheme_id) === schemeId);
   const needsOutOf = scheme?.kind === 'mark' && scheme.fixed_max == null;
   const schemeLocked = markCount > 0;
-  const lessonsThatDay = dueOn
-    ? (cls.timetable_slots || []).filter((s) => s.day_of_week === dayKey(dueOn)).sort((a, b) => a.period_number - b.period_number)
-    : [];
-  const picks = nextLessons(cls.timetable_slots, blocked);
+  const allPicks = nextLessons(cls.timetable_slots, blocked);
+  const [showAll, setShowAll] = useState(false);
+  const picks = showAll ? allPicks : allPicks.slice(0, FIRST_LESSONS);
+  // An existing homework keeps its deadline unless a lesson is chosen, even
+  // when that deadline isn't one of the lessons offered (passed, end of day,
+  // or a lesson since moved by an import).
+  const keptDeadline = existing?.due_on
+    && !allPicks.some(({ date, slot }) => date === existing.due_on && String(slot.slot_id) === String(existing.due_slot_id || ''));
+  const keptSlot = keptDeadline && (cls.timetable_slots || []).find((s) => String(s.slot_id) === String(existing.due_slot_id || ''));
   const offered = schemes.filter((s) => s.is_active || String(s.scheme_id) === schemeId);
 
   async function save() {
@@ -133,7 +141,7 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
       setError('The title can be at most 10 characters. Put the detail in the instructions.');
       return;
     }
-    if (!dueOn) { setError('Choose a deadline.'); return; }
+    if (!dueOn) { setError('Choose the lesson it is due in.'); return; }
     if (!existing && dueOn < schoolToday()) { setError('The deadline is in the past.'); return; }
     if (!(Number(minutes) >= 5)) { setError('Say how many minutes it should take.'); return; }
     if (!schemeId) { setError('Choose how it will be graded.'); return; }
@@ -206,7 +214,17 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
         <div>
           <div style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: '0.3rem' }}>Due in a lesson</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-            {picks.length === 0 && <span style={{ color: 'var(--ink-soft)' }}>No lessons found for this class.</span>}
+            {keptDeadline && (
+              <button
+                type="button"
+                className={dueOn === existing.due_on && dueSlotId === String(existing.due_slot_id || '') ? '' : 'secondary'} style={btnSmall}
+                onClick={() => { setDueOn(existing.due_on); setDueSlotId(existing.due_slot_id ? String(existing.due_slot_id) : ''); }}
+              >
+                As set: {formatUKDate(existing.due_on, { weekday: true }).replace(/ \d{4}$/, '')}
+                {keptSlot ? ` · L${keptSlot.period_number}` : existing.due_slot_id ? '' : ' · end of day'}
+              </button>
+            )}
+            {allPicks.length === 0 && <span style={{ color: 'var(--ink-soft)' }}>No lessons found for this class.</span>}
             {picks.map(({ date, slot }) => {
               const on = dueOn === date && dueSlotId === String(slot.slot_id);
               return (
@@ -219,21 +237,12 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
                 </button>
               );
             })}
+            {allPicks.length > FIRST_LESSONS && (
+              <button type="button" className="secondary" style={{ ...btnSmall, borderStyle: 'dashed' }} onClick={() => setShowAll((v) => !v)}>
+                {showAll ? 'Fewer lessons' : 'Later lessons…'}
+              </button>
+            )}
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <label style={{ flex: '1 1 12rem' }}>
-            Or pick a date
-            <input type="date" value={dueOn} onChange={(e) => { setDueOn(e.target.value); setDueSlotId(''); }} />
-            {dueOn && <span style={{ fontSize: '0.8rem', color: 'var(--ink-soft)' }}>{formatUKDate(dueOn, { weekday: true })}</span>}
-          </label>
-          <label style={{ flex: '1 1 12rem' }}>
-            Due by
-            <select value={dueSlotId} onChange={(e) => setDueSlotId(e.target.value)} disabled={!dueOn}>
-              <option value="">End of the day</option>
-              {lessonsThatDay.map((s) => <option key={s.slot_id} value={s.slot_id}>Lesson {s.period_number}</option>)}
-            </select>
-          </label>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <label style={{ flex: '0 1 10rem' }}>
