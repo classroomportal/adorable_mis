@@ -24,7 +24,7 @@ function loadCategories() {
   if (!categoriesPromise) {
     categoriesPromise = supabase
       .from('behaviour_categories')
-      .select('name, type, default_points, description, retired')
+      .select('name, type, default_points, description, retired, system_only')
       .order('name')
       .then(({ data }) => data || []);
   }
@@ -61,8 +61,9 @@ export default function EventCommentEditor({ event, onSaved, emptyText = 'No com
   }, [editing]);
 
   const { serious_event_points: seriousPoints, serious_event_guidance: seriousGuidance } = useBehaviourRules();
-  // A retired category (migration 378) is offered only as the event's own.
-  const options = categories.filter((c) => c.type === event.type && (!c.retired || c.name === event.category));
+  // A retired category (migration 378) is offered only as the event's own;
+  // so is an exclusion category (migration 401, recorded only from Exclusions).
+  const options = categories.filter((c) => c.type === event.type && ((!c.retired && !c.system_only) || c.name === event.category));
   const chosen = options.find((c) => c.name === category);
   // Keeping the category keeps the event's points (migration 378); a
   // returned Stage 5 (0 points until changed) gets its points back.

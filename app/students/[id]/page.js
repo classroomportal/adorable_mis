@@ -1226,7 +1226,7 @@ function StudentDetail() {
       )}
 
       {activeView === 'behaviour' && (
-      <Section title="Behaviour">
+      <Section title="Behaviour" extra={<a className="secondary no-print" href={`/students/${id}/behaviour-log`}>Print log</a>}>
         {behaviour.length === 0 ? <p>No events logged.</p> : (
           <div className="table-scroll">
             <table>

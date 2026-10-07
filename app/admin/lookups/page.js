@@ -184,7 +184,8 @@ function BehaviourCategories() {
       <h3 style={{ marginTop: '1rem' }}>Negative</h3>
       <div className="table-scroll"><table>
         <thead><tr><th>Category</th><th>Default points</th><th>Description</th><th></th></tr></thead>
-        <tbody>{negative.map((c) => <CategoryRow key={c.category_id} c={c} />)}</tbody>
+        {/* The exclusion categories (migration 401) are the system's: 0 points, recorded only from Exclusions. */}
+        <tbody>{negative.filter((c) => !c.system_only).map((c) => <CategoryRow key={c.category_id} c={c} />)}</tbody>
       </table></div>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>

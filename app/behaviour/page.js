@@ -187,7 +187,7 @@ function BehaviourPageInner() {
       setRestaurants([...new Set(list.map((x) => x.restaurant).filter(Boolean))].sort());
       setYearGroups([...new Set(list.map((x) => x.year_group).filter(Boolean))].sort((a, b) => a - b));
 
-      const { data: cat } = await supabase.from('behaviour_categories').select('category_id, name, type, default_points, description, retired').order('name');
+      const { data: cat } = await supabase.from('behaviour_categories').select('category_id, name, type, default_points, description, retired, system_only').order('name');
       setCategories(cat || []);
 
       const { data: access } = await supabase.rpc('my_house_access');
@@ -291,8 +291,9 @@ function BehaviourPageInner() {
 
   const usingGroup = groupType && (classId || boardingHouse || restaurant);
 
-  // Retired categories (migration 378) aren't offered for new events.
-  const categoriesForType = categories.filter((c) => c.type === form.type && !c.retired);
+  // Retired categories (migration 378) aren't offered for new events, nor
+  // the exclusion categories, which only Exclusions records (migration 401).
+  const categoriesForType = categories.filter((c) => c.type === form.type && !c.retired && !c.system_only);
   const chosenCategory = categoriesForType.find((c) => c.name === form.category);
 
   function handleTypeChange(newType) {
