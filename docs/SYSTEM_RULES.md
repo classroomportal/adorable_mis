@@ -297,6 +297,13 @@ One attendance code for a student over a run of days, entered once instead of in
 - The note is staff-only; parents see only the code on their child's attendance.
 - Planned absences, and the marks removed by ending or cancelling one, are logged in Change History under Registers.
 
+**Student Marks** (`/attendance/student-marks`, migration 390)
+- The school office and the attendance officer (and admins) choose a student and up to 62 days, and see every lesson on the student's timetable each day (registration, Other Half and Evening Prep included) with the mark entered and who entered it. Days outside term and holidays are left out; any mark on a lesson no longer on the timetable is shown too.
+- They can change any single mark, give several ticked lessons the same code, add a missing mark or remove one. Nobody else can use this page or its functions.
+- A changed mark shows the office member as the person who gave it; a planned-absence mark changed here becomes an ordinary mark. Unchanged marks are not touched.
+- No mark can be entered for a day that hasn't happened. Correcting an absent mark withdraws its automatic missing-a-lesson negative, as on a register.
+- Every change and removal is logged in Change History under Registers.
+
 **Registers Not Done** (`/pastoral/registers-not-done`)
 
 A class lesson is listed when all of these are true:
