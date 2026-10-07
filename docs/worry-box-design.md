@@ -5,7 +5,7 @@ The school has a paper worry box where students write about things that worry th
 ## The principal's decisions (7 Oct 2026)
 
 - **Who sees a worry:** the DSL and the principal only, with the student's name, "to start with". Not admins, SMT, pastoral, houseparents or teachers.
-- **Concerns about staff:** the routing first proposed (concerns about staff going to the principal and the DSL only, other kinds to pastoral or the office) is "not our method". For now every worry goes only to the DSL and the principal, so nothing else is routed. Ask the principal how the school handles concerns about staff before routing any worry to anyone else.
+- **Concerns about staff:** the routing first proposed (concerns about staff going to the principal and the DSL only, other kinds to pastoral or the office) is "not our method". Every concern from students, of every kind, goes to both the DSL (cs@) and the principal, who is the ADSL (deputy DSL). Nothing is routed to anyone else.
 - **Wellbeing check-in:** once a half term.
 - **Parents:** see none of it (worries, check-ins or ratings).
 - **Order:** Worry Box first, then the check-in, then the rating.
