@@ -319,12 +319,11 @@ function ModuleCard({ icon, label, accent, description, items, allowedHrefs, ext
 const TABS = [
   {
     key: 'students', label: 'Students', icon: '🎓', accent: 'students',
-    description: 'Core records, behaviour, attendance, results and certificates.',
+    description: 'Core records, behaviour, results and homework.',
     items: ({ hasAccess }) => [
       { href: '/students', label: 'Core Data', desc: "Find a student and open their full record." },
       { href: '/students/sports-houses', label: 'Sports Houses', desc: "Give new students a sports house, with each house's boys and girls in every year." },
       { href: '/behaviour/log', label: 'Behaviour Log', resource: '/behaviour', desc: "Look up, open and correct logged behaviour. Log new behaviour from the big tile at the top." },
-      { href: '/attendance', label: 'Attendance', desc: "Take a register for a lesson or mentor group." },
       { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
       { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
       // Homework is set from the lesson's register (Attendance), which links to
@@ -340,7 +339,7 @@ const TABS = [
   },
   {
     key: 'pastoral', label: 'Pastoral', icon: '💛', accent: 'students',
-    description: 'Behaviour, detentions, registers and mentor groups.',
+    description: 'Behaviour, detentions, prep and mentor groups.',
     // Class Allocation is on the Timetable card only (the principal, 30 Sept
     // 2026: one place for each link); pastoral staff and HoDs with the page
     // still see it there, because a card shows whatever links a person has.
@@ -349,14 +348,23 @@ const TABS = [
       { href: '/pastoral/behaviour-totals', label: 'Behaviour Totals', desc: "Running totals of positive and negative points, by student and by mentor group." },
       { href: '/behaviour/review', label: 'Behaviour Review', desc: "Approve serious incidents and any event with writing (office) and behaviour pictures (SMT) before parents see them; look through all events and correct categories." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
-      { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
-      { href: '/attendance/planned-absences', label: 'Planned Absences', desc: "Give a student one attendance code for a run of days: illness, holiday, exclusion." },
-      { href: '/attendance/student-marks', label: 'Student Marks', desc: "Change one student's register marks lesson by lesson over a run of days (office)." },
       { href: '/pastoral/unallocated', label: 'Unallocated Students', desc: "Students with no boarding house, no room, or gaps in their timetable." },
       { href: '/pastoral/prep', label: 'Prep Times', desc: "Evening prep for each year, and how much homework fits in it." },
       { href: '/pastoral/birthdays', label: 'Birthdays', desc: "Staff and students with a birthday in the next 7 days." },
-      { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time." },
       { href: '/staff/mentor-groups', label: 'Mentor Groups', desc: "Assign staff to each mentor group." },
+    ].filter((it) => hasAccess(it.href)),
+  },
+  {
+    // Migration 395 (the principal, 7 Oct 2026): registers and everything
+    // about them in one place, moved from the Students and Pastoral cards.
+    key: 'attendance', label: 'Attendance', icon: '✅', accent: 'students',
+    description: 'Take registers, chase missing ones, and correct or plan absences.',
+    items: ({ hasAccess }) => [
+      { href: '/attendance', label: 'Take a Register', desc: "Take a register for a lesson or mentor group." },
+      { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
+      { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time, person by person." },
+      { href: '/attendance/planned-absences', label: 'Planned Absences', desc: "Give a student one attendance code for a run of days: illness, holiday, exclusion." },
+      { href: '/attendance/student-marks', label: 'Student Marks', desc: "Change one student's register marks lesson by lesson over a run of days (office)." },
     ].filter((it) => hasAccess(it.href)),
   },
   {
