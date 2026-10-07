@@ -652,6 +652,12 @@ function BehaviourPageInner() {
             required={isSerious}
             rows={isSerious ? 5 : 3}
           />
+          {!isSerious && (
+            <span style={{ fontSize: '0.85em', color: 'var(--ink-soft)' }}>
+              With a comment, the event goes to parents only once the school office has approved it.
+              {form.type === 'positive' ? ' Without one, a merit goes to parents straight away.' : ''}
+            </span>
+          )}
         </label>
 
         {/* After the explanation, so the teacher records what happened

@@ -32,6 +32,13 @@ import BehaviourBrowser from '../../components/BehaviourBrowser';
 // While returned it counts 0 points and its future detention is cancelled,
 // and each return is tallied against the teacher (migration 337,
 // behaviour_event_returns, SMT and admin only).
+// Writing (migration 387, the principal 7 Oct 2026): any event with writing
+// waits here before it goes home, the whole event, points included. A merit
+// or a Stage 1-4 event with writing is listed under "Writing to approve",
+// where many can be ticked and sent (or kept at school) at once; one with a
+// picture gets a card like the others. A merit with no writing still goes
+// home at once, and a Stage 1-4 event with none still stays at school.
+// Changing an event's writing brings it back here, even after it was sent.
 // The "All events" tab (migration 376, app/components/BehaviourBrowser.js)
 // lists every event so the reviewers can look through comments and
 // categories, and change a category with a note to the teacher.
@@ -42,6 +49,13 @@ const PICTURE_STATUS = { pending: 'Waiting', approved: 'Sent', rejected: 'Not se
 // Beyond this many students on one picture (a whole boarding house), the
 // comments are shown once rather than with an editor each.
 const MAX_EDITORS = 5;
+
+// Ids per review call when sending many at once.
+const BATCH = 200;
+// The most "Writing to approve" rows read at once (the database's own cap).
+const WRITING_LIMIT = 1000;
+
+const hasWriting = (text) => !!text && text.trim() !== '';
 
 function fullName(p) {
   return p ? `${p.first_name} ${p.last_name}` : '—';
@@ -58,6 +72,10 @@ function ReviewInner() {
   const [students, setStudents] = useState([]);
   // Cards: { key, events: [...], photo: { photo_id, status, image_jpeg_base64, uploader } | null }
   const [items, setItems] = useState([]);
+  // Merits and Stage 1-4 events with writing, no picture: one table.
+  const [writing, setWriting] = useState([]);
+  const [picked, setPicked] = useState({}); // event_id -> true
+  const [writingConfirmed, setWritingConfirmed] = useState(false);
   const [history, setHistory] = useState([]);
   const [returnTally, setReturnTally] = useState([]); // [{ name, count, last }]
   const [loading, setLoading] = useState(true);
@@ -71,7 +89,7 @@ function ReviewInner() {
   async function load() {
     setLoading(true);
     const rules = await loadBehaviourRules();
-    const [{ data: s }, { data: photos }, { data: serious }, { data: h }, { data: rets }] = await Promise.all([
+    const [{ data: s }, { data: photos }, { data: serious }, { data: h }, { data: rets }, { data: written }] = await Promise.all([
       supabase.from('students').select('student_id, first_name, last_name').eq('status', 'active'),
       supabase
         .from('behaviour_photos')
@@ -98,6 +116,19 @@ function ReviewInner() {
         .from('behaviour_event_returns')
         .select('returned_at, teacher:staff!behaviour_event_returns_teacher_staff_id_fkey(first_name, last_name)')
         .order('returned_at', { ascending: false }),
+      // Writing not yet approved (migration 387): merits and Stage 1-4.
+      supabase
+        .from('behaviour_events')
+        .select(`${EVENT_FIELDS}, photo:behaviour_photos(photo_id, status, image_jpeg_base64)`)
+        .eq('visible_to_parents', false)
+        .is('protocol_reviewed_at', null)
+        .is('voided_at', null)
+        .is('returned_at', null)
+        .not('description', 'is', null)
+        .or(`type.eq.positive,points.gt.${rules.serious_event_points}`)
+        .order('event_date', { ascending: false })
+        .order('event_id', { ascending: false })
+        .limit(WRITING_LIMIT),
     ]);
 
     const pendingPhotos = photos || [];
@@ -122,9 +153,18 @@ function ReviewInner() {
       .filter((ev) => ev.photo?.status !== 'pending')
       .map(({ photo, ...ev }) => ({ key: `event-${ev.event_id}`, photo: photo || null, events: [ev] }));
 
+    const writtenEvents = (written || []).filter((ev) => hasWriting(ev.description));
+    // With a picture: a card, unless it's already on its picture's card.
+    const writtenPictureItems = writtenEvents
+      .filter((ev) => ev.photo_id && ev.photo?.status !== 'pending')
+      .map(({ photo, ...ev }) => ({ key: `event-${ev.event_id}`, photo: photo || null, events: [ev] }));
+
     setStudents(s || []);
     // A card with a picture is SMT's; one without is the office's.
-    setItems([...photoItems, ...seriousItems].filter((it) => (it.photo ? reviewsPictures : reviewsText)));
+    setItems([...photoItems, ...seriousItems, ...writtenPictureItems].filter((it) => (it.photo ? reviewsPictures : reviewsText)));
+    setWriting(reviewsText ? writtenEvents.filter((ev) => !ev.photo_id).map(({ photo, ...ev }) => ev) : []);
+    setPicked({});
+    setWritingConfirmed(false);
     setHistory(h || []);
     const tally = new Map();
     (rets || []).forEach((r) => {
@@ -178,6 +218,41 @@ function ReviewInner() {
     }
   }
 
+  async function decideWriting(send) {
+    const ids = writing.filter((ev) => picked[ev.event_id]).map((ev) => ev.event_id);
+    if (ids.length === 0) {
+      setStatus('Tick the events first.');
+      return;
+    }
+    if (send && !writingConfirmed) {
+      setStatus('Tick the protocol confirmation before sending to parents.');
+      return;
+    }
+    setBusyKey('writing');
+    setStatus(null);
+    let done = 0;
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const { error } = await supabase.rpc('review_behaviour_for_parents', {
+        p_event_ids: ids.slice(i, i + BATCH),
+        p_send_text: send,
+        p_send_picture: null,
+        p_protocol_confirmed: send ? writingConfirmed : false,
+      });
+      if (error) {
+        setBusyKey(null);
+        setStatus(`Error after ${done} of ${ids.length}: ${error.message}`);
+        load();
+        return;
+      }
+      done += Math.min(BATCH, ids.length - i);
+    }
+    setBusyKey(null);
+    setStatus(send
+      ? `${done} event${done === 1 ? '' : 's'} sent to parents.`
+      : `${done} event${done === 1 ? '' : 's'} kept at school; parents won't see ${done === 1 ? 'it' : 'them'}.`);
+    load();
+  }
+
   async function returnToTeacher(item) {
     const ev = item.events[0];
     const note = (returning[item.key] || '').trim();
@@ -205,9 +280,10 @@ function ReviewInner() {
     const { events, photo } = item;
     const first = events[0];
     const busy = busyKey === item.key;
-    // Negative events are hidden until sent; positive ones are always shown.
+    // Negative events and events with writing are hidden until sent; a
+    // merit with no writing is shown at once (migration 387).
     // A returned event can't be sent until the teacher has changed it.
-    const textHidden = events.some((e) => e.type === 'negative' && !e.visible_to_parents);
+    const textHidden = events.some((e) => !e.visible_to_parents);
     const textWaiting = textHidden && !events.some((e) => e.returned_at);
     const reviewedBefore = events.every((e) => e.protocol_reviewed_at);
     const photoWaiting = photo?.status === 'pending';
@@ -386,6 +462,94 @@ function ReviewInner() {
     );
   }
 
+  function renderWriting() {
+    const pickedCount = writing.filter((ev) => picked[ev.event_id]).length;
+    const allPicked = writing.length > 0 && pickedCount === writing.length;
+    const busy = busyKey === 'writing';
+    const updateWritten = (eventId, changes) => {
+      setWriting((list) => list.map((x) => (x.event_id === eventId ? { ...x, ...changes } : x)));
+      setWritingConfirmed(false);
+    };
+    return (
+      <>
+        <h2 style={{ marginTop: '1.5rem' }}>
+          Writing to approve ({writing.length}{writing.length >= WRITING_LIMIT ? '+' : ''})
+        </h2>
+        <p style={{ color: '#555', marginTop: 0 }}>
+          Merits and Stage 1–4 events with a comment. Parents see none of the event, points included,
+          until it&apos;s sent. Read each comment, use Edit to correct one, tick the ones to send, then
+          send them together. <em>Keep at school</em> means parents never see it.
+          {writing.length >= WRITING_LIMIT && ` Showing the newest ${WRITING_LIMIT}; the rest appear once these are done.`}
+        </p>
+        {writing.length === 0 ? <p>Nothing waiting.</p> : (
+          <>
+            <div className="table-scroll"><table>
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      aria-label="Tick all"
+                      checked={allPicked}
+                      onChange={(e) => setPicked(e.target.checked ? Object.fromEntries(writing.map((ev) => [ev.event_id, true])) : {})}
+                      style={{ width: 'auto' }}
+                    />
+                  </th>
+                  <th>Date</th><th>Student</th><th>Category</th><th>Points</th><th>Logged by</th><th>Comment</th>
+                </tr>
+              </thead>
+              <tbody>
+                {writing.map((ev) => (
+                  <tr key={ev.event_id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Tick ${fullName(ev.students)}`}
+                        checked={!!picked[ev.event_id]}
+                        onChange={(e) => setPicked((p) => ({ ...p, [ev.event_id]: e.target.checked }))}
+                        style={{ width: 'auto' }}
+                      />
+                    </td>
+                    <td>{formatUKDate(ev.event_date)}</td>
+                    <td>{fullName(ev.students)}</td>
+                    <td>{ev.category ?? '—'}</td>
+                    <td>{ev.points > 0 ? '+' : ''}{ev.points}</td>
+                    <td>{fullName(ev.staff)}</td>
+                    <td style={{ minWidth: '16rem' }}>
+                      <EventCommentEditor event={ev} onSaved={(changes) => updateWritten(ev.event_id, changes)} />
+                      {mentionsAnotherStudent(ev.description, ev.student_id) && (
+                        <span style={{ color: '#b45309', fontWeight: 'bold', fontSize: '0.85em' }}>
+                          ⚠ May name another enrolled student. Edit it before sending.
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+            <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <input
+                type="checkbox"
+                checked={writingConfirmed}
+                onChange={(e) => setWritingConfirmed(e.target.checked)}
+                style={{ flex: '0 0 auto', width: 'auto' }}
+              />
+              I confirm the ticked comments follow school behaviour protocol, name no other student, and are written in good English.
+            </label>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              <button disabled={busy || pickedCount === 0 || !writingConfirmed} onClick={() => decideWriting(true)} style={{ width: 'fit-content' }}>
+                {busy ? 'Working…' : `Send ${pickedCount} to parents`}
+              </button>
+              <button className="secondary" disabled={busy || pickedCount === 0} onClick={() => decideWriting(false)} style={{ width: 'fit-content' }}>
+                Keep {pickedCount} at school
+              </button>
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
+
   if (!canReview) {
     return <p>This page is for SMT, school office staff and admin only.</p>;
   }
@@ -428,8 +592,8 @@ function ReviewInner() {
       <h1>Behaviour Review</h1>
       {tabs}
       <p style={{ color: '#555' }}>
-        {reviewsPictures && `You review ${seriousPoints} events and every event with a picture. `}
-        {reviewsText && !reviewsPictures && `You review ${seriousPoints} events without a picture. SMT review any event with a picture. `}
+        {reviewsPictures && `You review ${seriousPoints} events, every event with writing, and every event with a picture. `}
+        {reviewsText && !reviewsPictures && `You review ${seriousPoints} events and every event with writing, without a picture. SMT review any event with a picture. `}
         Check each event before parents see it. The text and the picture are
         separate. You can send the text with the picture, send the text without
         it, or use Edit to correct the text first and then send it. Before
@@ -446,6 +610,8 @@ function ReviewInner() {
         <>
           <h2>Waiting for review ({waiting.length})</h2>
           {waiting.length === 0 ? <p>Nothing waiting.</p> : waiting.map(renderItem)}
+
+          {reviewsText && renderWriting()}
 
           {returned.length > 0 && (
             <>
