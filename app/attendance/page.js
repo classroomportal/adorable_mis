@@ -25,7 +25,7 @@ function AttendanceInner() {
   const [roster, setRoster] = useState([]);
   const [marks, setMarks] = useState({}); // student_id -> code
   const [lateMinutes, setLateMinutes] = useState({}); // student_id -> minutes late, as typed
-  const [planned, setPlanned] = useState({}); // student_id -> true when the mark came from a planned absence (318)
+  const [planned, setPlanned] = useState({}); // student_id -> 'planned' (318) or 'office' (390) when only the office can change the mark
   // Planned-absence marks can be changed only by the school office and the
   // attendance officer (389); for everyone else they're read-only here.
   const [isOffice, setIsOffice] = useState(false);
@@ -86,7 +86,7 @@ function AttendanceInner() {
         .eq('attend_date', date)
         .eq('period_number', periodNumber)
         .in('student_id', ids);
-      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id, other_half_activity_id');
+      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id, office_locked, other_half_activity_id');
       // Until migration 318 is run there's no planned_absence_id column; the
       // register must still show the marks already taken.
       if (existingError) ({ data: existing } = await existingMarks('student_id, code, minutes_late'));
@@ -98,12 +98,13 @@ function AttendanceInner() {
         if (row.code) prefill[row.student_id] = row.code;
         // A mark from an Other Half register is re-saved as this lesson's,
         // even unchanged, so it stops counting as OH attendance (385). A
-        // planned-absence mark isn't: it stays the absence's, and only the
-        // office can change it (389).
-        savedNow[row.student_id] = row.other_half_activity_id && !row.planned_absence_id
+        // planned-absence mark, or an authorised absence the office entered,
+        // isn't: only the office can change it (389, 390).
+        const officeMark = row.planned_absence_id || row.office_locked;
+        savedNow[row.student_id] = row.other_half_activity_id && !officeMark
           ? 'resave'
           : `${row.code || ''}|${row.minutes_late ?? ''}`;
-        if (row.planned_absence_id) plannedIds[row.student_id] = true;
+        if (officeMark) plannedIds[row.student_id] = row.planned_absence_id ? 'planned' : 'office';
         if (row.minutes_late !== null && row.minutes_late !== undefined) {
           prefillMinutes[row.student_id] = String(row.minutes_late);
         }
@@ -478,10 +479,10 @@ function AttendanceInner() {
                             <option key={c.code} value={c.code}>{c.code} — {c.description}</option>
                           ))}
                         </select>
-                        {/* Filled in by a planned absence (318); only the office can change it (389). */}
+                        {/* From a planned absence (318) or entered by the office (390); only the office can change it (389). */}
                         {planned[s.student_id] && (
-                          <span title="Filled in from a planned absence. Only the school office or the attendance officer can change it." style={{ marginLeft: '0.35rem', fontSize: '0.75em', color: '#475569' }}>
-                            planned
+                          <span title={`${planned[s.student_id] === 'planned' ? 'Filled in from a planned absence' : 'Entered by the office'}. Only the school office or the attendance officer can change it.`} style={{ marginLeft: '0.35rem', fontSize: '0.75em', color: '#475569' }}>
+                            {planned[s.student_id]}
                           </span>
                         )}
                       </td>

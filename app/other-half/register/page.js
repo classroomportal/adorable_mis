@@ -52,8 +52,9 @@ function RegisterInner() {
   const [marks, setMarks] = useState({});
   const [lateMinutes, setLateMinutes] = useState({});
   const [elsewhere, setElsewhere] = useState({}); // student_id -> activity name, when already marked in another activity
-  // Marks from a planned absence: only the school office and the attendance
-  // officer can change them (389), so for everyone else they're read-only.
+  // Marks from a planned absence, or authorised absences the office entered:
+  // only the school office and the attendance officer can change them (389,
+  // 390), so for everyone else they're read-only.
   const [planned, setPlanned] = useState(new Set());
   const [isOffice, setIsOffice] = useState(false);
   // student_id -> {class_code, teacher_name}: a timetabled lesson in this
@@ -116,7 +117,7 @@ function RegisterInner() {
       const { data: existing } = ids.length
         ? await supabase
           .from('attendance')
-          .select('student_id, code, minutes_late, other_half_activity_id, planned_absence_id, other_half_activities(activity_name)')
+          .select('student_id, code, minutes_late, other_half_activity_id, planned_absence_id, office_locked, other_half_activities(activity_name)')
           .eq('attend_date', date)
           .eq('period_number', slots.periodNumber)
           .in('student_id', ids)
@@ -126,7 +127,7 @@ function RegisterInner() {
       const other = {};
       const plannedIds = new Set();
       for (const row of existing || []) {
-        if (row.planned_absence_id) plannedIds.add(String(row.student_id));
+        if (row.planned_absence_id || row.office_locked) plannedIds.add(String(row.student_id));
         if (row.other_half_activity_id && row.other_half_activity_id !== activity.activity_id) {
           other[row.student_id] = row.other_half_activities?.activity_name || 'another activity';
           continue;
@@ -334,7 +335,7 @@ function RegisterInner() {
                         <select
                           value={marks[s.student_id] || ''}
                           disabled={readOnly || (planned.has(String(s.student_id)) && !isOffice)}
-                          title={planned.has(String(s.student_id)) ? 'From a planned absence. Only the school office or the attendance officer can change it.' : undefined}
+                          title={planned.has(String(s.student_id)) ? 'Entered by the office. Only the school office or the attendance officer can change it.' : undefined}
                           onChange={(e) => setMark(s.student_id, e.target.value)}
                           aria-label={`Code — ${s.first_name} ${s.last_name}`}
                           style={{ width: '6.5rem' }}
