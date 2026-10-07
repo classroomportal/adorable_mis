@@ -548,12 +548,15 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - Changes and deletions are logged in Change History.
 
 **What parents see**
-- Positive events are always visible to parents.
+- **Any event with writing in it is approved before it goes home** (migration 387, the principal, 7 Oct 2026), positive or negative. Until it is approved parents see nothing of it, points included. A merit with no writing still goes to parents at once.
 - **Negative events are hidden from parents until reviewed** at `/behaviour/review` (238, 239):
   - Events with a picture: SMT or admin decide. They can send the text with the picture, send the text only, or decline.
   - −5 events without a picture: the principal's PA (through her school office role), SMT or admin release the text (SMT since migration 336).
-  - −1 to −4 events without a picture never go to parents.
-- **The review is the only way a negative event reaches parents** (305): staff can't make an event visible to parents, mark it reviewed or change its type directly, and a new negative event always starts hidden.
+  - −1 to −4 events with writing: approved like merits with writing (below), and go home once sent (387). Without writing they never go to parents.
+- **Merits and −1 to −4 events with writing** wait under "Writing to approve" on Behaviour Review, for the school office (the PA), SMT or admin (SMT for one with a picture). The reviewer can correct a comment, tick many and send them together after confirming they follow protocol, name no other student and are in good English, or keep them at school, in which case parents never see them.
+- **Changing the writing sends it back for approval** (387): if anyone edits an event's comment, even after it was sent, parents stop seeing the event until it is approved again.
+- **The review is the only way an event with writing, or a negative event, reaches parents** (305, 387): staff can't make an event visible to parents, mark it reviewed or change its type directly, and a new negative event, or one with writing, always starts hidden.
+- Students still see their own events, with the writing, straight away.
 - SMT get a "picture to check" notice in their Formwork inbox.
 
 **Behaviour alert emails** (168, 202)

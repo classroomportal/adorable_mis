@@ -301,7 +301,7 @@ const TABS = [
     items: ({ hasAccess }) => [
       { href: '/detention', label: 'Detentions', desc: "This week's Friday detention list." },
       { href: '/pastoral/behaviour-totals', label: 'Behaviour Totals', desc: "Running totals of positive and negative points, by student and by mentor group." },
-      { href: '/behaviour/review', label: 'Behaviour Review', desc: "Check serious incidents (office) and behaviour pictures (SMT) before parents see them; look through all events and correct categories." },
+      { href: '/behaviour/review', label: 'Behaviour Review', desc: "Approve serious incidents and any event with writing (office) and behaviour pictures (SMT) before parents see them; look through all events and correct categories." },
       { href: '/appeals', label: 'Behaviour Appeals', desc: "Accept or reject students' behaviour appeals." },
       { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
       { href: '/attendance/planned-absences', label: 'Planned Absences', desc: "Give a student one attendance code for a run of days: illness, holiday, exclusion." },
