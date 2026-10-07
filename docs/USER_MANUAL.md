@@ -25,7 +25,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
-| Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, reward store, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
+| Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, reward store, the Worry Box and wellbeing check-ins, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
 | Care and conduct | [8. The Other Half and student groups](#8-the-other-half-and-student-groups) | Activity registers, the programme, student choices, groups, building a group from a rule | All staff; SMT; pastoral |
 | Care and conduct | [9. Calendar, messages and email](#9-calendar-messages-and-email) | The calendar, sending messages, the inbox, where replies go | SMT, office, pastoral |
 | School business | [10. Fees and bills](#10-fees-and-bills) | Payments, charging, fee items, discounts, debtors, price approval, the SMT dashboard | Bursar, SMT, principal, college secretary |
@@ -66,7 +66,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 
 ## About this manual
 
-This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 5 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
+This manual explains how to use every part of Formwork, the school's MIS at [misform.work](https://misform.work), as it stands on 7 October 2026. It is written for the people who use it every day: teachers, mentors, houseparents, the school office, the bursar, the tuckshop, admissions, SMT and administrators, and it ends with what students and parents see.
 
 **How it is organised.** It starts with How each person uses Formwork: a guide for each role (teachers, mentors, leaders, the office, specialist roles, students and parents) to what they do each day, week and term. Two short sections follow it for everyone: Using Formwork to raise achievement, and Safeguarding and keeping students safe. After that, each chapter covers one area of the school's work. It says who can use the pages, walks through the common tasks step by step, and lists the rules the system enforces so you know why something is refused. Where a page is only open to some roles, the chapter says so at the top.
 
@@ -327,6 +327,7 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 
 - You can see and edit every medical record and sick-bay visit, but not delete them.
 - When a visit is a safeguarding matter, tick **Safeguarding** as you record it, or press **Mark as safeguarding** on it in the Sick Bay Log. Its symptoms are then yours alone; the nurses still see the medicine given (chapter 7, The clinic).
+- With the principal, you read the **Worry Box** and **Wellbeing** check-ins and see the **School Rating** (chapter 7, The Worry Box, wellbeing check-ins and school rating). Open urgent worries first.
 
 ### Students and parents
 
@@ -339,6 +340,7 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 - **When the Reward Store is open**: spend your merit points on a reward from the **Reward Store** tile. Your merit total doesn't go down; only your points to spend do.
 - **When you get a behaviour point you think is unfair**: open **Behaviour** and appeal it once, explaining why. Pastoral staff decide. If a test mark doesn't match your marked paper, appeal it within 5 days under Assessment, Appeal a mark; your teacher checks the paper.
 - **After a lesson, by the end of the next day**: tap **Give feedback** on it on your **Timetable**. Choose green, amber or red for how well you understood it and answer every question. Your teacher sees the class's answers together, never your name.
+- **When something worries you**: use the **Worry Box** tile. Only the Designated Safeguarding Lead and the Principal read it. If you are in danger, tell any member of staff straight away. When a **wellbeing check-in** pops up, answer it honestly; and when **Rate the School** appears, tell us what you think (your name isn't shown with it).
 - **At the end of term**: download your report and transcripts from **Assessment**.
 
 **Parents**
@@ -456,7 +458,7 @@ Formwork helps keep students safe by showing where they are, raising alerts when
 | Showing patterns in attendance, behaviour, sick-bay visits and results | Deciding whether something is a safeguarding matter: that is the safeguarding lead's job |
 | Recording conduct (behaviour events) and medical care (clinic) | Sharing sensitive information with colleagues who don't need it |
 
-Formwork has no safeguarding or concern record, so anything typed into it is not a safeguarding report and nobody is alerted to it as one.
+Formwork has no safeguarding or concern record for staff, so anything staff type into it is not a safeguarding report and nobody is alerted to it as one. The one exception is the students' own Worry Box and wellbeing check-in, which go straight to the DSL and the principal (chapter 7). They don't replace telling the DSL what a student has told you.
 
 ### Who to tell
 
@@ -570,7 +572,7 @@ A teacher with the mentor and Head of Department roles sees far fewer cards:
 
 ![A teacher's dashboard](manual-images/03-dashboard-teacher.jpg)
 
-Hover over (or tab to) a link on a card to see a one-line description of the page. The numbers on the Students, Staff & Access and Pastoral cards (active students, staff, behaviour alerts in the last 7 days) are links to those pages. The Rewards card shows how many reward orders are waiting for you to accept.
+Hover over (or tab to) a link on a card to see a one-line description of the page. The numbers at the top of the Students, Staff & Access, Pastoral and Rewards cards (active students, staff, behaviour alerts in the last 7 days, reward orders waiting for you) open those pages, which aren't listed again as links: press Active students to find a student, Staff for Staff & Roles, and Orders waiting for reward orders. Registers have their own Attendance card, straight after Pastoral: Take a Register, Missing Registers, Register Alerts, Planned Absences and Student Marks.
 
 ### Roles and what they open
 
@@ -738,7 +740,7 @@ Lists every lesson today that started more than 15 minutes ago and has no marks,
 
 ![Registers still outstanding](manual-images/12-rnd.jpg)
 
-Every 15 minutes, outstanding registers are also copied into **Register Alerts** (/admin/register-alerts) for HR, the school office and admins. An alert stays even if the register is taken later, until someone ticks **Resolved**.
+Every 15 minutes, outstanding registers are also copied into **Register Alerts** (/admin/register-alerts, on the Attendance card) for HR, the school office and admins. It opens on All staff: one line per person with their number of alerts, total minutes late and latest date. Click a name, or choose the person in the Staff drop-down, to see their alerts. An alert stays even if the register is taken later, until someone ticks **Resolved**.
 
 ![Register Alerts](manual-images/15-register-alerts.jpg)
 
@@ -780,12 +782,14 @@ From 8 October 2026, a student who was in school that day (marked present or lat
 - If the mark was wrong, correct it on the register (present, late or an authorised absence). The event is withdrawn and its detention cancelled if it hasn't happened yet.
 - Only the day's registers are checked, so take registers on the day.
 
+**The teacher is asked to confirm.** Whoever marked the student absent gets an email and a Formwork inbox message: the student, the lesson or activity, the code, the −5 and the detention date, and "Was \<name> really not in your lesson?". If they weren't there, do nothing. If they were, or were away for a reason, correct the mark from the link in the message; the −5 and the detention are withdrawn at once. Replies go to the attendance officer.
+
 ### Planned absences (/attendance/planned-absences)
 
-When a student will be away for several days, or has been excluded, enter it once here instead of marking every register. Open to the school office, the attendance officer, pastoral staff, SMT and admins, from the Pastoral card.
+When a student will be away for several days or for some lessons, or has been excluded, enter it once here instead of marking every register. Open to the school office, the attendance officer, pastoral staff, SMT and admins, from the Attendance card.
 
 1. Type part of the student's name (and pick a year if needed), then click the student.
-2. Choose the **First day** and **Last day** (whole days), the **Code**, and a **Note** if it helps. The note is for staff only; parents never see it.
+2. Choose the **First day** and **Last day** (for part of a day, also the From lesson on the first day and the To lesson on the last; leave them on Whole day otherwise: one day, Period 3 to Period 5, works), the **Code**, and a **Note** if it helps. The note is for staff only; parents never see it.
 3. Press **Save planned absence**. The page says how many register marks it has filled in so far.
 
 ![Adding a planned absence, with the current and upcoming list below](manual-images/16-planned.jpg)
@@ -799,13 +803,26 @@ What it fills in:
 
 Only authorised codes can be planned: I (illness), M (medical or dental appointment), H (authorised holiday), E (educational visit), C (other authorised absence) and **X (excluded from school)**.
 
-**On the register.** The teacher sees the code already filled in, marked "planned", and saves the register as usual. If the student turns up after all, the teacher changes the code to present or late and saves. Once a teacher has saved the register, the mark is theirs.
+**On the register.** The teacher sees the code already filled in, marked "planned", and saves the register as usual. Teachers can't change or remove it. If the student turns up after all, tell the school office or the attendance officer: they change it on the register or on Student Marks (below), and it then becomes an ordinary mark. A lesson where every student already has a mark (a whole class on a visit) counts as taken.
 
 ![A register with a planned absence filled in and marked "planned"](manual-images/16b-register-planned.jpg)
 
-**Back early, or entered by mistake.** In the list, choose the **Back on** day and press **End early**: the marks from that day on are removed. **Cancel** removes the whole absence and all its marks. Marks a teacher has already saved are left as they are.
+**Back early, or entered by mistake.** In the list, choose the **Back on** day and press **End early**: the marks from that day on are removed. **Cancel** removes the whole absence and all its marks. Back on can also take a lesson, for a student back part-way through a day. Marks the office has changed are left as they are.
 
-A student can have only one planned absence on any day. Every planned absence, and every mark removed by ending or cancelling one, is kept in Change History.
+**Wrong code.** The school office and the attendance officer can press **Change code** on an absence in the list and choose a **New code**; every mark it filled in changes with it.
+
+A student can't have two planned absences over the same lessons; two on one day are fine if their lessons don't overlap. Every planned absence, and every mark removed by ending or cancelling one, is kept in Change History.
+
+### Student Marks (/attendance/student-marks)
+
+For the school office and the attendance officer: put right one student's marks, lesson by lesson, without opening each register. For example, a student was at the dentist for two lessons last Tuesday and in sick bay for one on Thursday.
+
+1. Find the student, choose the **First day** and **Last day** (up to 62 days, not after today) and press **Show lessons**.
+2. Each day lists every lesson on their timetable (registration, the Other Half and Evening Prep included) with the **Mark now** and who gave it. A mark on a lesson no longer on their timetable is shown too.
+3. Choose a code in **Change to** for any lesson, or **Remove the mark**. To give several lessons the same code, tick them, choose the code and press **Give ticked lessons this code**.
+4. Press **Save changes**. **Undo changes** clears what you haven't saved.
+
+A changed mark shows you as the person who gave it; a planned-absence mark changed here becomes an ordinary mark. Correcting an absent mark withdraws its automatic missed-lesson negative, as on a register. Every change is kept in Change History.
 
 ### Attendance summaries
 
@@ -838,7 +855,7 @@ Your own classes appear as buttons under **My classes**. **Other classes** lists
 
 ### Setting homework
 
-Press **Set homework**, on /homework or in the Homework panel of a class register.
+Press **Set homework** in the Homework panel of the lesson's register: open it from your timetable, or from Take a Register on the Attendance card. Heads of Department can open another teacher's lesson from that teacher's timetable. The full Homework page (/homework) has no link on the dashboard; open it from Mark book → on the register, or type /homework.
 
 ![Setting homework](manual-images/21-hw-set.jpg)
 
@@ -1141,7 +1158,7 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 **If your Stage 5 comes back.** The reviewer can return a Stage 5 that doesn't look serious enough. You get a message in your inbox with their reason, and the note shows on the event. Its points stop counting straight away, and its detention is cancelled if it hasn't happened yet. Press **Edit** on the event: choose the right category if it isn't a Stage 5 (its points then count), or keep Stage 5 and improve the explanation, which brings back the −5 and its detention and sends it back for review. Every return is counted against the teacher who logged the event, and SMT can see the count.
 
-**A Stage 5 during your lesson.** If you log a Stage 5 for a student you are teaching right now (your lesson, a lesson you are covering, or your Other Half activity), the school office gets a purple pop-up asking them to collect the student from your room, and Log behaviour tells you the office has been asked. The office presses **Going to collect**, which clears it from every office screen. A Stage 5 logged later, or for a student you aren't teaching at that moment, raises no pop-up.
+**A Stage 5 during your lesson.** If you log a Stage 5 for a student you are teaching right now (your lesson, a lesson you are covering, or your Other Half activity), the school office gets a purple pop-up asking them to collect the student from your room, and Log behaviour tells you the office has been asked. The office presses **Going to collect**, which clears it from every office screen. A Stage 5 logged later, or for a student you aren't teaching at that moment, raises no pop-up. During prep, a Stage 5 logged by anyone sends the pop-up to the Head of Boarding instead, to collect the student from prep, and Log behaviour says so.
 
 ![Logging a serious event, with the Stage 5 guidance and the confirmation tick](manual-images/50-log.jpg)
 
@@ -1202,7 +1219,7 @@ Students spend merit points on rewards. Spending never lowers their merit total:
 
 **What the student does.** On the **Reward Store** tile, they choose a reward and a day (up to 28 days ahead) and press order. They can cancel it until someone decides it, and they get an inbox message when it is accepted or declined.
 
-**Accepting orders.** Open **Orders** on the Rewards card. The card shows how many orders are waiting for you.
+**Accepting orders.** Open **Orders** by pressing the number of orders waiting at the top of the Rewards card.
 
 1. Each order shows the student, the reward, the day and the student's points.
 2. Press **Accept** or **Decline**. For Assistant for a day, choose the member of staff the student will help; they get an inbox message too.
@@ -1258,6 +1275,40 @@ The clinic holds each student's medical profile and consents, conditions, growth
 /staff/records holds each staff member's profile, appointment, police clearance, training, warnings, and absence and lateness. HR and SMT can read; only HR and admins can edit. A filter shows staff whose police clearance is missing, expired or due.
 
 ![Staff Records](manual-images/59-staff-records.jpg)
+
+### The Worry Box, wellbeing check-ins and school rating
+
+Students can tell the school what worries them, answer a short wellbeing check-in about every two months, and rate the school about once a term. Only the Designated Safeguarding Lead (cs@) and the principal see worries and check-ins, with the student's name. Admins, SMT, pastoral staff and teachers can't, and parents see none of it. Everyone else: if a student tells you something worrying, follow the school's safeguarding procedure as usual; the Worry Box doesn't replace that.
+
+**What students see.** Three things on the student portal:
+
+- **Worry Box** tile: choose what it's about (bullying or friendships, a member of staff, feelings, home or family, the boarding house, equipment and facilities, something else), write it, and tick **urgent** if they don't feel safe or need to talk to someone soon. Up to 5 a day. They see what they've sent, whether it's been read, and any reply.
+- **Wellbeing check-in**: while a check-in is open, a pop-up with 15 questions (about 3 minutes) on how they're feeling, sleeping, eating, coping with work and pressure, being away from home, the boarding house, friends and feeling safe, plus an optional comment. **Not now** hides it until the next morning, but from the check-in's must-answer day it can't be put off.
+- **Rate the School** tile: while a rating is open, they rate 10 areas of school life from 1 to 5, once, and can add one thing the school does well and one it could do better. Their name isn't shown with their answers.
+
+**For the DSL and the principal.** Three tiles on your dashboard: **Worry Box**, **Wellbeing** and **School Rating**. When a worry arrives, or a check-in has an answer that needs a look, you both get an inbox message and an email. They never say who or what, only whether it's urgent; check-in emails come at most once an hour.
+
+**Worry Box** (/worry-box)
+
+1. Open the **Worry Box** tile. New worries are in bold; urgent ones have a red **Urgent** badge.
+2. Click a worry to read it. Opening it marks it read, so the other person can see it's being dealt with.
+3. Add a **note** for yourselves (the student never sees notes), or tick **Send as a reply the student sees** to answer them on their portal. They get an inbox message saying there's a reply, without its text.
+4. When it's dealt with, press **Close** (with a reason if you like). **Reopen** brings it back.
+
+To record a slip from the paper box, press **Type in a paper slip**, pick the student (or leave it empty if the slip isn't signed), choose what it's about, type it and give the date it was found. Nothing is ever deleted.
+
+**Wellbeing check-ins** (/wellbeing)
+
+- The top shows how many students have answered. **To follow up** lists the check-ins with an answer that needs a look, or a comment, and shows those answers. **All answers** opens the rest.
+- When you've spoken to the student, add a note and press **Mark followed up**.
+- **Answers across the school** totals every question.
+- **Next check-in**: choose the opening day and time and the closing day (it suggests two months after the last). After adding it, set **Must be answered from** on the check-in to stop students putting it off from that day. You can change the closing date while it is open.
+
+**School Rating** (/school-rating)
+
+- **Open a school rating** at the bottom: opening day and time, and closing day. Students see the tile until the end of the closing day.
+- **Results** shows each area's average (green 4 or above, amber 3 to 4, red below 3) and the spread of answers, by year group or by boarding house. A group with fewer than 3 answers shows "under 3", so nobody can be picked out.
+- **What students wrote** lists the comments without names, in a mixed-up order, once 3 students have answered.
 
 ## 8. The Other Half and student groups
 
@@ -1401,7 +1452,7 @@ Nobody reads mis@abc.sch.ng, so each kind of email carries a Reply-To. SMT and a
 
 The bursar runs invoices, charges, payments and discounts. Prices change only when both the principal and the college secretary approve, and parents see a term's fees only once SMT publishes that term.
 
-The bursar's home page has no top rows of tiles. Like everyone else's, it shows a card for every page the bursar's roles can open, so ticking a page for the bursar at Permissions makes its card appear.
+The bursar's home page has no top rows of tiles. Like everyone else's, it shows the card numbers and a card for every page the bursar's roles can open, so ticking a page for the bursar at Permissions makes its card appear.
 
 ![The bursar's home page](manual-images/80-bursar-home.jpg)
 
