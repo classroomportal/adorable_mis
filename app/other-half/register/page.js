@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
+import { canUseExclusionCode, offeredCodes, lockedExclusion } from '../../../lib/exclusions';
 import { formatUKDate } from '../../../lib/formatDate';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday, minutesSinceSchoolTime } from '../../../lib/schoolTime';
@@ -40,7 +41,8 @@ function snapshot(marks, minutes) {
 
 function RegisterInner() {
   const searchParams = useSearchParams();
-  const { profile } = useAuth();
+  const { profile, staffRoles } = useAuth();
+  const canExclude = canUseExclusionCode(staffRoles);
   const activityId = Number(searchParams.get('activityId')) || null;
   const [activity, setActivity] = useState(null);
   const [term, setTerm] = useState(null);
@@ -333,14 +335,14 @@ function RegisterInner() {
                       ) : (
                         <select
                           value={marks[s.student_id] || ''}
-                          disabled={readOnly || (planned.has(String(s.student_id)) && !isOffice)}
+                          disabled={readOnly || (planned.has(String(s.student_id)) && !isOffice) || lockedExclusion(marks[s.student_id], canExclude)}
                           title={planned.has(String(s.student_id)) ? 'From a planned absence. Only the school office or the attendance officer can change it.' : undefined}
                           onChange={(e) => setMark(s.student_id, e.target.value)}
                           aria-label={`Code — ${s.first_name} ${s.last_name}`}
                           style={{ width: '6.5rem' }}
                         >
                           <option value="">—</option>
-                          {codes.map((c) => <option key={c.code} value={c.code}>{c.code} — {c.description}</option>)}
+                          {offeredCodes(codes, canExclude, marks[s.student_id]).map((c) => <option key={c.code} value={c.code}>{c.code} — {c.description}</option>)}
                         </select>
                       )}
                     </td>

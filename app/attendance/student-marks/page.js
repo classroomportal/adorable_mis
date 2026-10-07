@@ -5,6 +5,8 @@ import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { schoolToday } from '../../../lib/schoolTime';
 import { formatUKDate } from '../../../lib/formatDate';
+import { useAuth } from '../../../lib/AuthContext';
+import { canUseExclusionCode, offeredCodes, lockedExclusion } from '../../../lib/exclusions';
 
 // Student Marks (migration 390): the office changes one student's register
 // marks lesson by lesson over a run of days, without opening each register.
@@ -27,6 +29,9 @@ const keyOf = (r) => `${r.attend_date}|${r.period_number}`;
 
 function StudentMarksInner() {
   const today = schoolToday();
+  const { staffRoles } = useAuth();
+  // X marks are the principal's and the college secretary's (396).
+  const canExclude = canUseExclusionCode(staffRoles);
   const [students, setStudents] = useState([]);
   const [codes, setCodes] = useState([]);
   const [filter, setFilter] = useState({ name: '', year: '' });
@@ -142,7 +147,7 @@ function StudentMarksInner() {
   const codeOptions = (blank) => (
     <>
       <option value="">{blank}</option>
-      {codes.map((c) => <option key={c.code} value={c.code}>{c.code}: {c.description}</option>)}
+      {offeredCodes(codes, canExclude).map((c) => <option key={c.code} value={c.code}>{c.code}: {c.description}</option>)}
     </>
   );
 
@@ -260,9 +265,11 @@ function StudentMarksInner() {
                           <td>
                             <span style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
                               <select value={ch?.code || ''} aria-label={`New mark for ${r.period_name}`}
+                                disabled={lockedExclusion(r.code, canExclude)}
+                                title={lockedExclusion(r.code, canExclude) ? 'An exclusion. Only the principal or the college secretary can change it.' : undefined}
                                 onChange={(e) => setChange(r, { code: e.target.value })}>
                                 <option value="">No change</option>
-                                {codes.map((c) => <option key={c.code} value={c.code}>{c.code}: {c.description}</option>)}
+                                {offeredCodes(codes, canExclude).map((c) => <option key={c.code} value={c.code}>{c.code}: {c.description}</option>)}
                                 {r.code && <option value={REMOVE}>Remove the mark</option>}
                               </select>
                               {late && (

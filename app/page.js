@@ -10,6 +10,7 @@ import { findMyParentId } from '../lib/parentByEmail';
 import { useTileOrder, sortTiles } from '../lib/tileOrder';
 import StudentHome from './components/StudentHome';
 import TuckshopOrderingStatus from './components/TuckshopOrderingStatus';
+import { canUseExclusionCode } from '../lib/exclusions';
 
 // Every chip is the same fixed-size box, whatever the length of its label, and
 // carries a one-line description that pops out on hover or keyboard focus.
@@ -359,12 +360,17 @@ const TABS = [
     // about them in one place, moved from the Students and Pastoral cards.
     key: 'attendance', label: 'Attendance', icon: '✅', accent: 'students',
     description: 'Take registers, chase missing ones, and correct or plan absences.',
-    items: ({ hasAccess }) => [
+    items: ({ hasAccess, staffRoles }) => [
       { href: '/attendance', label: 'Take a Register', desc: "Take a register for a lesson or mentor group." },
       { href: '/pastoral/registers-not-done', label: 'Missing Registers', desc: "Today's registers that haven't been taken." },
       { href: '/admin/register-alerts', label: 'Register Alerts', desc: "Staff who didn't take a register on time, person by person." },
       { href: '/attendance/planned-absences', label: 'Planned Absences', desc: "Give a student one attendance code for a run of days: illness, holiday, exclusion." },
       { href: '/attendance/student-marks', label: 'Student Marks', desc: "Change one student's register marks lesson by lesson over a run of days (office)." },
+      // Migration 396: the principal and the college secretary only, checked on
+      // the roles themselves (admin is not enough), as record_exclusion() does.
+      ...(canUseExclusionCode(staffRoles)
+        ? [{ href: '/attendance/exclusions', label: 'Exclusions', desc: "Record an internal exclusion or an exclusion from school: registers marked X and parents told." }]
+        : []),
     ].filter((it) => hasAccess(it.href)),
   },
   {

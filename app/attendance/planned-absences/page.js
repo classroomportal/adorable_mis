@@ -14,7 +14,10 @@ import { formatUKDate } from '../../../lib/formatDate';
 // teachers can't change them, and only the office (school office, attendance
 // officer) can change an absence's code. All the checks happen in the
 // database (plan_absence() / end_planned_absence_from() /
-// change_planned_absence_code()); this page only asks.
+// change_planned_absence_code()); this page only asks. Exclusions (X) are
+// recorded and changed only by the principal and the college secretary, at
+// /attendance/exclusions (migration 396), so X isn't offered here and X
+// absences are shown without their buttons.
 
 const fullName = (s) => (s ? `${s.first_name} ${s.last_name}` : '');
 const MAX_MATCHES = 30;
@@ -58,9 +61,11 @@ function PlannedAbsencesInner() {
           .select('student_id, first_name, last_name, year_group, form_class')
           .eq('status', 'active')
           .order('last_name'),
-        // Only authorised codes can be planned (the database refuses others).
+        // Only authorised codes can be planned (the database refuses others),
+        // and not X, which only Exclusions records (396).
         supabase.from('attendance_codes').select('code, description, status')
           .eq('status', 'authorized_absence')
+          .neq('code', 'X')
           .order('description'),
         supabase.from('periods').select('period_number, period_name').order('period_number'),
         // Only shows or hides Change code; the database checks it again.
@@ -186,12 +191,14 @@ function PlannedAbsencesInner() {
       <h1>Planned Absences</h1>
       <p>
         Give a student one attendance code for a run of days, or from one lesson to another:
-        illness, an appointment, an authorised holiday, an educational visit or an exclusion. Every
+        illness, an appointment, an authorised holiday or an educational visit. Every
         lesson they have in that time (registration, Other Half and Evening Prep included) is
         filled in for the teacher. Past days and today are filled in straight away and later days
         each morning. A mark already in a register is never overwritten. Days outside term dates
         and holidays on the calendar are skipped. Teachers can't change these marks; only the
         school office and the attendance officer can, and only they can change an absence's code.
+        Exclusions (X) are recorded only by the principal and the college secretary, on Exclusions,
+        and only they can change them.
       </p>
 
       <form onSubmit={handleAdd} className="card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
@@ -283,6 +290,7 @@ function PlannedAbsencesInner() {
               <tbody>
                 {absences.map((a) => {
                   const over = a.end_date < today;
+                  const exclusion = a.code === 'X';
                   return (
                     <tr key={a.id}>
                       <td>{fullName(a.students)}<br /><span style={{ color: '#666', fontSize: '0.85em' }}>Year {a.students?.year_group}{a.students?.form_class ? `, ${a.students.form_class}` : ''}</span></td>
@@ -291,7 +299,10 @@ function PlannedAbsencesInner() {
                       <td>{a.notes || <span style={{ color: '#999' }}>—</span>}</td>
                       <td>{a.staff ? fullName(a.staff) : <span style={{ color: '#999' }}>—</span>}<br /><span style={{ color: '#666', fontSize: '0.85em' }}>{formatUKDate(a.created_at.slice(0, 10))}</span></td>
                       <td>
-                        {!over && (
+                        {!over && exclusion && (
+                          <span style={{ color: '#666', fontSize: '0.85em' }}>An exclusion: only the principal or the college secretary can change it, on Exclusions.</span>
+                        )}
+                        {!over && !exclusion && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                             <span style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
                               <span style={{ fontSize: '0.85em' }}>Back on</span>

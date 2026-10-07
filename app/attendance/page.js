@@ -9,12 +9,14 @@ import { formatUKDate } from '../../lib/formatDate';
 import { formatTimeRange } from '../../lib/formatTime';
 import { schoolToday, minutesSinceSchoolTime } from '../../lib/schoolTime';
 import { useAuth } from '../../lib/AuthContext';
+import { canUseExclusionCode, offeredCodes, lockedExclusion } from '../../lib/exclusions';
 import RegisterHomework from '../components/RegisterHomework';
 import SaveBar, { useSaveStatus } from '../components/SaveBar';
 
 function AttendanceInner() {
   const searchParams = useSearchParams();
-  const { profile } = useAuth();
+  const { profile, staffRoles } = useAuth();
+  const canExclude = canUseExclusionCode(staffRoles);
   const [periods, setPeriods] = useState([]);
   const [mentorClasses, setMentorClasses] = useState([]);
   const [subjectClasses, setSubjectClasses] = useState([]);
@@ -251,11 +253,13 @@ function AttendanceInner() {
     const all = {};
     // Planned-absence marks are left as they are, even for the office: a
     // student on a planned absence isn't present by default.
+    // So are X (exclusion) marks for anyone but the principal and the college
+    // secretary (396).
     roster.forEach((s) => {
-      all[s.student_id] = planned[s.student_id] ? marks[s.student_id] : '/';
+      all[s.student_id] = planned[s.student_id] || lockedExclusion(marks[s.student_id], canExclude) ? marks[s.student_id] : '/';
     });
     setMarks(all);
-    setLateMinutes((lm) => Object.fromEntries(Object.entries(lm).filter(([sid]) => planned[sid])));
+    setLateMinutes((lm) => Object.fromEntries(Object.entries(lm).filter(([sid]) => planned[sid] || lockedExclusion(marks[sid], canExclude))));
   }
 
   async function handleSubmit(e) {
@@ -470,11 +474,11 @@ function AttendanceInner() {
                           onChange={(e) => setMark(s.student_id, e.target.value)}
                           aria-label={`Code — ${s.first_name} ${s.last_name}`}
                           title={codes.find((c) => c.code === marks[s.student_id])?.description || ''}
-                          disabled={planned[s.student_id] && !isOffice}
+                          disabled={(planned[s.student_id] && !isOffice) || lockedExclusion(marks[s.student_id], canExclude)}
                           style={{ width: '6.5rem' }}
                         >
                           <option value="">—</option>
-                          {codes.map((c) => (
+                          {offeredCodes(codes, canExclude, marks[s.student_id]).map((c) => (
                             <option key={c.code} value={c.code}>{c.code} — {c.description}</option>
                           ))}
                         </select>
