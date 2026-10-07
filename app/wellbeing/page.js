@@ -133,6 +133,12 @@ function WellbeingInner() {
     loadRound(roundId);
   }
 
+  async function changeMustAnswer(dateValue) {
+    const { error } = await supabase.rpc('set_wellbeing_round_must_answer', { p_round_id: roundId, p_must_answer_from: dateValue });
+    setStatus(error ? error.message : 'Saved.');
+    loadRounds();
+  }
+
   async function changeClose(dateValue) {
     const { error } = await supabase.rpc('set_wellbeing_round_close', { p_round_id: roundId, p_closes_on: dateValue });
     setStatus(error ? error.message : 'Closing date changed.');
@@ -150,7 +156,8 @@ function WellbeingInner() {
           </select>
           {round && (
             <span style={soft}>
-              Opened {formatUKDateTime(round.opens_at)}, closes at the end of {formatUKDate(round.closes_on)}.{' '}
+              Opened {formatUKDateTime(round.opens_at)}, closes at the end of {formatUKDate(round.closes_on)}
+              {round.must_answer_from ? `, must be answered from ${formatUKDate(round.must_answer_from)}` : ''}.{' '}
               {checkIns.length} of {studentCount ?? '…'} students answered; {flagged.length} flagged, {toFollow.length} to follow up.
             </span>
           )}
@@ -159,6 +166,9 @@ function WellbeingInner() {
           <div style={{ marginTop: '0.5rem' }}>
             <label style={soft}>Change closing date{' '}
               <input type="date" defaultValue={round.closes_on} onChange={(e) => e.target.value && changeClose(e.target.value)} />
+            </label>{' '}
+            <label style={soft}>Must be answered from (no &ldquo;Not now&rdquo;){' '}
+              <input type="date" defaultValue={round.must_answer_from || ''} onChange={(e) => changeMustAnswer(e.target.value || null)} />
             </label>
           </div>
         )}
@@ -247,7 +257,7 @@ function WellbeingInner() {
 
       <div className="card">
         <h2>Next check-in</h2>
-        <p style={soft}>About every two months. Students get the pop-up from the opening time until the end of the closing day; &ldquo;Not now&rdquo; hides it until the next morning.</p>
+        <p style={soft}>About every two months. Students get the pop-up from the opening time until the end of the closing day; &ldquo;Not now&rdquo; hides it until the next morning, until the must-answer day (set it on the check-in above once it is added).</p>
         <RoundForm lastRound={rounds[0]} onSaved={loadRounds} />
       </div>
     </div>

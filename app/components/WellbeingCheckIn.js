@@ -3,8 +3,9 @@
 // The wellbeing check-in pop-up (migration 392). While a check-in round is
 // open (the DSL and the principal set the dates on /wellbeing, about every
 // two months) a student who hasn't answered it gets this over any page.
-// "Not now" hides it until the next morning (snooze_wellbeing_check_in());
-// once the round closes it stops. Answers go only to the DSL and the
+// "Not now" hides it until the next morning (snooze_wellbeing_check_in()),
+// but not from the round's must-answer day (migration 393: it must be done by
+// the end of the week); once the round closes it stops. Answers go only to the DSL and the
 // principal; the student sees "thank you" and nothing back. Every rule is in
 // the database (my_wellbeing_check_in(), give_wellbeing_check_in()).
 
@@ -12,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
+import { formatUKDate } from '../../lib/formatDate';
 
 const POLL_MS = 10 * 60000;
 
@@ -33,7 +35,7 @@ export default function WellbeingCheckIn() {
     if (!isStudent) return undefined;
     let cancelled = false;
     async function check() {
-      const { data } = await supabase.rpc('my_wellbeing_check_in');
+      const { data } = await supabase.rpc('my_wellbeing_prompt');
       const r = (data || [])[0] || null;
       if (cancelled) return;
       setRound(r && r.show_now ? r : null);
@@ -141,7 +143,9 @@ export default function WellbeingCheckIn() {
             {error && <p style={{ color: '#a3232c' }}>{error}</p>}
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.75rem' }}>
               <button onClick={send} disabled={busy}>{busy ? 'Sending…' : 'Send'}</button>
-              <button type="button" className="secondary" onClick={notNow}>Not now (ask me tomorrow)</button>
+              {round?.can_snooze
+                ? <button type="button" className="secondary" onClick={notNow}>Not now (ask me tomorrow)</button>
+                : <span style={{ fontSize: '0.85rem' }}>Please answer now: it closes at the end of {formatUKDate(round?.closes_on, { weekday: true })}.</span>}
               <span style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>{answered} of {questions.length} answered</span>
             </div>
           </>
