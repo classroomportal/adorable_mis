@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 7 October 2026 (database migrations up to 395). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 8 October 2026 (database migrations up to 401). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -79,7 +79,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | other\_half | OH coordinator | Manages OH activities and choices. Nobody holds it at present. |
 | lesson\_feedback\_reviewer | Nobody yet (created 6 Oct 2026, migration 382) | Lesson Feedback for every class, and the individual responses without students' names (FR-7.41). |
 
-Two further roles exist only to approve fee prices (FR-10.10): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either. The principal role, with dsl, also reads the Worry Box, wellbeing check-ins and school rating (FR-20).
+Two further roles approve fee prices (FR-10.10) and record exclusions (FR-4.46): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either. The principal role, with dsl, also reads the Worry Box, wellbeing check-ins and school rating (FR-20).
 
 **Students** see their own timetable, grades, behaviour (and appeal), tuckshop ordering, OH choices, documents and lesson feedback (FR-7.35). **Parents** see each linked child's timetable, results (after the delay set on Lookups, FR-7.34), released behaviour, attendance, published fees, tuckshop balance and documents.
 
@@ -279,7 +279,7 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 **Planned absences** (/attendance/planned-absences, Attendance card, migration 318, 2 Oct 2026)
 
 - **FR-4.21** School office, attendance officer, pastoral, SMT and admin can give a student one attendance code for a run of days, from a chosen lesson on the first day to a chosen lesson on the last if needed (no lesson chosen means the whole day; migration 389), with an optional note. All staff can see the list. \[DB\]
-- **FR-4.22** Only authorised codes can be planned: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and X, Excluded from school. X was added by migration 318 and counts as an authorised absence, so it never shows in Missed Lessons or the pop-up. \[DB\]
+- **FR-4.22** Only authorised codes can be planned: other authorised absence, educational visit, authorised holiday, illness, medical/dental appointment, and X, Excluded from school. X counts as an authorised absence, so it never shows in Missed Lessons or the pop-up. Since migration 396 X is entered only through Exclusions (FR-4.46), and Planned Absences no longer offers it. \[DB\]
 - **FR-4.23** Every period the student has on each day is filled in: their timetabled lessons (registration and Evening Prep included) and their Other Half activity. A class joined later counts only from the day they joined. Days outside term dates and days with a holiday on the calendar are skipped. \[DB\]
 - **FR-4.24** Past days and today are filled in as soon as the absence is saved; later days at 05:30 each morning, so FR-4.3 still holds. A mark already in a register is never overwritten (the principal's decision). \[DB\]
 - **FR-4.25** A student can't have two planned absences over the same lessons; two on one day are fine if their lessons don't overlap. \[DB\]
@@ -294,6 +294,15 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.43** The school office, the attendance officer and admin choose a student and up to 62 days, and see every lesson on the student's timetable each day (registration, the Other Half and Evening Prep included), with the mark and who gave it. Days outside term and holidays are left out; a mark on a lesson no longer on the timetable is shown too. \[DB\]
 - **FR-4.44** They can change one mark, give several ticked lessons the same code, add a missing mark or remove one. A changed mark shows the office member as the person who gave it, and a planned-absence mark changed here becomes an ordinary mark; unchanged marks aren't touched. Nobody else can use the page or its functions. \[DB\]
 - **FR-4.45** No mark can be entered for a day that hasn't happened. Correcting an absent mark here withdraws its automatic missed-lesson negative, as on a register (FR-4.40). Every change and removal is logged in Change History under Registers. \[DB\]
+
+**Exclusions** (/attendance/exclusions, Attendance card, migrations 396 and 401, the principal, 7–8 October 2026)
+
+- **FR-4.46** Two kinds, both marked X (Excluded from school) in the registers; no new code. An internal exclusion (out of lessons, in school) is recorded by the principal or the college secretary; an exclusion from school (sent home) by the principal only. Holding the role is what counts; being admin is not enough. The page is granted to those two roles only. \[DB\]
+- **FR-4.47** An exclusion covers days, optionally from a lesson on the first day to a lesson on the last, like a planned absence (FR-4.21–4.24), but it overwrites marks already in the registers for those lessons. Past days and today are filled in at once, later days at 05:30. Ending it early or cancelling it removes its marks from then on. \[DB\]
+- **FR-4.48** Once an X mark or an X planned absence exists, nobody but the principal and the college secretary can enter, change or remove one: not teachers, the office, pastoral or admin, and not through Planned Absences, Student Marks or a register. Other pages hide X. \[DB; hiding is Page\]
+- **FR-4.49** Every parent linked to the student gets an email and a portal inbox notice with the reason, the days and the lessons; ending or cancelling it tells them too. Replies go to whoever recorded it and to principal@ (Email Replies, "Exclusion"). Staff accounts linked as "Other" (principal@, cs@) are left out. \[DB\]
+- **FR-4.50** To help the decision, the page shows the student's Friday detentions this half term (held or still to come) and their internal exclusions this half term. It never decides: two detentions may lead to an internal exclusion, and a third internal exclusion in a half term may lead to an exclusion from school, but the school chooses. A half term runs to or from a holiday event named "Mid term" on the calendar. \[Page; DB data\]
+- **FR-4.51** Exclusions are read by the principal, the college secretary, SMT and pastoral, and logged in Change History under Exclusions. Each also goes on the behaviour log (FR-6.50). \[DB\]
 
 **Register-not-taken pop-up for teachers** (migration 367)
 
@@ -463,6 +472,16 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 - **FR-6.48** It goes to roles granted "Stage 5 collection pop-ups" at /admin/permissions (school\_office to start with); being admin is not enough. Hide for 2 minutes, the flashing tab title and a rising beep work as on FR-4.20; it checks every 30 seconds. \[DB\]
 
 * **FR-6.49** During prep the pop-up goes to the Head of Boarding instead (migration 392, the principal, 7 October 2026). A Stage 5 logged today by anyone while the student's year group is in prep (one of its prep days, between its prep times, in term, not a holiday or blocked day) gives the same purple pop-up, saying "collect from prep", to everyone holding head\_of\_boarding (admin is not enough), not the office. Either one pressing Going to collect clears it for both, and the person logging it is told the Head of Boarding has been asked. \[DB\]
+
+**Exclusions on the behaviour log** (migration 401, the principal, 8 October 2026)
+
+- **FR-6.50** Recording an exclusion (FR-4.46) adds a negative event worth 0 points, in the category "Internal exclusion" or "Exclusion from school", with the days and the reason as its explanation. At 0 points it books no detention and sends no behaviour alert (no 0-point event sends the alert now). It is hidden from parents, who have had the exclusion email, and starts reviewed, so it stays out of Behaviour Review. The student sees it like their other events. \[DB\]
+- **FR-6.51** Those two categories are system categories: not offered on Log behaviour or when changing a category, and not editable at Lookups. Only the principal and the college secretary can add, change or remove an event in them. \[DB\]
+- **FR-6.52** The person recording ticks which of the student's detentions not yet held the exclusion replaces. Those are cancelled and the student is told, as for any cancelled detention; the events behind them keep their points. Nothing is cancelled automatically. Cancelling the exclusion withdraws its event (crossed out); detentions it cancelled stay cancelled. \[DB\]
+
+**Printable behaviour log** (/students/\[id\]/behaviour-log, Print log on the student's Behaviour section)
+
+- **FR-6.53** Lists, for chosen dates (from 1 September by default), every event worth 2 or more points either way, plus exclusions, with the positive, negative and total points over every event in the dates, single points included. Withdrawn events are left out. It reads only what the viewer can already see. \[Page\]
 
 ## 10. FR-7 Assessment, results and targets
 
@@ -697,8 +716,7 @@ Every email goes through one queue from mis@abc.sch.ng with a Reply-To chosen by
 | Detention notices | All SMT |
 | Mark appeal (to the teacher, Head of Department in cc) | sro@ |
 | Missed lesson: please confirm (to the teacher who marked the absence) | guardian.counselling@ |
-| New worry in the Worry Box (to the DSL and the principal, no detail) | cs@ |
-| Wellbeing check-ins need a look (at most one an hour, no detail) | cs@ |
+| Exclusion (to the parents) | Whoever recorded it, and principal@ |
 | Anything else | sro@ |
 
 - **FR-12.7** One admin switch pauses every email to parents; inbox copies are still delivered. It is currently off (emails are sent). \[DB\]
@@ -728,7 +746,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /staff/roles | Assign staff roles; warns when a houseparent has no house | HR, admin |
 | /staff/mentor-groups | Assign one or two staff to each mentor group | Granted roles |
 | /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals, mark appeal days and credits (FR-7.30), hours before parents see a mark (FR-7.34), lesson feedback questions (FR-7.38). Every section starts folded closed and opens when clicked (4 Oct 2026) | Admin, SMT, HR |
-| /admin/student-numbers | Boys, girls and unknown by year, mentor group, boarding house and room (rooms counted within their house), restaurant and class | Granted roles |
+| /admin/student-numbers | Boys, girls and unknown, in three views, each its own link on the Administration card (8 Oct 2026): Years & Mentor Groups (mentor groups under a subtotal per year); Restaurants & Boarding (restaurant, then boarding house and room, rooms counted within their house, with the year groups in each room and house); Sports Houses & Classes (sports house with its years, then class) | Granted roles |
 | /admin/class-lists | Print class rosters by year, subject or class | HR, school office, admin |
 | /admin/bell-times | Sessions and times for each weekday | Admin |
 | /admin/subject-settings | Subject display names, departments, key stages, aliases, target fallback | Assessment manager, admin |
@@ -849,7 +867,7 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 
 | Record | What it keeps | Where to see it | Who can see it | Working today |
 | --- | --- | --- | --- | --- |
-| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed), finance (funds, forecast numbers, term budgets, contingency releases, suppliers and requisitions), reward store (rewards, prices and every order), prep times, days with no homework, and which years have the Other Half on which days | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
+| Change History | Registers (changes and deletions, and planned absences), fees and prices, fee approvals, academic years, behaviour events, the other students in serious events, thresholds and certificate levels, roles, permissions, ability ticks and logins, parent links, email settings, admissions, student groups (the group, its students and its staff), student records (every student added, changed or deleted; the photo is noted as changed but not copied), school reading tests (added, changed or removed), finance (funds, forecast numbers, term budgets, contingency releases, suppliers and requisitions), reward store (rewards, prices and every order), prep times, days with no homework, which years have the Other Half on which days, and exclusions (recorded, ended or cancelled; migration 396) | /admin/change-history: filter by dates, area, student, person and action; latest 500; CSV download | SMT, admin | Yes |
 | Grade History | Every score, target, transcript grade, homework grade and student group mark entered, changed or deleted, with old and new grade. Homework grades and group marks are hidden unless chosen, and only SMT and admins can read them | /assessments/grade-history: filter by dates, student, person, grade and action; flags where the person signed in differs from the teacher on the record; latest 500; CSV download | SMT, assessment managers, admin | Yes |
 | Mark appeals | Every appeal: the mark appealed, the student's reason and claimed mark, the outcome, the corrected mark, the teacher's note, who decided and when; never deleted (the corrected mark is also in Grade History) | /grade-appeals (waiting and decided) | The teacher (their students), Heads of Department (their department), SMT, assessment managers, admin; the student their own | Yes |
 | Fee price proposals | Each proposal, who made it, both approvals or the reason for rejecting | /bursar/fee-approvals | Bursar, SMT, principal, college secretary | Yes |
@@ -1009,7 +1027,7 @@ Students can tell the school what worries them, answer a wellbeing check-in abou
 **Worry Box (/worry-box, the portal's Worry Box tile)**
 
 - **FR-20.3** A student chooses what the worry is about (bullying or friendships; a member of staff; how they are feeling; home or family; the boarding house; equipment, rooms, food or facilities; something else), writes it (up to 2,000 characters) and can mark it urgent ("I don't feel safe, or I need to talk to someone soon"). At most 5 a day. The page tells them to speak to any member of staff straight away if they are in danger, and who will read it. \[DB / Page\]
-- **FR-20.4** A new worry sends the DSL and the principal an inbox message and an email that say only that a worry has come in and whether it is urgent: no name, kind or text. Replies to the email go to cs@ (Email Replies, "Worry Box"). \[DB\]
+- **FR-20.4** A new worry sends nothing (migration 400, the principal, 7 October 2026, after 43 worries on the first day each sent both an email and an inbox message). New and urgent worries show on the Worry Box tile and page. If notices ever come back, they must carry no detail of the worry. \[DB\]
 - **FR-20.5** On the Worry Box page they see new, open and closed worries, by kind. Opening a new worry marks it read. They add notes (staff only) or a reply the student sees on their portal; the student gets an inbox message saying there is a reply, without its text. They close and reopen worries. \[DB\]
 - **FR-20.6** Paper slips from the box in school are typed in on the same page, with or without a student's name and with the date found. They don't appear on the student's portal. \[DB\]
 - **FR-20.7** The student sees what they sent, its status (Sent, Read by staff, Closed) and any reply, never the staff notes. \[DB\]
@@ -1019,8 +1037,11 @@ Students can tell the school what worries them, answer a wellbeing check-in abou
 - **FR-20.8** The DSL or the principal opens a check-in with an opening time and a closing day, about every two months. While it is open, every active student who hasn't answered it gets a pop-up over any page. The first ran from 7 October 2026 to the end of Friday 9 October. \[DB / Page\]
 - **FR-20.9** "Not now" hides the pop-up until the next morning, but not from the check-in's must-answer day (the first: Thursday 8 October), when it can't be put off. Once only per check-in; answers can't be changed. \[DB\]
 - **FR-20.10** 15 questions, written for a boarding school with pressure to succeed: nine 1–5 scales (feeling in general, sleep, eating, coping with work and tests, pressure to get good results, time to rest, being away from home, the boarding house, friends) and six Yes/No (feel safe, an adult to talk to, anyone unkind, worry about letting family down, felt so low they stopped enjoying things, would like someone to talk to), plus an optional comment. All must be answered. The questions are data; their wording is fixed once answered. \[DB\]
-- **FR-20.11** Each question says which answers need a look (for example 1–2 on feeling in general, 5 on pressure, No to feeling safe, Yes to wanting to talk; letting family down doesn't alert). A check-in with any such answer, or a comment, is flagged: the DSL and the principal get an inbox message for each and an email at most once an hour, with no names or answers. \[DB\]
+- **FR-20.11** Each question says which answers need a look (for example 1–2 on feeling in general, 5 on pressure, No to feeling safe, Yes to wanting to talk; letting family down doesn't alert). A check-in with any such answer, or a comment, is flagged. Flagging sends nothing (migrations 398–399, the principal, 7 October 2026: "The list on the tile should be sufficient"); no wellbeing message or email goes to anyone, and the Wellbeing page is the list. \[DB\]
 - **FR-20.12** The Wellbeing page shows how many have answered, the flagged check-ins with what needs a look, every answer, totals for the school, "Mark followed up" with a note, and the dates of each check-in (add one, change its closing or must-answer day). \[DB / Page\]
+- **FR-20.15** Each flagged check-in gets a priority (migration 397, the principal, 8 October 2026, when 130 of 134 were flagged). Red: an alert on a red question (not feeling safe) or 1 out of 5 on feeling in general; the DSL or the principal see the student. Amber: an alert on an amber question (wanting to talk, no adult to talk to), 2 out of 5, 4 or more alerts, or a comment; someone they choose talks to the student. Green: the rest, counted in the school picture. Each question also names its issue (safety, low mood, wanting an adult, pressure and workload, friendships and unkindness, home and boarding, sleep and eating). \[DB data; Page\]
+- **FR-20.16** The page shows the counts by priority, a table of issues by house, and a list to download for each issue, for the person asked to discuss it. A year drop-down narrows all of it to one year group. Passing a list on is the DSL's or the principal's decision. \[Page\]
+- **FR-20.17** Meeting sheet prints the current list, one table per boarding house, with names and areas of concern only (never answers) and blank "who will talk to them" and notes columns, for the follow-up meeting with counselling and the houseparents. \[Page\]
 
 **School rating (/school-rating, the portal's Rate the School tile)**
 
@@ -1100,7 +1121,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 35 | Results | A mark appeal (FR-7.27) waits until the student's teacher decides. Nobody else can decide it if the teacher is away or has left, and it holds one of the student's credits meanwhile | An appeal can wait with no end; no deadline or hand-over to the Head of Department yet | Open |
 | 36 | Behaviour | Two mentors on the timetable don't hold the mentor role (found 4 Oct 2026): Uche Isiani (UIS, 10C/Me) and Christopher Agunwa (CSA, 10D/Me), who are teachers only. Behaviour Totals (FR-6.29), Certificates and other pages granted to mentor are missing for them | They can't see their group's behaviour totals; both were given the mentor role on 4 Oct 2026, and every mentor group's mentor now holds it | Fixed |
 | 37 | Registers | The automatic missed-lesson negative (FR-4.37) only looks at today's registers. A register saved after midnight for an earlier day gives no event. The event has no teacher, so returning it at review sends nobody a message | A lesson missed on a day whose register is filled in late goes unrecorded; the reviewer tells anyone who needs to know in person | Open |
-| 38 | Worry Box | An urgent worry or a flagged wellbeing check-in (FR-20.4, FR-20.11) alerts only the DSL and the principal, by inbox and email. Nothing escalates if neither opens it, and there is no cover when both are away or after hours | A student who marks a worry urgent may wait until one of the two reads it; the page tells them to speak to any member of staff if they are in danger | Open |
+| 38 | Worry Box | An urgent worry or a flagged wellbeing check-in (FR-20.4, FR-20.11) sends no message at all since migrations 398–400 (7 Oct 2026); it shows only on the DSL's and the principal's Worry Box and Wellbeing tiles. Nothing escalates if neither looks, and there is no cover when both are away or after hours | A student who marks a worry urgent may wait until one of the two reads it; the page tells them to speak to any member of staff if they are in danger | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 

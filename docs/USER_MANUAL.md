@@ -42,7 +42,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | See what my role does day to day | [Teachers](#teachers) · [Mentors and pastoral staff](#mentors-and-pastoral-staff) · [Leaders](#leaders-heads-of-department-assessment-staff-and-smt) · [Office, HR and administrators](#office-hr-and-administrators) · [Specialist roles](#specialist-roles) · [Students and parents](#students-and-parents) |
 | Take a register | [Taking a register](#taking-a-register-attendance) |
 | Find a student who is missing from a lesson | [Finding a missing student](#finding-a-missing-student) · [The missed-lesson pop-up](#the-missed-lesson-pop-up) |
-| Record a student who will be away for several days, or is excluded | [Planned absences](#planned-absences-attendanceplanned-absences) |
+| Record a student who will be away for several days | [Planned absences](#planned-absences-attendanceplanned-absences) |
 | Raise a worry about a student | [Safeguarding and keeping students safe](#safeguarding-and-keeping-students-safe) · [Who to tell](#who-to-tell) |
 | Spot students falling behind | [Signs to look for](#signs-to-look-for-and-where-to-see-them) · [Worked examples](#worked-examples) |
 | Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
@@ -182,7 +182,7 @@ Pastoral work in Formwork is about noticing early: who is absent, who is collect
 2. Go and find the student, then press **Seen: dealing with it** with a short note. This clears the alert from every screen. If the teacher corrects the mark, it clears by itself.
 3. During the day, keep **Missed Lessons** open as a list of every student who has missed a lesson today.
 4. At the end of the day, check **Register Alerts** and follow up staff whose registers were late.
-5. When a parent says their child will be away for some days, or a student is excluded, enter it once at **Planned Absences** (chapter 3). Every register for those days is filled in for the teachers.
+5. When a parent says their child will be away for some days, enter it once at **Planned Absences** (chapter 3). Every register for those days is filled in for the teachers.
 
 ### Leaders: Heads of Department, assessment staff and SMT
 
@@ -240,7 +240,7 @@ The office keeps student and parent records right and is first to hear about mis
 1. Keep Formwork open: the missed-lesson pop-up appears for you as well as the attendance officer (see Mentors and pastoral staff).
 2. Check **Register Alerts** and resolve each once the teacher has been contacted.
 3. The principal's PA only: release serious (−5) behaviour events without pictures to parents at **Behaviour Review**, after checking the text names no other student.
-4. Enter absences you know about in advance (illness, appointments, holidays the principal has agreed, exclusions) at **Planned Absences**, so teachers find the code already in their registers.
+4. Enter absences you know about in advance (illness, appointments, holidays the principal has agreed) at **Planned Absences**, so teachers find the code already in their registers.
 
 *When a family's details change*
 
@@ -786,7 +786,7 @@ From 8 October 2026, a student who was in school that day (marked present or lat
 
 ### Planned absences (/attendance/planned-absences)
 
-When a student will be away for several days or for some lessons, or has been excluded, enter it once here instead of marking every register. Open to the school office, the attendance officer, pastoral staff, SMT and admins, from the Attendance card.
+When a student will be away for several days or for some lessons, enter it once here instead of marking every register. Open to the school office, the attendance officer, pastoral staff, SMT and admins, from the Attendance card.
 
 1. Type part of the student's name (and pick a year if needed), then click the student.
 2. Choose the **First day** and **Last day** (for part of a day, also the From lesson on the first day and the To lesson on the last; leave them on Whole day otherwise: one day, Period 3 to Period 5, works), the **Code**, and a **Note** if it helps. The note is for staff only; parents never see it.
@@ -801,7 +801,7 @@ What it fills in:
 - Nothing outside term dates or on a day marked as a holiday on the calendar. Every weekday of a mid-term break is a holiday on the calendar, so an absence that runs across a break skips those days.
 - It never overwrites a mark that is already in a register.
 
-Only authorised codes can be planned: I (illness), M (medical or dental appointment), H (authorised holiday), E (educational visit), C (other authorised absence) and **X (excluded from school)**.
+Only authorised codes can be planned: I (illness), M (medical or dental appointment), H (authorised holiday), E (educational visit) and C (other authorised absence). Exclusions (X) are recorded only on the **Exclusions** page (below).
 
 **On the register.** The teacher sees the code already filled in, marked "planned", and saves the register as usual. Teachers can't change or remove it. If the student turns up after all, tell the school office or the attendance officer: they change it on the register or on Student Marks (below), and it then becomes an ordinary mark. A lesson where every student already has a mark (a whole class on a visit) counts as taken.
 
@@ -812,6 +812,27 @@ Only authorised codes can be planned: I (illness), M (medical or dental appointm
 **Wrong code.** The school office and the attendance officer can press **Change code** on an absence in the list and choose a **New code**; every mark it filled in changes with it.
 
 A student can't have two planned absences over the same lessons; two on one day are fine if their lessons don't overlap. Every planned absence, and every mark removed by ending or cancelling one, is kept in Change History.
+
+### Exclusions (/attendance/exclusions)
+
+The principal and the college secretary record exclusions here, from the Attendance card; nobody else sees the page. An **internal exclusion** keeps the student out of lessons but in school. An **exclusion from school** sends them home, and only the principal can record one. Both are marked X (excluded from school) in the registers.
+
+1. Type part of the student's name (and pick a year if needed), then click the student.
+2. Choose **Internal exclusion** or **Exclusion from school**, then the **First day** and **Last day** (and, for part of a day, the From and To lessons).
+3. Read **This half term**: the student's Friday detentions this half term and their internal exclusions so far. Tick any detentions not yet held that this exclusion replaces. They are cancelled and the student is told; the points behind them stay on the student's record. Nothing is cancelled unless you tick it.
+4. Write the **Reason**. It goes to the parents exactly as written.
+5. Press **Record exclusion and tell parents**.
+
+What happens:
+
+- Every register for those lessons is marked X, replacing any mark already taken. Later days are filled in at 05:30 each morning.
+- Every parent linked to the student gets an email and a portal inbox message with the reason, the days and the lessons. Replies come to you and to principal@.
+- The exclusion goes on the student's behaviour log as a 0-point event ("Internal exclusion" or "Exclusion from school"). It books no detention and isn't sent to parents again.
+- Nobody else can enter, change or remove an X mark: not teachers, the office or admins.
+
+The page never decides for you. As a guide, two Friday detentions may lead to an internal exclusion, and a third internal exclusion in a half term may lead to an exclusion from school.
+
+**Back early, or entered by mistake.** In the list, choose the **Back on** day and press **End early**, or press **Cancel**. The parents are told either way. Cancelling also crosses out the behaviour log entry; detentions it cancelled stay cancelled.
 
 ### Student Marks (/attendance/student-marks)
 
@@ -1164,6 +1185,8 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 **Behaviour Log** (/behaviour/log) searches and filters past events by student, type, category and dates; **View / edit** opens an event. **Behaviour alerts** (/behaviour/alerts) lists events of −3 or worse in the last 7 days; houseparents see their own house.
 
+**Printing a student's behaviour log.** On the student's profile, press **Print log** in the Behaviour section. Choose the dates (from 1 September by default). The log lists every event worth 2 or more points either way, plus exclusions, and gives the positive, negative and total points for every event in those dates, single points included. Cancelled events are left out.
+
 ![Behaviour Log](manual-images/51-blog.jpg)
 
 ![Behaviour alerts, last 7 days](manual-images/52-alerts.jpg)
@@ -1286,7 +1309,7 @@ Students can tell the school what worries them, answer a short wellbeing check-i
 - **Wellbeing check-in**: while a check-in is open, a pop-up with 15 questions (about 3 minutes) on how they're feeling, sleeping, eating, coping with work and pressure, being away from home, the boarding house, friends and feeling safe, plus an optional comment. **Not now** hides it until the next morning, but from the check-in's must-answer day it can't be put off.
 - **Rate the School** tile: while a rating is open, they rate 10 areas of school life from 1 to 5, once, and can add one thing the school does well and one it could do better. Their name isn't shown with their answers.
 
-**For the DSL and the principal.** Three tiles on your dashboard: **Worry Box**, **Wellbeing** and **School Rating**. When a worry arrives, or a check-in has an answer that needs a look, you both get an inbox message and an email. They never say who or what, only whether it's urgent; check-in emails come at most once an hour.
+**For the DSL and the principal.** Three tiles on your dashboard: **Worry Box**, **Wellbeing** and **School Rating**. Formwork sends no email or inbox message when a worry arrives or a check-in needs a look, so open these tiles yourselves every day.
 
 **Worry Box** (/worry-box)
 
@@ -1299,7 +1322,7 @@ To record a slip from the paper box, press **Type in a paper slip**, pick the st
 
 **Wellbeing check-ins** (/wellbeing)
 
-- The top shows how many students have answered. **To follow up** lists the check-ins with an answer that needs a look, or a comment, and shows those answers. **All answers** opens the rest.
+- The top shows how many students have answered. **To follow up** lists the check-ins with an answer that needs a look, or a comment, and shows those answers. Each has a priority. Red: you or the DSL see the student (they don't feel safe, or feel 1 out of 5). Amber: someone you choose talks to them (they want to talk, have no adult to talk to, feel 2 out of 5, gave many low answers, or wrote a comment). Green: no one-to-one follow-up; they count towards the school-wide picture. **All answers** opens the rest. Under To follow up, by priority and issue, press Red, Amber or Green, choose a year, or click an issue (safety, low mood, wanting an adult, pressure and workload, friendships, home and boarding, sleep and eating) to list those students. Download names or Download with answers saves that list for the person you ask to discuss it. Meeting sheet prints the list as one table per house, with names and areas of concern only (never answers) and blank columns for who will talk to them and notes, for the meeting with counselling and the houseparents.
 - When you've spoken to the student, add a note and press **Mark followed up**.
 - **Answers across the school** totals every question.
 - **Next check-in**: choose the opening day and time and the closing day (it suggests two months after the last). After adding it, set **Must be answered from** on the check-in to stop students putting it off from that day. You can change the closing date while it is open.
@@ -1765,7 +1788,7 @@ The lists and settings the rest of Formwork uses: boarding houses, sports houses
 - **Import Nova-T** (/admin/import-classes): upload Nova-T's .DAT files. Every change is previewed before it's applied; classes missing from the file are offered for deletion. A lesson's subject comes only from the subject code in the group name; Other Half (Oh) and Sports Academy (Sa) groups are skipped.
 - **Import Meetings** (/admin/import-staff-commitments): staff meetings and non-working periods, which block that person's slot.
 - **Class Allocation** (/admin/block-allocation): choose a year and block, then tick which class each student is in. Open to admins, Heads of Department and pastoral staff.
-- **Student Numbers** (/admin/student-numbers): boys, girls and unknown by year, mentor group, house and room, restaurant and class.
+- **Student Numbers** (/admin/student-numbers): boys, girls and unknown, as three links on the Administration card (tabs at the top of the page switch between them): Years & Mentor Groups (each year, then its mentor groups with a subtotal for the year); Restaurants & Boarding (each restaurant, then each boarding house and room, with a Years column showing the year groups in each room, for example "Y9 (3), Y10 (1)"; click a house to open its rooms); and Sports Houses & Classes (each sports house with its years, then every class by subject).
 
 ![Bell Times](manual-images/128-bell-times.jpg)
 
