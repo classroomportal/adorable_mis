@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { useAuth } from '../../../lib/AuthContext';
+import { holdsWorryRole, useWorryCategories } from '../../../lib/worries';
 
 // Each Lookups section folds away, closed when the page opens (the
 // principal, 4 Oct 2026: the page had grown long). Open one to edit it.
@@ -720,11 +722,108 @@ function LessonFeedbackQuestions() {
   );
 }
 
+// Worry Box categories (migration 411, the principal 8 Oct 2026). Shown and
+// saved only for the Worry Box readers (DSL, principal, guidance): the
+// heading decides whether students' words go to the admin manager's daily
+// Facilities list, and "Daily list to DSL" what the DSL is emailed, so admin
+// isn't enough. save_worry_category() checks it again.
+function WorryCategories() {
+  const { staffRoles } = useAuth();
+  const cats = useWorryCategories();
+  const [drafts, setDrafts] = useState({});
+  const [adding, setAdding] = useState({ label: '', short: '', area: 'other', dailyToDsl: false });
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    const d = {};
+    cats.all.forEach((c) => { d[c.key] = { label: c.label, short: c.short, area: c.area, dailyToDsl: !!c.dailyToDsl, sortOrder: c.sortOrder ?? 0 }; });
+    setDrafts(d);
+  }, [cats.all]);
+
+  if (!holdsWorryRole(staffRoles)) return null;
+
+  async function save(key, d, retired) {
+    const { error } = await supabase.rpc('save_worry_category', {
+      p_key: key, p_label: d.label, p_short_label: d.short, p_area: d.area, p_daily_to_dsl: d.dailyToDsl,
+      p_sort_order: d.sortOrder === '' || d.sortOrder == null ? null : parseInt(d.sortOrder, 10), p_retired: retired,
+    });
+    if (error) { setStatus(`Error: ${error.message}`); return false; }
+    await cats.reload();
+    return true;
+  }
+
+  async function add() {
+    if (await save(null, { ...adding, sortOrder: null }, false)) {
+      setStatus('Category added.');
+      setAdding({ label: '', short: '', area: 'other', dailyToDsl: false });
+    }
+  }
+
+  return (
+    <Section title="Worry Box categories">
+      <p style={{ marginTop: 0 }}>
+        What students choose from when they send a worry, and you when you type in a paper slip or move a worry.
+        Students first pick Facilities or Something else, then the category under it (a heading with one category
+        in use is chosen for them). Every afternoon at 4 pm the open worries under <strong>Facilities</strong> go
+        to the admin manager without names, and at 4.15 pm the open worries in categories ticked
+        <strong> Daily list to DSL</strong> go to the DSL with names, so choose both with care. Only the DSL, the
+        principal and guidance staff see this section. Categories are never deleted: retire one to stop offering
+        it, and its worries keep it. Changes are logged.
+      </p>
+      {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
+      <div className="table-scroll">
+        <table>
+          <thead><tr><th>Order</th><th>What students see</th><th>Short name (staff)</th><th>Heading</th><th>Daily list to DSL</th><th></th></tr></thead>
+          <tbody>
+            {cats.all.map((c) => {
+              const d = drafts[c.key] || {};
+              const set = (k, v) => setDrafts({ ...drafts, [c.key]: { ...d, [k]: v } });
+              return (
+                <tr key={c.key} style={c.retired ? { opacity: 0.55 } : undefined}>
+                  <td><input type="number" value={d.sortOrder ?? ''} onChange={(e) => set('sortOrder', e.target.value)} style={{ width: '4rem' }} /></td>
+                  <td><input type="text" maxLength={120} value={d.label ?? ''} onChange={(e) => set('label', e.target.value)} style={{ width: '100%', minWidth: '16rem' }} />{c.retired && <div style={{ fontSize: '0.8em' }}>Retired</div>}</td>
+                  <td><input type="text" maxLength={40} value={d.short ?? ''} onChange={(e) => set('short', e.target.value)} style={{ width: '10rem' }} /></td>
+                  <td>
+                    <select value={d.area ?? 'other'} onChange={(e) => set('area', e.target.value)}>
+                      <option value="facilities">Facilities</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </td>
+                  <td style={{ textAlign: 'center' }}><input type="checkbox" checked={!!d.dailyToDsl} onChange={(e) => set('dailyToDsl', e.target.checked)} /></td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button onClick={async () => { if (await save(c.key, d, c.retired)) setStatus('Saved.'); }}>Save</button>{' '}
+                    {c.retired
+                      ? <button className="secondary" onClick={async () => { if (await save(c.key, d, false)) setStatus('Category brought back.'); }}>Bring back</button>
+                      : <button className="secondary" onClick={async () => { if (await save(c.key, d, true)) setStatus('Category retired. Its worries keep it.'); }}>Retire</button>}
+                  </td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td></td>
+              <td><input type="text" maxLength={120} placeholder="New category, as students see it" value={adding.label} onChange={(e) => setAdding({ ...adding, label: e.target.value })} style={{ width: '100%', minWidth: '16rem' }} /></td>
+              <td><input type="text" maxLength={40} placeholder="Short name" value={adding.short} onChange={(e) => setAdding({ ...adding, short: e.target.value })} style={{ width: '10rem' }} /></td>
+              <td>
+                <select value={adding.area} onChange={(e) => setAdding({ ...adding, area: e.target.value })}>
+                  <option value="facilities">Facilities</option>
+                  <option value="other">Other</option>
+                </select>
+              </td>
+              <td style={{ textAlign: 'center' }}><input type="checkbox" checked={adding.dailyToDsl} onChange={(e) => setAdding({ ...adding, dailyToDsl: e.target.checked })} /></td>
+              <td><button onClick={add} disabled={!adding.label.trim() || !adding.short.trim()}>Add</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </Section>
+  );
+}
+
 function LookupsInner() {
   return (
     <div>
       <h1>Lookups</h1>
-      <p>Manage the fixed lists used for student core data and behaviour groups, the admission fees, the mark appeal rules, when parents see marks and the lesson feedback questions. Open a section to see or change it. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
+      <p>Manage the fixed lists used for student core data and behaviour groups, the admission fees, the mark appeal rules, when parents see marks and the lesson feedback questions (and, for the Worry Box readers, its categories). Open a section to see or change it. Add new houses here as they're created — they'll show up everywhere a boarding or sports house is selected.</p>
       <LookupList title="Boarding houses" table="boarding_houses" idField="house_id" />
       <LookupList title="Sports houses" table="sports_houses" idField="house_id" />
       <BehaviourCategories />
@@ -733,6 +832,7 @@ function LookupsInner() {
       <MarkAppealRules />
       <ParentMarkDelay />
       <LessonFeedbackQuestions />
+      <WorryCategories />
       <AcademicYears />
       <AdmissionFees />
     </div>
