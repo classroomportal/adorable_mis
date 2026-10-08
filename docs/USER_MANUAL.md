@@ -135,7 +135,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 **Every week**
 
 - Enter the short test: 2 Type In Marks on the Assessment card, choose your class and the week's result set, and type each percentage. The grade appears as you type. Use **Find missing grades by class** to check nobody is left without a mark.
-- Glance at **Class Progress** (or your classes on Weekly Results) to see who is falling below target.
+- Glance at **Class Progress** to see who is falling below target.
 - Look at **Lesson Feedback** (Students card) for what your classes said about their lessons. A class shows figures once 3 students have answered; names are never shown.
 
 **Each term**
@@ -383,7 +383,7 @@ The same four steps repeat after every assessment point: weekly short tests, Tea
 | Step | What to do | Where in Formwork | When |
 | --- | --- | --- | --- |
 | 1. Assess | Enter every score against the right result set, and close the gaps | Type In Marks; Marks Missing | Within a few days of the test |
-| 2. Review | Find students, classes and subjects below target, and look for the reasons (attendance, homework, behaviour) | Class Progress, Weekly Results, the student profile, the homework mark sheet | The week after |
+| 2. Review | Find students, classes and subjects below target, and look for the reasons (attendance, homework, behaviour) | Class Progress, the student profile, the homework mark sheet | The week after |
 | 3. Act | Choose an action for each concern and tell the people who need to know | Student groups, Other Half placement, messages, mentor conversations, report comments | Straight after the review |
 | 4. Check | At the next assessment point, see whether the students acted on have moved | Class Progress for the new result set; the group's mark sheet | Next test |
 
@@ -393,7 +393,7 @@ The cycle only works if the data is complete. A class with missing marks drops o
 
 | Sign | Where it shows | A starting point to consider |
 | --- | --- | --- |
-| A student below target in several subjects | Weekly Results (red "below target"); the student profile's Results and Target Grades tiles; **Build a group from a rule** → Below target | Below target in 3 or more subjects |
+| A student below target in several subjects | Class Progress; the student profile's Results and Target Grades tiles; **Build a group from a rule** → Below target | Below target in 3 or more subjects |
 | One subject or class falling behind | **Class Progress**: classes sorted worst first, with counts above / on / below target | A class where most students are below target |
 | A student below target in one subject | **Build a group from a rule** → A subject (below a grade, or below target) | Below target since the start of term |
 | A low or falling exam average | **Build a group from a rule** → Term exam average; **Student vs Avg** (student against the cohort) | Below 50% average |
@@ -410,7 +410,7 @@ Look at signs together, not one at a time. A student below target whose attendan
 
 | Who | Looks at | Acts by |
 | --- | --- | --- |
-| Teacher | Their classes on Weekly Results and Class Progress; **Show last grades** on the register; the homework mark sheet | Re-teaching topics a class got wrong; talking to individual students; chasing homework; telling the mentor about a student slipping in several ways; writing specific next steps in report comments |
+| Teacher | Their classes on Class Progress; **Show last grades** on the register; the homework mark sheet | Re-teaching topics a class got wrong; talking to individual students; chasing homework; telling the mentor about a student slipping in several ways; writing specific next steps in report comments |
 | Mentor | Each mentee's profile: Results against targets, Attendance, Behaviour; the subject judgements in Pastoral Comments | A regular one-to-one with students below target; agreeing one or two targets; contacting home through the office or SMT when needed |
 | Head of Department | Class Progress for the department, by result set; Marks Missing; homework in the department's classes | Comparing classes in the same year; supporting a teacher whose class is behind; moving a student to a better-suited set at Class Allocation; a department intervention group |
 | Pastoral lead and houseparent | Behaviour alerts, attendance, Missed Lessons, rule-built groups | Linking behaviour or attendance concerns to falling results; supervised study at Evening Prep; involving parents |
@@ -433,7 +433,7 @@ Look at signs together, not one at a time. A student below target whose attendan
 **2. A class falling behind (Head of Department)**
 
 1. Open **Class Progress**, pick the latest result set and filter to your department. Note any class with most students below target.
-2. Open the class on Weekly Results and see whether the gap is across one test or several.
+2. Open the class on Class Progress and choose each result set in turn, to see whether the gap is across one test or several.
 3. Check the class's homework mark sheet: is homework being set and handed in?
 4. Agree actions with the teacher, then compare the class again after the next result set.
 
@@ -506,7 +506,7 @@ No single mark proves anything. These patterns, especially together, are worth p
 | Attendance falling, or frequent unexplained absences | Student profile, Attendance tile; Attendance rule groups |
 | Frequent sick-bay visits, or the same complaint again and again | Sick Bay Log (nurse) |
 | A student often named as the target in serious behaviour events | The event's other students (target, witness, involved) on the Behaviour Log |
-| A sudden change in behaviour or results | Behaviour alerts; Class Progress; Weekly Results |
+| A sudden change in behaviour or results | Behaviour alerts; Class Progress |
 | Missing the Other Half or Evening Prep | Other Half Absentees; EP registers |
 | Withdrawal or a change in effort noted by several teachers | Effort judgements in Pastoral Comments |
 
@@ -990,7 +990,7 @@ A result set is a calendar event with the "result set" box ticked (SMT and admin
 
 ### Browsing results (/results)
 
-Recent results with each student's grade, target and a coloured **vs target** label: green above, amber on, red below. Grades are never compared across IGCSE and WAEC.
+Since 8 October 2026 this page has no link on the dashboard: use Class Progress or 4 Student vs Avg instead. It lists the 20 most recent results with each student's grade, target and a coloured **vs target** label: green above, amber on, red below. Grades are never compared across IGCSE and WAEC.
 
 ![Weekly Results](manual-images/31-results.jpg)
 
