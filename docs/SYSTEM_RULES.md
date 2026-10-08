@@ -35,7 +35,7 @@ Where a rule has changed several times, only the current version is given. Migra
 
 ## 1. Roles, page access and admins
 
-**Staff roles in use:** admin, smt, hr, pastoral, houseparent, head_of_boarding, assessment_manager, assessment_user, teacher, bursar, school_office, admissions, tuckshop, tuckshop_owner, head_of_department, mentor, nurse, dsl, other_half.
+**Staff roles in use:** admin, smt, hr, pastoral, houseparent, head_of_boarding, assessment_manager, assessment_user, teacher, bursar, school_office, admissions, tuckshop, tuckshop_owner, head_of_department, mentor, nurse, dsl, guidance, other_half. Only the principal gives or removes dsl and guidance (405).
 
 **Admins**
 - "Admin" is a separate account setting, not one of the staff roles. There are 3 admin accounts (175).
@@ -925,7 +925,7 @@ None of these has been fixed yet. They are listed so the school can decide what 
 7. **The −8 weekly behaviour alert repeats** on every further negative event that week.
 8. **The forced password change is page only.** Also, parent logins made by the school office, and all auto-created staff and student logins, are never forced to change their first password.
 9. **Report checkers** can see and edit every comment in the period, not only the scope set for them.
-10. **HR can give themselves any role except admin**, including smt and bursar. It is logged, but not blocked.
+10. **HR can give themselves any role except admin**, including smt and bursar (but not dsl or guidance, which only the principal gives, 405). It is logged, but not blocked.
 
 **The Other Half**
 
