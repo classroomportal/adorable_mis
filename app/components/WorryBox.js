@@ -1,19 +1,20 @@
 'use client';
 
 // The Worry Box on a student's portal (migration 391). A student writes what
-// is worrying them and sends it; only the DSL and the principal read it, with
-// their name (the principal, 7 Oct 2026). They see what they have sent, its
+// is worrying them and sends it; only the DSL, the principal and guidance
+// staff read it, with their name (the principal, 7 Oct 2026). They see what they have sent, its
 // status and any reply. Staff notes are never shown here (the database
 // returns replies only). Every rule is in send_worry().
 
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatUKDateTime } from '../../lib/formatDate';
-import { FACILITIES_CATEGORY, OTHER_CATEGORIES, WORRY_AREAS, WORRY_STATUS_STUDENT, worryCategoryLabel } from '../../lib/worries';
+import { WORRY_AREAS, WORRY_STATUS_STUDENT, useWorryCategories } from '../../lib/worries';
 
 const soft = { fontSize: '0.85rem', color: 'var(--ink-soft)' };
 
 export default function WorryBox({ studentId }) {
+  const cats = useWorryCategories();
   const [worries, setWorries] = useState([]);
   const [replies, setReplies] = useState([]);
   const [area, setArea] = useState('');
@@ -24,6 +25,10 @@ export default function WorryBox({ studentId }) {
   const [sent, setSent] = useState(false);
   const submittingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // The categories in use under a heading (Facilities or Other), from the
+  // list on Lookups (migration 411). A heading with one is chosen for them.
+  const choices = (a) => cats.active.filter((c) => c.area === a);
 
   async function load() {
     const [{ data: w }, { data: n }] = await Promise.all([
@@ -92,19 +97,19 @@ export default function WorryBox({ studentId }) {
               {Object.entries(WORRY_AREAS).map(([key, a]) => (
                 <button key={key} type="button" className={area === key ? '' : 'secondary'}
                   style={{ flex: '1 1 14rem', textAlign: 'left' }}
-                  onClick={() => { setArea(key); setCategory(key === 'facilities' ? FACILITIES_CATEGORY : ''); }}>
+                  onClick={() => { setArea(key); setCategory(choices(key).length === 1 ? choices(key)[0].key : ''); }}>
                   <strong>{key === 'facilities' ? a.label : 'Something else'}</strong>
                   <div style={{ fontSize: '0.85rem' }}>{a.hint}</div>
                 </button>
               ))}
             </div>
           </fieldset>
-          {area === 'other' && (
+          {area && choices(area).length > 1 && (
             <label>
               What is it about?
               <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ display: 'block', width: '100%' }}>
                 <option value="">Choose…</option>
-                {OTHER_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                {choices(area).map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
               </select>
             </label>
           )}
@@ -137,7 +142,7 @@ export default function WorryBox({ studentId }) {
           {worries.map((w) => (
             <div key={w.worry_id} className="card" style={{ margin: '0 0 0.6rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <strong>{worryCategoryLabel(w.category)}</strong>
+                <strong>{cats.label(w.category)}</strong>
                 <span className="badge">{WORRY_STATUS_STUDENT[w.status] || w.status}</span>
               </div>
               <div style={soft}>{formatUKDateTime(w.created_at)}{w.urgent ? ' · marked urgent' : ''}</div>

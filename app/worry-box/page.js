@@ -35,7 +35,7 @@ import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { schoolToday } from '../../lib/schoolTime';
 import { formatUKDate, formatUKDateTime } from '../../lib/formatDate';
-import { WORRY_AREAS, WORRY_CATEGORIES, WORRY_STATUS_STAFF, worryArea, worryCategoryLabel } from '../../lib/worries';
+import { WORRY_AREAS, WORRY_STATUS_STAFF, useWorryCategories } from '../../lib/worries';
 
 const soft = { fontSize: '0.85em', color: 'var(--ink-soft)' };
 
@@ -64,7 +64,7 @@ function studentSub(s) {
   return [s.year_group ? `Year ${s.year_group}` : null, s.boarding_house].filter(Boolean).join(' · ');
 }
 
-function PaperSlipForm({ onSaved, onCancel }) {
+function PaperSlipForm({ cats, onSaved, onCancel }) {
   const [students, setStudents] = useState([]);
   const [search, setSearch] = useState('');
   const [studentId, setStudentId] = useState('');
@@ -134,7 +134,7 @@ function PaperSlipForm({ onSaved, onCancel }) {
           What is it about?
           <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ display: 'block', width: '100%' }}>
             <option value="">Choose…</option>
-            {WORRY_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            {cats.active.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
         </label>
         <label>
@@ -158,7 +158,7 @@ function PaperSlipForm({ onSaved, onCancel }) {
   );
 }
 
-function WorryDetail({ worry, notes, onChanged, onBack }) {
+function WorryDetail({ cats, worry, notes, onChanged, onBack }) {
   const [note, setNote] = useState('');
   const [toStudent, setToStudent] = useState(false);
   const [closeNote, setCloseNote] = useState('');
@@ -213,12 +213,14 @@ function WorryDetail({ worry, notes, onChanged, onBack }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', margin: '1rem 0' }}>
-        <span className="badge">{WORRY_AREAS[worryArea(worry.category)].label}</span>
-        <strong>{worryCategoryLabel(worry.category)}</strong>
+        <span className="badge">{WORRY_AREAS[cats.area(worry.category)].label}</span>
+        <strong>{cats.label(worry.category)}</strong>
         <label style={soft}>
           Move to{' '}
           <select value={worry.category} onChange={(e) => moveTo(e.target.value)} disabled={busy}>
-            {WORRY_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
+            {/* A retired category stays listed only for a worry already in it. */}
+            {cats.all.filter((c) => !c.retired || c.key === worry.category)
+              .map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
           </select>
         </label>
       </div>
@@ -271,7 +273,7 @@ function WorryDetail({ worry, notes, onChanged, onBack }) {
 
 const NOTE_KIND = { note: 'Note', reply: 'Reply to student', status: '' };
 
-function PrintSheet({ title, worries, notes, onBack }) {
+function PrintSheet({ cats, title, worries, notes, onBack }) {
   const [withNotes, setWithNotes] = useState(true);
   const rows = [...worries].sort((a, b) =>
     (b.urgent && b.status !== 'closed') - (a.urgent && a.status !== 'closed')
@@ -308,7 +310,7 @@ function PrintSheet({ title, worries, notes, onBack }) {
                   {w.source === 'paper' && <div>Paper slip</div>}
                 </td>
                 <td style={cell}>{studentName(w.students)}<div>{studentSub(w.students)}</div></td>
-                <td style={cell}>{worryCategoryLabel(w.category, { short: true })}</td>
+                <td style={cell}>{cats.label(w.category, { short: true })}</td>
                 <td style={{ ...cell, whiteSpace: 'pre-wrap' }}>
                   {w.details}
                   {these.map((n) => (
@@ -331,6 +333,7 @@ function PrintSheet({ title, worries, notes, onBack }) {
 }
 
 function WorryBoxInner() {
+  const cats = useWorryCategories();
   const [worries, setWorries] = useState([]);
   const [notes, setNotes] = useState([]);
   const [view, setView] = useState('current');
@@ -374,7 +377,7 @@ function WorryBoxInner() {
 
   const shown = worries.filter((w) => {
     if (VIEWS[view].statuses && !VIEWS[view].statuses.includes(w.status)) return false;
-    if (area && worryArea(w.category) !== area) return false;
+    if (area && cats.area(w.category) !== area) return false;
     if (category && w.category !== category) return false;
     if (filters.year && String(w.students?.year_group ?? '') !== filters.year) return false;
     if (filters.house && (w.students?.boarding_house || '') !== filters.house) return false;
@@ -390,27 +393,30 @@ function WorryBoxInner() {
     }
     return true;
   });
-  const kinds = WORRY_CATEGORIES.filter((c) => !area || worryArea(c.key) === area);
-  const waiting = (a) => worries.filter((w) => w.status !== 'closed' && (!a || worryArea(w.category) === a));
+  // Retired categories only while they still have worries.
+  const kinds = cats.all.filter((c) => (!area || c.area === area)
+    && (!c.retired || worries.some((w) => w.category === c.key)));
+  const waiting = (a) => worries.filter((w) => w.status !== 'closed' && (!a || cats.area(w.category) === a));
   const current = worries.find((w) => w.worry_id === selected);
 
   if (printing) {
     const kind = (area ? ` · ${WORRY_AREAS[area].label}` : '')
-      + (category && area !== 'facilities' ? ` · ${worryCategoryLabel(category, { short: true })}` : '')
+      + (category && kinds.length > 1 ? ` · ${cats.label(category, { short: true })}` : '')
       + (filters.year ? ` · Year ${filters.year}` : '')
       + (filters.house ? ` · ${filters.house}` : '')
       + (filters.urgentOnly ? ' · Urgent' : '')
       + (filters.source ? ` · ${filters.source === 'paper' ? 'Paper slips' : 'Portal'}` : '')
       + (filters.from || filters.to ? ` · ${filters.from ? formatUKDate(filters.from) : '…'} to ${filters.to ? formatUKDate(filters.to) : '…'}` : '')
       + (words ? ` · "${filters.search.trim()}"` : '');
-    return <PrintSheet title={`Worry Box: ${VIEWS[view].label}${kind}`} worries={shown} notes={notes} onBack={() => setPrinting(false)} />;
+    return <PrintSheet cats={cats} title={`Worry Box: ${VIEWS[view].label}${kind}`} worries={shown} notes={notes} onBack={() => setPrinting(false)} />;
   }
   if (adding) {
-    return <PaperSlipForm onCancel={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />;
+    return <PaperSlipForm cats={cats} onCancel={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />;
   }
   if (current) {
     return (
       <WorryDetail
+        cats={cats}
         worry={current}
         notes={notes.filter((n) => n.worry_id === current.worry_id)}
         onChanged={load}
@@ -448,7 +454,7 @@ function WorryBoxInner() {
           <span style={soft}>Category:</span>
           {[{ key: '', short: 'All' }, ...kinds].map((c) => {
             const n = worries.filter((w) => w.status !== 'closed'
-              && (c.key ? w.category === c.key : (!area || worryArea(w.category) === area))).length;
+              && (c.key ? w.category === c.key : (!area || cats.area(w.category) === area))).length;
             return (
               <button key={c.key || 'all'} className={category === c.key ? '' : 'secondary'}
                 style={{ padding: '0.25rem 0.6rem', fontSize: '0.9rem' }}
@@ -506,7 +512,7 @@ function WorryBoxInner() {
                   {w.source === 'paper' && <div style={soft}>Paper slip</div>}
                 </td>
                 <td>{studentName(w.students)}<div style={soft}>{studentSub(w.students)}</div></td>
-                <td>{worryCategoryLabel(w.category, { short: true })}</td>
+                <td>{cats.label(w.category, { short: true })}</td>
                 <td style={{ maxWidth: 360 }}>{w.details.length > 120 ? `${w.details.slice(0, 120)}…` : w.details}</td>
                 <td>
                   {w.urgent && w.status !== 'closed' && <span className="badge badge-negative" style={{ marginRight: '0.3rem' }}>Urgent</span>}
