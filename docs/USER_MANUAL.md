@@ -961,7 +961,7 @@ Not built yet: students handing work in online, and notifications when homework 
 
 ## 5. Assessment, results and targets
 
-**Where the links are.** Every marks page is on the **Assessment** card, numbered in the order the work is done: **1 Upload Moodle** (the weekly gradebook), **2 Type In Marks**, **3 Marks Missing**, **4 Weekly Results**, **5 Student vs Avg**, **6 Marks Sheet**, **7 Top 10** and **8 Mark Appeals**, then Grade Boundaries, Subject Settings and Grade History. Baseline tests and targets are on the **Targets & Baselines** card: Import CAT4/NGRT, Reading Ages, Add Reading Test and Import Targets. Until 8 October 2026 some of these were called Enter Results, Missing Grades, Results, Review Results, Result Set Sheet and Record Reading Tests.
+**Where the links are.** Every marks page is on the **Assessment** card, numbered in the order the work is done: **1 Adorable.net** (the weekly gradebook from the school's Moodle), **2 Type In Marks**, **3 Marks Missing**, **4 Student vs Avg**, **5 Marks Sheet**, **6 Top 10**, **7 Mark Appeals**, then Grade Boundaries, Subject Settings and Grade History. Baseline tests and targets are on the **Targets & Baselines** card: Import CAT4/NGRT, Reading Ages, Add Reading Test and Import Targets. The old Weekly Results page has no link: use Type In Marks. Until 8 October 2026 some of these were called Enter Results, Missing Grades, Results, Review Results, Result Set Sheet and Record Reading Tests.
 
 Teachers enter percentage scores for their own classes against result sets. Each score is graded from the subject's boundaries for the year group and compared with the student's target. Every grade change is logged permanently.
 
