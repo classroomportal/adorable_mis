@@ -77,7 +77,7 @@ Formwork has three kinds of user: staff, students and parents. A member of staff
 | nurse | School nurses: nurse10@, nurse12@, nurse13@, hoc@ | Clinic and medical records: view, add, edit and delete (FR-11.6). The only role that can delete them. |
 | dsl | Designated Safeguarding Lead: cs@ (Uju MBA), from 4 Oct 2026 (migration 363) | Clinic and medical records: view, add and edit, not delete (FR-11.6). The only role that can mark a sick-bay entry as safeguarding and read its hidden details (FR-11.10–11.11). With the principal and the guidance staff, reads and works the Worry Box; with the principal alone, the wellbeing check-ins and school rating (FR-20). Gets the daily list of worries about staff (FR-20.21). Given and removed only by the principal (migration 405). |
 | guidance | Guidance & Counselling: guardian.counselling@ (Osione ILOEJE), from 8 Oct 2026 (migrations 402–403) | Reads and works the Worry Box with the DSL and the principal (FR-20.18), and gets the alert for urgent worries unopened after 24 hours (FR-20.19). Not the wellbeing check-ins or the school rating. Given and removed only by the principal (migration 405). |
-| other\_half | OH coordinator | Manages OH activities and choices. Nobody holds it at present. |
+| other\_half | OH coordinator | Manages OH activities and choices. Richardson IGBASUN (RIG) from 8 Oct 2026; others can be added. |
 | lesson\_feedback\_reviewer | Nobody yet (created 6 Oct 2026, migration 382) | Lesson Feedback for every class, and the individual responses without students' names (FR-7.41). |
 
 Two further roles approve fee prices (FR-10.10) and record exclusions (FR-4.46): **principal** (principal@) and **college\_secretary** (cs@). Being an admin doesn't count as either. The principal role, with dsl, also reads the Worry Box (as do guidance staff), the wellbeing check-ins and the school rating (FR-20), and is the only one that can give or remove the dsl and guidance roles (migration 405).
@@ -1092,7 +1092,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 25. Known issues and open decisions
 
-38 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; six of them (6, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
+38 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; seven of them (6, 17, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -1112,7 +1112,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 14 | Other Half | An activity with past registers but no current choices can be deleted | Past marks lose their activity name | Open |
 | 15 | Other Half | Changing year groups or capacity doesn't re-check existing choices | Over-full or ineligible activities | Open |
 | 16 | Other Half | Printed timetables leave out OH choices | Incomplete printouts | Open |
-| 17 | Other Half | Nobody holds the other\_half coordinator role | Only SMT and admins can manage OH | Open |
+| 17 | Other Half | Nobody held the other\_half coordinator role. Richardson IGBASUN (RIG) was given it on 8 Oct 2026 (the principal) | Only SMT and admins can manage OH | Fixed |
 | 18 | Tuckshop | tuckshop\_owner can open pages whose actions only tuckshop, bursar and admin may perform | Harmless today (owner is admin) | Open |
 | 19 | Tuckshop | A top-up adds an invoice charge with no matching payment | Parent's invoice shows unpaid | Open |
 | 20 | Tuckshop | Top-ups by a tuckshop-only user may be refused by the fee-charging step | Needs testing | Open |
