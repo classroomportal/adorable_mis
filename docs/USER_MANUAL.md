@@ -328,6 +328,14 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 - You can see and edit every medical record and sick-bay visit, but not delete them.
 - When a visit is a safeguarding matter, tick **Safeguarding** as you record it, or press **Mark as safeguarding** on it in the Sick Bay Log. Its symptoms are then yours alone; the nurses still see the medicine given (chapter 7, The clinic).
 - With the principal, you read the **Worry Box** and **Wellbeing** check-ins and see the **School Rating** (chapter 7, The Worry Box, wellbeing check-ins and school rating). Open urgent worries first.
+- Every afternoon at 4.15 pm you're emailed the worries about a member of staff that aren't closed, with the student's name. Only the principal can give or remove the DSL role.
+
+**Guidance staff**
+
+- You read and answer the **Worry Box** with the DSL and the principal, from its tile on your dashboard (chapter 7). You don't see wellbeing check-ins or the school rating.
+- If an urgent worry has waited 24 hours without anyone opening it, you get one inbox message and one email saying how many. Open them in the Worry Box; that is the answer.
+- Replies from the admin manager to the daily Facilities list come to you, so you can close the worries that have been fixed.
+- Only the principal can give or remove the Guidance role.
 
 ### Students and parents
 
@@ -340,7 +348,7 @@ When a price change is proposed, open **Fee Approvals**. Read the change and the
 - **When the Reward Store is open**: spend your merit points on a reward from the **Reward Store** tile. Your merit total doesn't go down; only your points to spend do.
 - **When you get a behaviour point you think is unfair**: open **Behaviour** and appeal it once, explaining why. Pastoral staff decide. If a test mark doesn't match your marked paper, appeal it within 5 days under Assessment, Appeal a mark; your teacher checks the paper.
 - **After a lesson, by the end of the next day**: tap **Give feedback** on it on your **Timetable**. Choose green, amber or red for how well you understood it and answer every question. Your teacher sees the class's answers together, never your name.
-- **When something worries you**: use the **Worry Box** tile. Only the Designated Safeguarding Lead and the Principal read it. If you are in danger, tell any member of staff straight away. When a **wellbeing check-in** pops up, answer it honestly; and when **Rate the School** appears, tell us what you think (your name isn't shown with it).
+- **When something worries you**: use the **Worry Box** tile. Only the Designated Safeguarding Lead, the Principal and the guidance staff read it. If you are in danger, tell any member of staff straight away. When a **wellbeing check-in** pops up, answer it honestly; and when **Rate the School** appears, tell us what you think (your name isn't shown with it).
 - **At the end of term**: download your report and transcripts from **Assessment**.
 
 **Parents**
@@ -458,7 +466,7 @@ Formwork helps keep students safe by showing where they are, raising alerts when
 | Showing patterns in attendance, behaviour, sick-bay visits and results | Deciding whether something is a safeguarding matter: that is the safeguarding lead's job |
 | Recording conduct (behaviour events) and medical care (clinic) | Sharing sensitive information with colleagues who don't need it |
 
-Formwork has no safeguarding or concern record for staff, so anything staff type into it is not a safeguarding report and nobody is alerted to it as one. The one exception is the students' own Worry Box and wellbeing check-in, which go straight to the DSL and the principal (chapter 7). They don't replace telling the DSL what a student has told you.
+Formwork has no safeguarding or concern record for staff, so anything staff type into it is not a safeguarding report and nobody is alerted to it as one. The one exception is the students' own Worry Box and wellbeing check-in, which go straight to the DSL and the principal, worries also to the guidance staff (chapter 7). They don't replace telling the DSL what a student has told you.
 
 ### Who to tell
 
@@ -876,7 +884,7 @@ Your own classes appear as buttons under **My classes**. **Other classes** lists
 
 ### Setting homework
 
-Press **Set homework** in the Homework panel of the lesson's register: open it from your timetable, or from Take a Register on the Attendance card. Heads of Department can open another teacher's lesson from that teacher's timetable. The full Homework page (/homework) has no link on the dashboard; open it from Mark book → on the register, or type /homework.
+Press **Set homework** in the Homework panel of the lesson's register: open it from your timetable, or from Take a Register on the Attendance card. Heads of Department can open another teacher's lesson from that teacher's timetable. The full Homework page (/homework) has no link on the dashboard; open it from All homework & mark books → in the register's Homework panel (every homework the class has had, its mark books and the mark sheet), or type /homework.
 
 ![Setting homework](manual-images/21-hw-set.jpg)
 
@@ -895,7 +903,7 @@ Press **Mark book** beside a piece of homework. Enter a mark (or grade), or choo
 
 ![The mark book](manual-images/22-hw-markbook.jpg)
 
-Students see nothing until you press **Release marks**; **Hide marks again** takes them back. A student who joined the class after the due date is left out unless they already have a mark.
+Students see nothing until you press **Release marks**; **Hide marks again** takes them back. A student who joined the class after the due date is left out unless they already have a mark. When you release, each student marked Not handed in automatically gets a "Homework not completed" negative (−2) in your name, as does a Not handed in entered after release. It goes to parents only after the office or SMT approve its writing. Changing the mark, hiding the marks again or withdrawing the homework withdraws it; Excused never counts.
 
 ### The mark sheet
 
@@ -993,6 +1001,7 @@ Each class's average grade against the average target of the same students, sort
 ### Other analysis
 
 - **Top 10** (/results/top-ten) ranks students in a result set by average percentage, per year or overall, and prints a page per year.
+- **Result Set Sheet** (/results/set-sheet) lists every current student's marks in a result set: a column per subject (percentages, or press Show for grades), how many subjects they have marks in and their average. Choose one year, each year on its own page, or all years together; order by surname or highest average; then **Print** or **Download CSV**.
 - **Review Results** (/results/subject-overview) charts one student's scores in each subject against the cohort average.
 - **Target coverage** (/target-grades/coverage) lists students missing a target.
 
@@ -1170,7 +1179,7 @@ Any member of staff can log behaviour. Points come only from the category, serio
 
 Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this class** on a register.
 
-1. **Log for**: one student, or a group chosen by class, house, room, restaurant or year.
+1. **Log for**: one student, or a group chosen by class, Other Half activity, student group, house, room, restaurant or year. Your own lessons, activities and mentor groups come first, then every other class and this term's other activities. Type in Find to narrow the names, and press Only this one to tick just the students found, so you can give one student in a class a merit without unticking the rest. One student has the same search.
 2. Choose the **Date**, **Positive** or **Negative**, and the **Category**. Points come from the category (−1 to −5, +1 to +5); you can't type them. Some categories show a line underneath saying when to use them.
 3. Add a comment. Anything you write, on a merit too, is checked by the school office or SMT before parents see the event; a merit with no comment goes home at once. For a serious event (−5 or worse: Stage 5, Bullying, Academic dishonesty) an **Explanation** is required: say what happened in your own words and don't name any other student. First, a box asks "Is this really a Stage 5?" and lists what the school counts as one. If the incident isn't on that list, choose a lower category: repeated minor behaviour reaches a detention through the weekly total anyway. To save a Stage 5 you must tick "I confirm this is a single serious incident"; the button stays greyed out until you do. The same box and tick appear if you edit an event up to Stage 5 later.
 4. On a serious event you can **+ Add a witness, someone involved or a target**, found by name, year and house. These links are staff-only and carry no points.
@@ -1301,15 +1310,15 @@ The clinic holds each student's medical profile and consents, conditions, growth
 
 ### The Worry Box, wellbeing check-ins and school rating
 
-Students can tell the school what worries them, answer a short wellbeing check-in about every two months, and rate the school about once a term. Only the Designated Safeguarding Lead (cs@) and the principal see worries and check-ins, with the student's name. Admins, SMT, pastoral staff and teachers can't, and parents see none of it. Everyone else: if a student tells you something worrying, follow the school's safeguarding procedure as usual; the Worry Box doesn't replace that.
+Students can tell the school what worries them, answer a short wellbeing check-in about every two months, and rate the school about once a term. Only the Designated Safeguarding Lead (cs@), the principal and the guidance staff (Osione ILOEJE) see worries with the student's name, and only the DSL and the principal see check-ins. Admins, SMT, pastoral staff and teachers can't, and parents see none of it. Everyone else: if a student tells you something worrying, follow the school's safeguarding procedure as usual; the Worry Box doesn't replace that.
 
 **What students see.** Three things on the student portal:
 
-- **Worry Box** tile: choose what it's about (bullying or friendships, a member of staff, feelings, home or family, the boarding house, equipment and facilities, something else), write it, and tick **urgent** if they don't feel safe or need to talk to someone soon. Up to 5 a day. They see what they've sent, whether it's been read, and any reply.
+- **Worry Box** tile: choose Facilities (equipment, rooms, food or facilities) or Something else, and then what it's about (bullying or friendships, a member of staff, feelings, home or family, the boarding house, something else), write it, and tick **urgent** if they don't feel safe or need to talk to someone soon. Up to 5 a day. They see what they've sent, whether it's been read, and any reply.
 - **Wellbeing check-in**: while a check-in is open, a pop-up with 15 questions (about 3 minutes) on how they're feeling, sleeping, eating, coping with work and pressure, being away from home, the boarding house, friends and feeling safe, plus an optional comment. **Not now** hides it until the next morning, but from the check-in's must-answer day it can't be put off.
 - **Rate the School** tile: while a rating is open, they rate 10 areas of school life from 1 to 5, once, and can add one thing the school does well and one it could do better. Their name isn't shown with their answers.
 
-**For the DSL and the principal.** Three tiles on your dashboard: **Worry Box**, **Wellbeing** and **School Rating**. Formwork sends no email or inbox message when a worry arrives or a check-in needs a look, so open these tiles yourselves every day.
+**For the DSL and the principal.** Three tiles on your dashboard: **Worry Box**, **Wellbeing** and **School Rating**. Formwork sends no email or inbox message when a worry arrives or a check-in needs a look, so open these tiles yourselves every day. Guidance staff have the Worry Box tile only. The only emails are the three described under Automatic emails below.
 
 **Worry Box** (/worry-box)
 
@@ -1319,6 +1328,16 @@ Students can tell the school what worries them, answer a short wellbeing check-i
 4. When it's dealt with, press **Close** (with a reason if you like). **Reopen** brings it back.
 
 To record a slip from the paper box, press **Type in a paper slip**, pick the student (or leave it empty if the slip isn't signed), choose what it's about, type it and give the date it was found. Nothing is ever deleted.
+
+**Finding worries.** The page has two tabs, **Facilities** and **Other**. Under them is a button for each kind of worry with how many aren't closed, then filters: search the student's name or the words, year, house, **Urgent only**, portal or paper, and the dates it came in. **Print** prints the list as filtered, each worry in full with its notes and replies. If a worry is under the wrong heading (a personal worry filed as Facilities, say), press **Move to** on it; a note records who moved it.
+
+**Automatic emails.**
+
+- **Urgent and unopened for 24 hours**: the guidance staff get one inbox message and one email with the number, never the student or the words.
+- **4 pm, Facilities list**: the admin manager (Paul IMO) is emailed every Facilities worry that isn't closed, without the student's name, year or house, so things can be fixed. Replies go to Osione ILOEJE. Close a worry once it's fixed, or it stays on the list. Move a personal worry out of Facilities, or it goes to the admin manager too.
+- **4.15 pm, worries about staff**: the DSL is emailed every worry about a member of staff that isn't closed, with the student's name.
+
+Nothing is sent on a day with none, and sending doesn't open or change a worry.
 
 **Wellbeing check-ins** (/wellbeing)
 
@@ -1772,7 +1791,7 @@ Records without tick boxes are still set in the database. A few actions (approvi
 
 ### Staff and roles (/staff/roles)
 
-Add staff (name, code, email: a login is created automatically from the email) and give each person their roles with **+ Add role**. Some roles carry a scope: a houseparent's house, a Head of Department's department. HR and admins can assign any role except admin. Every change is logged in Change History. Staff logins are emailed from **Staff Logins** (/staff/welcome-emails); mentor groups are staffed at /staff/mentor-groups.
+Add staff (name, code, email: a login is created automatically from the email) and give each person their roles with **+ Add role**. Some roles carry a scope: a houseparent's house, a Head of Department's department. HR and admins can assign any role except admin. Roles are listed in alphabetical order. Only the principal gives or removes DSL and Guidance; everyone else sees them with a padlock. Every change is logged in Change History. Staff logins are emailed from **Staff Logins** (/staff/welcome-emails); mentor groups are staffed at /staff/mentor-groups.
 
 ![Staff & Roles](manual-images/121-roles.jpg)
 
