@@ -1346,6 +1346,7 @@ form.behaviour-log label { flex: 0 0 auto; }
 .bl-small { padding: 0.2rem 0.6rem; font-size: 0.8rem; }
 .bl-roster-bar { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.35rem; font-size: 0.85rem; color: var(--ink-soft); }
 .bl-roster-bar span { margin-right: auto; }
+.bl-roster-bar .bl-find { width: auto; flex: 0 1 220px; min-width: 0; padding: 0.25rem 0.5rem; font-size: 0.85rem; }
 .bl-roster {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));

@@ -41,6 +41,10 @@ function BehaviourPageInner() {
   const [mentorClasses, setMentorClasses] = useState([]);
   const [myClasses, setMyClasses] = useState([]); // timetabled lessons this person teaches
   const [myActivities, setMyActivities] = useState([]); // Other Half activities this person runs
+  // Every other lesson class and this term's OH activities: any member of
+  // staff may log for any student, so any group can be chosen.
+  const [otherClasses, setOtherClasses] = useState([]);
+  const [otherActivities, setOtherActivities] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
@@ -65,6 +69,10 @@ function BehaviourPageInner() {
   const [linkedActivity, setLinkedActivity] = useState(null); // the linked OH activity
   const [boardingHouse, setBoardingHouse] = useState('');
   const [restaurant, setRestaurant] = useState('');
+  const [studentGroups, setStudentGroups] = useState([]); // /groups (migration 284), not archived
+  const [studentGroupId, setStudentGroupId] = useState('');
+  // Find a name in the chosen class or group, or among all students.
+  const [findName, setFindName] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState(new Set()); // rooms within the chosen house; empty = whole house
 
@@ -134,11 +142,14 @@ function BehaviourPageInner() {
 
   // The lesson followed in from /attendance may be someone else's class (a
   // cover lesson), so it is offered even when it is in neither list.
-  const knownClass = (id) => myClasses.some((c) => c.class_id === id) || mentorClasses.some((c) => c.class_id === id);
+  const knownClass = (id) => myClasses.some((c) => c.class_id === id) || mentorClasses.some((c) => c.class_id === id)
+    || otherClasses.some((c) => c.class_id === id);
   const extraClasses = linkedClass && !knownClass(linkedClass.class_id) ? [linkedClass] : [];
   // Likewise an OH activity followed in from its register (a colleague's).
-  const extraActivities = linkedActivity && !myActivities.some((a) => a.activity_id === linkedActivity.activity_id) ? [linkedActivity] : [];
-  const hasClassOptions = myClasses.length + mentorClasses.length + myActivities.length + extraClasses.length + extraActivities.length > 0;
+  const knownActivity = (id) => myActivities.some((a) => a.activity_id === id) || otherActivities.some((a) => a.activity_id === id);
+  const extraActivities = linkedActivity && !knownActivity(linkedActivity.activity_id) ? [linkedActivity] : [];
+  const hasClassOptions = myClasses.length + mentorClasses.length + myActivities.length + otherClasses.length
+    + otherActivities.length + extraClasses.length + extraActivities.length > 0;
   const activityLabel = (a) => `${a.activity_name} (OH, ${OH_DAY_NAMES[a.day_of_week] || a.day_of_week})`;
   const isActivity = classId.startsWith(OH_PREFIX);
   const classLabel = (c) => (c.subjects?.subject_name ? `${c.class_code} — ${c.subjects.subject_name}` : c.class_code || `Class ${c.class_id}`);
@@ -165,19 +176,33 @@ function BehaviourPageInner() {
       // they had just taught — could not be chosen here at all.
       setMyClasses(allClasses.filter((cl) => cl.staff_id === profile?.staff_id
         && cl.curriculum_blocks?.block_name !== 'Mentor'));
+      setOtherClasses(allClasses.filter((cl) => cl.staff_id !== profile?.staff_id
+        && cl.curriculum_blocks?.block_name !== 'Mentor'));
 
       // The Other Half activities this person runs this OH term. OH lives in
       // its own tables, not classes (migration 156), so it needs its own list.
+      const ohTermId = await loadCurrentOtherHalfTermId();
+      const { data: allOh } = await supabase
+        .from('other_half_activities')
+        .select('activity_id, activity_name, day_of_week')
+        .eq('term_id', ohTermId ?? -1)
+        .eq('is_active', true)
+        .order('activity_name');
+      const ohList = allOh || [];
       if (profile?.staff_id) {
-        const ohTermId = await loadCurrentOtherHalfTermId();
         const { data: oh } = await supabase
           .from('other_half_activity_staff')
           .select('other_half_activities!inner(activity_id, activity_name, day_of_week, term_id, is_active)')
           .eq('staff_id', profile.staff_id)
           .eq('other_half_activities.term_id', ohTermId ?? -1)
           .eq('other_half_activities.is_active', true);
-        setMyActivities((oh || []).map((r) => r.other_half_activities).filter(Boolean)
-          .sort((x, y) => x.activity_name.localeCompare(y.activity_name)));
+        const mine = (oh || []).map((r) => r.other_half_activities).filter(Boolean)
+          .sort((x, y) => x.activity_name.localeCompare(y.activity_name));
+        setMyActivities(mine);
+        const mineIds = new Set(mine.map((a) => a.activity_id));
+        setOtherActivities(ohList.filter((a) => !mineIds.has(a.activity_id)));
+      } else {
+        setOtherActivities(ohList);
       }
 
       const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, boarding_room_number, restaurant, year_group').eq('status', 'active').order('last_name');
@@ -186,6 +211,10 @@ function BehaviourPageInner() {
       setBoardingHouses([...new Set(list.map((x) => x.boarding_house).filter(Boolean))].sort());
       setRestaurants([...new Set(list.map((x) => x.restaurant).filter(Boolean))].sort());
       setYearGroups([...new Set(list.map((x) => x.year_group).filter(Boolean))].sort((a, b) => a - b));
+
+      // Student groups the viewer can see (staff, under the group ticks).
+      const { data: grp } = await supabase.from('student_groups').select('group_id, name').is('archived_at', null).order('name');
+      setStudentGroups(grp || []);
 
       const { data: cat } = await supabase.from('behaviour_categories').select('category_id, name, type, default_points, description, retired, system_only').order('name');
       setCategories(cat || []);
@@ -259,6 +288,21 @@ function BehaviourPageInner() {
       setLoadingRoster(false);
       return;
     }
+    if (groupType === 'student_group' && studentGroupId) {
+      setLoadingRoster(true);
+      const { data: gm } = await supabase
+        .from('student_group_members')
+        .select('students(student_id, first_name, last_name, status)')
+        .eq('group_id', Number(studentGroupId));
+      const studentList = (gm || [])
+        .map((row) => row.students)
+        .filter((s) => s && s.status === 'active')
+        .sort((a, b) => a.last_name.localeCompare(b.last_name));
+      setRoster(studentList);
+      setSelected(new Set(studentList.map((s) => s.student_id)));
+      setLoadingRoster(false);
+      return;
+    }
     if (groupType === 'boarding' && boardingHouse) {
       const studentList = allStudents
         .filter((s) => s.boarding_house === boardingHouse
@@ -281,15 +325,24 @@ function BehaviourPageInner() {
     setSelected(new Set());
   }
 
-  useEffect(() => { loadRoster(); }, [groupType, classId, boardingHouse, restaurant, yearFilter, roomFilter, allStudents]);
+  useEffect(() => { loadRoster(); }, [groupType, classId, studentGroupId, boardingHouse, restaurant, yearFilter, roomFilter, allStudents]);
 
   function handleGroupTypeChange(newType) {
     setGroupType(newType);
-    setClassId(''); setBoardingHouse(''); setRestaurant(''); setYearFilter('');
+    setClassId(''); setStudentGroupId(''); setBoardingHouse(''); setRestaurant(''); setYearFilter('');
     setRoomFilter(new Set());
+    setFindName('');
   }
 
-  const usingGroup = groupType && (classId || boardingHouse || restaurant);
+  const usingGroup = groupType && (classId || studentGroupId || boardingHouse || restaurant);
+
+  // The name search narrows what is shown; it never changes who is ticked by
+  // itself, so a ticked student hidden by the search is still logged for.
+  const findText = findName.trim().toLowerCase();
+  const nameMatches = (s) => !findText || `${s.first_name} ${s.last_name}`.toLowerCase().includes(findText)
+    || `${s.last_name} ${s.first_name}`.toLowerCase().includes(findText);
+  const shownRoster = roster.filter(nameMatches);
+  const shownStudents = allStudents.filter(nameMatches);
 
   // Retired categories (migration 378) aren't offered for new events, nor
   // the exclusion categories, which only Exclusions records (migration 401).
@@ -321,6 +374,8 @@ function BehaviourPageInner() {
 
   function selectAll() { setSelected(new Set(roster.map((s) => s.student_id))); }
   function selectNone() { setSelected(new Set()); }
+  // Tick only the students the search shows: find a name, then "Only these".
+  function selectOnlyShown() { setSelected(new Set(shownRoster.map((s) => s.student_id))); }
 
   const { serious_event_points: seriousPoints, serious_event_guidance: seriousGuidance } = useBehaviourRules();
   const isSerious = form.type === 'negative' && Number(form.points) <= seriousPoints && form.points !== '';
@@ -444,6 +499,7 @@ function BehaviourPageInner() {
       setShowInvolved(false);
       setSeriousConfirmed(false);
       if (usingGroup) selectAll(); else setSingleStudentId('');
+      setFindName('');
       loadEvents();
     }
   }
@@ -472,28 +528,62 @@ function BehaviourPageInner() {
             Log for
             <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)}>
               <option value="">One student</option>
-              <option value="mentor">My lesson, OH activity or mentor group</option>
+              <option value="mentor">Class, OH activity or mentor group</option>
+              <option value="student_group">Student group</option>
               <option value="boarding">Boarding house</option>
               <option value="restaurant">Restaurant</option>
             </select>
           </label>
 
           {!groupType && (
+            <>
+              <label>
+                Find
+                <input
+                  type="search"
+                  value={findName}
+                  placeholder="Type part of a name"
+                  onChange={(e) => {
+                    const text = e.target.value;
+                    setFindName(text);
+                    // One match: choose it, so typing a name is enough.
+                    const t = text.trim().toLowerCase();
+                    const hits = t ? allStudents.filter((s) => `${s.first_name} ${s.last_name}`.toLowerCase().includes(t)
+                      || `${s.last_name} ${s.first_name}`.toLowerCase().includes(t)) : [];
+                    if (hits.length === 1) setSingleStudentId(String(hits[0].student_id));
+                  }}
+                />
+              </label>
+              <label>
+                Student{findText && ` (${shownStudents.length} found)`}
+                <select value={singleStudentId} onChange={(e) => setSingleStudentId(e.target.value)}>
+                  <option value="">Select...</option>
+                  {/* Keep the chosen student listed even if the search no longer matches them. */}
+                  {allStudents.filter((s) => nameMatches(s) || String(s.student_id) === singleStudentId).map((s) => (
+                    <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name}{s.year_group ? ` (Y${s.year_group})` : ''}</option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+
+          {groupType === 'student_group' && (
             <label>
-              Student
-              <select value={singleStudentId} onChange={(e) => setSingleStudentId(e.target.value)}>
+              Student group
+              <select value={studentGroupId} onChange={(e) => { setStudentGroupId(e.target.value); setFindName(''); }}>
                 <option value="">Select...</option>
-                {allStudents.map((s) => (
-                  <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name}</option>
-                ))}
+                {studentGroups.map((g) => <option key={g.group_id} value={g.group_id}>{g.name}</option>)}
               </select>
+              {studentGroups.length === 0 && (
+                <span style={{ color: '#5a6b8c', fontSize: '0.85rem' }}>No student groups to choose from.</span>
+              )}
             </label>
           )}
 
           {groupType === 'mentor' && (
             <label>
               Class, activity or mentor group
-              <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <select value={classId} onChange={(e) => { setClassId(e.target.value); setFindName(''); }}>
                 <option value="">Select...</option>
                 {extraClasses.map((c) => (
                   <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
@@ -522,10 +612,24 @@ function BehaviourPageInner() {
                     ))}
                   </optgroup>
                 )}
+                {otherClasses.length > 0 && (
+                  <optgroup label="All other classes">
+                    {otherClasses.map((c) => (
+                      <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {otherActivities.length > 0 && (
+                  <optgroup label="All other Other Half activities">
+                    {otherActivities.map((a) => (
+                      <option key={a.activity_id} value={`${OH_PREFIX}${a.activity_id}`}>{activityLabel(a)}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               {!hasClassOptions && (
                 <span style={{ color: '#5a6b8c', fontSize: '0.85rem' }}>
-                  You have no timetabled lessons, Other Half activities or mentor groups.
+                  No classes, Other Half activities or mentor groups to choose from.
                 </span>
               )}
             </label>
@@ -589,12 +693,28 @@ function BehaviourPageInner() {
           ) : (
             <div>
               <div className="bl-roster-bar">
+                <input
+                  type="search"
+                  className="bl-find"
+                  value={findName}
+                  onChange={(e) => setFindName(e.target.value)}
+                  placeholder="Find a student"
+                  aria-label="Find a student in this group"
+                />
                 <span>{selected.size} of {roster.length} selected</span>
+                {findText && shownRoster.length > 0 && (
+                  <button type="button" className="bl-small" onClick={selectOnlyShown}>
+                    Only {shownRoster.length === 1 ? 'this one' : `these ${shownRoster.length}`}
+                  </button>
+                )}
                 <button type="button" className="secondary bl-small" onClick={selectAll}>All</button>
                 <button type="button" className="secondary bl-small" onClick={selectNone}>None</button>
               </div>
+              {findText && shownRoster.length === 0 && (
+                <p className="bl-hint" style={{ margin: '0 0 0.35rem' }}>Nobody in this group matches “{findName.trim()}”.</p>
+              )}
               <div className="bl-roster">
-                {roster.map((s) => (
+                {shownRoster.map((s) => (
                   <label key={s.student_id}>
                     <input type="checkbox" checked={selected.has(s.student_id)} onChange={() => toggleStudent(s.student_id)} />
                     <span>{s.first_name} {s.last_name}</span>
