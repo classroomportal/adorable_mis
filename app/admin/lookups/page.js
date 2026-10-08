@@ -4,7 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
-import { holdsWorryRole, useWorryCategories } from '../../../lib/worries';
+import { useWorryCategories } from '../../../lib/worries';
 
 // Each Lookups section folds away, closed when the page opens (the
 // principal, 4 Oct 2026: the page had grown long). Open one to edit it.
@@ -723,7 +723,8 @@ function LessonFeedbackQuestions() {
 }
 
 // Worry Box categories (migration 411, the principal 8 Oct 2026). Shown and
-// saved only for the Worry Box readers (DSL, principal, guidance): the
+// saved only for the DSL and the principal (migration 412: "Osione no edit";
+// guidance staff read worries but don't change the list): the
 // heading decides whether students' words go to the admin manager's daily
 // Facilities list, and "Daily list to DSL" what the DSL is emailed, so admin
 // isn't enough. save_worry_category() checks it again.
@@ -740,7 +741,7 @@ function WorryCategories() {
     setDrafts(d);
   }, [cats.all]);
 
-  if (!holdsWorryRole(staffRoles)) return null;
+  if (!(staffRoles || []).some((r) => r === 'dsl' || r === 'principal')) return null;
 
   async function save(key, d, retired) {
     const { error } = await supabase.rpc('save_worry_category', {
@@ -766,8 +767,8 @@ function WorryCategories() {
         Students first pick Facilities or Something else, then the category under it (a heading with one category
         in use is chosen for them). Every afternoon at 4 pm the open worries under <strong>Facilities</strong> go
         to the admin manager without names, and at 4.15 pm the open worries in categories ticked
-        <strong> Daily list to DSL</strong> go to the DSL with names, so choose both with care. Only the DSL, the
-        principal and guidance staff see this section. Categories are never deleted: retire one to stop offering
+        <strong> Daily list to DSL</strong> go to the DSL with names, so choose both with care. Only the DSL and the
+        principal see this section. Categories are never deleted: retire one to stop offering
         it, and its worries keep it. Changes are logged.
       </p>
       {status && <p style={{ color: status.startsWith('Error') ? 'red' : 'green' }}>{status}</p>}
