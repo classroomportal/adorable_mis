@@ -10,6 +10,11 @@
 // see someone has it. Notes stay with the staff; a reply is shown to the
 // student on their portal and they get an inbox notice without its text.
 // Nothing is deleted. Every write is a database function.
+//
+// Print (the principal, 8 Oct 2026: "i need to produce a print out of the
+// worry box") prints the list as filtered, each worry in full with its notes
+// and replies if ticked. It is drawn from what the page already read under
+// the same rules, so it shows nothing more; printing doesn't open a worry.
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -229,6 +234,67 @@ function WorryDetail({ worry, notes, onChanged, onBack }) {
   );
 }
 
+const NOTE_KIND = { note: 'Note', reply: 'Reply to student', status: '' };
+
+function PrintSheet({ title, worries, notes, onBack }) {
+  const [withNotes, setWithNotes] = useState(true);
+  const rows = [...worries].sort((a, b) =>
+    (b.urgent && b.status !== 'closed') - (a.urgent && a.status !== 'closed')
+    || new Date(b.created_at) - new Date(a.created_at));
+  const cell = { border: '1px solid #999', padding: '4px 6px', verticalAlign: 'top' };
+  return (
+    <div className="card">
+      <div className="no-print" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+        <button onClick={() => window.print()}>Print</button>
+        <button className="secondary" onClick={onBack}>&larr; Back to the list</button>
+        <label style={{ fontSize: '0.9rem' }}>
+          <input type="checkbox" checked={withNotes} onChange={(e) => setWithNotes(e.target.checked)} /> Include notes and replies
+        </label>
+      </div>
+      <h1 style={{ margin: '0 0 0.25rem' }}>{title}</h1>
+      <p style={{ margin: '0 0 0.75rem', fontSize: '0.9rem' }}>
+        {rows.length} worr{rows.length === 1 ? 'y' : 'ies'}, printed {formatUKDateTime(new Date().toISOString())}. Urgent ones first, then newest.{' '}
+        <strong>Confidential: safeguarding.</strong> For the DSL, the Principal and the guidance staff only. Keep it locked away and shred it after use.
+      </p>
+      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.85rem' }}>
+        <thead>
+          <tr>
+            <th style={{ ...cell, width: '7.5rem' }}>Received</th><th style={{ ...cell, width: '9rem' }}>Student</th>
+            <th style={{ ...cell, width: '6.5rem' }}>About</th><th style={cell}>Worry</th><th style={{ ...cell, width: '5.5rem' }}>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((w) => {
+            const these = withNotes ? notes.filter((n) => n.worry_id === w.worry_id && n.kind !== 'status') : [];
+            return (
+              <tr key={w.worry_id} style={{ breakInside: 'avoid' }}>
+                <td style={cell}>
+                  {w.source === 'paper' ? formatUKDate(w.received_on) : formatUKDateTime(w.created_at)}
+                  {w.source === 'paper' && <div>Paper slip</div>}
+                </td>
+                <td style={cell}>{studentName(w.students)}<div>{studentSub(w.students)}</div></td>
+                <td style={cell}>{worryCategoryLabel(w.category, { short: true })}</td>
+                <td style={{ ...cell, whiteSpace: 'pre-wrap' }}>
+                  {w.details}
+                  {these.map((n) => (
+                    <div key={n.note_id} style={{ marginTop: '0.4rem', paddingTop: '0.3rem', borderTop: '1px dashed #bbb', whiteSpace: 'pre-wrap' }}>
+                      <strong>{NOTE_KIND[n.kind]}</strong>, {n.created_by_name || 'staff'}, {formatUKDateTime(n.created_at)}: {n.note}
+                    </div>
+                  ))}
+                </td>
+                <td style={cell}>
+                  {w.urgent && <div style={{ fontWeight: 700, color: '#a3232c' }}>Urgent</div>}
+                  {WORRY_STATUS_STAFF[w.status]}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function WorryBoxInner() {
   const [worries, setWorries] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -236,6 +302,7 @@ function WorryBoxInner() {
   const [category, setCategory] = useState('');
   const [selected, setSelected] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -266,6 +333,10 @@ function WorryBoxInner() {
     && (!category || w.category === category));
   const current = worries.find((w) => w.worry_id === selected);
 
+  if (printing) {
+    const kind = category ? ` · ${worryCategoryLabel(category, { short: true })}` : '';
+    return <PrintSheet title={`Worry Box: ${VIEWS[view].label}${kind}`} worries={shown} notes={notes} onBack={() => setPrinting(false)} />;
+  }
   if (adding) {
     return <PaperSlipForm onCancel={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />;
   }
@@ -284,7 +355,10 @@ function WorryBoxInner() {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h1 style={{ margin: 0 }}>Worry Box</h1>
-        <button onClick={() => setAdding(true)}>Type in a paper slip</button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="secondary" onClick={() => setPrinting(true)} disabled={loading || shown.length === 0}>Print</button>
+          <button onClick={() => setAdding(true)}>Type in a paper slip</button>
+        </div>
       </div>
       <p style={soft}>Only the Designated Safeguarding Lead, the Principal and the guidance staff can see these worries.</p>
 
