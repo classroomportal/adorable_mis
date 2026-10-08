@@ -149,6 +149,7 @@ function WellbeingInner() {
   const [show, setShow] = useState('flagged');
   const [issue, setIssue] = useState('');
   const [tierFilter, setTierFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
   const [meeting, setMeeting] = useState(false);
   const [open, setOpen] = useState(null);
   const [note, setNote] = useState('');
@@ -211,14 +212,19 @@ function WellbeingInner() {
   const round = rounds.find((r) => r.round_id === roundId);
   const flagged = checkIns.filter((c) => c.flagged);
   const toFollow = flagged.filter((c) => !c.followed_up_at);
-  const base = show === 'flagged' ? toFollow : show === 'followed' ? flagged.filter((c) => c.followed_up_at) : checkIns;
+  // The year filter narrows everything below the round's summary: the
+  // priority counts, the issue table, the list, downloads and meeting sheet.
+  const years = [...new Set(checkIns.map((c) => c.year_group).filter((y) => y != null))].sort((a, b) => Number(a) - Number(b));
+  const inYear = (c) => !yearFilter || String(c.year_group) === yearFilter;
+  const yearFollow = toFollow.filter(inYear);
+  const base = (show === 'flagged' ? toFollow : show === 'followed' ? flagged.filter((c) => c.followed_up_at) : checkIns).filter(inYear);
   const listed = base
     .filter((c) => !tierFilter || sorted.get(c.check_in_id)?.tier === tierFilter)
     .filter((c) => !issue || sorted.get(c.check_in_id)?.issues.includes(issue))
     .sort((a, b) => byTier(sorted.get(a.check_in_id)?.tier, sorted.get(b.check_in_id)?.tier));
 
-  const tierCount = (t) => toFollow.filter((c) => sorted.get(c.check_in_id)?.tier === t).length;
-  const houses = [...new Set(toFollow.map((c) => c.boarding_house || 'No house'))].sort();
+  const tierCount = (t) => yearFollow.filter((c) => sorted.get(c.check_in_id)?.tier === t).length;
+  const houses = [...new Set(yearFollow.map((c) => c.boarding_house || 'No house'))].sort();
 
   // The answers needing a look that belong to the chosen issue (all of them
   // when no issue is chosen).
@@ -240,7 +246,7 @@ function WellbeingInner() {
       if (withAnswers) r.push(issueAnswers(c).join('; '), (!issue || issue === 'comment') ? (c.comment || '') : '');
       return r;
     });
-    downloadCsv(`Wellbeing ${round?.name || ''} - ${issueLabel}${tierFilter ? ` - ${TIERS[tierFilter].label}` : ''}.csv`, [head, ...rows]);
+    downloadCsv(`Wellbeing ${round?.name || ''}${yearFilter ? ` - Year ${yearFilter}` : ''} - ${issueLabel}${tierFilter ? ` - ${TIERS[tierFilter].label}` : ''}.csv`, [head, ...rows]);
   }
 
   async function followUp(id) {
@@ -264,7 +270,7 @@ function WellbeingInner() {
   }
 
   if (meeting) {
-    const label = [round?.name, issue && ISSUES.find((i) => i.key === issue)?.label, tierFilter && `${TIERS[tierFilter].label} only`]
+    const label = [round?.name, yearFilter && `Year ${yearFilter}`, issue && ISSUES.find((i) => i.key === issue)?.label, tierFilter && `${TIERS[tierFilter].label} only`]
       .filter(Boolean).join(' · ');
     const rows = listed.map((c) => {
       const info = sorted.get(c.check_in_id) || {};
@@ -311,8 +317,8 @@ function WellbeingInner() {
         <p style={soft}>
           Red: you or the DSL see the student (doesn&apos;t feel safe, or feels 1 out of 5). Amber: a conversation with
           someone you choose (wants to talk, no adult to talk to, feels 2 out of 5, many low answers, or a comment).
-          Green: no one-to-one follow-up; it counts towards the school-wide picture. Click an issue or a priority
-          to list those students, then download the list for the person you ask to discuss it.
+          Green: no one-to-one follow-up; it counts towards the school-wide picture. Choose a year, or click an issue
+          or a priority, to list those students, then download the list for the person you ask to discuss it.
         </p>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.5rem 0' }}>
           {['red', 'amber', 'green'].map((t) => (
@@ -321,6 +327,10 @@ function WellbeingInner() {
               {TIERS[t].label}: {tierCount(t)}
             </button>
           ))}
+          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} aria-label="Year">
+            <option value="">Every year</option>
+            {years.map((y) => <option key={y} value={String(y)}>Year {y}</option>)}
+          </select>
         </div>
         <div className="table-scroll"><table>
           <thead>
@@ -331,7 +341,7 @@ function WellbeingInner() {
           </thead>
           <tbody>
             {ISSUES.map((i) => {
-              const these = toFollow.filter((c) => sorted.get(c.check_in_id)?.issues.includes(i.key));
+              const these = yearFollow.filter((c) => sorted.get(c.check_in_id)?.issues.includes(i.key));
               const n = (t) => these.filter((c) => sorted.get(c.check_in_id)?.tier === t).length;
               return (
                 <tr key={i.key} onClick={() => { setShow('flagged'); setIssue(issue === i.key ? '' : i.key); }}
@@ -361,6 +371,10 @@ function WellbeingInner() {
             <option value="">Every priority</option>
             {['red', 'amber', 'green'].map((t) => <option key={t} value={t}>{TIERS[t].label}</option>)}
           </select>
+          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} aria-label="Year">
+            <option value="">Every year</option>
+            {years.map((y) => <option key={y} value={String(y)}>Year {y}</option>)}
+          </select>
           {listed.length > 0 && (
             <>
               <button className="secondary" onClick={() => download(false)} title="Name, year, house, priority and issues">Download names ({listed.length})</button>
@@ -369,11 +383,11 @@ function WellbeingInner() {
             </>
           )}
         </div>
-        {(issue || tierFilter) && (
+        {(issue || tierFilter || yearFilter) && (
           <p style={soft}>
-            Showing {listed.length}{issue ? ` with ${ISSUES.find((i) => i.key === issue)?.label.toLowerCase()}` : ''}
+            Showing {listed.length}{yearFilter ? ` in Year ${yearFilter}` : ''}{issue ? ` with ${ISSUES.find((i) => i.key === issue)?.label.toLowerCase()}` : ''}
             {tierFilter ? `, ${TIERS[tierFilter].label.toLowerCase()} priority` : ''}.{' '}
-            <button type="button" className="secondary" onClick={() => { setIssue(''); setTierFilter(''); }}>Show all</button>
+            <button type="button" className="secondary" onClick={() => { setIssue(''); setTierFilter(''); setYearFilter(''); }}>Show all</button>
           </p>
         )}
         {listed.length === 0 ? <p>None.</p> : (
