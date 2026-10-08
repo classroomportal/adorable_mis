@@ -134,7 +134,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 
 **Every week**
 
-- Enter the short test: Enter Results, choose your class and the week's result set, and type each percentage. The grade appears as you type. Use **Find missing grades by class** to check nobody is left without a mark.
+- Enter the short test: 2 Type In Marks on the Assessment card, choose your class and the week's result set, and type each percentage. The grade appears as you type. Use **Find missing grades by class** to check nobody is left without a mark.
 - Glance at **Class Progress** (or your classes on Weekly Results) to see who is falling below target.
 - Look at **Lesson Feedback** (Students card) for what your classes said about their lessons. A class shows figures once 3 students have answered; names are never shown.
 
@@ -191,7 +191,7 @@ Leaders use Formwork to see what is happening across classes and the school, and
 **Heads of Department**
 
 1. **Weekly**: open **Class Progress** from the top row. It shows your department's classes worst first, each class's average grade against its students' average target. Pick a result set to compare a particular test.
-2. Use **Missing Grades** after each test to chase marks that haven't been entered.
+2. Use **Marks Missing** after each test to chase marks that haven't been entered.
 3. Look at your department's homework on /homework: the drop-down lists every class in your subjects, and you can open any class's mark book.
 4. You can correct or delete a score in your department's subjects, and move students between classes at **Class Allocation** when sets change.
 5. **Each term**, read your department's comments before the deadline if you are a checker.
@@ -200,7 +200,7 @@ Leaders use Formwork to see what is happening across classes and the school, and
 **Assessment manager**
 
 - **Before each term**: make sure every subject's **Grade Boundaries** are right for each year group, and import targets (/target-grades/import) and CAT4/NGRT scores. Check **Target coverage** for students without a target.
-- **After tests and exams**: use Missing Grades and **Top 10**; correct scores where needed. Every change is kept in **Grade History**.
+- **After tests and exams**: use Marks Missing and **Top 10**; correct scores where needed. Every change is kept in **Grade History**.
 - **End of term**: generate the Termly Grade Report, Term Test Scores and transcripts at **Generate Reports**, previewing one student first.
 
 **SMT**
@@ -382,7 +382,7 @@ The same four steps repeat after every assessment point: weekly short tests, Tea
 
 | Step | What to do | Where in Formwork | When |
 | --- | --- | --- | --- |
-| 1. Assess | Enter every score against the right result set, and close the gaps | Enter Results; Missing Grades | Within a few days of the test |
+| 1. Assess | Enter every score against the right result set, and close the gaps | Type In Marks; Marks Missing | Within a few days of the test |
 | 2. Review | Find students, classes and subjects below target, and look for the reasons (attendance, homework, behaviour) | Class Progress, Weekly Results, the student profile, the homework mark sheet | The week after |
 | 3. Act | Choose an action for each concern and tell the people who need to know | Student groups, Other Half placement, messages, mentor conversations, report comments | Straight after the review |
 | 4. Check | At the next assessment point, see whether the students acted on have moved | Class Progress for the new result set; the group's mark sheet | Next test |
@@ -396,7 +396,7 @@ The cycle only works if the data is complete. A class with missing marks drops o
 | A student below target in several subjects | Weekly Results (red "below target"); the student profile's Results and Target Grades tiles; **Build a group from a rule** → Below target | Below target in 3 or more subjects |
 | One subject or class falling behind | **Class Progress**: classes sorted worst first, with counts above / on / below target | A class where most students are below target |
 | A student below target in one subject | **Build a group from a rule** → A subject (below a grade, or below target) | Below target since the start of term |
-| A low or falling exam average | **Build a group from a rule** → Term exam average; **Review Results** (student against the cohort) | Below 50% average |
+| A low or falling exam average | **Build a group from a rule** → Term exam average; **Student vs Avg** (student against the cohort) | Below 50% average |
 | Homework not being done | The homework **mark sheet** (Not handed in count, average); the Homework Monitor for classes setting nothing | Two or more not handed in this term |
 | Poor attendance | Student profile, Attendance tile; **Build a group from a rule** → Attendance | Below 90% present or late |
 | Missing lessons in school | **Missed Lessons**; the missed-lesson pop-up | Any repeated pattern |
@@ -412,7 +412,7 @@ Look at signs together, not one at a time. A student below target whose attendan
 | --- | --- | --- |
 | Teacher | Their classes on Weekly Results and Class Progress; **Show last grades** on the register; the homework mark sheet | Re-teaching topics a class got wrong; talking to individual students; chasing homework; telling the mentor about a student slipping in several ways; writing specific next steps in report comments |
 | Mentor | Each mentee's profile: Results against targets, Attendance, Behaviour; the subject judgements in Pastoral Comments | A regular one-to-one with students below target; agreeing one or two targets; contacting home through the office or SMT when needed |
-| Head of Department | Class Progress for the department, by result set; Missing Grades; homework in the department's classes | Comparing classes in the same year; supporting a teacher whose class is behind; moving a student to a better-suited set at Class Allocation; a department intervention group |
+| Head of Department | Class Progress for the department, by result set; Marks Missing; homework in the department's classes | Comparing classes in the same year; supporting a teacher whose class is behind; moving a student to a better-suited set at Class Allocation; a department intervention group |
 | Pastoral lead and houseparent | Behaviour alerts, attendance, Missed Lessons, rule-built groups | Linking behaviour or attendance concerns to falling results; supervised study at Evening Prep; involving parents |
 | SMT | Class Progress across the school; Homework Monitor; rule-built groups by year; Top 10 | Deciding where intervention goes; placing a group in an Other Half study activity and locking it; messaging a year group's parents; following up at the next result set |
 | Parents | Grades against targets, attendance, released behaviour and reports in the parent portal | Supporting at home; raising questions at parents' evening |
@@ -422,7 +422,7 @@ Look at signs together, not one at a time. A student below target whose attendan
 
 **1. Year 11 students below target in several subjects (SMT or pastoral lead)**
 
-1. After Teacher Assessment week, check Missing Grades and ask for any missing marks to be entered.
+1. After Teacher Assessment week, check Marks Missing and ask for any missing marks to be entered.
 2. Go to **Student Groups → Build a group from a rule**, choose **Below target**, set "at least 3 subjects", count results since the start of term, and tick Year 11.
 3. Press **Show students**. Read each reason and untick anyone who shouldn't be included. Save it as an intervention group, and name the staff who will run it.
 4. On the group's page, place the group in an Other Half study activity (for example a supervised study session, if the school runs one) and lock it until a chosen date. Students and parents see "Placed by the school".
@@ -961,13 +961,15 @@ Not built yet: students handing work in online, and notifications when homework 
 
 ## 5. Assessment, results and targets
 
+**Where the links are.** Every marks page is on the **Assessment** card, numbered in the order the work is done: **1 Adorable.net** (the weekly gradebook from the school's Moodle), **2 Type In Marks**, **3 Marks Missing**, **4 Student vs Avg**, **5 Marks Sheet**, **6 Top 10**, **7 Mark Appeals**, then Grade Boundaries, Subject Settings and Grade History. Baseline tests and targets are on the **Targets & Baselines** card: Import CAT4/NGRT, Reading Ages, Add Reading Test and Import Targets. The old Weekly Results page has no link: use Type In Marks. Until 8 October 2026 some of these were called Enter Results, Missing Grades, Results, Review Results, Result Set Sheet and Record Reading Tests.
+
 Teachers enter percentage scores for their own classes against result sets. Each score is graded from the subject's boundaries for the year group and compared with the student's target. Every grade change is logged permanently.
 
 ### Result sets
 
 A result set is a calendar event with the "result set" box ticked (SMT and admins manage the calendar, chapter 9). Weekly short tests, Teacher Assessment weeks and end-of-term exams are all result sets. End-of-term exams are one set per year group per term ("Y10 Term 1 Exam"); Year 12 has Terms 1 and 2 only, as Term 3 is WAEC. Only the current school year's sets can be picked for entry.
 
-**Special result sets** (the One Year category on the calendar) are for particular year groups only, such as Year 12 mocks. When you choose one on Enter Results, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk3" becomes "Year 12 Mock 1"). They count on the written report and never appear on a transcript.
+**Special result sets** (the One Year category on the calendar) are for particular year groups only, such as Year 12 mocks. When you choose one on Type In Marks, only classes and students in those year groups are listed, and a mark can't be saved for anyone else. The marks are kept under the set's name, not in a week: on the Termly Grade Report the set takes the place of that week's column (for Year 12, "Wk3" becomes "Year 12 Mock 1"). They count on the written report and never appear on a transcript.
 
 ### Entering results (/results/enter)
 
@@ -1001,8 +1003,8 @@ Each class's average grade against the average target of the same students, sort
 ### Other analysis
 
 - **Top 10** (/results/top-ten) ranks students in a result set by average percentage, per year or overall, and prints a page per year.
-- **Result Set Sheet** (/results/set-sheet) lists every current student's marks in a result set: a column per subject (percentages, or press Show for grades), how many subjects they have marks in and their average. Choose one year, each year on its own page, or all years together; order by surname or highest average; then **Print** or **Download CSV**.
-- **Review Results** (/results/subject-overview) charts one student's scores in each subject against the cohort average.
+- **Marks Sheet** (/results/set-sheet) lists every current student's marks in a result set: a column per subject (percentages, or press Show for grades), how many subjects they have marks in and their average. Choose one year, each year on its own page, or all years together; order by surname or highest average; then **Print** or **Download CSV**.
+- **Student vs Avg** (/results/subject-overview) charts one student's scores in each subject against the cohort average.
 - **Target coverage** (/target-grades/coverage) lists students missing a target.
 
 ![Top 10 for a result set](manual-images/36-top-ten.jpg)
@@ -1039,7 +1041,7 @@ A student who thinks a mark doesn't match their marked paper can appeal it, as t
 
 1. Find the appeal under **Waiting for a decision**. It shows the mark, what the student says their paper shows, and their reason.
 2. Check the student's paper.
-3. If the mark was entered wrongly, type the **Correct score** and press **Uphold**. The grade is worked out from the boundaries, the mark is changed, and the change is kept in Grade History under your name. If you have already corrected it on Enter Results, press **Uphold** without a score.
+3. If the mark was entered wrongly, type the **Correct score** and press **Uphold**. The grade is worked out from the boundaries, the mark is changed, and the change is kept in Grade History under your name. If you have already corrected it on Type In Marks, press **Uphold** without a score.
 4. If the mark is right, write a note to the student and press **Turn down**. The note is required, and the student sees it.
 
 ![Mark Appeals: two appeals waiting and one decided](manual-images/38-mark-appeals.jpg)
@@ -1078,7 +1080,7 @@ Feedback can be given from the end of the lesson until the end of the next day, 
 
 Literacy is one of the school's improvement targets, so every student's reading age is tracked against their actual age from admission (the application and the interview) onwards. The **gap** is the reading age minus the student's age on the day of the test: **−1 y 2 m** means reading 14 months below their age, **+8 m** means 8 months above. Formwork works out the age and the gap from the date of birth and the test date; nobody types them.
 
-Open **Reading Ages** from the Assessment card. Teachers, Heads of Department, mentors, pastoral staff, assessment managers and SMT can see it. Choose a **Year group** (and a **Form** if you want one).
+Open **Reading Ages** from the Targets & Baselines card. Teachers, Heads of Department, mentors, pastoral staff, assessment managers and SMT can see it. Choose a **Year group** (and a **Form** if you want one).
 
 ![Reading Ages for Year 8](manual-images/34b-reading-ages.jpg)
 
@@ -1436,7 +1438,7 @@ Staff see the academic calendar of terms and events for the chosen **Academic ye
 
 ![The academic calendar](manual-images/70-calendar.jpg)
 
-Each event has a date, name, category, an optional year-group note and a **result set** tick. Ticking result set makes the event available on Enter Results (chapter 5); adding a report-period event also creates the report period. Parents see a read-only calendar without staff deadlines, and can subscribe to it on their phone (chapter 13).
+Each event has a date, name, category, an optional year-group note and a **result set** tick. Ticking result set makes the event available on Type In Marks (chapter 5); adding a report-period event also creates the report period. Parents see a read-only calendar without staff deadlines, and can subscribe to it on their phone (chapter 13).
 
 To add a special result set, such as Year 12 mocks:
 

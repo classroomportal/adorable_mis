@@ -464,20 +464,21 @@ const TABS = [
     description: 'Marks, numbered in the order the work is done, then grading setup.',
     // Every marks link is here, numbered in process order, with names that
     // say what each does (the principal, 8 Oct 2026: six links on two cards
-    // all said "Results"). Targets, CAT4/NGRT and reading ages are on the
+    // all said "Results"). Weekly Results (/results, a one-at-a-time form
+    // whose save is broken, PRD P0-1) has no link: Type In Marks does its job
+    // (the principal, 8 Oct 2026). Targets, CAT4/NGRT and reading ages are on the
     // Targets & Baselines card. Class Progress is here only for those without
     // its top-row tile.
     items: ({ hasAccess, staffRoles, isAdmin }) => [
-      { href: '/results/import-gradebook', label: '1 Upload Moodle', desc: "Upload the weekly Moodle gradebook (CSV) to load a week's marks." },
+      { href: '/results/import-gradebook', label: '1 Adorable.net', desc: "Upload the weekly gradebook from Adorable.net, the school's Moodle (CSV), to load a week's marks." },
       { href: '/results/enter', label: '2 Type In Marks', desc: "Type in marks for a class by hand." },
       // Shares the /results grant rather than having a resource of its own.
       { href: '/results/missing', label: '3 Marks Missing', resource: '/results', desc: "Classes that still have marks to enter." },
-      { href: '/results', label: '4 Weekly Results', desc: "Each week's marks against students' target grades." },
-      { href: '/results/subject-overview', label: '5 Student vs Avg', desc: "One student's marks in each subject against the average of everyone who sat the same result set." },
+      { href: '/results/subject-overview', label: '4 Student vs Avg', desc: "One student's marks in each subject against the average of everyone who sat the same result set." },
       // Shares the /results/top-ten grant rather than having a resource of its own.
-      { href: '/results/set-sheet', label: '6 Marks Sheet', resource: '/results/top-ten', desc: "Every student's marks in a result set, a year at a time, to print or download." },
-      { href: '/results/top-ten', label: '7 Top 10', desc: "Print the top 10 students for a result set." },
-      { href: '/grade-appeals', label: '8 Mark Appeals', desc: "Students' appeals against a mark: check the paper and decide." },
+      { href: '/results/set-sheet', label: '5 Marks Sheet', resource: '/results/top-ten', desc: "Every student's marks in a result set, a year at a time, to print or download." },
+      { href: '/results/top-ten', label: '6 Top 10', desc: "Print the top 10 students for a result set." },
+      { href: '/grade-appeals', label: '7 Mark Appeals', desc: "Students' appeals against a mark: check the paper and decide." },
       !showsClassProgressTile(hasAccess, staffRoles, isAdmin) && { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
