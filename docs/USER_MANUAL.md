@@ -1335,9 +1335,11 @@ To record a slip from the paper box, press **Type in a paper slip**, pick the st
 
 - **Urgent and unopened for 24 hours**: the guidance staff get one inbox message and one email with the number, never the student or the words.
 - **4 pm, Facilities list**: the admin manager (Paul IMO) is emailed every Facilities worry that isn't closed, without the student's name, year or house, so things can be fixed. Replies go to Osione ILOEJE. Close a worry once it's fixed, or it stays on the list. Move a personal worry out of Facilities, or it goes to the admin manager too.
-- **4.15 pm, worries about staff**: the DSL is emailed every worry about a member of staff that isn't closed, with the student's name.
+- **4.15 pm, worries about staff**: the DSL and the principal are emailed every worry that isn't closed in the categories ticked Daily list to DSL (A member of staff), with the student's name.
 
 Nothing is sent on a day with none, and sending doesn't open or change a worry.
+
+**Categories.** The DSL, the principal and the guidance staff can change the list of categories at **Lookups → Worry Box categories** (nobody else sees that section). Change the wording, the short name staff see, the order, and the heading. A category under **Facilities** has its open worries emailed to the admin manager every day (without names), and one ticked **Daily list to DSL** goes on the 4.15 pm email, so choose both with care. Press **Add** for a new one. To stop using one, press **Retire**: students no longer see it, and the worries in it keep it. There is always at least one under each heading.
 
 **Wellbeing check-ins** (/wellbeing)
 
@@ -1797,7 +1799,7 @@ Add staff (name, code, email: a login is created automatically from the email) a
 
 ### Lookups (/admin/lookups)
 
-The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only; changing a category's points affects new events only, and to stop using a category that has been used, press Retire: it is no longer offered for new events, its old events keep it, and Bring back restores it), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, admission fee proposals, the mark appeal rules (days to appeal and credits a year, for each school year), and When parents see marks: how many hours (0 to 168) a new mark waits before parents can see it, counted from when it was first entered. 0 means parents see marks as soon as they are entered. Every section starts folded closed: click its title to open it. Thresholds must be negative whole numbers and apply to new events only. Changes are logged.
+The lists and settings the rest of Formwork uses: boarding houses, sports houses, behaviour categories with their points and a short description of when to use each (admins only; changing a category's points affects new events only, and to stop using a category that has been used, press Retire: it is no longer offered for new events, its old events keep it, and Bring back restores it), the behaviour thresholds and detention room and time, the Stage 5 guidance shown to staff when they log a serious event (under Detentions and serious events: start a line with • or - for a list, end a line with a colon for a heading, then press Save guidance), certificate levels, academic years, admission fee proposals, the mark appeal rules (days to appeal and credits a year, for each school year), and When parents see marks: how many hours (0 to 168) a new mark waits before parents can see it, counted from when it was first entered. 0 means parents see marks as soon as they are entered. Every section starts folded closed: click its title to open it. Thresholds must be negative whole numbers and apply to new events only. The DSL, the principal and guidance staff also see a Worry Box categories section (chapter 7, The Worry Box). Changes are logged.
 
 ![Lookups, every section closed except Mark appeals](manual-images/122-lookups.jpg)
 
