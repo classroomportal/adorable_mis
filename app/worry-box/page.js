@@ -20,6 +20,14 @@
 // split into Facilities (the 'equipment' category) and Other, as tabs, and a
 // misfiled worry is moved with "Move to" (set_worry_category(), which leaves a
 // note saying who moved it).
+//
+// Filters (the principal, 8 Oct 2026: "the view on the worry box needs to be
+// able to be filtered", "different categories"): besides the tabs and status,
+// a button per category with its count of worries not closed, a search over the
+// student's name and the worry's words, year group, house, urgent only, portal
+// or paper, and a date range (the day it was sent, or found in the box for a
+// paper slip, in Lagos time). Print follows every filter. All on the page,
+// over the rows already read; no new data rules.
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -37,6 +45,14 @@ const VIEWS = {
   closed: { label: 'Closed', statuses: ['closed'] },
   all: { label: 'Everything', statuses: null },
 };
+
+// The day a worry came in, as YYYY-MM-DD in Lagos time.
+function worryDay(w) {
+  if (w.source === 'paper') return w.received_on;
+  return new Date(w.created_at).toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' });
+}
+
+const NO_FILTERS = { search: '', year: '', house: '', urgentOnly: false, source: '', from: '', to: '' };
 
 function studentName(s) {
   if (!s) return 'Not signed (paper slip)';
@@ -320,6 +336,7 @@ function WorryBoxInner() {
   const [view, setView] = useState('current');
   const [area, setArea] = useState('other');
   const [category, setCategory] = useState('');
+  const [filters, setFilters] = useState(NO_FILTERS);
   const [selected, setSelected] = useState(null);
   const [adding, setAdding] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -349,16 +366,43 @@ function WorryBoxInner() {
     }
   }
 
-  const shown = worries.filter((w) => (!VIEWS[view].statuses || VIEWS[view].statuses.includes(w.status))
-    && (!area || worryArea(w.category) === area)
-    && (!category || w.category === category));
+  const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
+  const years = [...new Set(worries.map((w) => w.students?.year_group).filter((y) => y != null))].sort((a, b) => a - b);
+  const houses = [...new Set(worries.map((w) => w.students?.boarding_house).filter(Boolean))].sort();
+  const words = filters.search.trim().toLowerCase();
+  const filtering = JSON.stringify(filters) !== JSON.stringify(NO_FILTERS);
+
+  const shown = worries.filter((w) => {
+    if (VIEWS[view].statuses && !VIEWS[view].statuses.includes(w.status)) return false;
+    if (area && worryArea(w.category) !== area) return false;
+    if (category && w.category !== category) return false;
+    if (filters.year && String(w.students?.year_group ?? '') !== filters.year) return false;
+    if (filters.house && (w.students?.boarding_house || '') !== filters.house) return false;
+    if (filters.urgentOnly && !w.urgent) return false;
+    if (filters.source && w.source !== filters.source) return false;
+    const day = worryDay(w);
+    if (filters.from && day < filters.from) return false;
+    if (filters.to && day > filters.to) return false;
+    if (words) {
+      const s = w.students;
+      const text = `${w.details} ${s ? `${s.first_name} ${s.preferred_name || ''} ${s.last_name}` : 'not signed'}`.toLowerCase();
+      if (!text.includes(words)) return false;
+    }
+    return true;
+  });
   const kinds = WORRY_CATEGORIES.filter((c) => !area || worryArea(c.key) === area);
   const waiting = (a) => worries.filter((w) => w.status !== 'closed' && (!a || worryArea(w.category) === a));
   const current = worries.find((w) => w.worry_id === selected);
 
   if (printing) {
     const kind = (area ? ` · ${WORRY_AREAS[area].label}` : '')
-      + (category && area !== 'facilities' ? ` · ${worryCategoryLabel(category, { short: true })}` : '');
+      + (category && area !== 'facilities' ? ` · ${worryCategoryLabel(category, { short: true })}` : '')
+      + (filters.year ? ` · Year ${filters.year}` : '')
+      + (filters.house ? ` · ${filters.house}` : '')
+      + (filters.urgentOnly ? ' · Urgent' : '')
+      + (filters.source ? ` · ${filters.source === 'paper' ? 'Paper slips' : 'Portal'}` : '')
+      + (filters.from || filters.to ? ` · ${filters.from ? formatUKDate(filters.from) : '…'} to ${filters.to ? formatUKDate(filters.to) : '…'}` : '')
+      + (words ? ` · "${filters.search.trim()}"` : '');
     return <PrintSheet title={`Worry Box: ${VIEWS[view].label}${kind}`} worries={shown} notes={notes} onBack={() => setPrinting(false)} />;
   }
   if (adding) {
@@ -399,16 +443,55 @@ function WorryBoxInner() {
         })}
       </div>
 
+      {kinds.length > 1 && (
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', margin: '0.75rem 0' }}>
+          <span style={soft}>Category:</span>
+          {[{ key: '', short: 'All' }, ...kinds].map((c) => {
+            const n = worries.filter((w) => w.status !== 'closed'
+              && (c.key ? w.category === c.key : (!area || worryArea(w.category) === area))).length;
+            return (
+              <button key={c.key || 'all'} className={category === c.key ? '' : 'secondary'}
+                style={{ padding: '0.25rem 0.6rem', fontSize: '0.9rem' }}
+                onClick={() => setCategory(c.key)}>
+                {c.short} ({n})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
         <select value={view} onChange={(e) => setView(e.target.value)}>
           {Object.entries(VIEWS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        {kinds.length > 1 && (
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="">Every kind</option>
-            {kinds.map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
-          </select>
-        )}
+        <select value={filters.year} onChange={(e) => setFilter('year', e.target.value)}>
+          <option value="">Every year</option>
+          {years.map((y) => <option key={y} value={String(y)}>Year {y}</option>)}
+        </select>
+        <select value={filters.house} onChange={(e) => setFilter('house', e.target.value)}>
+          <option value="">Every house</option>
+          {houses.map((h) => <option key={h} value={h}>{h}</option>)}
+        </select>
+        <select value={filters.source} onChange={(e) => setFilter('source', e.target.value)}>
+          <option value="">Portal and paper</option>
+          <option value="portal">Portal only</option>
+          <option value="paper">Paper slips only</option>
+        </select>
+        <label style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+          <input type="checkbox" checked={filters.urgentOnly} onChange={(e) => setFilter('urgentOnly', e.target.checked)} /> Urgent only
+        </label>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', margin: '0.75rem 0' }}>
+        <input type="search" placeholder="Search a name or words in the worry" value={filters.search}
+          onChange={(e) => setFilter('search', e.target.value)} style={{ minWidth: 260, flex: '1 1 260px', maxWidth: 420 }} />
+        <label style={soft}>
+          From <input type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => setFilter('from', e.target.value)} />
+        </label>
+        <label style={soft}>
+          to <input type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilter('to', e.target.value)} />
+        </label>
+        {filtering && <button className="secondary" onClick={() => setFilters(NO_FILTERS)}>Clear filters</button>}
+        {!loading && <span style={soft}>{shown.length} shown</span>}
       </div>
 
       {error && <p style={{ color: '#a3232c' }}>{error}</p>}
