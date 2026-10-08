@@ -70,9 +70,9 @@ export default function WorryBox({ studentId }) {
       </div>
 
       <p>
-        Write about anything that worries you. Only the Designated Safeguarding Lead and the Principal
-        read it, and they will see your name, so they can help you. Nobody else does: not your teachers,
-        not other students, not your parents.
+        Write about anything that worries you. Only the Designated Safeguarding Lead, the Principal and
+        the school&apos;s guidance staff read it, and they will see your name, so they can help you. Nobody
+        else does: not your teachers, not other students, not your parents.
       </p>
 
       {sent ? (

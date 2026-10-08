@@ -24,11 +24,13 @@ export default function RequireResource({ resourceKey, children }) {
   // The Worry Box, wellbeing check-ins and the school rating (migrations
   // 391–394) are for the DSL and the principal only, on
   // the roles themselves; admins get nothing from the database.
-  if (['/worry-box', '/wellbeing', '/school-rating'].includes(resourceKey) && !(staffRoles || []).some((r) => r === 'dsl' || r === 'principal')) {
+  // Guidance staff (migration 402) also work the Worry Box, but not the other two.
+  const worryRoles = resourceKey === '/worry-box' ? ['dsl', 'principal', 'guidance'] : ['dsl', 'principal'];
+  if (['/worry-box', '/wellbeing', '/school-rating'].includes(resourceKey) && !(staffRoles || []).some((r) => worryRoles.includes(r))) {
     return (
       <main style={{ padding: '1.25rem', maxWidth: 700, margin: '0 auto' }}>
         <h1>Access not allowed</h1>
-        <p>The Worry Box, wellbeing check-ins and the school rating are for the Designated Safeguarding Lead and the Principal only.</p>
+        <p>{resourceKey === '/worry-box' ? 'The Worry Box is for the Designated Safeguarding Lead, the Principal and the guidance staff only.' : 'Wellbeing check-ins and the school rating are for the Designated Safeguarding Lead and the Principal only.'}</p>
       </main>
     );
   }

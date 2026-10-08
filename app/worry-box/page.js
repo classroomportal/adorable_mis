@@ -1,8 +1,9 @@
 'use client';
 
 // The Worry Box (migration 391). Students send worries from their portal;
-// the DSL and the principal read them here, with the student's name, and
-// nobody else does (the principal, 7 Oct 2026; admins get no rows). Paper
+// the DSL, the principal and, since migration 402, holders of the guidance
+// role read them here, with the student's name, and nobody else does (the
+// principal, 7 and 8 Oct 2026; admins get no rows). Paper
 // slips from the box in school are typed in here too, signed or not.
 //
 // Opening a new worry marks it read (open_worry()), so the other reader can
@@ -203,7 +204,7 @@ function WorryDetail({ worry, notes, onChanged, onBack }) {
 
       <div style={{ display: 'grid', gap: '0.5rem', maxWidth: 640, marginTop: '1rem' }}>
         <textarea rows={4} maxLength={4000} value={note} onChange={(e) => setNote(e.target.value)}
-          placeholder={toStudent ? 'Reply to the student (they will see this)' : 'Note for the DSL and the Principal (the student doesn’t see it)'} />
+          placeholder={toStudent ? 'Reply to the student (they will see this)' : 'Note for the DSL, the Principal and guidance staff (the student doesn’t see it)'} />
         {canReply && (
           <label style={{ display: 'flex', gap: '0.5rem' }}>
             <input type="checkbox" checked={toStudent} onChange={(e) => setToStudent(e.target.checked)} />
@@ -285,7 +286,7 @@ function WorryBoxInner() {
         <h1 style={{ margin: 0 }}>Worry Box</h1>
         <button onClick={() => setAdding(true)}>Type in a paper slip</button>
       </div>
-      <p style={soft}>Only the Designated Safeguarding Lead and the Principal can see these worries.</p>
+      <p style={soft}>Only the Designated Safeguarding Lead, the Principal and the guidance staff can see these worries.</p>
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
         <select value={view} onChange={(e) => setView(e.target.value)}>
