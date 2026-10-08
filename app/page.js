@@ -473,13 +473,15 @@ const TABS = [
       !showsClassProgressTile(hasAccess, staffRoles, isAdmin) && { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
       { href: '/grade-appeals', label: 'Mark Appeals', desc: "Students' appeals against a mark: check the paper and decide." },
       { href: '/results/top-ten', label: 'Top 10', desc: "Print the top 10 students for a result set." },
+      // Shares the /results/top-ten grant rather than having a resource of its own.
+      { href: '/results/set-sheet', label: 'Result Set Sheet', resource: '/results/top-ten', desc: "Every student's marks in a result set, a year at a time, to print or download." },
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
       { href: '/assessments/import', label: 'Import CAT4/NGRT', desc: "Upload CAT4 and NGRT scores." },
       { href: '/reading-ages', label: 'Reading Ages', desc: "Reading age against actual age, and how the gap changes over time." },
       { href: '/reading-ages/record', label: 'Record Reading Tests', desc: "Enter a reading test for a year group or form." },
       { href: '/assessments/grade-history', label: 'Grade History', desc: "Every grade entered, changed or deleted, and who did it." },
-    ].filter((it) => it && hasAccess(it.href)),
+    ].filter((it) => it && hasAccess(it.resource || it.href)),
   },
   {
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
