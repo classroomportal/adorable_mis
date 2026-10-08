@@ -4,12 +4,12 @@ import { supabase } from '../../../lib/supabaseClient';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { useAuth } from '../../../lib/AuthContext';
-import { ROLE_LABELS } from '../../../lib/staffRoles';
-
-const ALL_ROLES = Object.keys(ROLE_LABELS);
+import { ROLE_LABELS, PROTECTED_ROLES, roleLabel, sortRoles } from '../../../lib/staffRoles';
 
 function StaffRolesInner() {
-  const { hasAccess } = useAuth();
+  const { hasAccess, staffRoles } = useAuth();
+  const isPrincipal = (staffRoles || []).includes('principal');
+  const [allRoles, setAllRoles] = useState(sortRoles(Object.keys(ROLE_LABELS)));
   const [staff, setStaff] = useState([]);
   const [roleMap, setRoleMap] = useState({}); // staff_id -> Set of role_name
   const [deptScopeMap, setDeptScopeMap] = useState({}); // staff_id -> department_name (for head_of_department)
@@ -23,6 +23,8 @@ function StaffRolesInner() {
   async function load() {
     const { data: s } = await supabase.from('staff').select('*').order('last_name');
     setStaff(s || []);
+    const { data: rl } = await supabase.from('roles').select('role_name');
+    if (rl && rl.length) setAllRoles(sortRoles(rl.map((x) => x.role_name)));
     const { data: r } = await supabase.from('staff_roles').select('*');
     const map = {};
     const deptScopes = {};
@@ -185,8 +187,9 @@ function StaffRolesInner() {
           {staff
             .filter((s) => `${s.first_name} ${s.last_name}`.toLowerCase().includes(nameFilter.toLowerCase()))
             .map((s) => {
-              const assigned = [...(roleMap[s.staff_id] || [])];
-              const unassigned = ALL_ROLES.filter((r) => !assigned.includes(r));
+              const assigned = sortRoles([...(roleMap[s.staff_id] || [])]);
+              const canChange = (r) => isPrincipal || !PROTECTED_ROLES.includes(r);
+              const unassigned = allRoles.filter((r) => !assigned.includes(r) && canChange(r));
               return (
             <tr key={s.staff_id}>
               <td>
@@ -237,15 +240,19 @@ function StaffRolesInner() {
                       background: '#eef1fb', border: '1px solid #d3d9f0', borderRadius: '999px',
                       padding: '0.15rem 0.5rem', fontSize: '0.8rem',
                     }}>
-                      {ROLE_LABELS[r]}
-                      <button
-                        type="button"
-                        onClick={() => toggleRole(s.staff_id, r, false)}
-                        title={`Remove ${ROLE_LABELS[r]}`}
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, color: '#667' }}
-                      >
-                        ×
-                      </button>
+                      {roleLabel(r)}
+                      {canChange(r) ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleRole(s.staff_id, r, false)}
+                          title={`Remove ${roleLabel(r)}`}
+                          style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, color: '#667' }}
+                        >
+                          ×
+                        </button>
+                      ) : (
+                        <span title="Only the principal can give or remove this role" aria-label="Locked">🔒</span>
+                      )}
                     </span>
                   ))}
                 </div>
@@ -286,7 +293,7 @@ function StaffRolesInner() {
                     style={{ fontSize: '0.8rem' }}
                   >
                     <option value="">+ Add role...</option>
-                    {unassigned.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                    {unassigned.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
                   </select>
                 )}
               </td>
