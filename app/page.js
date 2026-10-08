@@ -320,19 +320,15 @@ function ModuleCard({ icon, label, accent, description, items, allowedHrefs, ext
 const TABS = [
   {
     key: 'students', label: 'Students', icon: '🎓', accent: 'students',
-    description: 'Core records, behaviour, results and homework.',
+    description: 'Core records, behaviour and lesson feedback.',
     items: ({ hasAccess }) => [
       { href: '/students', label: 'Core Data', desc: "Find a student and open their full record." },
       { href: '/students/sports-houses', label: 'Sports Houses', desc: "Give new students a sports house, with each house's boys and girls in every year." },
       { href: '/behaviour/log', label: 'Behaviour Log', resource: '/behaviour', desc: "Look up, open and correct logged behaviour. Log new behaviour from the big tile at the top." },
-      { href: '/results', label: 'Results', desc: "Browse weekly results against target grades." },
-      { href: '/results/enter', label: 'Enter Results', desc: "Type in marks for a class." },
       // Homework is set from the lesson's register (Attendance), which links to
       // the mark book, so it has no link here (the principal, 7 Oct 2026).
+      // Every marks link is on the Assessment card (the principal, 8 Oct 2026).
       { href: '/lesson-feedback', label: 'Lesson Feedback', desc: "What students say about lessons: a summary for each class, no names." },
-      // Shares the /results grant rather than having a resource of its own.
-      { href: '/results/missing', label: 'Missing Grades', resource: '/results', desc: "Classes that still have marks to enter." },
-      { href: '/results/subject-overview', label: 'Review Results', desc: "A student's exam results in each subject against the cohort average." },
       // Detentions and Behaviour Appeals live on the Pastoral card only, and
       // Certificates on the Rewards card (the principal, 30 Sept 2026: one
       // place for each link; migration 371).
@@ -465,21 +461,29 @@ const TABS = [
   },
   {
     key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school',
-    description: 'Import results, target grades and manage grading setup.',
-    // Class Progress is here only for those without its top-row tile.
+    description: 'Marks, numbered in the order the work is done, then grading setup and reading ages.',
+    // Every marks link is here, numbered in process order, with names that
+    // say what each does (the principal, 8 Oct 2026: six links on two cards
+    // all said "Results"). Class Progress is here only for those without its
+    // top-row tile.
     items: ({ hasAccess, staffRoles, isAdmin }) => [
-      { href: '/results/import-gradebook', label: 'Import Results', desc: "Upload the weekly Moodle gradebook." },
+      { href: '/results/import-gradebook', label: '1 Upload Moodle', desc: "Upload the weekly Moodle gradebook (CSV) to load a week's marks." },
+      { href: '/results/enter', label: '2 Type In Marks', desc: "Type in marks for a class by hand." },
+      // Shares the /results grant rather than having a resource of its own.
+      { href: '/results/missing', label: '3 Marks Missing', resource: '/results', desc: "Classes that still have marks to enter." },
+      { href: '/results', label: '4 Weekly Results', desc: "Each week's marks against students' target grades." },
+      { href: '/results/subject-overview', label: '5 Student vs Avg', desc: "One student's marks in each subject against the average of everyone who sat the same result set." },
+      // Shares the /results/top-ten grant rather than having a resource of its own.
+      { href: '/results/set-sheet', label: '6 Marks Sheet', resource: '/results/top-ten', desc: "Every student's marks in a result set, a year at a time, to print or download." },
+      { href: '/results/top-ten', label: '7 Top 10', desc: "Print the top 10 students for a result set." },
+      { href: '/grade-appeals', label: '8 Mark Appeals', desc: "Students' appeals against a mark: check the paper and decide." },
       { href: '/target-grades/import', label: 'Import Targets', desc: "Upload students' target grades." },
       !showsClassProgressTile(hasAccess, staffRoles, isAdmin) && { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
-      { href: '/grade-appeals', label: 'Mark Appeals', desc: "Students' appeals against a mark: check the paper and decide." },
-      { href: '/results/top-ten', label: 'Top 10', desc: "Print the top 10 students for a result set." },
-      // Shares the /results/top-ten grant rather than having a resource of its own.
-      { href: '/results/set-sheet', label: 'Result Set Sheet', resource: '/results/top-ten', desc: "Every student's marks in a result set, a year at a time, to print or download." },
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
       { href: '/assessments/import', label: 'Import CAT4/NGRT', desc: "Upload CAT4 and NGRT scores." },
       { href: '/reading-ages', label: 'Reading Ages', desc: "Reading age against actual age, and how the gap changes over time." },
-      { href: '/reading-ages/record', label: 'Record Reading Tests', desc: "Enter a reading test for a year group or form." },
+      { href: '/reading-ages/record', label: 'Add Reading Test', desc: "Enter a reading test for a year group or form." },
       { href: '/assessments/grade-history', label: 'Grade History', desc: "Every grade entered, changed or deleted, and who did it." },
     ].filter((it) => it && hasAccess(it.resource || it.href)),
   },

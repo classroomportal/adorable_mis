@@ -265,7 +265,7 @@ function ImportInner() {
 
   return (
     <div>
-      <h1>Import Weekly Gradebook (CSV)</h1>
+      <h1>Upload Moodle Gradebook (CSV)</h1>
 
       <div className="card">
         <p>Upload the raw weekly export. Any number of subject/quiz columns is fine — they're detected automatically. Students are matched by <code>ID number</code> against each student's UPN.</p>

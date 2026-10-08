@@ -78,7 +78,7 @@ function MissingGradesInner() {
 
   return (
     <div>
-      <h1>Missing Grades</h1>
+      <h1>Marks Missing</h1>
       <p>
         Students with no mark for a result set, grouped by class. A class is only listed if its subject
         was assessed in its year group for that set.

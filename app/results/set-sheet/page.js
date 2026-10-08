@@ -183,7 +183,7 @@ function SetSheetInner() {
   return (
     <div>
       <div className="no-print">
-        <h1>Result Set Sheet</h1>
+        <h1>Marks Sheet</h1>
         <div className="card" style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <label>
             Result set
