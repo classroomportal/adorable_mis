@@ -1788,7 +1788,7 @@ The lists and settings the rest of Formwork uses: boarding houses, sports houses
 - **Import Nova-T** (/admin/import-classes): upload Nova-T's .DAT files. Every change is previewed before it's applied; classes missing from the file are offered for deletion. A lesson's subject comes only from the subject code in the group name; Other Half (Oh) and Sports Academy (Sa) groups are skipped.
 - **Import Meetings** (/admin/import-staff-commitments): staff meetings and non-working periods, which block that person's slot.
 - **Class Allocation** (/admin/block-allocation): choose a year and block, then tick which class each student is in. Open to admins, Heads of Department and pastoral staff.
-- **Student Numbers** (/admin/student-numbers): boys, girls and unknown, as three links on the Administration card (tabs at the top of the page switch between them): Years & Mentor Groups (each year, then its mentor groups with a subtotal for the year); Restaurants & Boarding (each restaurant, then each boarding house and room, with a Years column showing the year groups in each room, for example "Y9 (3), Y10 (1)"; click a house to open its rooms); and Sports Houses & Classes (each sports house with its years, then every class by subject).
+- **Student Numbers** (/admin/student-numbers): boys, girls and unknown, counted six ways. The page opens on six choices: Year Groups, Mentor Groups (with a subtotal for each year), Restaurants, Boarding Houses (click a house to open its rooms; a Years column shows the year groups in each room, for example "Y9 (3), Y10 (1)"), Sports Houses (with their year groups) and Classes (by subject). Once one is open, the buttons at the top switch to another.
 
 ![Bell Times](manual-images/128-bell-times.jpg)
 

@@ -746,7 +746,7 @@ SMT own the calendar and terms; admins own setup, imports, permissions and backu
 | /staff/roles | Assign staff roles; warns when a houseparent has no house | HR, admin |
 | /staff/mentor-groups | Assign one or two staff to each mentor group | Granted roles |
 | /admin/lookups | Boarding houses, sports houses, behaviour categories and points, behaviour thresholds, detention room and time, certificate levels, academic years, admission fee proposals, mark appeal days and credits (FR-7.30), hours before parents see a mark (FR-7.34), lesson feedback questions (FR-7.38). Every section starts folded closed and opens when clicked (4 Oct 2026) | Admin, SMT, HR |
-| /admin/student-numbers | Boys, girls and unknown, in three views, each its own link on the Administration card (8 Oct 2026): Years & Mentor Groups (mentor groups under a subtotal per year); Restaurants & Boarding (restaurant, then boarding house and room, rooms counted within their house, with the year groups in each room and house); Sports Houses & Classes (sports house with its years, then class) | Granted roles |
+| /admin/student-numbers | Boys, girls and unknown, one link on the Administration card opening six choices (8 Oct 2026): Year Groups; Mentor Groups (with a subtotal per year); Restaurants; Boarding Houses (house and room, rooms counted within their house, with the year groups in each room and house); Sports Houses (with their year groups); Classes (by subject) | Granted roles |
 | /admin/class-lists | Print class rosters by year, subject or class | HR, school office, admin |
 | /admin/bell-times | Sessions and times for each weekday | Admin |
 | /admin/subject-settings | Subject display names, departments, key stages, aliases, target fallback | Assessment manager, admin |
