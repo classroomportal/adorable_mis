@@ -77,9 +77,14 @@ export default function RegisterHomework({ classId }) {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0 }}>📘 Homework · {cls.class_code}</h2>
-        {!formOpen && (
-          <button type="button" onClick={() => { setFormOpen(true); setStatus(null); }}>Set homework</button>
-        )}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Every homework the class has had, its mark books and the mark
+              sheet: /homework has no dashboard link (the principal, 7 Oct 2026). */}
+          <a href={`/homework?class=${classId}`} style={{ ...btnSmall, whiteSpace: 'nowrap' }}>All homework &amp; mark books →</a>
+          {!formOpen && (
+            <button type="button" onClick={() => { setFormOpen(true); setStatus(null); }}>Set homework</button>
+          )}
+        </div>
       </div>
       {status && <p style={{ marginBottom: 0 }}>{status}</p>}
       {homework.length === 0 ? (
