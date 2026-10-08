@@ -185,6 +185,10 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
           </button>
         )}
       </div>
+      <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+        Once marks are released, each student marked Not handed in gets a &ldquo;Homework not completed&rdquo; negative,
+        logged as you. Changing the mark, or hiding the marks again, withdraws it.
+      </p>
 
       <SaveBar status={status}>
         <button type="button" onClick={saveMarks} disabled={busy || dirty.length === 0 || withdrawn}>
