@@ -461,11 +461,12 @@ const TABS = [
   },
   {
     key: 'assessment', label: 'Assessment', icon: '📊', accent: 'school',
-    description: 'Marks, numbered in the order the work is done, then grading setup and reading ages.',
+    description: 'Marks, numbered in the order the work is done, then grading setup.',
     // Every marks link is here, numbered in process order, with names that
     // say what each does (the principal, 8 Oct 2026: six links on two cards
-    // all said "Results"). Class Progress is here only for those without its
-    // top-row tile.
+    // all said "Results"). Targets, CAT4/NGRT and reading ages are on the
+    // Targets & Baselines card. Class Progress is here only for those without
+    // its top-row tile.
     items: ({ hasAccess, staffRoles, isAdmin }) => [
       { href: '/results/import-gradebook', label: '1 Upload Moodle', desc: "Upload the weekly Moodle gradebook (CSV) to load a week's marks." },
       { href: '/results/enter', label: '2 Type In Marks', desc: "Type in marks for a class by hand." },
@@ -477,15 +478,24 @@ const TABS = [
       { href: '/results/set-sheet', label: '6 Marks Sheet', resource: '/results/top-ten', desc: "Every student's marks in a result set, a year at a time, to print or download." },
       { href: '/results/top-ten', label: '7 Top 10', desc: "Print the top 10 students for a result set." },
       { href: '/grade-appeals', label: '8 Mark Appeals', desc: "Students' appeals against a mark: check the paper and decide." },
-      { href: '/target-grades/import', label: 'Import Targets', desc: "Upload students' target grades." },
       !showsClassProgressTile(hasAccess, staffRoles, isAdmin) && { href: '/classes/progress', label: 'Class Progress', desc: "A class's results against their targets." },
       { href: '/admin/grade-boundaries', label: 'Grade Boundaries', desc: "Score cut-offs that turn marks into grades." },
       { href: '/admin/subject-settings', label: 'Subject Settings', desc: "Departments, key stages and subject names." },
+      { href: '/assessments/grade-history', label: 'Grade History', desc: "Every grade entered, changed or deleted, and who did it." },
+    ].filter((it) => it && hasAccess(it.resource || it.href)),
+  },
+  {
+    // The information targets are set from, then the targets themselves
+    // (the principal, 8 Oct 2026; migration 413). Off the Assessment card,
+    // which is about marks.
+    key: 'targets', label: 'Targets & Baselines', icon: '🎯', accent: 'school',
+    description: 'Baseline tests and reading ages, then the target grades set from them.',
+    items: ({ hasAccess }) => [
       { href: '/assessments/import', label: 'Import CAT4/NGRT', desc: "Upload CAT4 and NGRT scores." },
       { href: '/reading-ages', label: 'Reading Ages', desc: "Reading age against actual age, and how the gap changes over time." },
       { href: '/reading-ages/record', label: 'Add Reading Test', desc: "Enter a reading test for a year group or form." },
-      { href: '/assessments/grade-history', label: 'Grade History', desc: "Every grade entered, changed or deleted, and who did it." },
-    ].filter((it) => it && hasAccess(it.resource || it.href)),
+      { href: '/target-grades/import', label: 'Import Targets', desc: "Upload students' target grades." },
+    ].filter((it) => hasAccess(it.href)),
   },
   {
     key: 'fees', label: 'Fees & Bills', icon: '💳', accent: 'family',
