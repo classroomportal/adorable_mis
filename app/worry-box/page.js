@@ -15,6 +15,11 @@
 // worry box") prints the list as filtered, each worry in full with its notes
 // and replies if ticked. It is drawn from what the page already read under
 // the same rules, so it shows nothing more; printing doesn't open a worry.
+//
+// Facilities and Other (migration 407, the principal 8 Oct 2026): the list is
+// split into Facilities (the 'equipment' category) and Other, as tabs, and a
+// misfiled worry is moved with "Move to" (set_worry_category(), which leaves a
+// note saying who moved it).
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -22,7 +27,7 @@ import RequireAuth from '../RequireAuth';
 import RequireResource from '../RequireResource';
 import { schoolToday } from '../../lib/schoolTime';
 import { formatUKDate, formatUKDateTime } from '../../lib/formatDate';
-import { WORRY_CATEGORIES, WORRY_STATUS_STAFF, worryCategoryLabel } from '../../lib/worries';
+import { WORRY_AREAS, WORRY_CATEGORIES, WORRY_STATUS_STAFF, worryArea, worryCategoryLabel } from '../../lib/worries';
 
 const soft = { fontSize: '0.85em', color: 'var(--ink-soft)' };
 
@@ -164,6 +169,11 @@ function WorryDetail({ worry, notes, onChanged, onBack }) {
     }
   }
 
+  async function moveTo(next) {
+    if (!next || next === worry.category) return;
+    await run('set_worry_category', { p_worry_id: worry.worry_id, p_category: next });
+  }
+
   async function setWorryStatus(next) {
     if (await run('set_worry_status', { p_worry_id: worry.worry_id, p_status: next, p_note: closeNote })) setCloseNote('');
   }
@@ -186,7 +196,16 @@ function WorryDetail({ worry, notes, onChanged, onBack }) {
           </div>
         </div>
       </div>
-      <p><strong>{worryCategoryLabel(worry.category)}</strong></p>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', margin: '1rem 0' }}>
+        <span className="badge">{WORRY_AREAS[worryArea(worry.category)].label}</span>
+        <strong>{worryCategoryLabel(worry.category)}</strong>
+        <label style={soft}>
+          Move to{' '}
+          <select value={worry.category} onChange={(e) => moveTo(e.target.value)} disabled={busy}>
+            {WORRY_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
+          </select>
+        </label>
+      </div>
       <p style={{ whiteSpace: 'pre-wrap', background: '#f7f7f9', padding: '0.75rem', borderRadius: 6 }}>{worry.details}</p>
 
       <h3>What has been done</h3>
@@ -299,6 +318,7 @@ function WorryBoxInner() {
   const [worries, setWorries] = useState([]);
   const [notes, setNotes] = useState([]);
   const [view, setView] = useState('current');
+  const [area, setArea] = useState('other');
   const [category, setCategory] = useState('');
   const [selected, setSelected] = useState(null);
   const [adding, setAdding] = useState(false);
@@ -330,11 +350,15 @@ function WorryBoxInner() {
   }
 
   const shown = worries.filter((w) => (!VIEWS[view].statuses || VIEWS[view].statuses.includes(w.status))
+    && (!area || worryArea(w.category) === area)
     && (!category || w.category === category));
+  const kinds = WORRY_CATEGORIES.filter((c) => !area || worryArea(c.key) === area);
+  const waiting = (a) => worries.filter((w) => w.status !== 'closed' && (!a || worryArea(w.category) === a));
   const current = worries.find((w) => w.worry_id === selected);
 
   if (printing) {
-    const kind = category ? ` · ${worryCategoryLabel(category, { short: true })}` : '';
+    const kind = (area ? ` · ${WORRY_AREAS[area].label}` : '')
+      + (category && area !== 'facilities' ? ` · ${worryCategoryLabel(category, { short: true })}` : '');
     return <PrintSheet title={`Worry Box: ${VIEWS[view].label}${kind}`} worries={shown} notes={notes} onBack={() => setPrinting(false)} />;
   }
   if (adding) {
@@ -363,13 +387,28 @@ function WorryBoxInner() {
       <p style={soft}>Only the Designated Safeguarding Lead, the Principal and the guidance staff can see these worries.</p>
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
+        {[...Object.entries(WORRY_AREAS), ['', { label: 'Everything' }]].map(([key, a]) => {
+          const open = waiting(key);
+          const urgent = open.filter((w) => w.urgent).length;
+          return (
+            <button key={key || 'all'} className={area === key ? '' : 'secondary'}
+              onClick={() => { setArea(key); setCategory(''); }}>
+              {a.label} ({open.length} not closed{urgent ? `, ${urgent} urgent` : ''})
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
         <select value={view} onChange={(e) => setView(e.target.value)}>
           {Object.entries(VIEWS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">Every kind</option>
-          {WORRY_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
-        </select>
+        {kinds.length > 1 && (
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Every kind</option>
+            {kinds.map((c) => <option key={c.key} value={c.key}>{c.short}</option>)}
+          </select>
+        )}
       </div>
 
       {error && <p style={{ color: '#a3232c' }}>{error}</p>}
