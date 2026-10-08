@@ -20,6 +20,7 @@ The school has a paper worry box where students write about things that worry th
 - Nothing is deleted; notes can't be edited. Not in Change History (SMT and admins read it): `worry_notes` is the record.
 - At most 5 worries a day per student.
 - **Guidance staff** (migration 402, the principal 8 Oct 2026: "worry box needs to be viewable by our guidance personnel and we need a new role to allow this", after 16 urgent worries sat unopened overnight): a new `guidance` role reads every worry with the name and works it (open, notes, replies, close, paper slips) exactly as the DSL and the principal do. Admin is not enough. It isn't on the Staff Roles page; who holds it is set in a migration agreed with the principal. The wellbeing check-in and the school rating stay with the DSL and the principal. Students are told guidance staff read their worries too. Osione ILOEJE (guardian.counselling@) holds it from 8 Oct 2026 (migration 403).
+- **Urgent worries not opened in 24 hours** (migration 404, the principal 8 Oct 2026: "cover when neither the DSL nor the principal opens urgent worries", then "24 hours, alert Osione"): every hour, any urgent worry still unopened 24 hours after it was sent or typed in is counted, and the guidance staff get one inbox message and one email saying how many, with no detail. Each worry is escalated once; opening it is the answer. The DSL and the principal aren't sent it.
 
 ## Stage 2: wellbeing check-in (built, migration 392)
 
