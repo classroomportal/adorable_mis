@@ -11,7 +11,6 @@ import { useTileOrder, sortTiles } from '../lib/tileOrder';
 import StudentHome from './components/StudentHome';
 import TuckshopOrderingStatus from './components/TuckshopOrderingStatus';
 import { canUseExclusionCode } from '../lib/exclusions';
-import { STUDENT_NUMBER_VIEWS } from '../lib/studentNumberViews';
 
 // Every chip is the same fixed-size box, whatever the length of its label, and
 // carries a one-line description that pops out on hover or keyboard focus.
@@ -554,9 +553,7 @@ const TABS = [
     items: ({ hasAccess }) => [
       { href: '/admin/lookups', label: 'Lookups', desc: "Drop-down lists such as houses and behaviour types." },
       { href: '/groups', label: 'Student Groups', desc: "Groups of students for activities, marks and messages." },
-      ...STUDENT_NUMBER_VIEWS.map((v) => ({
-        href: `/admin/student-numbers?view=${v.key}`, resource: '/admin/student-numbers', label: `Numbers: ${v.label}`, desc: v.desc,
-      })),
+      { href: '/admin/student-numbers', label: 'Student Numbers', desc: "Boys and girls by year, mentor group, restaurant, boarding house, sports house or class." },
       { href: '/admin/class-lists', label: 'Class Lists', desc: "Print class lists." },
       { href: '/students/import', label: 'Import Students', desc: "Upload a student list." },
       { href: '/students/photos/import', label: 'Import Photos', desc: "Upload student photos." },

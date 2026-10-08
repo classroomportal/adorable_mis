@@ -123,10 +123,29 @@ function ViewTabs({ view }) {
   );
 }
 
+// The page opened from the Administration card with nothing chosen yet.
+function ViewChoices() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem' }}>
+      {STUDENT_NUMBER_VIEWS.map((v) => (
+        <Link
+          key={v.key}
+          href={`/admin/student-numbers?view=${v.key}`}
+          style={{ display: 'block', padding: '0.9rem 1rem', border: '1px solid #ddd', borderRadius: 8, textDecoration: 'none', color: '#333', background: '#fff' }}
+        >
+          <div style={{ fontWeight: 600, color: '#1e3a5f', marginBottom: '0.25rem' }}>{v.label}</div>
+          <div style={{ fontSize: '0.85rem', color: '#555' }}>{v.desc}</div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 function StudentNumbersInner() {
   const searchParams = useSearchParams();
   const requested = searchParams.get('view');
-  const view = STUDENT_NUMBER_VIEWS.some((v) => v.key === requested) ? requested : 'years';
+  // No view chosen: the page shows the six choices and loads nothing.
+  const view = STUDENT_NUMBER_VIEWS.some((v) => v.key === requested) ? requested : null;
   const viewInfo = STUDENT_NUMBER_VIEWS.find((v) => v.key === view);
 
   const [loading, setLoading] = useState(true);
@@ -152,6 +171,7 @@ function StudentNumbersInner() {
 
   useEffect(() => {
     async function load() {
+      if (!view) { setLoading(false); return; }
       setLoading(true);
       setError(null);
       try {
@@ -173,7 +193,7 @@ function StudentNumbersInner() {
         setByYear(YEARS.map((y) => ({ year_group: y, counts: yearCounts[y] })));
         setYearTotal(yTotal);
 
-        if (view === 'years') {
+        if (view === 'mentors') {
         // --- By mentor group ---
         const { data: groups, error: gErr } = await supabase
           .from('mentor_groups')
@@ -201,7 +221,7 @@ function StudentNumbersInner() {
         setMentorTotal(mTotal);
         }
 
-        if (view === 'boarding') {
+        if (view === 'boarding' || view === 'restaurants') {
         // --- By boarding house and room ---
         // Room numbers repeat across houses (every house has a room 1), so
         // rooms are counted within their house, never on the number alone.
@@ -252,7 +272,7 @@ function StudentNumbersInner() {
         setRestaurantTotal(rTotal);
         }
 
-        if (view === 'houses') {
+        if (view === 'sports') {
         // --- By sports house ---
         const sportsMap = new Map(); // house -> {counts, years}
         const spTotal = newCounts();
@@ -271,6 +291,9 @@ function StudentNumbersInner() {
         );
         setSportsHouseTotal(spTotal);
 
+        }
+
+        if (view === 'classes') {
         // --- By class (every subject class, all years) ---
         // student_class has 4500+ rows school-wide, well past Supabase's default
         // 1000-row response cap, so this has to page through with .range() or it
@@ -325,12 +348,14 @@ function StudentNumbersInner() {
 
   return (
     <div style={{ padding: '1rem', maxWidth: 900, margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>Student Numbers: {viewInfo.label}</h1>
+      <h1 style={{ fontSize: '1.3rem', marginBottom: '0.25rem' }}>
+        Student Numbers{viewInfo ? `: ${viewInfo.label}` : ''}
+      </h1>
       <p style={{ color: '#555', marginTop: 0, marginBottom: '1rem' }}>
-        Active students, Years 7–12. {viewInfo.desc}
+        Active students, Years 7–12. {viewInfo ? viewInfo.desc : 'Boys and girls, counted six ways. Choose one.'}
       </p>
 
-      <ViewTabs view={view} />
+      {viewInfo ? <ViewTabs view={view} /> : <ViewChoices />}
 
       {error && <p style={{ color: 'crimson' }}>Error: {error}</p>}
 
@@ -343,7 +368,11 @@ function StudentNumbersInner() {
               <CountsRow key={r.year_group} label={`Year ${r.year_group}`} counts={r.counts} />
             ))}
           />
+        </>
+      )}
 
+      {view === 'mentors' && (
+        <>
           <CountsTable
             title="By Mentor Group"
             labelHeader="Mentor group"
@@ -367,7 +396,7 @@ function StudentNumbersInner() {
         </>
       )}
 
-      {view === 'boarding' && (
+      {view === 'restaurants' && (
         <>
           <CountsTable
             title="By Restaurant"
@@ -381,7 +410,11 @@ function StudentNumbersInner() {
               />
             ))}
           />
+        </>
+      )}
 
+      {view === 'boarding' && (
+        <>
           <div style={{ marginBottom: '2rem' }}>
             <h2 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>By Boarding House and Room</h2>
             {byHouse.map((h) => (
@@ -427,7 +460,7 @@ function StudentNumbersInner() {
         </>
       )}
 
-      {view === 'houses' && (
+      {view === 'sports' && (
         <>
           <CountsTable
             title="By Sports House"
@@ -438,7 +471,11 @@ function StudentNumbersInner() {
               <CountsRow key={r.house} label={r.house} years={yearsLabel(r.years)} counts={r.counts} />
             ))}
           />
+        </>
+      )}
 
+      {view === 'classes' && (
+        <>
           <div style={{ marginBottom: '1rem' }}>
             <h2 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>By Class</h2>
             {bySubject.map((subj) => (
