@@ -9,13 +9,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatUKDateTime } from '../../lib/formatDate';
-import { WORRY_CATEGORIES, WORRY_STATUS_STUDENT, worryCategoryLabel } from '../../lib/worries';
+import { FACILITIES_CATEGORY, OTHER_CATEGORIES, WORRY_AREAS, WORRY_STATUS_STUDENT, worryCategoryLabel } from '../../lib/worries';
 
 const soft = { fontSize: '0.85rem', color: 'var(--ink-soft)' };
 
 export default function WorryBox({ studentId }) {
   const [worries, setWorries] = useState([]);
   const [replies, setReplies] = useState([]);
+  const [area, setArea] = useState('');
   const [category, setCategory] = useState('');
   const [details, setDetails] = useState('');
   const [urgent, setUrgent] = useState(false);
@@ -39,6 +40,7 @@ export default function WorryBox({ studentId }) {
   useEffect(() => { if (studentId) load(); }, [studentId]);
 
   async function send() {
+    if (!area) { setStatus('Please choose Facilities or Something else.'); return; }
     if (!category) { setStatus('Please choose what your worry is about.'); return; }
     if (!details.trim()) { setStatus('Please write what is worrying you.'); return; }
     if (submittingRef.current) return;
@@ -55,6 +57,7 @@ export default function WorryBox({ studentId }) {
       setSubmitting(false);
     }
     if (error) { setStatus(error.message); return; }
+    setArea('');
     setCategory('');
     setDetails('');
     setUrgent(false);
@@ -83,13 +86,28 @@ export default function WorryBox({ studentId }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '0.6rem', maxWidth: 640 }}>
-          <label>
-            What is it about?
-            <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ display: 'block', width: '100%' }}>
-              <option value="">Choose…</option>
-              {WORRY_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-            </select>
-          </label>
+          <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
+            <legend>Is it about the school&apos;s facilities, or something else?</legend>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.3rem' }}>
+              {Object.entries(WORRY_AREAS).map(([key, a]) => (
+                <button key={key} type="button" className={area === key ? '' : 'secondary'}
+                  style={{ flex: '1 1 14rem', textAlign: 'left' }}
+                  onClick={() => { setArea(key); setCategory(key === 'facilities' ? FACILITIES_CATEGORY : ''); }}>
+                  <strong>{key === 'facilities' ? a.label : 'Something else'}</strong>
+                  <div style={{ fontSize: '0.85rem' }}>{a.hint}</div>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          {area === 'other' && (
+            <label>
+              What is it about?
+              <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ display: 'block', width: '100%' }}>
+                <option value="">Choose…</option>
+                {OTHER_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+            </label>
+          )}
           <label>
             What is worrying you?
             <textarea
