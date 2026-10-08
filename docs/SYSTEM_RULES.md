@@ -206,7 +206,7 @@ Students **cannot** see their own CAT4/NGRT scores (220) or their attendance.
 | Take an OH register | Any member of staff, one person at a time. Once it is taken, only the person who took it, the school office, the attendance officer and SMT can change it (385) |
 | See activities and choice windows | Everyone signed in. Students see their own choices; parents see their children's |
 
-Pages: `/other-half` and its register page are for teaching and pastoral staff. The Activities, Choices and Absentees pages are for SMT, the coordinator and admins. **At present nobody holds the `other_half` coordinator role**, so only SMT and admins can manage OH.
+Pages: `/other-half` and its register page are for teaching and pastoral staff. The Activities, Choices and Absentees pages are for SMT, the coordinator and admins. **Richardson IGBASUN (RIG) holds the `other_half` coordinator role** from 8 Oct 2026 (the principal); others can be given it at Staff Roles.
 
 **Activities**
 - Each activity runs on one weekday in one term and repeats every week of that term. It needs a name and at least one year group.
@@ -934,7 +934,7 @@ None of these has been fixed yet. They are listed so the school can decide what 
 12. An activity with past registers but no current choices can be deleted, and its past marks then lose their activity name.
 13. Changing an activity's year groups or capacity doesn't re-check the students already on it.
 14. Printed timetables don't show OH choices.
-15. Nobody currently holds the `other_half` coordinator role.
+15. ~~Nobody currently holds the `other_half` coordinator role.~~ Fixed 8 Oct 2026: Richardson IGBASUN holds it.
 
 **Tuckshop**
 
