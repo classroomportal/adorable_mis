@@ -293,7 +293,7 @@ function EnterResultsInner() {
 
   return (
     <div>
-      <h1>Enter Results</h1>
+      <h1>Type In Marks</h1>
       <p>
         {canEnterAnyClass
           ? 'Pick any class and a result set, then enter a percentage for each student — the grade is calculated automatically.'

@@ -285,7 +285,7 @@ function SubjectOverviewInner() {
   return (
     <div style={{ padding: '1rem', maxWidth: '100%' }}>
       <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>
-        {selectedStudentName ? `${selectedStudentName} Results` : 'Review Results'} — % vs Cohort Average
+        {selectedStudentName ? `${selectedStudentName} Results` : 'Student vs Average'} — % vs Cohort Average
       </h1>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-end' }}>
