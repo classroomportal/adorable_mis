@@ -41,6 +41,10 @@ function BehaviourPageInner() {
   const [mentorClasses, setMentorClasses] = useState([]);
   const [myClasses, setMyClasses] = useState([]); // timetabled lessons this person teaches
   const [myActivities, setMyActivities] = useState([]); // Other Half activities this person runs
+  // Every other lesson class and this term's OH activities: any member of
+  // staff may log for any student, so any group can be chosen.
+  const [otherClasses, setOtherClasses] = useState([]);
+  const [otherActivities, setOtherActivities] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [events, setEvents] = useState([]);
@@ -138,11 +142,14 @@ function BehaviourPageInner() {
 
   // The lesson followed in from /attendance may be someone else's class (a
   // cover lesson), so it is offered even when it is in neither list.
-  const knownClass = (id) => myClasses.some((c) => c.class_id === id) || mentorClasses.some((c) => c.class_id === id);
+  const knownClass = (id) => myClasses.some((c) => c.class_id === id) || mentorClasses.some((c) => c.class_id === id)
+    || otherClasses.some((c) => c.class_id === id);
   const extraClasses = linkedClass && !knownClass(linkedClass.class_id) ? [linkedClass] : [];
   // Likewise an OH activity followed in from its register (a colleague's).
-  const extraActivities = linkedActivity && !myActivities.some((a) => a.activity_id === linkedActivity.activity_id) ? [linkedActivity] : [];
-  const hasClassOptions = myClasses.length + mentorClasses.length + myActivities.length + extraClasses.length + extraActivities.length > 0;
+  const knownActivity = (id) => myActivities.some((a) => a.activity_id === id) || otherActivities.some((a) => a.activity_id === id);
+  const extraActivities = linkedActivity && !knownActivity(linkedActivity.activity_id) ? [linkedActivity] : [];
+  const hasClassOptions = myClasses.length + mentorClasses.length + myActivities.length + otherClasses.length
+    + otherActivities.length + extraClasses.length + extraActivities.length > 0;
   const activityLabel = (a) => `${a.activity_name} (OH, ${OH_DAY_NAMES[a.day_of_week] || a.day_of_week})`;
   const isActivity = classId.startsWith(OH_PREFIX);
   const classLabel = (c) => (c.subjects?.subject_name ? `${c.class_code} — ${c.subjects.subject_name}` : c.class_code || `Class ${c.class_id}`);
@@ -169,19 +176,33 @@ function BehaviourPageInner() {
       // they had just taught — could not be chosen here at all.
       setMyClasses(allClasses.filter((cl) => cl.staff_id === profile?.staff_id
         && cl.curriculum_blocks?.block_name !== 'Mentor'));
+      setOtherClasses(allClasses.filter((cl) => cl.staff_id !== profile?.staff_id
+        && cl.curriculum_blocks?.block_name !== 'Mentor'));
 
       // The Other Half activities this person runs this OH term. OH lives in
       // its own tables, not classes (migration 156), so it needs its own list.
+      const ohTermId = await loadCurrentOtherHalfTermId();
+      const { data: allOh } = await supabase
+        .from('other_half_activities')
+        .select('activity_id, activity_name, day_of_week')
+        .eq('term_id', ohTermId ?? -1)
+        .eq('is_active', true)
+        .order('activity_name');
+      const ohList = allOh || [];
       if (profile?.staff_id) {
-        const ohTermId = await loadCurrentOtherHalfTermId();
         const { data: oh } = await supabase
           .from('other_half_activity_staff')
           .select('other_half_activities!inner(activity_id, activity_name, day_of_week, term_id, is_active)')
           .eq('staff_id', profile.staff_id)
           .eq('other_half_activities.term_id', ohTermId ?? -1)
           .eq('other_half_activities.is_active', true);
-        setMyActivities((oh || []).map((r) => r.other_half_activities).filter(Boolean)
-          .sort((x, y) => x.activity_name.localeCompare(y.activity_name)));
+        const mine = (oh || []).map((r) => r.other_half_activities).filter(Boolean)
+          .sort((x, y) => x.activity_name.localeCompare(y.activity_name));
+        setMyActivities(mine);
+        const mineIds = new Set(mine.map((a) => a.activity_id));
+        setOtherActivities(ohList.filter((a) => !mineIds.has(a.activity_id)));
+      } else {
+        setOtherActivities(ohList);
       }
 
       const { data: s } = await supabase.from('students').select('student_id, first_name, last_name, boarding_house, boarding_room_number, restaurant, year_group').eq('status', 'active').order('last_name');
@@ -507,7 +528,7 @@ function BehaviourPageInner() {
             Log for
             <select value={groupType} onChange={(e) => handleGroupTypeChange(e.target.value)}>
               <option value="">One student</option>
-              <option value="mentor">My lesson, OH activity or mentor group</option>
+              <option value="mentor">Class, OH activity or mentor group</option>
               <option value="student_group">Student group</option>
               <option value="boarding">Boarding house</option>
               <option value="restaurant">Restaurant</option>
@@ -591,10 +612,24 @@ function BehaviourPageInner() {
                     ))}
                   </optgroup>
                 )}
+                {otherClasses.length > 0 && (
+                  <optgroup label="All other classes">
+                    {otherClasses.map((c) => (
+                      <option key={c.class_id} value={c.class_id}>{classLabel(c)}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {otherActivities.length > 0 && (
+                  <optgroup label="All other Other Half activities">
+                    {otherActivities.map((a) => (
+                      <option key={a.activity_id} value={`${OH_PREFIX}${a.activity_id}`}>{activityLabel(a)}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               {!hasClassOptions && (
                 <span style={{ color: '#5a6b8c', fontSize: '0.85rem' }}>
-                  You have no timetabled lessons, Other Half activities or mentor groups.
+                  No classes, Other Half activities or mentor groups to choose from.
                 </span>
               )}
             </label>
