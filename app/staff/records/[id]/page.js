@@ -10,7 +10,7 @@ import { formatUKDate } from '../../../../lib/formatDate';
 import { formatTimeRange } from '../../../../lib/formatTime';
 import { schoolToday } from '../../../../lib/schoolTime';
 import { resizePhotoToBase64 } from '../../../../lib/photo';
-import { ROLE_LABELS } from '../../../../lib/staffRoles';
+import { roleLabel } from '../../../../lib/staffRoles';
 import {
   EMPLOYMENT_TYPES, HR_DEPARTMENTS, NATIONALITIES, WARNING_LEVELS, ATTENDANCE_TYPES,
   academicYearLabel, clearanceStatus, lengthOfService, isWarningLive,
@@ -498,7 +498,7 @@ function StaffRecord() {
               ? <span className="hr-empty">Class Teacher (default)</span>
               : roles.map((r) => (
                 <span key={r.role_name} className="staff-role-chip">
-                  {ROLE_LABELS[r.role_name] || r.role_name}{r.scope_value ? ` · ${r.scope_value}` : ''}
+                  {roleLabel(r.role_name)}{r.scope_value ? ` · ${r.scope_value}` : ''}
                 </span>
               ))}
           </div>

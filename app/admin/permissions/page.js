@@ -7,6 +7,7 @@ import { useAuth } from '../../../lib/AuthContext';
 import { STUDENT_CORE_FIELDS } from '../../../lib/studentFields';
 import { abilitiesForRole, ACTIONS } from '../../../lib/roleAbilities';
 import { describeTable, AREA_ORDER } from '../../../lib/dataAreas';
+import { roleLabel } from '../../../lib/staffRoles';
 
 // /admin/permissions: three views of the same roles.
 //   Pages            — tick which pages a role can open (role_permissions).
@@ -15,13 +16,7 @@ import { describeTable, AREA_ORDER } from '../../../lib/dataAreas';
 //                      migration 327), plus student Core Data fields.
 //   Compare roles    — every page against every role, read-only.
 
-const ROLE_NAMES = { smt: 'SMT', hr: 'HR', other_half: 'Other Half' };
-
-function roleTitle(roleName) {
-  if (ROLE_NAMES[roleName]) return ROLE_NAMES[roleName];
-  const words = roleName.replace(/_/g, ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
+const roleTitle = roleLabel;
 
 const ABILITY_STYLE = {
   yes: { label: 'Yes', bg: '#dcf5e3', color: '#1a7a3d', mark: '✓' },
@@ -127,7 +122,8 @@ function PermissionsInner() {
     const { data: r } = await supabase.from('roles').select('*').order('role_name');
     const { data: res } = await supabase.from('resources').select('*').order('sort_order');
     const { data: rp } = await supabase.from('role_permissions').select('*');
-    setRoles(r || []);
+    const sorted = (r || []).slice().sort((a, b) => roleTitle(a.role_name).localeCompare(roleTitle(b.role_name)));
+    setRoles(sorted);
     setResources(res || []);
     const map = {};
     (rp || []).forEach((row) => {
@@ -142,7 +138,7 @@ function PermissionsInner() {
       fieldMap[row.role_name].add(row.field_name);
     });
     setFieldGrants(fieldMap);
-    if (r && r.length > 0 && !selectedRole) setSelectedRole(r[0].role_name);
+    if (sorted.length > 0 && !selectedRole) setSelectedRole(sorted[0].role_name);
 
     const [{ data: pol, error: polErr }, { data: tbl, error: tblErr }] = await Promise.all([
       supabase.rpc('role_access_policies'),
