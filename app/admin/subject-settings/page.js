@@ -151,7 +151,10 @@ function ImportInner() {
           <strong>WAEC only</strong> marks a subject Years 10–11 sit for WAEC only (e.g. Igbo, Fashion).
           On their Termly Grade Report it goes in the <em>WAEC Only Subjects</em> section under the
           IGCSE subjects, its grades are printed in WAEC, and an IGCSE target is printed as its WAEC
-          equivalent (A* → A1+, A → A1, B → B2, C → C4, D → C6, E → E8, F/G → F9). Years 7–9 and 12
+          equivalent (A* → A1+, A → A1, B → B2, C → C4, D → C6, E → E8, F/G → F9). Ticking it also
+          replaces the subject's Year 10 and 11 grade boundaries with a copy of its Year 12 (WAEC)
+          ones, so new marks are graded in WAEC; marks already entered keep their grade. Unticking
+          leaves the boundaries as they are: set IGCSE ones on Grade Boundaries. Years 7–9 and 12
           are not affected.
         </p>
         <input
