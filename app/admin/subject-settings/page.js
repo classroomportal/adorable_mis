@@ -21,7 +21,7 @@ function ImportInner() {
   async function load() {
     const { data } = await supabase
       .from('subjects')
-      .select('subject_id, subject_name, display_name, target_fallback_subject_id, department_name, waec_only')
+      .select('subject_id, subject_name, display_name, target_fallback_subject_id, department_name, waec_only, igcse_only')
       .order('subject_name');
     setSubjects(data || []);
 
@@ -100,6 +100,14 @@ function ImportInner() {
     setSubjects((prev) => prev.map((s) => (s.subject_id === id ? { ...s, [field]: value } : s)));
   }
 
+  // IGCSE only and WAEC only can't both be ticked (migration 427), so
+  // ticking one clears the other.
+  function setOnly(id, field, checked) {
+    setSubjects((prev) => prev.map((s) => (s.subject_id === id
+      ? { ...s, [field]: checked, ...(checked ? { [field === 'waec_only' ? 'igcse_only' : 'waec_only']: false } : {}) }
+      : s)));
+  }
+
   async function saveAll() {
     setStatus('Saving...');
     const updates = subjects.map((row) =>
@@ -110,6 +118,7 @@ function ImportInner() {
           target_fallback_subject_id: row.target_fallback_subject_id || null,
           department_name: row.department_name || null,
           waec_only: !!row.waec_only,
+          igcse_only: !!row.igcse_only,
         })
         .eq('subject_id', row.subject_id)
     );
@@ -157,6 +166,12 @@ function ImportInner() {
           leaves the boundaries as they are: set IGCSE ones on Grade Boundaries. Years 7–9 and 12
           are not affected.
         </p>
+        <p>
+          <strong>IGCSE only</strong> marks a subject Years 10–11 sit for IGCSE only (e.g. Chinese,
+          Spanish). On their Termly Grade Report it goes in an <em>IGCSE Only Subjects</em> section
+          between the subjects sat for both and the WAEC-only ones; its grades and targets stay IGCSE.
+          A subject can't be both IGCSE only and WAEC only.
+        </p>
         <input
           type="text"
           placeholder="Filter subjects..."
@@ -169,7 +184,7 @@ function ImportInner() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Subject (source)</th><th>Display name</th><th>Department</th><th>Use targets from</th><th>Key stages</th><th>WAEC only</th><th>Aliases</th></tr>
+              <tr><th>Subject (source)</th><th>Display name</th><th>Department</th><th>Use targets from</th><th>Key stages</th><th>IGCSE only</th><th>WAEC only</th><th>Aliases</th></tr>
             </thead>
             <tbody>
               {filtered.map((s) => (
@@ -219,9 +234,17 @@ function ImportInner() {
                   <td style={{ textAlign: 'center' }}>
                     <input
                       type="checkbox"
+                      aria-label={`${s.subject_name} is IGCSE only in Years 10–11`}
+                      checked={!!s.igcse_only}
+                      onChange={(e) => setOnly(s.subject_id, 'igcse_only', e.target.checked)}
+                    />
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
                       aria-label={`${s.subject_name} is WAEC only in Years 10–11`}
                       checked={!!s.waec_only}
-                      onChange={(e) => updateField(s.subject_id, 'waec_only', e.target.checked)}
+                      onChange={(e) => setOnly(s.subject_id, 'waec_only', e.target.checked)}
                     />
                   </td>
                   <td>
