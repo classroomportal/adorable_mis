@@ -1983,6 +1983,18 @@ nav button.help-button span {
 .lf-todo-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
 .lf-open-btn { margin-top: 0.3rem; padding: 0.15rem 0.5rem; font-size: 0.78rem; }
 .lf-given { margin-top: 0.3rem; font-size: 0.78rem; color: #1f7a3a; font-weight: 600; }
+/* Lesson worksheets (migration 428): on the student timetable and the register. */
+.ws-chip {
+  display: inline-block; margin-top: 0.3rem; padding: 0.15rem 0.5rem; font-size: 0.78rem;
+  border-radius: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-align: left;
+}
+.ws-locked { background: var(--brand-050); color: var(--ink-soft); border: 1px dashed var(--brand-600); }
+.ws-lessons { list-style: none; margin: 0; padding: 0; }
+.ws-lessons > li { padding: 0.45rem 0.5rem; border-top: 1px solid var(--slate-200); }
+.ws-lessons > li.ws-this { background: var(--brand-050); border-radius: 6px; }
+.ws-lesson-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ws-this-tag { margin-left: 0.4rem; font-size: 0.75rem; font-weight: 600; color: var(--brand-800); }
 .lf-question { font-weight: 600; margin: 0.6rem 0 0.4rem; }
 .lf-rag { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
 @media (max-width: 560px) { .lf-rag { grid-template-columns: 1fr; } }

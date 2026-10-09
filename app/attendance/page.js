@@ -11,6 +11,7 @@ import { schoolToday, minutesSinceSchoolTime } from '../../lib/schoolTime';
 import { useAuth } from '../../lib/AuthContext';
 import { canUseExclusionCode, offeredCodes, lockedExclusion } from '../../lib/exclusions';
 import RegisterHomework from '../components/RegisterHomework';
+import RegisterWorksheets from '../components/RegisterWorksheets';
 import SaveBar, { useSaveStatus } from '../components/SaveBar';
 
 function AttendanceInner() {
@@ -415,6 +416,9 @@ function AttendanceInner() {
 
       {/* Only shows for classes the signed-in teacher can set homework for. */}
       {classId && <RegisterHomework classId={classId} />}
+
+      {/* Only shows for classes on the worksheet trial the teacher teaches (migration 428). */}
+      {classId && <RegisterWorksheets classId={classId} date={date} periodNumber={periodNumber} />}
 
       {classId && (
         <form onSubmit={handleSubmit} className="card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
