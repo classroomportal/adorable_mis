@@ -307,6 +307,7 @@ function DetentionRules() {
       alert: r?.alert_weekly_total_points ?? -8,
       serious: r?.serious_event_points ?? -5,
       guidance: r?.serious_event_guidance ?? '',
+      meritWords: r?.merit_review_words ?? 12,
       room: ss?.detention_room ?? '',
       time: ss?.detention_time ?? '',
     });
@@ -332,6 +333,16 @@ function DetentionRules() {
     else { setStatus('Stage 5 guidance saved.'); load(); }
   }
 
+  // Migration 417: only a merit with more words than this waits for approval.
+  async function saveMeritWords(e) {
+    e.preventDefault();
+    const n = parseInt(d.meritWords, 10);
+    if (!Number.isFinite(n) || n < 0 || n > 500) { setStatus('Error: give a number of words from 0 to 500.'); return; }
+    const { error } = await supabase.rpc('set_merit_review_words', { p_words: n });
+    if (error) setStatus(`Error: ${error.message}`);
+    else { setStatus('Saved. New merits follow this from now on.'); load(); }
+  }
+
   if (!d) return null;
   const field = (k) => ({ value: d[k], onChange: (e) => { setD({ ...d, [k]: e.target.value }); setStatus(null); } });
   return (
@@ -355,6 +366,16 @@ function DetentionRules() {
         A serious event must have a written explanation, and the principal's PA or SMT (only SMT when it has a picture) review it at
         Behaviour Review before parents can see it.
       </p>
+
+      <h3 style={{ marginTop: '0.5rem' }}>Merits with long comments</h3>
+      <p style={{ marginTop: 0, fontSize: '0.85em', color: '#666' }}>
+        A merit goes home at once unless its comment is longer than this many words; a longer one waits under
+        "Writing to approve" on Behaviour Review. 0 means every merit with a comment waits. Negative events with writing always wait.
+      </p>
+      <form onSubmit={saveMeritWords} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+        <label>Approve merits with more than (words)<input type="number" min="0" max="500" {...field('meritWords')} style={{ width: '7rem' }} /></label>
+        <button type="submit">Save</button>
+      </form>
 
       <h3 style={{ marginTop: '0.5rem' }}>Stage 5 guidance</h3>
       <p style={{ marginTop: 0, fontSize: '0.85em', color: '#666' }}>
