@@ -38,6 +38,9 @@ import BehaviourBrowser from '../../components/BehaviourBrowser';
 // where many can be ticked and sent (or kept at school) at once; one with a
 // picture gets a card like the others. A merit with no writing still goes
 // home at once, and a Stage 1-4 event with none still stays at school.
+// Since migration 417 (the principal 9 Oct 2026) a merit waits only when its
+// writing is longer than behaviour_rules.merit_review_words (12, set at
+// /admin/lookups); shorter merits go home at once and never appear here.
 // Changing an event's writing brings it back here, even after it was sent.
 // The "All events" tab (migration 376, app/components/BehaviourBrowser.js)
 // lists every event so the reviewers can look through comments and
