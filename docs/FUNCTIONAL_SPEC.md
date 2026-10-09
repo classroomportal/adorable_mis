@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 8 October 2026 (database migrations up to 413). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 9 October 2026 (database migrations up to 414). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -485,6 +485,11 @@ The behaviour numbers above are the current settings, not fixed values: anyone w
 
 - **FR-6.53** Lists, for chosen dates (from 1 September by default), every event worth 2 or more points either way, plus exclusions, with the positive, negative and total points over every event in the dates, single points included. Withdrawn events are left out. It reads only what the viewer can already see. \[Page\]
 
+**100% in a Big ReLP** (migration 414, the principal, 9 October 2026)
+
+- **FR-6.55** A full mark (the score equals the maximum) in a Big ReLP gives the student a "100% in a Big ReLP Test" merit (+3) automatically, one per subject, with the note "Recorded automatically: 100% in \<subject> (\<score>/\<out of>, \<test>)". A Big ReLP is a result set in the ReLP calendar category with "Big ReLP" in its name, so "Mid Term tests" doesn't count; a future Big ReLP must keep those words in its name. Grade-only marks never count. Only current students. It is logged as the teacher who saved the mark. Because it has writing, it waits under "Writing to approve" (FR-6.44) before parents see it; the student sees it at once. The Week 3 Big ReLP (9 October 2026) was done when the rule went in: 84 merits for 72 students. \[DB\]
+- **FR-6.56** If the mark is corrected below full marks, deleted, or moved to another set, student or subject, the merit is withdrawn (crossed out, 0 points). Reaching full marks again gives a fresh one. Each mark gives at most one merit at a time, and one that SMT delete isn't made again while the mark stands. \[DB\]
+
 ## 10. FR-7 Assessment, results and targets
 
 Teachers enter percentage scores for their own classes against result sets; each score is graded from the subject's boundaries and compared with the student's target.
@@ -504,6 +509,7 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.5** One score per student, per subject, per result set. Types: short test, teacher assessment, exam grade (plus imported term exams). \[DB\]
 - **FR-7.6** The class teacher, a Head of Department for their department's subjects, and assessment managers and admins can delete a score. Assessment users can't. Scores are deleted on Type In Marks, or by assessment managers and admins with the Delete button beside each score on a student's profile (Results tab), with a confirmation. \[DB / Page\]
 - **FR-7.7** Every insert, change and delete of a score, target or transcript grade is logged permanently in Grade History, with old and new grade and who did it. Nobody can edit the log. SMT, assessment managers and admins read it at /assessments/grade-history. \[DB\]
+- **FR-7.44** The Adorable.net gradebook import saves into a result set, not a week (the principal, 9 October 2026). The person importing chooses one of this school year's result sets (the Type In Marks list, with the same date warning) and a result type (short test, teacher assessment or exam grade), and every mark in the file goes into that set. For a set only for some year groups, other students are skipped and listed. If the set already has marks for any of the students and subjects in the file, the page says how many will be replaced and asks before saving. Until then the import couldn't save at all (known issue 1). \[Page\]
 
 **Boundaries, subjects and targets**
 
@@ -576,7 +582,8 @@ Written reports are built only from checked comments; transcripts and score shee
 - **FR-8.7** The Termly Grade Report and Term Test Scores sheet show a subject only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey. \[DB / Page\]
 - **FR-8.8** Transcripts: KS3 (Years 7–9, IGCSE) and KS4/5 (Years 10–12, IGCSE and WAEC versions; Year 12 always WAEC). Each square takes the exam mark's grade, then the legacy transcript grade, then the score converted through boundaries (Year 12's for WAEC). Any error stops the PDF. \[Page\]
 - **FR-8.9** Publishing replaces the previous copy and makes it downloadable by the student and parents. Admins, SMT and assessment managers publish, and can bulk-upload PDFs at /reports/documents. \[DB\]
-- **FR-8.10** On the Termly Grade Report a special result set (FR-7.31) replaces the week column its date falls in, headed by its name (Year 12 Mock 1, dated Monday 5 October 2026, replaces Year 12's Wk3 column). Weeks start on Mondays and a date goes to the nearest one, so Friday to Sunday count towards the following week's column; subjects not in the set show grey. A set matching no week, or a second set in the same week, gets its own column after the weeks. Other year groups' reports are unchanged. The written report includes special-set marks like any other mark in the term. Transcripts never show them: they read only end-of-term exam sets and legacy transcript grades. \[DB / Page\]
+- **FR-8.10** On the Termly Grade Report a special result set (FR-7.31) replaces the week column its date falls in, headed by its name (Year 12 Mock 1, dated Monday 5 October 2026, replaces Year 12's Wk3 column). A date goes in the week that contains it, Monday to Sunday (FR-8.11); subjects not in the set show grey. A set matching no week, or a second set in the same week, gets its own column after the weeks. Other year groups' reports are unchanged. The written report includes special-set marks like any other mark in the term. Transcripts never show them: they read only end-of-term exam sets and legacy transcript grades. \[DB / Page\]
+- **FR-8.11** The Termly Grade Report has one column per teaching week (the principal, 9 October 2026). A week whose school days are all holidays on the calendar, such as the mid-term break, gets no column and no number, so the September term prints Wk1–Wk10. The week holding the end-of-term exam set is headed Exam. A mark goes in the week its date falls in, so the Friday 2 October 2026 "Week 3 ReLP" marks are in Wk2. Where a student has two marks in a subject in one week, the square shows both, oldest first (e.g. "B / A"). The subject column widens to fit the longest subject name on one line, never narrowing a week below 11 mm. The report writer numbers weeks the same way. \[Page\]
 
 ## 12. FR-9 Tuckshop
 
@@ -1096,7 +1103,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Results | Gradebook import and the quick-add form on /results send a result type ("Exam"/"ReLP") the database no longer accepts | They can't save; /results/enter is unaffected | Open |
+| 1 | Results | The quick-add form on /results sends a result type ("Exam"/"ReLP") the database no longer accepts | It can't save; /results/enter is unaffected. The gradebook import had the same fault, fixed 9 October 2026 (FR-7.44) | Open |
 | 2 | Certificates | Levels now come from Lookups (Bronze 100, Silver 200, Gold 500), which fixed the old 200-point mismatch. Totals may still read only the first 1,000 events | Totals may be low for some students; needs checking | Open |
 | 3 | Subject settings | Assessment managers can open the page but only admins can save names, departments and target fallbacks | Saves by others change nothing, silently | Open |
 | 4 | Results | Decimal scores such as 89.5 can fall between whole-number grade bands | Saved with no grade | Open |
