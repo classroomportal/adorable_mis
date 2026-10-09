@@ -15,7 +15,7 @@ const METADATA_COLUMNS = new Set([
   'Email address', 'Last downloaded from this course',
 ]);
 
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 25;
 
 // "Quiz: Business Studies Exam (Real)" -> "Business Studies"
 function parseSubjectName(header) {
@@ -280,17 +280,32 @@ function ImportInner() {
     }
 
     // 3. Write in batches
-    const batches = chunk(toUpsert, BATCH_SIZE);
-    for (const [i, batch] of batches.entries()) {
-      setStatus(`Importing batch ${i + 1} of ${batches.length} (${successCount} of ${toUpsert.length} results written so far)...`);
+    // A batch that runs past the database's 8-second limit when the server is
+    // busy (9 Oct 2026) is split in half and tried again, down to one mark,
+    // so a slow moment loses nothing.
+    const writeBatch = async (batch) => {
       const { error: upErr } = await supabase
         .from('results')
         // One mark per student, subject and result set
         // (results_student_subject_resultset_unique), as on Enter Results,
         // so re-importing the same file updates in place.
         .upsert(batch, { onConflict: 'student_id,subject_id,result_set_event_id' });
-      if (upErr) problems.push(`Batch write failed: ${upErr.message}`);
-      else successCount += batch.length;
+      if (!upErr) {
+        successCount += batch.length;
+        return;
+      }
+      if (/statement timeout/i.test(upErr.message) && batch.length > 1) {
+        const half = Math.ceil(batch.length / 2);
+        await writeBatch(batch.slice(0, half));
+        await writeBatch(batch.slice(half));
+        return;
+      }
+      problems.push(`Batch write failed (${batch.length} mark${batch.length === 1 ? '' : 's'}): ${upErr.message}`);
+    };
+    const batches = chunk(toUpsert, BATCH_SIZE);
+    for (const [i, batch] of batches.entries()) {
+      setStatus(`Importing batch ${i + 1} of ${batches.length} (${successCount} of ${toUpsert.length} results written so far)...`);
+      await writeBatch(batch);
     }
 
     setErrors(problems);
