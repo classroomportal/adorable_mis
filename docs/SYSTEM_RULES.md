@@ -366,6 +366,7 @@ At the same moment the office's pop-up appears, every member of staff signed in 
 - Everyone on staff gets it, except the people who get the office pop-up (they have their own) and the person who marked the student absent. Students and parents never see it.
 - **I've sent them** (with an optional note of where they were) clears it from every staff screen and shows on the office's pop-up.
 - **Not with me** clears it from that person's screen only; the office sees who has said so.
+- **They're with me** changes the student's mark for that lesson to **C** (other authorised absence) under that member of staff's name, with "With <their name>" (and anything they typed) in the mark's note. It clears the pop-up from every screen, the office's too. The note is shown, read-only, under the mark on the lesson and Other Half registers. A C given this way never brings the automatic "Missing a lesson" negative, even if the student then attends a later lesson. If the C is later changed to another code, the note goes with it.
 - It stays until the period ends, even after the office has pressed Seen (the office usually presses Seen straight away, which would otherwise take it off everyone's screen before anyone had read it). A corrected mark clears it at once.
 - **Hide for 2 minutes**, the beep and the one-minute check work as on the office pop-up.
 - Answers are kept (who, when, the note). The checks happen in the database (`staff_missing_student_alerts()`, `respond_missing_student_alert()`).

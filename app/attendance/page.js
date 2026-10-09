@@ -30,6 +30,8 @@ function AttendanceInner() {
   // student_id -> 'planned' when the mark came from a planned absence (318),
   // 'office' when it's a C the office or the principal set (415)
   const [planned, setPlanned] = useState({});
+  // student_id -> the mark's note, e.g. "With <teacher>" from the missing-student pop-up (418); shown, not edited
+  const [markNotes, setMarkNotes] = useState({});
   // Planned-absence marks can be changed only by the school office and the
   // attendance officer (389); for everyone else they're read-only here.
   const [isOffice, setIsOffice] = useState(false);
@@ -90,7 +92,7 @@ function AttendanceInner() {
         .eq('attend_date', date)
         .eq('period_number', periodNumber)
         .in('student_id', ids);
-      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id, other_half_activity_id, office_locked');
+      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id, other_half_activity_id, office_locked, notes');
       // Until migration 318 is run there's no planned_absence_id column; the
       // register must still show the marks already taken.
       if (existingError) ({ data: existing } = await existingMarks('student_id, code, minutes_late'));
@@ -98,8 +100,10 @@ function AttendanceInner() {
       const prefillMinutes = {};
       const plannedIds = {};
       const savedNow = {};
+      const notesNow = {};
       (existing || []).forEach((row) => {
         if (row.code) prefill[row.student_id] = row.code;
+        if (row.notes) notesNow[row.student_id] = row.notes;
         // A mark from an Other Half register is re-saved as this lesson's,
         // even unchanged, so it stops counting as OH attendance (385). A
         // planned-absence mark isn't: it stays the absence's, and only the
@@ -117,6 +121,7 @@ function AttendanceInner() {
       setMarks(prefill);
       setLateMinutes(prefillMinutes);
       setPlanned(plannedIds);
+      setMarkNotes(notesNow);
       setSaved(savedNow);
 
       const { data: today } = await supabase
@@ -156,6 +161,7 @@ function AttendanceInner() {
       setMarks({});
       setLateMinutes({});
       setPlanned({});
+      setMarkNotes({});
       setSaved({});
       setTodaySoFar({});
       setLastGrades({});
@@ -338,6 +344,14 @@ function AttendanceInner() {
       rows.forEach((r) => { next[r.student_id] = `${r.code}|${r.minutes_late ?? ''}`; });
       return next;
     });
+    // Changing a "They're with me" C clears its "With …" note in the database (418); match it here.
+    setMarkNotes((prev) => {
+      const next = { ...prev };
+      rows.forEach((r) => {
+        if (r.code !== 'C' && next[r.student_id]) next[r.student_id] = next[r.student_id].replace(/(^| · )With [^·]*$/, '').trim();
+      });
+      return next;
+    });
     setStatus(`Saved ${rows.length} mark${rows.length === 1 ? '' : 's'}.`);
   }
 
@@ -496,6 +510,11 @@ function AttendanceInner() {
                           <span title="Filled in from a planned absence. Only the school office or the attendance officer can change it." style={{ marginLeft: '0.35rem', fontSize: '0.75em', color: '#475569' }}>
                             planned
                           </span>
+                        )}
+                        {markNotes[s.student_id] && (
+                          <div style={{ fontSize: '0.75em', color: '#475569', fontStyle: 'italic', marginTop: '0.15rem', maxWidth: '16rem' }}>
+                            {markNotes[s.student_id]}
+                          </div>
                         )}
                       </td>
                       <td>
