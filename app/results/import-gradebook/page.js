@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
 import { schoolToday } from '../../../lib/schoolTime';
-import { buildWeekColumns } from '../../../lib/generateTermTestScores';
+import { buildWeekColumns, loadHolidayDates } from '../../../lib/termWeeks';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
 import { formatUKDate } from '../../../lib/formatDate';
@@ -50,6 +50,7 @@ function ImportInner() {
   const [terms, setTerms] = useState([]);
   const [termId, setTermId] = useState('');
   const [weekLabel, setWeekLabel] = useState('');
+  const [holidays, setHolidays] = useState(new Set());
   const [status, setStatus] = useState(null);
   const [errors, setErrors] = useState([]);
   const [preview, setPreview] = useState([]);
@@ -78,7 +79,14 @@ function ImportInner() {
   }, []);
 
   const selectedTerm = terms.find((t) => t.term_id === termId);
-  const weekOptions = selectedTerm ? buildWeekColumns(selectedTerm) : [];
+  // Half-term weeks are left out and the weeks after them renumbered, as on
+  // the Termly Grade Report, so "Wk6" means the same week in both.
+  useEffect(() => {
+    if (!selectedTerm) return;
+    loadHolidayDates(selectedTerm.start_date, selectedTerm.end_date).then(setHolidays);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [termId, terms]);
+  const weekOptions = selectedTerm ? buildWeekColumns(selectedTerm, holidays) : [];
   const weekStart = weekOptions.find((w) => w.label === weekLabel)?.date || '';
 
   useEffect(() => {
@@ -86,7 +94,7 @@ function ImportInner() {
       setWeekLabel(weekOptions[0].label);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [termId, terms]);
+  }, [termId, terms, holidays]);
 
   async function handleFile(e) {
     const file = e.target.files[0];
