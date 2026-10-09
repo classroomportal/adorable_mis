@@ -35,7 +35,7 @@ export function setsForYear(sets, year) {
   });
 }
 
-// Map of student_id -> { pct, grade, n } for one column.
+// Map of student_id -> { pct, n } for one column (percentage only, no grade).
 export async function loadMarkColumn(set, subjectId, studentIds) {
   const values = new Map();
   if (!studentIds.length) return values;
@@ -43,7 +43,7 @@ export async function loadMarkColumn(set, subjectId, studentIds) {
   for (let from = 0; ; from += PAGE_SIZE) {
     let q = supabase
       .from("results")
-      .select("result_id, student_id, score, max_score, grade")
+      .select("result_id, student_id, score, max_score")
       .in("student_id", studentIds)
       .gt("max_score", 0);
     // Older sets predate result_set_event_id and are linked by the set's date,
@@ -59,11 +59,9 @@ export async function loadMarkColumn(set, subjectId, studentIds) {
   }
   for (const r of rows) {
     if (r.score == null) continue;
-    const cur = values.get(r.student_id) || { sum: 0, n: 0, grade: null };
+    const cur = values.get(r.student_id) || { sum: 0, n: 0 };
     cur.sum += (Number(r.score) / Number(r.max_score)) * 100;
     cur.n += 1;
-    // Rows come in result_id order, so the last grade seen is the latest.
-    if (r.grade) cur.grade = r.grade;
     values.set(r.student_id, cur);
   }
   for (const v of values.values()) v.pct = v.sum / v.n;

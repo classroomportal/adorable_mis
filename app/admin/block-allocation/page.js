@@ -489,7 +489,6 @@ function BlockAllocationInner() {
                           title={v && avg ? `Average of ${v.n} mark${v.n === 1 ? "" : "s"}` : undefined}
                         >
                           {v ? `${Math.round(v.pct)}%` : <span style={{ color: "#bbb" }}>–</span>}
-                          {v && !avg && v.grade ? <span style={{ color: "#666", marginLeft: 4 }}>{v.grade}</span> : null}
                         </td>
                       );
                     })}
