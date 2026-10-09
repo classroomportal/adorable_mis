@@ -14,6 +14,7 @@ import { isOtherHalfSubject, mergeOtherHalfIntoCells } from '../../lib/otherHalf
 import ChildOtherHalf from '../components/ChildOtherHalf';
 import BehaviourPhoto from '../components/BehaviourPhoto';
 import PortalGroups from '../components/PortalGroups';
+import TuckshopPurchases from '../components/TuckshopPurchases';
 import ReadingAgeHistory from '../components/ReadingAgeHistory';
 import { loadReadingAgeHistory, formatMonths } from '../../lib/readingAge';
 import { loadPortalGroups } from '../../lib/studentGroups';
@@ -377,15 +378,18 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                   <span className="dashboard-tile-sub">Term dates and events</span>
                 </a>
 
-                {/* These open pages for whoever is signed in, so when staff
-                    are viewing as a parent they'd show the staff member's own
-                    inbox and tuckshop — show the tiles but don't link them. */}
-                <a href={viewingAs ? undefined : '/parent-portal/tuckshop'} className="dashboard-tile" style={{ textDecoration: 'none', cursor: viewingAs ? 'default' : undefined }}>
+                {/* Opens here for the chosen child (not /parent-portal/tuckshop,
+                    which loads the signed-in person's own children), so it
+                    works for staff viewing as a parent too. */}
+                <button type="button" className="dashboard-tile" onClick={() => setActiveView('tuckshop')}>
                   <span className="dashboard-tile-label">Tuckshop</span>
                   <span className="dashboard-tile-icon">🛒</span>
                   <span className="dashboard-tile-sub">{tuckshopBalance === null ? 'No data yet' : `₦${Number(tuckshopBalance).toLocaleString('en-GB', { maximumFractionDigits: 0 })} balance`}</span>
-                </a>
+                </button>
 
+                {/* The inbox opens for whoever is signed in, so when staff are
+                    viewing as a parent it would show their own — show the tile
+                    but don't link it. */}
                 <a href={viewingAs ? undefined : '/inbox'} className="dashboard-tile" style={{ textDecoration: 'none', cursor: viewingAs ? 'default' : undefined }}>
                   <span className="dashboard-tile-label">Messages</span>
                   <span className="dashboard-tile-icon">📬</span>
@@ -464,6 +468,19 @@ export function ParentPortalInner({ viewAsParentId = null } = {}) {
                 The gap is the difference: a minus means reading below their age, a plus means above it.
               </p>
               <ReadingAgeHistory readings={readingAges} canRecord={false} />
+            </div>
+          )}
+
+          {activeView === 'tuckshop' && (
+            <div className="card">
+              <h2>Tuckshop</h2>
+              <p>
+                Balance:{' '}
+                <span style={{ fontWeight: 700, color: (tuckshopBalance ?? 0) < 0 ? '#a3232c' : '#1a7a3d' }}>
+                  {tuckshopBalance === null ? '…' : `₦${Number(tuckshopBalance).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`}
+                </span>
+              </p>
+              <TuckshopPurchases studentId={selectedId} />
             </div>
           )}
 

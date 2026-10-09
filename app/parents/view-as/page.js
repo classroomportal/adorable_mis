@@ -70,7 +70,7 @@ function ViewAsInner() {
             {parent.email ? ` (${parent.email})` : ''} — this is what they see when they sign in.
           </p>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: '#5b6472' }}>
-            Fees only appear here if you have access to fees yourself. Their inbox and tuckshop aren&apos;t shown.
+            Fees only appear here if you have access to fees yourself. Their inbox isn&apos;t shown.
           </p>
           <p style={{ margin: '0.5rem 0 0' }}>
             <button type="button" className="secondary" onClick={() => { setParent(null); window.history.replaceState(null, '', window.location.pathname); }}>
