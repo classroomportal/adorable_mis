@@ -470,7 +470,7 @@ const TABS = [
     // Targets & Baselines card. Class Progress is here only for those without
     // its top-row tile.
     items: ({ hasAccess, staffRoles, isAdmin }) => [
-      { href: '/results/import-gradebook', label: '1 Adorable.net', desc: "Upload the weekly gradebook from Adorable.net, the school's Moodle (CSV), to load a week's marks." },
+      { href: '/results/import-gradebook', label: '1 Adorable.net', desc: "Upload a gradebook from Adorable.net, the school's Moodle (CSV), into a result set." },
       { href: '/results/enter', label: '2 Type In Marks', desc: "Type in marks for a class by hand." },
       // Shares the /results grant rather than having a resource of its own.
       { href: '/results/missing', label: '3 Marks Missing', resource: '/results', desc: "Classes that still have marks to enter." },

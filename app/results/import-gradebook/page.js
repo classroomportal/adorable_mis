@@ -2,11 +2,12 @@
 import { useEffect, useState } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../../lib/supabaseClient';
-import { schoolToday } from '../../../lib/schoolTime';
-import { buildWeekColumns, loadHolidayDates } from '../../../lib/termWeeks';
 import RequireAuth from '../../RequireAuth';
 import RequireResource from '../../RequireResource';
+import { useAuth } from '../../../lib/AuthContext';
 import { formatUKDate } from '../../../lib/formatDate';
+import { loadResultSetScopes, inReportPeriod } from '../../../lib/reportWriting';
+import ResultSetPicker, { currentYearSets, confirmResultSetDate, ResultSetDateNote, fieldStyle } from '../../components/ResultSetPicker';
 
 // Columns that are NOT subject score columns in the weekly gradebook export.
 const METADATA_COLUMNS = new Set([
@@ -29,11 +30,13 @@ function parseSubjectName(header) {
   return name.trim();
 }
 
-// Type is read from the raw header BEFORE parseSubjectName strips the
-// "Exam"/"Quiz" wording, since that wording is the only signal we have.
-function parseResultType(header) {
-  return /exam/i.test(header) ? 'Exam' : 'ReLP';
-}
+// The same choices as Enter Results; results_result_type_check allows
+// only these (and term_exam_import, which is for historic loads).
+const RESULT_TYPES = [
+  { value: 'short_test', label: 'Short Test' },
+  { value: 'teacher_assessment', label: 'Teacher Assessment' },
+  { value: 'exam_grade', label: 'Exam Grade' },
+];
 
 function chunk(arr, size) {
   const out = [];
@@ -42,15 +45,18 @@ function chunk(arr, size) {
 }
 
 function ImportInner() {
+  const { profile } = useAuth();
   const [rows, setRows] = useState([]);
   const [subjectColumns, setSubjectColumns] = useState([]); // raw header names
   const [subjectNames, setSubjectNames] = useState({}); // raw header -> parsed name (display only)
   const [allSubjects, setAllSubjects] = useState([]); // {subject_id, subject_name}
   const [resolution, setResolution] = useState({}); // header -> { mode: 'existing'|'new'|'unresolved', subjectId, auto }
-  const [terms, setTerms] = useState([]);
-  const [termId, setTermId] = useState('');
-  const [weekLabel, setWeekLabel] = useState('');
-  const [holidays, setHolidays] = useState(new Set());
+  const [resultSets, setResultSets] = useState([]);
+  const [resultSetEventId, setResultSetEventId] = useState('');
+  // Sets only for some students: a special set's years (migration 358), or
+  // a report period's years and join date (e.g. "New students check").
+  const [setScopes, setSetScopes] = useState({});
+  const [resultType, setResultType] = useState('short_test');
   const [status, setStatus] = useState(null);
   const [errors, setErrors] = useState([]);
   const [preview, setPreview] = useState([]);
@@ -63,38 +69,33 @@ function ImportInner() {
     loadSubjectsAndAliases();
   }, []);
 
+  // Marks go into a result set, as on Enter Results, never a bare week:
+  // the reports, progress pages and appeals all find marks by their set.
   useEffect(() => {
-    async function loadTerms() {
-      const { data } = await supabase
-        .from('terms')
-        .select('term_id, term_name, start_date, end_date')
-        .order('start_date', { ascending: false });
-      setTerms(data || []);
-      const today = schoolToday();
-      const current = (data || []).find((t) => t.start_date <= today && t.end_date >= today);
-      if (current) setTermId(current.term_id);
-      else if (data && data.length > 0) setTermId(data[0].term_id);
-    }
-    loadTerms();
+    supabase
+      .from('calendar_events')
+      .select('event_id, event_date, event_name, special_year_groups')
+      .eq('is_result_set', true)
+      .order('event_date', { ascending: false })
+      .then(async ({ data }) => {
+        const sets = currentYearSets(data || []);
+        setResultSets(sets);
+        const scopes = await loadResultSetScopes();
+        for (const ev of sets) {
+          if (ev.special_year_groups?.length) scopes[ev.event_id] = { year_groups: ev.special_year_groups };
+        }
+        setSetScopes(scopes);
+      });
   }, []);
 
-  const selectedTerm = terms.find((t) => t.term_id === termId);
-  // Half-term weeks are left out and the weeks after them renumbered, as on
-  // the Termly Grade Report, so "Wk6" means the same week in both.
-  useEffect(() => {
-    if (!selectedTerm) return;
-    loadHolidayDates(selectedTerm.start_date, selectedTerm.end_date).then(setHolidays);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [termId, terms]);
-  const weekOptions = selectedTerm ? buildWeekColumns(selectedTerm, holidays) : [];
-  const weekStart = weekOptions.find((w) => w.label === weekLabel)?.date || '';
+  const selectedResultSet = resultSets.find((r) => String(r.event_id) === String(resultSetEventId));
+  const setScope = setScopes[resultSetEventId] || null;
 
-  useEffect(() => {
-    if (weekOptions.length > 0 && !weekOptions.find((w) => w.label === weekLabel)) {
-      setWeekLabel(weekOptions[0].label);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [termId, terms, holidays]);
+  function chooseResultSet(id) {
+    const rs = resultSets.find((r) => String(r.event_id) === String(id));
+    if (!confirmResultSetDate(rs)) return;
+    setResultSetEventId(id);
+  }
 
   async function handleFile(e) {
     const file = e.target.files[0];
@@ -152,8 +153,8 @@ function ImportInner() {
   const unresolvedCount = subjectColumns.filter((h) => resolution[h]?.mode === 'unresolved').length;
 
   async function handleImport() {
-    if (!weekStart) {
-      setStatus('Please choose a term and week first.');
+    if (!selectedResultSet) {
+      setStatus('Please choose a result set first.');
       return;
     }
     if (unresolvedCount > 0) {
@@ -219,17 +220,23 @@ function ImportInner() {
 
       const { data: student, error: sErr } = await supabase
         .from('students')
-        .select('student_id, year_group')
+        .select('student_id, year_group, admission_date')
         .eq('upn', upn)
         .maybeSingle();
 
       if (sErr || !student) { problems.push(`Row ${i + 2}: no student found with ID "${upn}".`); continue; }
+      // The database refuses a special set's marks for other years
+      // (trg_results_special_set_year), which would fail the whole batch.
+      if (setScope && !inReportPeriod(student, setScope)) {
+        problems.push(`Row ${i + 2}: ${row['First name'] || ''} ${row['Last name'] || ''} (Year ${student.year_group}) is not in "${selectedResultSet.event_name}", skipped.`);
+        continue;
+      }
 
       for (const header of subjectColumns) {
         const subjectId = subjectIdByHeader[header];
         if (!subjectId) continue;
         const raw = (row[header] || '').trim();
-        if (raw === '' || raw === '-') continue; // no result this week for this subject
+        if (raw === '' || raw === '-') continue; // no mark for this subject
 
         const score = Number(raw);
         if (Number.isNaN(score)) { problems.push(`Row ${i + 2}, "${header}": "${raw}" is not a number, skipped.`); continue; }
@@ -239,15 +246,36 @@ function ImportInner() {
         toUpsert.push({
           student_id: student.student_id,
           subject_id: subjectId,
-          week_start_date: weekStart,
-          // Sent explicitly because it is part of the conflict target below:
-          // a gradebook row belongs to a week, not to a named result set.
-          result_set_event_id: null,
+          result_set_event_id: selectedResultSet.event_id,
+          week_start_date: selectedResultSet.event_date,
           score,
           max_score: 100,
           grade,
-          result_type: parseResultType(header),
+          result_type: resultType,
+          staff_id: profile?.staff_id ?? null,
         });
+      }
+    }
+
+    // Re-importing replaces marks already in the set (a teacher's, too), so
+    // say how many before writing anything.
+    const subjectIds = Array.from(new Set(toUpsert.map((r) => r.subject_id)));
+    const studentIds = Array.from(new Set(toUpsert.map((r) => r.student_id)));
+    if (toUpsert.length > 0) {
+      const existing = new Set();
+      for (const ids of chunk(studentIds, 200)) {
+        const { data } = await supabase
+          .from('results')
+          .select('student_id, subject_id')
+          .eq('result_set_event_id', selectedResultSet.event_id)
+          .in('subject_id', subjectIds)
+          .in('student_id', ids);
+        for (const r of data || []) existing.add(`${r.student_id}:${r.subject_id}`);
+      }
+      const replacing = toUpsert.filter((r) => existing.has(`${r.student_id}:${r.subject_id}`)).length;
+      if (replacing > 0 && !confirm(`${replacing} of these ${toUpsert.length} marks are already in "${selectedResultSet.event_name}" and will be replaced by the file's.\n\nImport anyway?`)) {
+        setStatus('Import cancelled. Nothing was saved.');
+        return;
       }
     }
 
@@ -257,18 +285,16 @@ function ImportInner() {
       setStatus(`Importing batch ${i + 1} of ${batches.length} (${successCount} of ${toUpsert.length} results written so far)...`);
       const { error: upErr } = await supabase
         .from('results')
-        // Migration 130 widened the weekly uniqueness rule to include
-        // result_set_event_id (NULLS NOT DISTINCT), so that a teacher entering
-        // a result set no longer collides with an imported row for the same
-        // week. Re-importing a week still updates in place: these rows all
-        // carry a null result set, and null collides with null.
-        .upsert(batch, { onConflict: 'student_id,subject_id,week_start_date,result_set_event_id' });
+        // One mark per student, subject and result set
+        // (results_student_subject_resultset_unique), as on Enter Results,
+        // so re-importing the same file updates in place.
+        .upsert(batch, { onConflict: 'student_id,subject_id,result_set_event_id' });
       if (upErr) problems.push(`Batch write failed: ${upErr.message}`);
       else successCount += batch.length;
     }
 
     setErrors(problems);
-    setStatus(`Imported ${successCount} of ${toUpsert.length} results for week ${weekStart}.${problems.length ? ' Some rows had issues — see below.' : ''}`);
+    setStatus(`Imported ${successCount} of ${toUpsert.length} results into "${selectedResultSet.event_name}" (${formatUKDate(selectedResultSet.event_date)}).${problems.length ? ' Some rows had issues — see below.' : ''}`);
   }
 
   return (
@@ -276,27 +302,29 @@ function ImportInner() {
       <h1>Upload Adorable.net Gradebook (CSV)</h1>
 
       <div className="card">
-        <p>Upload the raw weekly export. Any number of subject/quiz columns is fine — they're detected automatically. Students are matched by <code>ID number</code> against each student's UPN.</p>
+        <p>Upload the gradebook export. Any number of subject/quiz columns is fine — they're detected automatically. Students are matched by <code>ID number</code> against each student's UPN.</p>
         <input type="file" accept=".csv" onChange={handleFile} />
       </div>
 
       {rows.length > 0 && (
         <div className="card">
-          <h2>Week</h2>
+          <h2>Result set</h2>
+          <div style={{ ...fieldStyle, margin: '0.5rem 0' }}>
+            Result Set
+            <ResultSetPicker resultSets={resultSets} value={resultSetEventId} onChange={chooseResultSet} />
+            <ResultSetDateNote resultSet={selectedResultSet} checkDate />
+            {setScope && (
+              <span style={{ color: 'var(--ink-soft)' }}>
+                Only for Year {(setScope.year_groups || []).join(', ')}
+                {setScope.joined_from ? `, joined since ${formatUKDate(setScope.joined_from)}` : ''}; other students in the file are skipped.
+              </span>
+            )}
+          </div>
           <label>
-            Term:{' '}
-            <select value={termId} onChange={(e) => setTermId(Number(e.target.value))}>
-              {terms.map((t) => (
-                <option key={t.term_id} value={t.term_id}>{t.term_name}</option>
-              ))}
-            </select>
-          </label>
-          {'  '}
-          <label>
-            Week:{' '}
-            <select value={weekLabel} onChange={(e) => setWeekLabel(e.target.value)}>
-              {weekOptions.map((w) => (
-                <option key={w.label} value={w.label}>{w.label} ({formatUKDate(w.date)})</option>
+            Result Type
+            <select value={resultType} onChange={(e) => setResultType(e.target.value)}>
+              {RESULT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </label>
@@ -378,8 +406,8 @@ function ImportInner() {
             </table>
           </div>
           <p style={{ marginTop: '1rem' }}>{rows.length} students, {subjectColumns.length} subject columns detected. Written in batches of {BATCH_SIZE}.</p>
-          <button onClick={handleImport} disabled={unresolvedCount > 0}>
-            Import results for {selectedTerm?.term_name || '(choose term)'} — {weekLabel || '(choose week)'}
+          <button onClick={handleImport} disabled={unresolvedCount > 0 || !selectedResultSet}>
+            {selectedResultSet ? `Import results into ${selectedResultSet.event_name}` : 'Choose a result set to import'}
           </button>
         </div>
       )}
