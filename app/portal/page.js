@@ -26,6 +26,7 @@ import {
 import { formatUKDate } from '../../lib/formatDate';
 import LessonFeedbackForm from '../components/LessonFeedbackForm';
 import { loadFeedbackLessons, feedbackKey } from '../../lib/lessonFeedback';
+import { loadMyWorksheets, openLessonWorksheet, worksheetKey, opensAtClock } from '../../lib/lessonWorksheets';
 import RewardStore, { useRewardPoints } from '../components/RewardStore';
 import WorryBox from '../components/WorryBox';
 import SchoolRating, { useSchoolRating } from '../components/SchoolRating';
@@ -92,6 +93,10 @@ function PortalInner() {
     const { lessons } = await loadFeedbackLessons();
     setFeedbackLessons(lessons);
   }
+  // Lesson worksheets (migration 428): shown on the lesson in the week shown;
+  // the database lets the student open one only once the lesson has started.
+  const [worksheets, setWorksheets] = useState([]);
+  const [worksheetError, setWorksheetError] = useState(null);
   const tileOrder = useTileOrder('student');
   // Reward Store (migration 370): merit points to spend, shown on its tile.
   const [rewardPoints, reloadRewardPoints, rewardsOpen] = useRewardPoints(studentId);
@@ -218,6 +223,24 @@ function PortalInner() {
 
   useEffect(() => { if (studentId) loadFeedback(); }, [studentId]);
 
+  // Reloaded every minute while one shown is still locked, so it opens on the
+  // timetable when the lesson starts without the student refreshing.
+  const hasLockedWorksheet = worksheets.some((w) => !w.is_open);
+  useEffect(() => {
+    if (!studentId) return undefined;
+    let live = true;
+    const loadWs = () => loadMyWorksheets(weekStart, addDays(weekStart, 6)).then(({ worksheets: w }) => { if (live) setWorksheets(w); });
+    loadWs();
+    const timer = hasLockedWorksheet && view === 'timetable' ? setInterval(loadWs, 60000) : null;
+    return () => { live = false; if (timer) clearInterval(timer); };
+  }, [studentId, weekStart, hasLockedWorksheet, view]);
+
+  async function openWorksheet(w) {
+    setWorksheetError(null);
+    const error = await openLessonWorksheet(w);
+    if (error) setWorksheetError(`That worksheet couldn't be opened: ${error.message}`);
+  }
+
   useEffect(() => {
     if (!homeworkOn) return;
     loadMyHomework(weekStart, addDays(weekStart, 6)).then(({ homework }) => setWeekHomework(homework));
@@ -295,6 +318,12 @@ function PortalInner() {
   const feedbackByKey = new Map(feedbackLessons.map((l) => [feedbackKey(l.lesson_date, l.period_number, l.class_id), l]));
   const feedbackToGive = feedbackLessons.filter((l) => !l.given);
 
+  const worksheetsByKey = {};
+  worksheets.forEach((w) => {
+    const k = worksheetKey(w.lesson_date, w.period_number, w.class_id);
+    (worksheetsByKey[k] = worksheetsByKey[k] || []).push(w);
+  });
+
   function renderTimetableGrid({ forPrint = false } = {}) {
     const withHomework = homeworkOn && !forPrint;
     return (
@@ -337,6 +366,19 @@ function PortalInner() {
                                 </div>
                               );
                           })()}
+                          {!forPrint && e.classId && (worksheetsByKey[worksheetKey(cellDate, p.period_number, e.classId)] || []).map((w) => (
+                            w.is_open ? (
+                              <div key={w.worksheet_id}>
+                                <button type="button" className="ws-chip" onClick={() => openWorksheet(w)} title="Open the worksheet">
+                                  📄 {w.title}
+                                </button>
+                              </div>
+                            ) : (
+                              <div key={w.worksheet_id} className="ws-chip ws-locked" title="You can open this when the lesson starts">
+                                🔒 Worksheet · opens {opensAtClock(w.opens_at)}
+                              </div>
+                            )
+                          ))}
                           {withHomework && (e.homework || []).map((hw) => (
                             <div key={hw.homework_id} style={{ marginTop: '0.25rem' }}>
                               <HomeworkChip hw={hw} selected={selectedHw === hw.homework_id} onSelect={setSelectedHw} />
@@ -495,6 +537,7 @@ function PortalInner() {
               </div>
             )}
             {homeworkOn && <WeekPicker weekStart={weekStart} onChange={(w) => { setWeekStart(w); setSelectedHw(null); }} />}
+            {worksheetError && <p className="no-print" style={{ color: '#a3232c', margin: '0.5rem 0' }}>{worksheetError}</p>}
             <div className="table-scroll">
               {renderTimetableGrid()}
             </div>
