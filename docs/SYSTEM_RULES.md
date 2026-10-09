@@ -596,8 +596,9 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - Students still see their own events, with the writing, straight away.
 - SMT get a "picture to check" notice in their Formwork inbox.
 
-**Behaviour alert emails** (168, 202)
-- **When it's sent:** when a negative event is logged and either it is −5, or the student's negative total for the Saturday–Friday week reaches −8 or worse.
+**Behaviour alert emails** (168, 202, 419)
+- **When it's raised:** when a negative event is logged and either it is −5, or the student's negative total for the Saturday–Friday week reaches −8 or worse. The alert goes to the Formwork inbox straight away.
+- **The email is a daily summary** (419, 9 Oct 2026): one email at 4.30 pm listing every alert since the last one (student, year, category, points, date, why it alerted, description). Alerts whose event was withdrawn or returned before then are only counted, not listed. No email on a day with no alerts; alerts after 4.30 pm go in the next day's.
 - **Who gets it:** it is sent to cs@, copied to every SMT member and sro@. Houseparents no longer receive it.
 - **Replies** go to guardian.counselling@.
 
@@ -929,7 +930,7 @@ None of these has been fixed yet. They are listed so the school can decide what 
 **Rules that are weaker than they look**
 
 6. **Any member of staff can change whether a behaviour event is visible to parents** by sending a direct request, skipping the review page.
-7. **The −8 weekly behaviour alert repeats** on every further negative event that week.
+7. **The −8 weekly behaviour alert repeats** on every further negative event that week (in the inbox, and as a line in that day's summary email).
 8. **The forced password change is page only.** Also, parent logins made by the school office, and all auto-created staff and student logins, are never forced to change their first password.
 9. **Report checkers** can see and edit every comment in the period, not only the scope set for them.
 10. **HR can give themselves any role except admin**, including smt and bursar (but not dsl or guidance, which only the principal gives, 405). It is logged, but not blocked.
