@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import RequireAuth from "../../RequireAuth";
 import RequireResource from "../../RequireResource";
 import { groupClassesByKey } from "../../../lib/blockGroups";
+import { withoutOtherHalfBlocks } from "../../../lib/curriculumBlocks";
 import SaveBar, { useSaveStatus } from "../../components/SaveBar";
 
 const YEARS = [7, 8, 9, 10, 11, 12];
@@ -49,8 +50,10 @@ function BlockAllocationInner() {
         setMessage("Error loading blocks: " + error.message);
         return;
       }
-      setBlocks(data || []);
-      if (!data || data.length === 0) {
+      // Other Half and Sports are chosen by students at /other-half, not allocated here.
+      const shown = withoutOtherHalfBlocks(data);
+      setBlocks(shown);
+      if (shown.length === 0) {
         setMessage(`No curriculum_blocks rows found for year_group = ${year}. (Query ran without error, just returned 0 rows.)`);
       }
     })();
