@@ -4,10 +4,10 @@ import { supabase } from '../../lib/supabaseClient';
 import { formatUKDate } from '../../lib/formatDate';
 import { formatTimeRange } from '../../lib/formatTime';
 import { schoolToday, schoolDateOffset, schoolClock } from '../../lib/schoolTime';
-import { fileSizeLabel, homeworkFileProblem, HOMEWORK_FILE_ACCEPT } from '../../lib/homework';
+import { fileSizeLabel, HOMEWORK_FILE_ACCEPT } from '../../lib/homework';
 import {
   canAddWorksheets, loadClassLessons, loadClassWorksheets, addLessonWorksheet,
-  removeLessonWorksheet, openLessonWorksheet, worksheetKey, opensAtClock,
+  removeLessonWorksheet, openLessonWorksheet, worksheetKey, opensAtClock, worksheetFileProblem,
 } from '../../lib/lessonWorksheets';
 import { btnSmall } from './HomeworkForm';
 
@@ -67,7 +67,7 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
   async function add(lesson, files) {
     setStatus(null);
     const list = Array.from(files || []);
-    const problems = list.map(homeworkFileProblem).filter(Boolean);
+    const problems = list.map(worksheetFileProblem).filter(Boolean);
     if (problems.length) { setStatus(problems.join(' ')); return; }
     const key = worksheetKey(lesson.lesson_date, lesson.period_number, Number(classId));
     setBusy(key);
@@ -97,7 +97,7 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
     <div className="card">
       <h2 style={{ margin: 0 }}>📄 Lesson worksheets</h2>
       <p style={{ color: 'var(--ink-soft)', margin: '0.3rem 0 0.6rem' }}>
-        Students see a worksheet on their timetable but can only open it once the lesson starts.
+        Students see a worksheet on their timetable but can only open it once the lesson starts. Up to 3 MB a file.
       </p>
       {status && <p style={{ color: '#a3232c', margin: '0 0 0.5rem' }}>{status}</p>}
       {lessons.length === 0 ? (
