@@ -21,7 +21,7 @@ function ImportInner() {
   async function load() {
     const { data } = await supabase
       .from('subjects')
-      .select('subject_id, subject_name, display_name, target_fallback_subject_id, department_name')
+      .select('subject_id, subject_name, display_name, target_fallback_subject_id, department_name, waec_only')
       .order('subject_name');
     setSubjects(data || []);
 
@@ -109,6 +109,7 @@ function ImportInner() {
           display_name: row.display_name || null,
           target_fallback_subject_id: row.target_fallback_subject_id || null,
           department_name: row.department_name || null,
+          waec_only: !!row.waec_only,
         })
         .eq('subject_id', row.subject_id)
     );
@@ -146,6 +147,13 @@ function ImportInner() {
           than one key stage. A subject with no key stage ticked will never show on any transcript — and
           note it also needs at least one actual result to appear, not just a target grade.
         </p>
+        <p>
+          <strong>WAEC only</strong> marks a subject Years 10–11 sit for WAEC only (e.g. Igbo, Fashion).
+          On their Termly Grade Report it goes in the <em>WAEC Only Subjects</em> section under the
+          IGCSE subjects, its grades are printed in WAEC, and an IGCSE target is printed as its WAEC
+          equivalent (A* → A1+, A → A1, B → B2, C → C4, D → C6, E → E8, F/G → F9). Years 7–9 and 12
+          are not affected.
+        </p>
         <input
           type="text"
           placeholder="Filter subjects..."
@@ -158,7 +166,7 @@ function ImportInner() {
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Subject (source)</th><th>Display name</th><th>Department</th><th>Use targets from</th><th>Key stages</th><th>Aliases</th></tr>
+              <tr><th>Subject (source)</th><th>Display name</th><th>Department</th><th>Use targets from</th><th>Key stages</th><th>WAEC only</th><th>Aliases</th></tr>
             </thead>
             <tbody>
               {filtered.map((s) => (
@@ -204,6 +212,14 @@ function ImportInner() {
                         />{' '}{ks}
                       </label>
                     ))}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`${s.subject_name} is WAEC only in Years 10–11`}
+                      checked={!!s.waec_only}
+                      onChange={(e) => updateField(s.subject_id, 'waec_only', e.target.checked)}
+                    />
                   </td>
                   <td>
                     {(aliasesBySubject[s.subject_id] || []).map((a) => (
