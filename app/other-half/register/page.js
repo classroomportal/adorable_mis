@@ -57,6 +57,8 @@ function RegisterInner() {
   // Marks from a planned absence: only the school office and the attendance
   // officer can change them (389), so for everyone else they're read-only.
   const [planned, setPlanned] = useState(new Set());
+  // student_id -> the mark's note, e.g. "With <teacher>" from the missing-student pop-up (418); shown, not edited
+  const [markNotes, setMarkNotes] = useState({});
   const [isOffice, setIsOffice] = useState(false);
   // student_id -> {class_code, teacher_name}: a timetabled lesson in this
   // period, which always beats the Other Half (migration 385).
@@ -118,7 +120,7 @@ function RegisterInner() {
       const { data: existing } = ids.length
         ? await supabase
           .from('attendance')
-          .select('student_id, code, minutes_late, other_half_activity_id, planned_absence_id, office_locked, other_half_activities(activity_name)')
+          .select('student_id, code, minutes_late, other_half_activity_id, planned_absence_id, office_locked, notes, other_half_activities(activity_name)')
           .eq('attend_date', date)
           .eq('period_number', slots.periodNumber)
           .in('student_id', ids)
@@ -127,6 +129,7 @@ function RegisterInner() {
       const prefillMinutes = {};
       const other = {};
       const plannedIds = new Set();
+      const notesNow = {};
       for (const row of existing || []) {
         // Planned-absence marks (389) and a C the office or the principal set (415).
         if (row.planned_absence_id || row.office_locked) plannedIds.add(String(row.student_id));
@@ -135,6 +138,7 @@ function RegisterInner() {
           continue;
         }
         if (row.code) prefill[row.student_id] = row.code;
+        if (row.notes) notesNow[row.student_id] = row.notes;
         if (row.minutes_late != null) prefillMinutes[row.student_id] = String(row.minutes_late);
       }
       const { data: opened, error: openError } = await supabase
@@ -150,6 +154,7 @@ function RegisterInner() {
       // Planned-absence marks stay the absence's (389): not re-saved.
       setSaved(snapshot(prefill, prefillMinutes));
       setPlanned(plannedIds);
+      setMarkNotes(notesNow);
       setElsewhere(other);
       setStatus(null);
       setLoading(false);
@@ -258,6 +263,14 @@ function RegisterInner() {
       return;
     }
     setSaved(snapshot(marks, lateMinutes));
+    // Changing a "They're with me" C clears its "With …" note in the database (418); match it here.
+    setMarkNotes((prev) => {
+      const next = { ...prev };
+      rows.forEach((r) => {
+        if (r.code !== 'C' && next[r.student_id]) next[r.student_id] = next[r.student_id].replace(/(^| · )With [^·]*$/, '').trim();
+      });
+      return next;
+    });
     setStatus(`Saved ${rows.length} mark${rows.length === 1 ? '' : 's'}.`);
     // Saved: let it go, so office/SMT can correct it straight away.
     supabase.rpc('release_other_half_register', { p_activity_id: activity.activity_id, p_date: date });
@@ -345,6 +358,11 @@ function RegisterInner() {
                           <option value="">—</option>
                           {offeredCodes(codes, canExclude, marks[s.student_id]).map((c) => <option key={c.code} value={c.code}>{c.code} — {c.description}</option>)}
                         </select>
+                      )}
+                      {markNotes[s.student_id] && !elsewhere[s.student_id] && (
+                        <div style={{ fontSize: '0.75em', color: '#475569', fontStyle: 'italic', marginTop: '0.15rem', maxWidth: '16rem' }}>
+                          {markNotes[s.student_id]}
+                        </div>
                       )}
                     </td>
                     <td>

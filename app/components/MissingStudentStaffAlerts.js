@@ -10,7 +10,9 @@ import { useAuth } from '../../lib/AuthContext';
 // the office, who have their own pop-up, and this stops asking) and leaves
 // out the person who marked the student absent. It lasts until the period
 // ends. "I've sent them" clears it from every screen and tells the office;
-// "Not with me" clears it from this person's screen only.
+// "Not with me" clears it from this person's screen only. "They're with me"
+// (migration 418) changes the absent mark to C with "With <their name>" in
+// the mark's note, which clears it from every screen, the office's too.
 
 const POLL_MS = 60000;
 const SNOOZE_MS = 2 * 60000;
@@ -154,13 +156,17 @@ export default function MissingStudentStaffAlerts() {
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                   <input
                     type="text"
-                    placeholder="Where were they? (optional)"
+                    placeholder="Where were they? / why with you (optional)"
                     value={notes[key] || ''}
                     onChange={(e) => setNotes((n) => ({ ...n, [key]: e.target.value }))}
                     style={{ flex: '1 1 12rem' }}
                   />
                   <button type="button" disabled={busy === key} onClick={() => respond(a, 'sent')}>
                     {busy === key ? 'Saving…' : 'I’ve sent them'}
+                  </button>
+                  <button type="button" disabled={busy === key} onClick={() => respond(a, 'with_me')}
+                    title="Marks them C on the register, with your name in the note">
+                    They’re with me
                   </button>
                   <button type="button" className="secondary" disabled={busy === key} onClick={() => respond(a, 'not_with_me')}>
                     Not with me
