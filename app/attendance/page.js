@@ -27,7 +27,9 @@ function AttendanceInner() {
   const [roster, setRoster] = useState([]);
   const [marks, setMarks] = useState({}); // student_id -> code
   const [lateMinutes, setLateMinutes] = useState({}); // student_id -> minutes late, as typed
-  const [planned, setPlanned] = useState({}); // student_id -> true when the mark came from a planned absence (318)
+  // student_id -> 'planned' when the mark came from a planned absence (318),
+  // 'office' when it's a C the office or the principal set (415)
+  const [planned, setPlanned] = useState({});
   // Planned-absence marks can be changed only by the school office and the
   // attendance officer (389); for everyone else they're read-only here.
   const [isOffice, setIsOffice] = useState(false);
@@ -88,7 +90,7 @@ function AttendanceInner() {
         .eq('attend_date', date)
         .eq('period_number', periodNumber)
         .in('student_id', ids);
-      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id, other_half_activity_id');
+      let { data: existing, error: existingError } = await existingMarks('student_id, code, minutes_late, planned_absence_id, other_half_activity_id, office_locked');
       // Until migration 318 is run there's no planned_absence_id column; the
       // register must still show the marks already taken.
       if (existingError) ({ data: existing } = await existingMarks('student_id, code, minutes_late'));
@@ -102,10 +104,12 @@ function AttendanceInner() {
         // even unchanged, so it stops counting as OH attendance (385). A
         // planned-absence mark isn't: it stays the absence's, and only the
         // office can change it (389).
-        savedNow[row.student_id] = row.other_half_activity_id && !row.planned_absence_id
+        // An office C (415) isn't either.
+        savedNow[row.student_id] = row.other_half_activity_id && !row.planned_absence_id && !row.office_locked
           ? 'resave'
           : `${row.code || ''}|${row.minutes_late ?? ''}`;
-        if (row.planned_absence_id) plannedIds[row.student_id] = true;
+        if (row.planned_absence_id) plannedIds[row.student_id] = 'planned';
+        else if (row.office_locked) plannedIds[row.student_id] = 'office';
         if (row.minutes_late !== null && row.minutes_late !== undefined) {
           prefillMinutes[row.student_id] = String(row.minutes_late);
         }
@@ -483,7 +487,12 @@ function AttendanceInner() {
                           ))}
                         </select>
                         {/* Filled in by a planned absence (318); only the office can change it (389). */}
-                        {planned[s.student_id] && (
+                        {planned[s.student_id] === 'office' && (
+                          <span title="Set by the school office. Only the school office, the attendance officer or the principal can change it." style={{ marginLeft: '0.35rem', fontSize: '0.75em', color: '#475569' }}>
+                            office
+                          </span>
+                        )}
+                        {planned[s.student_id] === 'planned' && (
                           <span title="Filled in from a planned absence. Only the school office or the attendance officer can change it." style={{ marginLeft: '0.35rem', fontSize: '0.75em', color: '#475569' }}>
                             planned
                           </span>
