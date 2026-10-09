@@ -23,6 +23,7 @@ import { groupResultSets } from '../../../lib/resultSets';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday, schoolWeekdayShort } from '../../../lib/schoolTime';
 import { classGroupKey, groupClassesByKey } from '../../../lib/blockGroups';
+import { withoutOtherHalfBlocks } from '../../../lib/curriculumBlocks';
 import {
   AttendanceScopeCards,
   AttendanceTodayTable,
@@ -321,7 +322,9 @@ function StudentDetail() {
         setBlockClasses({});
       } else {
         setBlocksError(null);
-        setBlocks(cb || []);
+        // Other Half and Sports are chosen at /other-half, so they're not listed;
+        // their classes still count as this year's below (no "another year group" warning).
+        setBlocks(withoutOtherHalfBlocks(cb));
         (cb || []).forEach((b) => { byBlock[b.block_id] = b.classes || []; compoundByBlock[b.block_id] = b.is_compound; });
         blocksLoaded = true;
         setBlockClasses(byBlock);
