@@ -963,6 +963,10 @@ Not built yet: students handing work in online, and notifications when homework 
 
 **Where the links are.** Every marks page is on the **Assessment** card, numbered in the order the work is done: **1 Adorable.net** (the weekly gradebook from the school's Moodle), **2 Type In Marks**, **3 Marks Missing**, **4 Student vs Avg**, **5 Marks Sheet**, **6 Top 10**, **7 Mark Appeals**, then Grade Boundaries, Subject Settings and Grade History. Baseline tests and targets are on the **Targets & Baselines** card: Import CAT4/NGRT, Reading Ages, Add Reading Test and Import Targets. The old Weekly Results page has no link: use Type In Marks. Until 8 October 2026 some of these were called Enter Results, Missing Grades, Results, Review Results, Result Set Sheet and Record Reading Tests.
 
+**Importing from Adorable.net.** Choose the **result set** the marks belong to (this school year's sets, as on Type In Marks, with the same warning if its date is far from today) and the **result type** (Short Test, Teacher Assessment or Exam Grade), then choose the CSV file. Every mark in the file goes into that set. If the set is only for some year groups, students in other years are skipped and listed. If the set already has marks for any of the students and subjects in the file, the page says how many will be replaced and asks before saving.
+
+**100% in a Big ReLP.** When you save a full mark in a Big ReLP (any result set called "Big ReLP"), the student gets a "100% in a Big ReLP Test" merit (+3) straight away, logged in your name, with the subject in the note. You don't need to log it yourself. If you correct the mark below full marks or delete it, the merit is withdrawn.
+
 Teachers enter percentage scores for their own classes against result sets. Each score is graded from the subject's boundaries for the year group and compared with the student's target. Every grade change is logged permanently.
 
 ### Result sets
@@ -1164,7 +1168,7 @@ Checkers assigned to the period, SMT and admins can check. Only checked comments
 What goes in:
 
 - **Written report**: checked comments only, English, then Maths, then the rest A–Z, then the Mentor, Houseparent and SMT comments. A student with no checked comments is skipped. The Homework line shows the grade only.
-- **Termly Grade Report and Term Test Scores**: a subject appears only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey. A special result set (such as Year 12 mocks) appears in place of the week its date falls in, headed by its name.
+- **Termly Grade Report and Term Test Scores**: a subject appears only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey. A special result set (such as Year 12 mocks) appears in place of the week its date falls in, headed by its name. There is a column for each teaching week only (the half-term week gets none, so the September term runs Wk1–Wk10), the end-of-term exam week is headed Exam, and where a student has two marks in a subject in one week both show, oldest first ("B / A").
 - **Transcripts**: KS3 (Years 7–9, IGCSE) and KS4/5 (Years 10–12, IGCSE and WAEC versions; Year 12 always WAEC), built from the end-of-term exam result sets. Special result sets such as mocks never appear on them.
 
 ### Uploading documents (/reports/documents)
@@ -1209,6 +1213,7 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 - A merit with no writing goes home at once. Any event with writing, positive or negative, waits for review, and parents see none of it, points included, until it is sent.
 - −1 to −4 events without writing never go to parents; with writing they go once approved.
 - Merits and Stage 1–4 events with writing are listed under **Writing to approve**. Read each comment, use Edit to correct one, tick the ones to send, tick the confirmation, then press **Send to parents** (or **Keep at school**, and parents never see them).
+- Automatic "100% in a Big ReLP Test" merits are listed there too, with the subject in the note; they can be sent in one go with the rest.
 - −5 events without a picture: the principal's PA or SMT (or an admin) checks the text and sends it.
 - Events with a picture: SMT or an admin sends the text with the picture, the text alone, or declines.
 - If an event's writing is changed later, it is hidden again until the new words are approved.
@@ -1446,7 +1451,7 @@ To add a special result set, such as Year 12 mocks:
 2. Choose the **One Year** category, then tick the year group(s) it is for, e.g. **Y12**. The Result set box is ticked for you.
 3. Click **Add event**. The Result set column shows "Y12 only".
 
-The date decides which week's column the set replaces on the Termly Grade Report. The report's weeks start on Mondays: a date from Monday to Thursday falls in that week's column, and a Friday, Saturday or Sunday in the next week's (so Friday 2 October is in the same column as Monday 5 October). Give the set the date of the assessment it takes the place of: dated Monday 5 October, Year 12 Mock 1 replaces the column Week 3 ReLP (Friday 2 October) uses. To change an existing event, use **Edit**: choosing One Year shows the year ticks, and choosing another category makes it an ordinary event again.
+The date decides which week's column the set replaces on the Termly Grade Report. A date falls in the week that contains it, Monday to Sunday, so Friday 2 October is in the column for the week of Monday 28 September. Give the set a date in the week whose column it should take: dated Monday 5 October, Year 12 Mock 1 replaces Year 12's Wk3. To change an existing event, use **Edit**: choosing One Year shows the year ticks, and choosing another category makes it an ordinary event again.
 
 ### Sending a message (/comms/compose)
 
