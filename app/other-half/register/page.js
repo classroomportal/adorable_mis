@@ -118,7 +118,7 @@ function RegisterInner() {
       const { data: existing } = ids.length
         ? await supabase
           .from('attendance')
-          .select('student_id, code, minutes_late, other_half_activity_id, planned_absence_id, other_half_activities(activity_name)')
+          .select('student_id, code, minutes_late, other_half_activity_id, planned_absence_id, office_locked, other_half_activities(activity_name)')
           .eq('attend_date', date)
           .eq('period_number', slots.periodNumber)
           .in('student_id', ids)
@@ -128,7 +128,8 @@ function RegisterInner() {
       const other = {};
       const plannedIds = new Set();
       for (const row of existing || []) {
-        if (row.planned_absence_id) plannedIds.add(String(row.student_id));
+        // Planned-absence marks (389) and a C the office or the principal set (415).
+        if (row.planned_absence_id || row.office_locked) plannedIds.add(String(row.student_id));
         if (row.other_half_activity_id && row.other_half_activity_id !== activity.activity_id) {
           other[row.student_id] = row.other_half_activities?.activity_name || 'another activity';
           continue;
@@ -336,7 +337,7 @@ function RegisterInner() {
                         <select
                           value={marks[s.student_id] || ''}
                           disabled={readOnly || (planned.has(String(s.student_id)) && !isOffice) || lockedExclusion(marks[s.student_id], canExclude)}
-                          title={planned.has(String(s.student_id)) ? 'From a planned absence. Only the school office or the attendance officer can change it.' : undefined}
+                          title={planned.has(String(s.student_id)) ? 'From a planned absence or set by the school office. Only the school office, the attendance officer or the principal can change it.' : undefined}
                           onChange={(e) => setMark(s.student_id, e.target.value)}
                           aria-label={`Code — ${s.first_name} ${s.last_name}`}
                           style={{ width: '6.5rem' }}
