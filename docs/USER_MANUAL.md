@@ -22,7 +22,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [1. Getting started](#1-getting-started) | Signing in, the dashboard, roles, using a phone | Everyone |
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
 | Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, the automatic missed-lesson negative, planned absences | Teachers, office, pastoral |
-| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor, lesson worksheets, card sorts and classwork marks (Maths trial) | Teachers, HoDs, SMT |
+| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the class mark book, student view, Homework Monitor, lesson worksheets, card sorts and classwork marks (Maths trial) | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
 | Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, reward store, the Worry Box and wellbeing check-ins, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
@@ -46,7 +46,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Raise a worry about a student | [Safeguarding and keeping students safe](#safeguarding-and-keeping-students-safe) · [Who to tell](#who-to-tell) |
 | Spot students falling behind | [Signs to look for](#signs-to-look-for-and-where-to-see-them) · [Worked examples](#worked-examples) |
 | Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
-| Set or mark homework | [Setting homework](#setting-homework) · [Marking](#marking-the-mark-book) |
+| Set or mark homework | [Setting homework](#setting-homework) · [Marking](#entering-marks-for-a-homework) |
 | Put a worksheet on a Maths lesson | [Lesson worksheets](#lesson-worksheets-maths-trial) |
 | Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
 | Appeal a mark, or decide a student's appeal | [Mark appeals](#mark-appeals-grade-appeals) |
@@ -129,7 +129,7 @@ A teacher's work in Formwork happens mostly in the lesson: take the register, lo
 **Every day**
 
 - Check the banner on My Timetable for any register you forgot. Taking it late still clears it from the list.
-- Mark homework that came in: open /homework, choose the class, press **Mark book**, enter marks (or Not handed in) and press **Release marks** when you want students to see them.
+- Mark homework that came in: open your class's mark book (the **Mark books** links at the top of your timetable, or /homework), press **Marks** beside the homework, enter marks (or Not handed in) and press **Release marks** when you want students to see them.
 - Read your **Inbox** for messages from SMT and the office.
 - If you get a mark appeal email, check the student's paper and decide it at Mark Appeals (chapter 5). Decide promptly: nobody else can, and it holds one of the student's credits.
 
@@ -384,7 +384,7 @@ The same four steps repeat after every assessment point: weekly short tests, Tea
 | Step | What to do | Where in Formwork | When |
 | --- | --- | --- | --- |
 | 1. Assess | Enter every score against the right result set, and close the gaps | Type In Marks; Marks Missing | Within a few days of the test |
-| 2. Review | Find students, classes and subjects below target, and look for the reasons (attendance, homework, behaviour) | Class Progress, the student profile, the homework mark sheet | The week after |
+| 2. Review | Find students, classes and subjects below target, and look for the reasons (attendance, homework, behaviour) | Class Progress, the student profile, the homework mark book | The week after |
 | 3. Act | Choose an action for each concern and tell the people who need to know | Student groups, Other Half placement, messages, mentor conversations, report comments | Straight after the review |
 | 4. Check | At the next assessment point, see whether the students acted on have moved | Class Progress for the new result set; the group's mark sheet | Next test |
 
@@ -398,7 +398,7 @@ The cycle only works if the data is complete. A class with missing marks drops o
 | One subject or class falling behind | **Class Progress**: classes sorted worst first, with counts above / on / below target | A class where most students are below target |
 | A student below target in one subject | **Build a group from a rule** → A subject (below a grade, or below target) | Below target since the start of term |
 | A low or falling exam average | **Build a group from a rule** → Term exam average; **Student vs Avg** (student against the cohort) | Below 50% average |
-| Homework not being done | The homework **mark sheet** (Not handed in count, average); the Homework Monitor for classes setting nothing | Two or more not handed in this term |
+| Homework not being done | The homework **mark book** (Not handed in count, average); the Homework Monitor for classes setting nothing | Two or more not handed in this term |
 | Poor attendance | Student profile, Attendance tile; **Build a group from a rule** → Attendance | Below 90% present or late |
 | Missing lessons in school | **Missed Lessons**; the missed-lesson pop-up | Any repeated pattern |
 | Behaviour getting in the way of learning | **Behaviour alerts**; **Build a group from a rule** → Negative behaviour | −10 or worse in a half-term |
@@ -411,7 +411,7 @@ Look at signs together, not one at a time. A student below target whose attendan
 
 | Who | Looks at | Acts by |
 | --- | --- | --- |
-| Teacher | Their classes on Class Progress; **Show last grades** on the register; the homework mark sheet | Re-teaching topics a class got wrong; talking to individual students; chasing homework; telling the mentor about a student slipping in several ways; writing specific next steps in report comments |
+| Teacher | Their classes on Class Progress; **Show last grades** on the register; the homework mark book | Re-teaching topics a class got wrong; talking to individual students; chasing homework; telling the mentor about a student slipping in several ways; writing specific next steps in report comments |
 | Mentor | Each mentee's profile: Results against targets, Attendance, Behaviour; the subject judgements in Pastoral Comments | A regular one-to-one with students below target; agreeing one or two targets; contacting home through the office or SMT when needed |
 | Head of Department | Class Progress for the department, by result set; Marks Missing; homework in the department's classes | Comparing classes in the same year; supporting a teacher whose class is behind; moving a student to a better-suited set at Class Allocation; a department intervention group |
 | Pastoral lead and houseparent | Behaviour alerts, attendance, Missed Lessons, rule-built groups | Linking behaviour or attendance concerns to falling results; supervised study at Evening Prep; involving parents |
@@ -435,7 +435,7 @@ Look at signs together, not one at a time. A student below target whose attendan
 
 1. Open **Class Progress**, pick the latest result set and filter to your department. Note any class with most students below target.
 2. Open the class on Class Progress and choose each result set in turn, to see whether the gap is across one test or several.
-3. Check the class's homework mark sheet: is homework being set and handed in?
+3. Check the class's homework mark book: is homework being set and handed in?
 4. Agree actions with the teacher, then compare the class again after the next result set.
 
 **3. One student slipping (mentor)**
@@ -679,6 +679,8 @@ There are nine sessions: Registration (M), Lessons 1–6 (L1–L6), The Other Ha
 
 Your week: lessons, mentor registration, Other Half activities and meetings. Click a lesson to open its register. If you have overdue registers today, a banner appears above the timetable. Staff with the right access can pick another person from **Viewing timetable for**.
 
+Above your own timetable, **Mark books** has a small link for each of your classes; each opens that class's mark book, with every homework and classwork mark (chapter 4).
+
 ![A teacher's week](manual-images/10-timetable.jpg)
 
 #### Finding when a group is free
@@ -719,7 +721,7 @@ On the register:
 - **Today so far** shows each student's other marks today as coloured badges (M, L1–L6, OH, EP).
 - **Show last grades** reveals each student's most recent grade in the subject. It is hidden by default so it is not on the class's screen.
 - **Log behaviour for this class** opens behaviour logging with the class already chosen.
-- For every teaching class, the **Homework** panel shows what is due and links to each mark book (chapter 4).
+- For every teaching class, the **Homework** panel shows what is due and links to the class's mark book and to the marks for each homework (chapter 4).
 
 | Code | Meaning | Counts as |
 | --- | --- | --- |
@@ -891,11 +893,11 @@ Your own classes appear as buttons under **My classes**. **Other classes** lists
 
 ### Setting homework
 
-Press **Set homework** in the Homework panel of the lesson's register: open it from your timetable, or from Take a Register on the Attendance card. Heads of Department can open another teacher's lesson from that teacher's timetable. The full Homework page (/homework) has no link on the dashboard; open it from All homework & mark books → in the register's Homework panel (every homework the class has had, its mark books and the mark sheet), or type /homework.
+Press **Set homework** in the Homework panel of the lesson's register: open it from your timetable, or from Take a Register on the Attendance card. Heads of Department can open another teacher's lesson from that teacher's timetable. The full Homework page (/homework) has no link on the dashboard; open it from All homework → or Mark book → in the register's Homework panel, or the Mark books links on your timetable, or type /homework.
 
 ![Setting homework](manual-images/21-hw-set.jpg)
 
-1. **Title**: at most 10 characters, so it fits the mark sheet (e.g. "Ex 4B"). Put the detail in the instructions.
+1. **Title**: at most 10 characters, so it fits the mark book (e.g. "Ex 4B"). Put the detail in the instructions.
 2. **Instructions**: plain text. Links starting https:// become clickable for students.
 3. **Due**: pick one of the class's coming lessons, or a date and "end of the day". Then choose Time it takes (30 minutes unless you change it). The homework is done in prep the evening before the deadline (Sunday for a Monday deadline), and the form shows that evening and the least time any student in the class has left. If any student would run out of prep time that evening, it won't save: shorten it or choose a later deadline. Homework due today can't be set, because its prep evening has passed.
 4. **Files and links**: PDF, Word, PowerPoint, Excel, images, text or CSV up to 20 MB each, and https:// links. Files are private and open through a link that lasts ten minutes.
@@ -904,17 +906,19 @@ Press **Set homework** in the Homework panel of the lesson's register: open it f
 
 Once any grade is recorded, the grading system can't be changed and the homework can't be deleted, only withdrawn.
 
-### Marking (the mark book)
+### Entering marks for a homework
 
-Press **Mark book** beside a piece of homework. Enter a mark (or grade), or choose **Not handed in** or **Excused**. For marks, the grade is worked out from the subject's grade boundaries for the year group and shown beside the number (11 out of 14 is 79%, a B). Students who ticked the work done show "ticked done" under their name.
+Press **Mark**s beside a piece of homework (or Marks → in the register's Homework panel). Enter a mark (or grade), or choose **Not handed in** or **Excused**. For marks, the grade is worked out from the subject's grade boundaries for the year group and shown beside the number (11 out of 14 is 79%, a B). Students who ticked the work done show "ticked done" under their name.
 
 ![The mark book](manual-images/22-hw-markbook.jpg)
 
 Students see nothing until you press **Release marks**; **Hide marks again** takes them back. A student who joined the class after the due date is left out unless they already have a mark. When you release, each student marked Not handed in automatically gets a "Homework not completed" negative (−2) in your name, as does a Not handed in entered after release. It goes to parents only after the office or SMT approve its writing. Changing the mark, hiding the marks again or withdrawing the homework withdraws it; Excused never counts.
 
-### The mark sheet
+### The class mark book
 
-**Mark sheet** shows a class's marks between two dates (this term by default): one column per homework, each student's average of number-marked homework with its grade, how many were marked and how many not handed in. **Download CSV** exports it.
+**The Mark book** shows a class's marks between two dates (this term by default): one column per homework, each student's average of number-marked homework with its grade, how many were marked and how many not handed in. **Download CSV** exports it.
+
+To open a class's mark book, use the **Mark books** links at the top of your own timetable (one small link per class), **Mark book →** in the register's Homework panel, or **Mark book** on the class's homework page. Press a homework's title in it to enter that homework's marks.
 
 ![The mark sheet](manual-images/23-hw-marksheet.jpg)
 
@@ -993,7 +997,7 @@ Each worksheet then shows its size, who has it ("all Year 10, lesson 2" or "10\_
 
 ![A student's timetable: one worksheet open, two still locked](manual-images/140-portal-worksheets.jpg)
 
-**What it is marked out of.** When you add an ordinary worksheet, Formwork asks what it is marked out of; leave it empty if it won't be marked. You can set or change it later with the **out of 24** (or **Set out of**) button beside the worksheet, or in the mark sheet. A card sort isn't asked: it marks itself.
+**What it is marked out of.** When you add an ordinary worksheet, Formwork asks what it is marked out of; leave it empty if it won't be marked. You can set or change it later with the **out of 24** (or **Set out of**) button beside the worksheet, or in the mark book. A card sort isn't asked: it marks itself.
 
 **If the timetable changes.** A worksheet given to the whole year follows the timetable by itself: it always goes on that week's lesson of that number. A worksheet added to one class's lesson stays locked if a timetable import moves that lesson; the panel lists it under **Lesson moved**, so press **Remove** and add it again on the right lesson.
 
@@ -1011,9 +1015,9 @@ Students never see the answer key or the Word file; Formwork does the checking.
 
 ![A card sort part-way through, with the support cards placed (invented students)](manual-images/141-card-sort.jpg)
 
-#### Classwork marks in the mark sheet
+#### Classwork marks in the mark book
 
-Every worksheet and card sort on a class's lessons appears in the class's mark sheet (Homework → your class → **Mark sheet**) as a **Classwork** column, after the homework. Card sorts fill in by themselves; "(h)" means the pair used Help me start, and ↺ removes a pair's mark so they can do it again. For an ordinary worksheet, type each student's mark in its column once "out of" is set. Classwork marks never count towards the homework average or the report, and every change is kept in Grade History.
+Every worksheet and card sort on a class's lessons appears in the class's mark book (the **Mark books** links on your timetable, or Homework → your class → **Mark book**) as a **Classwork** column, after the homework. Card sorts fill in by themselves; "(h)" means the pair used Help me start, and ↺ removes a pair's mark so they can do it again. For an ordinary worksheet, type each student's mark in its column once "out of" is set. Classwork marks never count towards the homework average or the report, and every change is kept in Grade History.
 
 ![The mark sheet with Classwork columns: a card sort and two worksheets (invented students)](manual-images/142-classwork-columns.jpg)
 

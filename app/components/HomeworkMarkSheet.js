@@ -223,7 +223,7 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0 }}>Mark sheet · {cls.class_code}</h2>
+        <h2 style={{ margin: 0 }}>Mark book · {cls.class_code}</h2>
         <button type="button" className="secondary" onClick={onBack}>← Back to homework</button>
       </div>
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap', margin: '0.75rem 0' }}>
@@ -233,7 +233,7 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
       </div>
       <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
         Homework due between {from ? formatUKDate(from) : '…'} and {to ? formatUKDate(to) : '…'}. The average covers homework marked with a number,
-        and its grade comes from the subject&apos;s grade boundaries. NHI = not handed in, Exc = excused, · = due before the student joined the class. Click a homework to open its mark book.
+        and its grade comes from the subject&apos;s grade boundaries. NHI = not handed in, Exc = excused, · = due before the student joined the class. Click a homework to enter its marks.
         {' '}Classwork columns are the worksheets and card sorts put on this class&apos;s lessons; they never count in the homework average or the report.
         {' '}A card sort is marked by the students&apos; one check (h = used Help me start; ↺ lets a pair do it again). For a worksheet, set what it is out of, then type the marks.
       </p>
@@ -247,7 +247,7 @@ export default function HomeworkMarkSheet({ cls, schemes, onOpenMarkBook, onBack
               <th className="hw-sheet-name">Student</th>
               {homework.map((h) => (
                 <th key={h.homework_id} className="hw-sheet-hw">
-                  <button type="button" className="hw-sheet-link" onClick={() => onOpenMarkBook(h)} title={`Open the mark book for ${h.title}`}>
+                  <button type="button" className="hw-sheet-link" onClick={() => onOpenMarkBook(h)} title={`Enter the marks for ${h.title}`}>
                     {/* Titles are at most 10 characters (migration 290); older ones are cut. */}
                     {h.title.length > 10 ? `${h.title.slice(0, 10)}…` : h.title}
                   </button>

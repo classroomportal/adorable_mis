@@ -167,7 +167,8 @@ function MarkBook({ hw, cls, scheme, onBack, onChanged }) {
   return (
     <div className="card">
       <button type="button" className="secondary" onClick={onBack} style={btnSmall}>← Back to {cls.class_code}</button>
-      <h2 style={{ marginBottom: '0.25rem' }}>{hw.title}</h2>
+      <div style={{ fontSize: '0.8rem', color: 'var(--ink-soft)', marginTop: '0.5rem' }}>Marks for this homework</div>
+      <h2 style={{ margin: '0 0 0.25rem' }}>{hw.title}</h2>
       <p style={{ margin: '0 0 0.5rem', color: 'var(--ink-soft)' }}>
         {classLabel(cls)} · due {formatUKDate(hw.due_on, { weekday: true })} · {schemeLabel(scheme, hw.out_of)} · {markedCount} of {students.length} marked · {Object.keys(doneAt).length} ticked done
       </p>
@@ -275,6 +276,7 @@ function HomeworkInner() {
   const [markCounts, setMarkCounts] = useState({}); // homework_id -> marks recorded
   const [tickCounts, setTickCounts] = useState({}); // homework_id -> students who ticked it done
   const pendingHomework = useRef(null);
+  const pendingView = useRef(null);
   const [status, setStatus] = useState(null);
 
   useEffect(() => {
@@ -304,13 +306,16 @@ function HomeworkInner() {
         .filter((c) => c.mine || c.canSet || mySubjects.has(c.subject_id))
         .sort((a, b) => a.class_code.localeCompare(b.class_code));
       setClasses(shown);
-      // ?class=…&homework=… (from the register's "Mark book" links).
+      // ?class=…&homework=… opens one homework's marks (the register's
+      // "Marks" links); ?class=…&view=markbook opens the class's mark book
+      // (the register and the teacher's timetable).
       const params = new URLSearchParams(window.location.search);
       const wanted = shown.find((c) => String(c.class_id) === params.get('class'));
       const own = shown.filter((c) => c.mine);
       if (wanted) setClassId(wanted.class_id);
       else if (own.length === 1) setClassId(own[0].class_id);
       pendingHomework.current = params.get('homework');
+      pendingView.current = params.get('view');
     })();
   }, [profileLoaded, myStaffId]);
 
@@ -345,8 +350,14 @@ function HomeworkInner() {
 
   useEffect(() => { loadHomework(); setMode({ kind: 'list' }); setStatus(null); }, [loadHomework]);
 
-  // Open the mark book asked for in the URL once its class's homework is loaded.
+  // Open what the URL asks for once its class's homework is loaded: one
+  // homework's marks, or the class's mark book.
   useEffect(() => {
+    if (pendingView.current === 'markbook' && cls?.canSet) {
+      pendingView.current = null;
+      setMode({ kind: 'sheet' });
+      return;
+    }
     if (!pendingHomework.current || !cls?.canSet) return;
     const hw = homework.find((h) => String(h.homework_id) === pendingHomework.current);
     if (hw) { pendingHomework.current = null; setMode({ kind: 'marks', homework: hw }); }
@@ -448,7 +459,8 @@ function HomeworkInner() {
               <button type="button" className="secondary" onClick={() => setMode({ kind: 'student' })}>Student view</button>
               {cls.canSet && (
                 <>
-                  <button type="button" className="secondary" onClick={() => setMode({ kind: 'sheet' })}>Mark sheet</button>
+                  <button type="button" className="secondary" onClick={() => setMode({ kind: 'sheet' })}
+                    title="Every homework and classwork mark for this class">Mark book</button>
                   <button type="button" onClick={() => setMode({ kind: 'form' })}>Set homework</button>
                 </>
               )}
@@ -497,7 +509,8 @@ function HomeworkInner() {
                       </td>}
                       {cls.canSet && <td>
                         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                          <button type="button" style={btnSmall} onClick={() => setMode({ kind: 'marks', homework: hw })}>Mark book</button>
+                          <button type="button" style={btnSmall} onClick={() => setMode({ kind: 'marks', homework: hw })}
+                            title="Enter the marks for this homework">Marks</button>
                           {!withdrawn && <button type="button" className="secondary" style={btnSmall} onClick={() => setMode({ kind: 'form', homework: hw })}>Edit</button>}
                           <button type="button" className="secondary" style={btnSmall} onClick={() => setWithdrawn(hw, !withdrawn)}>{withdrawn ? 'Restore' : 'Withdraw'}</button>
                           {n === 0 && <button type="button" className="secondary" style={btnSmall} onClick={() => remove(hw)}>Delete</button>}
