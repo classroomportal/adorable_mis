@@ -37,7 +37,7 @@ none fit — no special format required beyond a markdown checkbox.
 ## Data cleanup
 
 - [ ] Merge duplicate/abbreviated subjects (`Dl`, `Fa`, `Gl`, `Gs`, old `Religion`) via `merge_subjects()`
-- [ ] Tag key stages for `Sociology`, `Care (Vocational)`, `Electronics`, `Food/Textiles`
+- [ ] Tag key stages for `Sociology`, `Catering and Craft`, `Electronics`, `Food/Textiles`
 - [ ] Confirm the null-grade backfill from the Business merge actually ran
 - [ ] Review seeded WAEC/IGCSE grade boundary guesses against real school policy
 
