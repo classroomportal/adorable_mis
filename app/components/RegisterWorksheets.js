@@ -106,7 +106,7 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
 
   async function remove(w) {
     const whom = w.class_id == null ? ` for every ${yearLabel} class` : '';
-    if (!window.confirm(`Remove "${w.title}"${whom}?`)) return;
+    if (!window.confirm(`Remove "${w.title}"${whom}? Any classwork marks for it are removed too.`)) return;
     setStatus(null);
     const error = await removeLessonWorksheet(w);
     if (error) setStatus(`That wasn't removed: ${error.message}`);
@@ -140,6 +140,7 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
           ? <>Add a worksheet to a lesson of the week (lesson 1, 2, 3…) for every {yearLabel} class: each class gets it in its own lesson of that number. </>
           : null}
         Students see it on their timetable but can only open it once their lesson starts. Up to 3 MB a file.
+        A card sort in the card sort format becomes an on-screen card sort; marks for every worksheet go in the mark sheet under Classwork.
       </p>
       {status && <p style={{ color: '#a3232c', margin: '0 0 0.5rem' }}>{status}</p>}
       {moved.length > 0 && (
@@ -195,12 +196,16 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
                       const missing = (placements[w.worksheet_id] || []).filter((p) => !p.lesson_date).map((p) => p.class_code);
                       return (
                         <li key={w.worksheet_id} style={{ flexWrap: 'wrap' }}>
-                          <span aria-hidden="true">📄</span>
-                          <button type="button" className="hw-attachment" onClick={() => open(w)}>
+                          <span aria-hidden="true">{w.kind === 'card_sort' ? '🃏' : '📄'}</span>
+                          <button type="button" className="hw-attachment" onClick={() => open(w)}
+                            title={w.kind === 'card_sort' ? 'Open the Word file (with its answer key)' : undefined}>
                             <span className="hw-attachment-title">{w.title}</span>
                           </button>
+                          {w.kind === 'card_sort' && (
+                            <a href={`/portal/card-sort?w=${w.worksheet_id}`} target="_blank" rel="noopener noreferrer" style={btnSmall}>Preview</a>
+                          )}
                           <span className="hw-attachment-meta">
-                            {fileSizeLabel(w.size_bytes)}
+                            {w.kind === 'card_sort' ? 'card sort on screen' : fileSizeLabel(w.size_bytes)}
                             {' · '}{w.class_id == null ? `all Year ${w.year_group}, lesson ${w.lesson_number}` : `${cls.class_code} only`}
                             {' · '}{lessonOpen ? 'open to students' : `students can open from ${opensAtClock(`${l.lesson_date}T${l.start_time}`)}`}
                           </span>
