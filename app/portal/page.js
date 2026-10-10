@@ -237,6 +237,8 @@ function PortalInner() {
 
   async function openWorksheet(w) {
     setWorksheetError(null);
+    // A card sort opens on screen (migration 432); its Word file isn't theirs.
+    if (w.kind === 'card_sort') { window.location.href = `/portal/card-sort?w=${w.worksheet_id}`; return; }
     const error = await openLessonWorksheet(w);
     if (error) setWorksheetError(`That worksheet couldn't be opened: ${error.message}`);
   }
@@ -369,13 +371,15 @@ function PortalInner() {
                           {!forPrint && e.classId && (worksheetsByKey[worksheetKey(cellDate, p.period_number, e.classId)] || []).map((w) => (
                             w.is_open ? (
                               <div key={w.worksheet_id}>
-                                <button type="button" className="ws-chip" onClick={() => openWorksheet(w)} title="Open the worksheet">
-                                  📄 {w.title}
+                                <button type="button" className="ws-chip" onClick={() => openWorksheet(w)}
+                                  title={w.kind === 'card_sort' ? 'Open the card sort' : 'Open the worksheet'}>
+                                  {w.kind === 'card_sort' ? '🃏' : '📄'} {w.title}
+                                  {w.my_score != null && ` · ${Number(w.my_score)}/${Number(w.my_out_of)}`}
                                 </button>
                               </div>
                             ) : (
                               <div key={w.worksheet_id} className="ws-chip ws-locked" title="You can open this when the lesson starts">
-                                🔒 Worksheet · opens {opensAtClock(w.opens_at)}
+                                🔒 {w.kind === 'card_sort' ? 'Card sort' : 'Worksheet'} · opens {opensAtClock(w.opens_at)}
                               </div>
                             )
                           ))}

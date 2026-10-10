@@ -761,6 +761,12 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 - **Staff** can open any worksheet at any time (to print it, or for cover). **Parents** see nothing.
 - Worksheets aren't edited: they are removed and added again. Nothing is logged in Change History.
 
+**On-screen card sorts and classwork marks** (432, 10 Oct 2026)
+- **A card sort becomes an on-screen activity.** When a teacher adds a Word card sort in the card sort format (the department's Lesson 2 card sorts already are), Formwork reads its cards, pictures and answer key and students do it on screen instead of on paper. A file that has an answer key but doesn't fit the format is refused with the reasons, so the answers can never reach students by mistake. Teachers can open the Word file and a Preview of the student screen.
+- **Students can't see the answers.** The answer key and the Word file stay staff-only; checking is done by Formwork.
+- **Pairs on one laptop.** The signed-in student chooses their partner from the class (or works alone). They drag the cards (or click a card, then where it goes). "Help me start" places the sheet's Set 4 support cards. **Check can be pressed once**: it shows the count ("6 of 8 sets right", or cards right for a header sort), and that count is the mark for both students. Neither can do it again unless the teacher removes the mark. Students see only that count.
+- **Classwork columns in the mark sheet.** Every worksheet and card sort put on a class's lessons appears as a Classwork column in the class's mark sheet (Homework page), after the homework. Card sorts fill in by themselves; for other worksheets the teacher sets what it is out of and types the marks. **Classwork never counts towards homework**: not in the homework average, the report's Homework grade, prep time or "not handed in" negatives. Marks are read by the class's teachers, the Head of Department and SMT, and every change is kept in Grade History (SMT only). Parents see nothing.
+
 **Certificates:** these are behaviour-points certificates. See the gap in [§14](#14-known-gaps-and-inconsistencies-found-while-writing-this).
 
 ---
