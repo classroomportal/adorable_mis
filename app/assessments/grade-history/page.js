@@ -25,6 +25,8 @@ const TABLES = {
   homework_marks: 'Homework grade',
   // Student group marks (migration 287): also outside reporting, SMT and admins only.
   student_group_marks: 'Student group mark',
+  // Classwork marks (migration 432): worksheets and card sorts, outside reporting too.
+  classwork_marks: 'Classwork mark',
 };
 const ALL_WITH_HOMEWORK = '*';
 const ACTIONS = { INSERT: 'Entered', UPDATE: 'Changed', DELETE: 'Deleted' };
@@ -56,6 +58,7 @@ function recordLabel(h) {
   if (h.table_name === 'transcript_grades') return `Year ${row.year_group}, term ${row.term_number}`;
   if (h.table_name === 'homework_marks') return `homework #${row.homework_id}`;
   if (h.table_name === 'student_group_marks') return `group mark sheet #${row.sheet_id}`;
+  if (h.table_name === 'classwork_marks') return `worksheet #${row.worksheet_id}${row.source === 'card_sort' ? ' (card sort)' : ''}`;
   return '';
 }
 
@@ -121,7 +124,7 @@ function GradeHistoryInner() {
       .order('changed_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(LIMIT);
-    if (!table) query = query.not('table_name', 'in', '(homework_marks,student_group_marks)');
+    if (!table) query = query.not('table_name', 'in', '(homework_marks,student_group_marks,classwork_marks)');
     else if (table !== ALL_WITH_HOMEWORK) query = query.eq('table_name', table);
     if (action) query = query.eq('action', action);
     if (staffFilter === 'none') query = query.is('changed_by_staff_id', null);
@@ -215,8 +218,8 @@ function GradeHistoryInner() {
         <label>
           Type
           <select value={table} onChange={(e) => setTable(e.target.value)}>
-            <option value="">All grades except homework and group marks</option>
-            <option value={ALL_WITH_HOMEWORK}>All grades including homework and group marks</option>
+            <option value="">All grades except homework, group and classwork marks</option>
+            <option value={ALL_WITH_HOMEWORK}>All grades including homework, group and classwork marks</option>
             {Object.entries(TABLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>

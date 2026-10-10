@@ -1,4 +1,4 @@
--- 432: rename the subject "Care (Vocational)" to "Catering and Craft".
+-- 435: rename the subject "Care (Vocational)" to "Catering and Craft".
 --
 -- The principal, 10 Oct 2026: the Year 12 vocational subject the school
 -- calls Care is Catering and Craft. Only the name changes: subject_id 91,

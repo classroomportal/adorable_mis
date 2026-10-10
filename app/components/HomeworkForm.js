@@ -196,7 +196,7 @@ export default function HomeworkForm({ cls, schemes, existing, markCount, onSave
       {!embedded && <h2 style={{ marginTop: 0 }}>{existing ? 'Edit homework' : 'Set homework'} · {classLabel(cls)}</h2>}
       <div style={{ display: 'grid', gap: '0.75rem', maxWidth: '44rem' }}>
         <label>
-          Title (up to 10 characters, so it fits the mark sheet)
+          Title (up to 10 characters, so it fits the mark book)
           <input value={title} maxLength={10} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Ex 4B" />
           <span style={{ fontSize: '0.8rem', color: title.trim().length > 10 ? '#a3232c' : 'var(--ink-soft)' }}>
             {title.trim().length}/10{title.trim().length > 10 ? ' · an older title: shorten it to save a change to it' : ' · put the detail in the instructions'}
