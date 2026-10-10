@@ -8,7 +8,7 @@ Sep 29, 2026 · @Chris TERRY
 
 ## 1. Purpose and scope
 
-This specification describes what Formwork does as built on 9 October 2026 (database migrations up to 414). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
+This specification describes what Formwork does as built on 10 October 2026 (database migrations up to 430). It is written from the live system and its code, not from a plan, so it is a record of current behaviour, not a wish list.
 
 **Formwork** is the school management information system (MIS) for Adorable British College, a boarding and day secondary school of about 260 students in Years 7–12. It is used by staff, students and parents at misform.work.
 
@@ -114,6 +114,8 @@ Only Formwork creates logins; nobody can create their own account, by email or b
 - **FR-1.16** A login can get a new-device email: the first sign-in from a phone or browser it hasn't used before emails its owner the time, device, network and how they signed in. The principal's login has it. A browser update counts as a new device. If the email can't be queued, the sign-in still goes ahead. \[DB\]
 - **FR-1.17** Anyone can end every other sign-in on their account with Sign out all other devices on the Change Password page. A device signed out this way can carry on for up to an hour on the pass it already holds. \[Page\]
 
+* **FR-1.18** A browser holding a sign-in that is no longer valid (for example, after Sign out all other devices on another device) is sent to the sign-in page. Before 9 October 2026 every page told such a teacher "You don't have access to this page", although they had access. Formwork tries one refresh first, then signs that browser out. \[Page\]
+
 **Server routes**
 
 - **FR-1.10** Every server route except the parents' calendar feed (FR-1.11) checks the caller's sign-in and page access before doing anything, and the build fails if one doesn't. Backup is admin-only whatever the permissions page says. \[DB + build check\]
@@ -176,6 +178,8 @@ Every member of staff can read the whole student record; what each role can chan
 
 * **FR-2.13** A parent sees a child only while that child is an active student. When a child leaves, their records drop out of the parent portal, though the parent link is kept. Staff who are also parents still see leavers through their staff access. \[DB\]
 
+- **FR-2.22** On the parent portal the Tuckshop tile opens the chosen child's tuckshop balance and purchases on the portal itself (9 October 2026), so it works for parents and for staff viewing as a parent alike. Until then it linked to a separate page that only worked for the signed-in parent's own children. \[Page\]
+
 **Families and siblings**
 
 - **FR-2.14** A parent's relationship (Mother, Father, Other and so on) is recorded for each child they are linked to, not once per parent. The parent's own value is used only where a link has none. \[DB\]
@@ -204,6 +208,8 @@ The timetable comes from Nova-T and is imported by admins; Formwork never invent
 **Who changes what**
 
 - **FR-3.6** Only admins change classes, lessons, staff commitments and bell times. Admins, Heads of Department, pastoral staff and the school office move students between classes, at /admin/block-allocation, and edit next year's planned enrolments. The school office was added on 2 Oct 2026 (migration 317): it had the page, but every save was refused. \[DB\]
+
+* **FR-3.20** Class Allocation (/admin/block-allocation) can show students' marks beside their names (9 October 2026): pick a result set and a subject (the block's own subject by default, any other, or the average of all subjects) to add a column of percentages, up to four columns. No grades are shown (the principal's choice). Clicking a column heading sorts highest first. Only the year group's own sets are offered. It reads results under the usual rules and changes nothing. \[Page\]
 
 **Nova-T timetable import (/admin/import-classes, admin only)**
 
@@ -244,6 +250,8 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.6** Changes and deletions of marks are logged permanently in Change History; taking a register is not. \[DB\]
 - **FR-4.7** Parents can read their own children's attendance; students cannot read attendance. \[DB\]
 
+* **FR-4.52** A C mark (Other authorised absence) saved by the school office, the attendance officer, the principal or an admin is locked (migration 415, the principal, 9 October 2026, after about a dozen were overwritten by later registers on 8–9 October). Only the school office, the attendance officer, admin or the principal can change or delete it; anyone else saving the register keeps it as it is. Both register pages show it read-only, marked "office". A C saved by a teacher stays an ordinary mark. \[DB\]
+
 **Registers Not Done (/pastoral/registers-not-done)**
 
 - **FR-4.8** A lesson is listed when it is timetabled today inside term dates, more than 15 minutes past its start, has at least one enrolled student, and none of them has a mark for that period, not counting marks filled in by a planned absence (FR-4.26). It stays listed for the rest of the day. \[DB\]
@@ -276,6 +284,8 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 * **FR-4.34** At the same moment as the office pop-up, every other member of staff signed in gets a flashing pop-up, "Do you know where this student is?": the student's name, photo, year, mentor group and house, and "Please send them to \<lesson>, room \<room> (\<teacher>)" (migration 382, the principal, 6 October 2026). The office staff who get FR-4.17 and the person who marked the student absent don't get it; students and parents never do. \[DB rule; Page display\]
 * **FR-4.35** "I've sent them", with an optional note of where they were, clears it from every staff screen; "Not with me" clears it from that person's screen only. It stays until the period ends, even after the office presses Seen, and a corrected mark clears it at once. Every answer is kept: who, when and the note. Hide for 2 minutes, the beep and the one-minute check work as on FR-4.20. \[DB\]
 * **FR-4.36** The office pop-up also shows the student's registers today, period by period (lesson, teacher, mark and who marked it), and what staff have answered to FR-4.34. \[Page; DB data\]
+
+- **FR-4.53** "They're with me" is a third answer to FR-4.34 (migration 418, the principal, 9 October 2026). It changes the student's N or O for that lesson to C under the answering member of staff's name, with "With \<name>" in the mark's note (any note they type follows). The pop-up clears for everyone, the office's included, and no automatic missed-lesson negative follows (FR-4.37). Both register pages show the note under the mark, read-only. If the C is later changed, the note goes with it. \[DB\]
 
 **Planned absences** (/attendance/planned-absences, Attendance card, migration 318, 2 Oct 2026)
 
@@ -322,6 +332,8 @@ Registers are taken lesson by lesson, and any lesson whose register isn't taken 
 - **FR-4.40** Correcting the mark (to present, late or an authorised absence) or deleting it withdraws the event, as an upheld appeal does, and cancels its detention if not yet held. Each student gets one event at most per day and period, ever, so one SMT delete or the review returns is not made again. If the category is retired or renamed, nothing is recorded. \[DB\]
 
 * **FR-4.41** The member of staff who saved the absent mark is asked to confirm it (migration 391, the principal, 7 October 2026). They get an email and a Formwork inbox message naming the student, year, lesson or activity, period, date and code, the −5 and the detention date, and asking "Was \<name> really not in your lesson?". If not, they do nothing; if the student was there, they correct the register from the link and FR-4.40 withdraws the event. There is no confirm button. Replies go to the attendance officer (FR-12, Email). \[DB\]
+
+- **FR-4.54** A C before the student turns up counts too (migration 416, the principal, 9 October 2026). A C mark followed by a present or late mark at a later period the same day gets the same −5 event, detention, alert and review as an N or O; a C after the student's last present lesson (sent home ill, an appointment) does not. Planned-absence C marks count: an absence the student comes back from should carry its own code (M, I, E or H). Changing the C to any code except N or O, or deleting it, withdraws the event. The confirm-it notice goes to whoever saved the C, or to the attendance officer for a planned-absence mark, and asks for the matching code. A C given by "They're with me" (FR-4.53) never counts. From 9 October 2026 on; earlier days were not gone back over. \[DB\]
 
 ## 8. FR-5 The Other Half
 
@@ -397,9 +409,13 @@ Staff log behaviour by category, points come only from the category, and a −5 
 * **FR-6.44** The school office and SMT (SMT for a picture) approve writing at /behaviour/review. Merits and Stage 1–4 events with writing are approved in bulk under "Writing to approve", several hundred in one go. \[DB / Page\]
 * **FR-6.45** Changing an event's writing takes it away from parents and clears its review, so the new words are approved again, whoever edits it. Removing the writing leaves the event as it was, except that a merit not yet reviewed goes home like any merit without writing. Events already with parents on 7 October 2026 stay with them. \[DB\]
 
+- **FR-6.57** Only a merit with long writing waits for approval (migration 417, the principal, 9 October 2026: "Too many merits to approve"; 1,090 merits waited in 7–9 October, nearly all short notes). A merit goes home at once unless its writing is more than 12 words; about 27 a day wait. The number is set on Lookups (0 = every merit with writing waits, as before). Editing a merit's writing sends it back for approval only if the new writing is long. Negative events are unchanged: any writing on a Stage 1–4 event is still approved first. \[DB\]
+
 **Alerts**
 
-- **FR-6.10** When a negative event is logged and it is −5, or the student's negative total for the Saturday–Friday week reaches −8, an alert email goes to cs@, copied to every SMT member and sro@. Replies go to guardian.counselling@. \[DB\]
+- **FR-6.10** When a negative event is logged and it is −5, or the student's negative total for the Saturday–Friday week reaches −8, an alert goes to cs@, copied to every SMT member and sro@: an inbox notice at once and, since 9 October 2026, a line in one daily summary email (FR-6.58). Replies go to guardian.counselling@. \[DB\]
+
+* **FR-6.58** Behaviour alert emails are one daily summary at 4.15 pm (migrations 419–420, the principal, 9 October 2026, after 71 alert emails in a fortnight, most of them automatic missed-lesson negatives). The summary lists each alert: student, year, category, points, date, why it alerted and the writing. An event voided, returned to the teacher or deleted before 4.15 pm is only counted ("2 alerts since withdrawn"). Alerts after 4.15 pm go in the next day's summary; nothing is sent on a day with none. The inbox notices still go at once. \[DB\]
 
 **Appeals**
 
@@ -511,6 +527,8 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.7** Every insert, change and delete of a score, target or transcript grade is logged permanently in Grade History, with old and new grade and who did it. Nobody can edit the log. SMT, assessment managers and admins read it at /assessments/grade-history. \[DB\]
 - **FR-7.44** The Adorable.net gradebook import saves into a result set, not a week (the principal, 9 October 2026). The person importing chooses one of this school year's result sets (the Type In Marks list, with the same date warning) and a result type (short test, teacher assessment or exam grade), and every mark in the file goes into that set. For a set only for some year groups, other students are skipped and listed. If the set already has marks for any of the students and subjects in the file, the page says how many will be replaced and asks before saving. Until then the import couldn't save at all (known issue 1). \[Page\]
 
+* **FR-7.45** The gradebook import no longer times out (migration 421, 9 October 2026). On 9 October two batches of the Week 3 Big ReLP import failed at the 8-second limit for signed-in users: each mark re-checked "is this an admin?" once for every profile row. The check now runs once per request, so a batch of 50 marks takes about 1 second instead of 6.5. Who can read what is unchanged. \[DB\]
+
 **Boundaries, subjects and targets**
 
 - **FR-7.8** Grade boundaries are set per subject and per year group (7–12). Only assessment managers can edit boundaries (the principal, 3 Oct 2026, migration 329; until then any member of staff could), as a tick admins can change (FR-1.13); everyone signed in can read them. Any member of staff can edit subject aliases and key-stage tags (school decision, 27 Sept 2026; since migration 331 an ordinary tick, set for every role). Years 10 and 11 follow Cambridge IGCSE's June 2026 grade thresholds (migration 322, the principal, 2 Oct 2026) in 17 subjects, among them Maths, English, the sciences, Computing, Economics, the languages, Art, PE, Geography and History: time-zone variant 3, the Extended route, each threshold turned into a percentage of the route's total and rounded up. Below the lowest grade is U; Extended Maths and Further Maths stop at E. Years 7–9 keep 90/80/70…, Year 12 (WAEC) is unchanged, and saved results keep their grade. \[DB\]
@@ -518,6 +536,11 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.10** A subject with no target of its own borrows one from a related subject (e.g. Further Maths from Maths). Portals show targets only for subjects the student takes. /target-grades/coverage lists students missing a target. \[DB / Page\]
 - **FR-7.11** Grades are compared with targets as above, on or below (green, amber, red). No comparison is made across IGCSE and WAEC. \[Page\]
 - **FR-7.12** CAT4 and NGRT scores are imported from CoreSats by UPN; only assessment managers and admins can change them. Staff and parents can read them; students can't. \[DB\]
+
+* **FR-7.46** WAEC-only subjects (migrations 422–423, the principal, 9 October 2026): the subjects Years 10–11 sit for WAEC only are ticked WAEC only on Subject Settings: Igbo, Government, Computer and GSM Repairs, Animal Husbandry, Fashion, Civics and Digital Technologies. Years 7–9 stay IGCSE and Year 12 is WAEC already. \[DB\]
+* **FR-7.47** Their Year 10–11 targets are stored in WAEC (migrations 424–425). Each student's IGCSE target in the subject was converted grade for grade (A\* → A1+, A → A1, B → B2, C → C4, D → C6, E → E8, F/G/U → F9); a student with none got the average of their other IGCSE targets, converted the same way. Animal Husbandry takes Biology's target (its "Use targets from"). 20 students with no targets at all got none. Every change is in Grade History. An IGCSE target written later (a CAT4 import, a teacher) is still converted on the printed report. \[DB\]
+* **FR-7.48** Their Year 10–11 marks are graded on the WAEC scale (migration 426): those years' boundaries are a copy of the subject's Year 12 (WAEC) ones, so Type In Marks, the gradebook import, homework marks and mark appeals give WAEC grades. Ticking WAEC only later copies them by itself; unticking leaves them, and IGCSE ones are set on Grade Boundaries. Scored marks of current Year 10–11 students (and last year's for Year 11) and homework marks were re-graded on 9 October 2026, each change in Grade History. \[DB\]
+* **FR-7.49** IGCSE-only subjects (migration 427): Chinese and Spanish are ticked IGCSE only. They are graded as usual and only printed in their own section (FR-8.12). A subject can't be both WAEC only and IGCSE only. \[DB\]
 
 **Analysis pages**
 
@@ -546,8 +569,10 @@ Teachers enter percentage scores for their own classes against result sets; each
 - **FR-7.26** One appeal per mark at a time; once decided, a mark can be appealed again only if it changes. A student can withdraw a waiting appeal. A student whose subject has no teacher in Formwork can't appeal and is told to see their mentor. \[DB\]
 - **FR-7.27** Only the student's teacher for that subject decides, at Mark Appeals (/grade-appeals, on the Assessment card; granted to teacher, head\_of\_department, assessment\_manager and smt). Upheld: the teacher enters the correct score, the grade is worked out from the subject's boundaries for the student's year group, and the change is in Grade History under the teacher's name. Turned down: the teacher must write a note, which the student sees. \[DB\]
 - **FR-7.28** The student sees their own appeals, the teacher their students', a Head of Department their department's, and SMT, assessment managers and admins every appeal. Only the teacher decides. Appeals are never deleted. \[DB\]
-- **FR-7.29** A new appeal goes to the teacher's inbox and by email, with the subject's Head of Department in cc (replies go to the Mark appeal row at Email Replies, sro@ to start). The Head of Department also gets an inbox copy naming the teacher it went to. The decision goes to the student's inbox and the Head of Department's, unless they decided it themselves; decisions aren't emailed. A student's text appears in the email as plain text, never as links or formatting. \[DB\]
+- **FR-7.29** A new appeal goes to the teacher's inbox at once and by email in a daily summary (FR-7.50), with the subject's Head of Department in cc (replies go to the Mark appeal row at Email Replies, sro@ to start). The Head of Department also gets an inbox copy naming the teacher it went to. The decision goes to the student's inbox and the Head of Department's, unless they decided it themselves; decisions aren't emailed. A student's text appears in the email as plain text, never as links or formatting. \[DB\]
 - **FR-7.30** The 5 days and 5 credits are set per school year on Lookups (Mark appeals), by anyone with that page. Changing them doesn't affect appeals already made. \[DB\]
+
+* **FR-7.50** Mark appeal emails are one daily summary at 4.15 pm (migration 420, the principal, 9 October 2026), one email per teacher (Head of Department in cc) listing their appeals still waiting. An appeal decided or withdrawn before then is only counted. Students still have 5 days to appeal, and teachers see a new appeal in their inbox and on /grade-appeals at once; only the email waits. \[DB\]
 
 **When parents see marks** (Lookups, migration 360, the principal, 4 Oct 2026)
 
@@ -584,6 +609,9 @@ Written reports are built only from checked comments; transcripts and score shee
 - **FR-8.9** Publishing replaces the previous copy and makes it downloadable by the student and parents. Admins, SMT and assessment managers publish, and can bulk-upload PDFs at /reports/documents. \[DB\]
 - **FR-8.10** On the Termly Grade Report a special result set (FR-7.31) replaces the week column its date falls in, headed by its name (Year 12 Mock 1, dated Monday 5 October 2026, replaces Year 12's Wk3 column). A date goes in the week that contains it, Monday to Sunday (FR-8.11); subjects not in the set show grey. A set matching no week, or a second set in the same week, gets its own column after the weeks. Other year groups' reports are unchanged. The written report includes special-set marks like any other mark in the term. Transcripts never show them: they read only end-of-term exam sets and legacy transcript grades. \[DB / Page\]
 - **FR-8.11** The Termly Grade Report has one column per teaching week (the principal, 9 October 2026). A week whose school days are all holidays on the calendar, such as the mid-term break, gets no column and no number, so the September term prints Wk1–Wk10. The week holding the end-of-term exam set is headed Exam. A mark goes in the week its date falls in, so the Friday 2 October 2026 "Week 3 ReLP" marks are in Wk2. Where a student has two marks in a subject in one week, the square shows both, oldest first (e.g. "B / A"). The subject column widens to fit the longest subject name on one line, never narrowing a week below 11 mm. The report writer numbers weeks the same way. \[Page\]
+
+* **FR-8.12** On a Year 10–11 Termly Grade Report the subjects are in up to three sections: "IGCSE and WAEC Subjects", then "IGCSE Only Subjects", then "WAEC Only Subjects" under a thick line (the principal, 9 October 2026). WAEC-only subjects print WAEC grades, with the target converted to WAEC grade for grade if it is still IGCSE (FR-7.47). In every year, each section lists English and Mathematics first, then the rest A–Z. \[Page; flags in DB\]
+* **FR-8.13** The written report's Grade line for a Year 10–11 WAEC-only subject converts the target to WAEC in the same way. \[Page\]
 
 ## 12. FR-9 Tuckshop
 
@@ -730,6 +758,8 @@ Every email goes through one queue from mis@abc.sch.ng with a Reply-To chosen by
 | Anything else | sro@ |
 
 - **FR-12.7** One admin switch pauses every email to parents; inbox copies are still delivered. It is currently off (emails are sent). \[DB\]
+
+* **FR-12.10** Two kinds of email go as one daily summary at 4.15 pm Lagos instead of one email per event (migrations 419–420, the principal, 9 October 2026): behaviour alerts (FR-6.58) and new mark appeals (FR-7.50). Their replies go where they did before. Anything withdrawn or decided before the summary goes is only counted. \[DB\]
 
 ## 16. FR-13 Calendar, terms and administration
 
@@ -907,6 +937,8 @@ Formwork keeps a permanent record of every sensitive change: who made it, when, 
 - **FR-16.11** Changes to the lesson feedback questions. Feedback itself can't be changed once sent, so it needs no log. \[DB\]
 - **FR-16.12** Worries, wellbeing check-ins and school ratings are not in Change History, because SMT and admins read it. A worry keeps its own notes (who opened, replied, closed and when), and none of these records can be changed or deleted. \[DB\]
 
+* **FR-16.13** Adding or removing a lesson worksheet (FR-17.25), and the queued rows behind the daily behaviour-alert and mark-appeal summaries (FR-12.10). The worksheet row keeps who added it and when; the summary rows are kept with the time they were sent. \[DB\]
+
 ## 20. FR-17 Homework
 
 Teachers set homework for a class with a deadline and a grading system, and record a grade for each student. The grades inform the end-of-term written report (FR-17.12) but never transcripts, result sets or target grades. It began as a pilot on 10\_1/Ma and 11\_1/Ma was opened to every Year 10 and 11 teaching group on 30 September 2026 (migration 295) and to every teaching group in Years 7–12 on 4 October 2026 (migration 353). The design and the principal's decisions are in docs/homework-design.md.
@@ -954,6 +986,16 @@ Teachers set homework for a class with a deadline and a grading system, and reco
 - **FR-17.19** Homework Monitor (migration 311, /homework/monitor, a tile in the staff dashboard's second row; SMT and admins): homework as students see it, for a chosen week. For a year group it shows every class's homework due that week on the students' cards, each labelled with its class code, with a subject filter and a table of each subject's switched-on classes and which have nothing due that week. For one student in that year it shows their timetable with homework on the lesson it's due in and their Homework cards, with their own Done ticks and their grades once released. The student view comes from the database under the same rules as the student's own page (current school year, released marks only, homework due before they joined the class left out), and returns nothing to anyone without the page. In the year view each homework shows its marking, not the student's "Overdue": Not marked, Marked n of N, or Marked (not released), counted against the class's active students who had joined by the due date; the subject table adds a "Past due, not fully marked" column (2 Oct 2026). Nothing can be changed from it. \[DB / Page\]
 - **FR-17.22** On their Homework page each day lists what to do that day ("To do"; Saturday and Sunday under Weekend): the homework on that evening's prep. A student can move a homework to an earlier day for their own planning ("I'll do it on…", from today up to the day before its prep evening) and back again. Once graded, it goes back to its prep evening and shows its grade there. Only the student writes or reads their own plans; staff don't see them, and a plan never changes the prep evening or the time check. Prep homework isn't shown on the timetable. (Migration 352.) \[DB / Page\]
 - **FR-17.24** Not handed in gives a negative automatically (migration 406, the principal, 8 October 2026). When the teacher releases a homework's marks, or enters Not handed in on one already released, each active student marked Not handed in gets one "Homework not completed" event (the category's points, −2 today), logged as that teacher, dated the day of release, on the homework's class. Excused and unreleased marks record nothing. It counts towards the weekly total detention and alert, and as it has writing it waits for review before parents see it (FR-6). Changing or removing the mark, un-releasing or withdrawing the homework withdraws the event and cancels a weekly detention it caused if not yet held; marking Not handed in again records a fresh one. An event SMT delete or the review returns is never made again while its mark stands. Homework released before 8 October isn't back-filled. \[DB\]
+
+**Lesson worksheets: the Maths trial** (migrations 428–430, the principal, 9 October 2026)
+
+- **FR-17.25** Teachers attach worksheets to lessons, and students can't open one before their lesson starts. The trial is switched on by subject: Mathematics, Further Maths and Additional Maths. Adding Science or IT subjects is a database change; there is no page for it during the trial. \[DB\]
+- **FR-17.26** A year worksheet is the usual kind: "Year 10 Mathematics, week of 12 October, lesson 2". Every class of that subject and year gets it at its own 2nd lesson that week. Lessons are numbered Monday to Friday in time order, counting only school days (a holiday Monday makes Wednesday's lesson lesson 1), and a double counts as two. A class with fewer lessons that week doesn't get it, and the teacher's panel names those classes. It is worked out when read, so a Nova-T re-import or a new class picks it up. \[DB\]
+- **FR-17.27** A worksheet can also go on one lesson of one class only. \[DB\]
+- **FR-17.28** The Lesson worksheets panel on the class register (/attendance) lists the class's lessons this week and next, numbered ("Lesson 2 of 4 this week"), with "+ All Year 10 (lesson 2)" and "+ \<class> only" buttons and a Remove button on each worksheet. It shows only to those who may add: whoever teaches or leads a class of that subject and year (class or lesson teacher, Head of Department, admin). A worksheet isn't edited; it is removed and added again. \[DB; panel is Page\]
+- **FR-17.29** Each file is at most 3 MB (migration 429: a worksheet on every lesson would be about 24,000 files a year), in the same file types as homework. The storage and the database both refuse a larger file. \[DB\]
+- **FR-17.30** Students see the worksheet on that lesson in their portal timetable. Until the lesson starts it shows only "Worksheet · opens 10:40", with no title or file; from the start time they can open it, and it stays open. The opening time comes from the timetable, never from the request, and the file can only be fetched through its row, so a copied request is refused too. Maths classes in a year are timetabled together, so they open at the same moment; Science classes aren't, so each would open at its own lesson. Students who joined the class after the lesson date don't get it. \[DB\]
+- **FR-17.31** Staff can open every worksheet at any time (to print, or for cover). Parents get nothing. \[DB\]
 
 **Not built yet:** students handing work in online (the principal's answer was "not yet"), and notifications: setting homework or releasing marks sends no email or inbox message.
 
@@ -1099,7 +1141,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 
 ## 25. Known issues and open decisions
 
-38 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; seven of them (6, 17, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
+39 places where Formwork does not behave as its pages suggest, or where a rule is weaker than it looks; seven of them (6, 17, 30, 31, 32, 33 and 36) have since been fixed. The first five stop something working today.
 
 | # | Area | Issue | Effect | Status |
 | --- | --- | --- | --- | --- |
@@ -1109,7 +1151,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 4 | Results | Decimal scores such as 89.5 can fall between whole-number grade bands | Saved with no grade | Open |
 | 5 | Behaviour | /behaviour/review page isn't granted to the school office, who release serious events without pictures | Office can't reach its review task. Decided 3 Oct 2026: only the principal's PA (who has the page) and SMT review Stage 5; migration 336 lets SMT release and return events without a picture | Decided: keep |
 | 6 | Behaviour | Any staff member can change an event's parent visibility with a direct request | Review can be bypassed | Fixed |
-| 7 | Behaviour | The weekly alert fires again on every further negative event that week | Repeat emails | Open |
+| 7 | Behaviour | The weekly alert fires again on every further negative event that week. Since 9 October 2026 the emails are one daily summary (FR-6.58), but each repeat is still a line in it and an inbox notice | Repeat emails | Open |
 | 8 | Behaviour | Deleting an event that already booked a detention probably fails | SMT can't delete it | Open |
 | 9 | Sign-in | Forced password change is page-only; office-made parent logins and auto-made staff and student logins are never forced to change | First passwords may stay in use | Open |
 | 10 | Access | HR can give anyone, including themselves, any role except admin (and, since migration 405 on 8 Oct 2026, dsl and guidance, which only the principal can give) | Logged, but not blocked | Open |
@@ -1141,6 +1183,7 @@ The database, not the browser, decides who someone is and what they may do; sens
 | 36 | Behaviour | Two mentors on the timetable don't hold the mentor role (found 4 Oct 2026): Uche Isiani (UIS, 10C/Me) and Christopher Agunwa (CSA, 10D/Me), who are teachers only. Behaviour Totals (FR-6.29), Certificates and other pages granted to mentor are missing for them | They can't see their group's behaviour totals; both were given the mentor role on 4 Oct 2026, and every mentor group's mentor now holds it | Fixed |
 | 37 | Registers | The automatic missed-lesson negative (FR-4.37) only looks at today's registers. A register saved after midnight for an earlier day gives no event. The event has no teacher, so returning it at review sends nobody a message | A lesson missed on a day whose register is filled in late goes unrecorded; the reviewer tells anyone who needs to know in person | Open |
 | 38 | Worry Box | An urgent worry or a flagged wellbeing check-in (FR-20.4, FR-20.11) sends no message at all since migrations 398–400 (7 Oct 2026); it shows only on the DSL's and the principal's Worry Box and Wellbeing tiles. Since 8 Oct 2026 the guidance staff also read worries (migration 402), and an urgent worry nobody opens in 24 hours alerts them (migration 404), with the count only; a flagged check-in still alerts nobody, and there is no cover for check-ins when the DSL and the principal are both away. Decided 8 Oct 2026 (the principal): urgent issues are dealt with verbally, so no further cover is built | A student who marks a worry urgent may wait until one of the two reads it; the page tells them to speak to any member of staff if they are in danger | Decided: keep |
+| 39 | Results | Years 10–11 WAEC-only subjects keep WAEC targets (FR-7.47), but a target written later in IGCSE (a CAT4 import, a teacher) is stored as IGCSE. Only the printed reports convert it (FR-8.12) | Class Progress and the portals show an IGCSE target beside WAEC grades, with no on/below colour (FR-7.11) | Open |
 
 Choose "Decided: keep" for anything the school is happy to leave as it is.
 

@@ -22,7 +22,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [1. Getting started](#1-getting-started) | Signing in, the dashboard, roles, using a phone | Everyone |
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
 | Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, the automatic missed-lesson negative, planned absences | Teachers, office, pastoral |
-| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor | Teachers, HoDs, SMT |
+| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor, lesson worksheets (Maths trial) | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
 | Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, reward store, the Worry Box and wellbeing check-ins, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
@@ -47,6 +47,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Spot students falling behind | [Signs to look for](#signs-to-look-for-and-where-to-see-them) · [Worked examples](#worked-examples) |
 | Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
 | Set or mark homework | [Setting homework](#setting-homework) · [Marking](#marking-the-mark-book) |
+| Put a worksheet on a Maths lesson | [Lesson worksheets](#lesson-worksheets-maths-trial) |
 | Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
 | Appeal a mark, or decide a student's appeal | [Mark appeals](#mark-appeals-grade-appeals) |
 | Give feedback on a lesson, or see what students said | [Lesson feedback](#lesson-feedback) |
@@ -445,7 +446,7 @@ Look at signs together, not one at a time. A student below target whose attendan
 
 ### Limits of the data
 
-- Grades are compared only on the same scale: IGCSE (Years 7–11) with IGCSE, WAEC (Year 12) with WAEC.
+- Grades are compared only on the same scale: IGCSE (Years 7–11) with IGCSE, WAEC (Year 12, and Years 10–11 in WAEC-only subjects) with WAEC.
 - A grade is worked out from the subject's boundaries when the score is entered. If boundaries change later, scores already saved keep their old grade.
 - A decimal score such as 89.5 can fall between grade bands and be saved without a grade. Enter whole numbers where possible.
 - A subject without its own target may borrow one from a related subject (for example Further Maths from Maths).
@@ -560,7 +561,7 @@ Everyone signs in at misform.work. Staff and students use their school Google ac
 2. Staff and students: press **Sign in with your school account** and pick your @abc.sch.ng Google account. You can also use **Sign in with a password instead**.
 3. Parents: enter the email address the school holds and your password. Your first password is in the welcome letter (your oldest child's date of birth as DDMMYYYY), and you must choose a new one at first sign-in.
 
-**If sign-in is refused.** Google only links to a login Formwork already made. If you see "not set up in Formwork yet", ask the school office or an administrator; nobody can create their own account. A student who leaves is signed out at once and cannot sign in again unless they return.
+**If sign-in is refused.** Google only links to a login Formwork already made. If you see "not set up in Formwork yet", ask the school office or an administrator; nobody can create their own account. A student who leaves is signed out at once and cannot sign in again unless they return. If Formwork suddenly sends you back to the sign-in page (for example after Sign out all other devices on another phone), just sign in again.
 
 **Passwords.** Use **Change Password** at the top right at any time. A new password must be at least 8 characters. Staff and students who sign in with their school account have no Formwork password to forget. A parent who forgets theirs presses **Forgot your password?** on the sign-in page, enters the email the school holds and follows the link emailed to them; it can take a few minutes and may land in spam or junk. If nothing arrives within 15 minutes, the school office can resend their welcome letter. If you think someone else has used your account, press \*\*Sign out all other devices\*\* on Change Password: every other phone or browser is signed out (one may carry on for up to an hour). The principal's login can only be used with Google and emails a warning whenever it signs in on a new device.
 
@@ -731,6 +732,8 @@ On the register:
 
 **Rules.** Any member of staff can mark any register (the school's decision). You cannot save a register for a future date; past dates ask for confirmation. Taking a register is not logged, but every later change or deletion of a mark is kept permanently in Change History.
 
+**Office C marks.** A C (other authorised absence) saved by the school office, the attendance officer, the principal or an admin shows read-only, marked "office". Only they can change it; saving the register leaves it as it is. If you think it is wrong, ask the office. A note under a mark, such as "With Mrs Adeyemi", is shown read-only too.
+
 **If you haven't taken it after 10 minutes.** A flashing, full-screen reminder appears on whatever Formwork page you have open, listing each of your lessons today (Other Half included) with no register yet: the class, room, period and how long ago it started.
 
 A lesson you have been asked to cover shows with "(cover)" after the class; the absent teacher doesn't get the reminder for it.
@@ -780,6 +783,8 @@ The pop-up also shows the student's registers today, period by period, with who 
 - If not, press **Not with me**. It clears from your screen only.
 - It stays until the period ends, even after the office presses Seen, and clears at once if the mark is corrected.
 
+**They're with me.** If the student is with you (a detention, a catch-up, a conversation), press **They're with me** and add a note if it helps. Their N or O becomes C under your name, with "With \<your name>" on the mark, the pop-up clears for everyone, the office's included, and no automatic negative follows. If the C is later changed, the note goes with it.
+
 ### The automatic missed-lesson negative
 
 From 8 October 2026, a student who was in school that day (marked present or late at any period) and is marked N or O at a lesson, an Other Half activity or Evening Prep gets a **Missing a lesson activity** event (−5) for each period missed. It is recorded at the end of the lesson.
@@ -789,6 +794,8 @@ From 8 October 2026, a student who was in school that day (marked present or lat
 - Registration doesn't count, and authorised absences never do. A student away all day gets nothing.
 - If the mark was wrong, correct it on the register (present, late or an authorised absence). The event is withdrawn and its detention cancelled if it hasn't happened yet.
 - Only the day's registers are checked, so take registers on the day.
+
+**A C before they turn up counts too.** From 9 October 2026, a student marked C for a lesson and then present or late at a later lesson that day gets the same −5. A C after their last lesson (sent home ill, left for an appointment) doesn't count. If they were away for a known reason, change the C to the matching code (M, I, E or H) and the event is withdrawn; whoever saved the C (or the attendance officer, for a planned absence) is asked to check. A C given by "They're with me" never counts.
 
 **The teacher is asked to confirm.** Whoever marked the student absent gets an email and a Formwork inbox message: the student, the lesson or activity, the code, the −5 and the detention date, and "Was \<name> really not in your lesson?". If they weren't there, do nothing. If they were, or were away for a reason, correct the mark from the link in the message; the −5 and the detention are withdrawn at once. Replies go to the attendance officer.
 
@@ -959,6 +966,33 @@ When writing the end-of-term report, teachers see each student's average of the 
 
 Not built yet: students handing work in online, and notifications when homework is set or marks are released.
 
+### Lesson worksheets (Maths trial)
+
+From 9 October 2026 Maths teachers can put a worksheet on a lesson. Students see it on their timetable but can open it only once their lesson has started, so nobody gets it in advance. The trial covers Mathematics, Further Maths and Additional Maths; other subjects will be added later.
+
+**Adding a worksheet (Maths teachers and Heads of Department)**
+
+1. Open the register for one of your Maths classes (chapter 3). Above the register, the **Lesson worksheets** panel lists the class's lessons this week and next, each numbered within its week, for example "Lesson 2 of 4 this week · Tue 13 Oct · Period 3".
+2. To give every class in the year the same worksheet, press **+ All Year 10 (lesson 2)** on that lesson and choose the file. Each Year 10 Maths class gets it at its own 2nd lesson that week.
+3. To give it to this class only, press **+ \<class> only**.
+4. You can choose several files at once. Each must be 3 MB or less, in the same file types as homework files. The file name becomes the title.
+
+![The Lesson worksheets panel on a Year 10 Maths register](manual-images/139-lesson-worksheets.jpg)
+
+Each worksheet then shows its size, who has it ("all Year 10, lesson 2" or "10\_1/Ma only") and when students can open it. Press its title to open it yourself: staff can open any worksheet at any time, to print or for cover. To change one, press **Remove** and add the new file.
+
+**Good to know**
+
+- Lessons are counted Monday to Friday in time order, school days only: if Monday is a holiday, Wednesday's lesson is lesson 1. A double lesson counts as two.
+- A class with fewer lessons that week doesn't get a worksheet meant for a later lesson; the panel says, for example, "Not given to 12S/Ma: fewer than 2 lessons that week".
+- Maths classes in a year are timetabled together, so a year worksheet opens for all of them at the same moment.
+- Students who join the class after the lesson don't get it. Parents never see worksheets.
+- The panel only appears for staff who can add worksheets to that class: its teachers, the Head of Department and admins.
+
+**What students see.** On their portal timetable the lesson shows "Worksheet · opens 10:40" with a padlock until the lesson starts. Then it becomes the worksheet's title, and pressing it opens the file; it stays open afterwards. The timetable checks every minute, so it unlocks without a reload.
+
+![A student's timetable: one worksheet open, two still locked](manual-images/140-portal-worksheets.jpg)
+
 ## 5. Assessment, results and targets
 
 **Where the links are.** Every marks page is on the **Assessment** card, numbered in the order the work is done: **1 Adorable.net** (the weekly gradebook from the school's Moodle), **2 Type In Marks**, **3 Marks Missing**, **4 Student vs Avg**, **5 Marks Sheet**, **6 Top 10**, **7 Mark Appeals**, then Grade Boundaries, Subject Settings and Grade History. Baseline tests and targets are on the **Targets & Baselines** card: Import CAT4/NGRT, Reading Ages, Add Reading Test and Import Targets. The old Weekly Results page has no link: use Type In Marks. Until 8 October 2026 some of these were called Enter Results, Missing Grades, Results, Review Results, Result Set Sheet and Record Reading Tests.
@@ -1017,7 +1051,7 @@ Each class's average grade against the average target of the same students, sort
 
 ### Grade boundaries (/admin/grade-boundaries)
 
-Grade cut-offs are set per subject and per year group (7–12). Years 7–11 use IGCSE (A\*–U); Year 12 uses WAEC (A1–F9). Choose the subject and year, edit the minimum and maximum score for each grade, or **Remove** a band. Only assessment managers can edit boundaries (the principal, 3 Oct 2026); everyone else can view them. Changes are not logged.
+Grade cut-offs are set per subject and per year group (7–12). Years 7–11 use IGCSE (A\*–U); Year 12 uses WAEC (A1–F9). In Years 10–11 the WAEC-only subjects (chapter 14, Subjects and grading) use their Year 12 WAEC boundaries, so their marks get WAEC grades. Choose the subject and year, edit the minimum and maximum score for each grade, or **Remove** a band. Only assessment managers can edit boundaries (the principal, 3 Oct 2026); everyone else can view them. Changes are not logged.
 
 ![Grade boundaries for one subject and year](manual-images/33-boundaries.jpg)
 
@@ -1041,7 +1075,7 @@ A student who thinks a mark doesn't match their marked paper can appeal it, as t
 
 ![A student appealing a mark, with their earlier appeals below](manual-images/116-portal-appeals.jpg)
 
-**Deciding an appeal (teachers).** You get an email, with your Head of Department copied in, and a message in your inbox. Open **Mark Appeals** from the Assessment card.
+**Deciding an appeal (teachers).** You get a message in your inbox at once and, at 4.15 pm, one email listing your appeals still waiting, with your Head of Department copied in. Open **Mark Appeals** from the Assessment card.
 
 1. Find the appeal under **Waiting for a decision**. It shows the mark, what the student says their paper shows, and their reason.
 2. Check the student's paper.
@@ -1168,7 +1202,7 @@ Checkers assigned to the period, SMT and admins can check. Only checked comments
 What goes in:
 
 - **Written report**: checked comments only, English, then Maths, then the rest A–Z, then the Mentor, Houseparent and SMT comments. A student with no checked comments is skipped. The Homework line shows the grade only.
-- **Termly Grade Report and Term Test Scores**: a subject appears only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey. A special result set (such as Year 12 mocks) appears in place of the week its date falls in, headed by its name. There is a column for each teaching week only (the half-term week gets none, so the September term runs Wk1–Wk10), the end-of-term exam week is headed Exam, and where a student has two marks in a subject in one week both show, oldest first ("B / A").
+- **Termly Grade Report and Term Test Scores**: a subject appears only if it is on the grade report and tagged for the student's key stage; unassessed subjects show grey. A special result set (such as Year 12 mocks) appears in place of the week its date falls in, headed by its name. There is a column for each teaching week only (the half-term week gets none, so the September term runs Wk1–Wk10), the end-of-term exam week is headed Exam, and where a student has two marks in a subject in one week both show, oldest first ("B / A"). For Years 10–11 the subjects are in up to three sections: IGCSE and WAEC Subjects, then IGCSE Only Subjects (Chinese, Spanish), then WAEC Only Subjects below a thick line, in WAEC grades with a WAEC target. English and Mathematics come first in each section.
 - **Transcripts**: KS3 (Years 7–9, IGCSE) and KS4/5 (Years 10–12, IGCSE and WAEC versions; Year 12 always WAEC), built from the end-of-term exam result sets. Special result sets such as mocks never appear on them.
 
 ### Uploading documents (/reports/documents)
@@ -1210,13 +1244,13 @@ Use the **Log behaviour** tile on the dashboard, or **Log behaviour for this cla
 
 ### What parents see: Behaviour Review (/behaviour/review)
 
-- A merit with no writing goes home at once. Any event with writing, positive or negative, waits for review, and parents see none of it, points included, until it is sent.
+- A merit goes home at once unless its writing is more than 12 words (the number is set on Lookups). A negative event with any writing, and a merit with long writing, waits for review, and parents see none of it, points included, until it is sent.
 - −1 to −4 events without writing never go to parents; with writing they go once approved.
 - Merits and Stage 1–4 events with writing are listed under **Writing to approve**. Read each comment, use Edit to correct one, tick the ones to send, tick the confirmation, then press **Send to parents** (or **Keep at school**, and parents never see them).
 - Automatic "100% in a Big ReLP Test" merits are listed there too, with the subject in the note; they can be sent in one go with the rest.
 - −5 events without a picture: the principal's PA or SMT (or an admin) checks the text and sends it.
 - Events with a picture: SMT or an admin sends the text with the picture, the text alone, or declines.
-- If an event's writing is changed later, it is hidden again until the new words are approved.
+- If an event's writing is changed later, it is hidden again until the new words are approved (for a merit, only if the new writing is long).
 
 The reviewer ticks the confirmation that the text follows protocol, names no other student and is in good English, then presses **Send text** (or **Don't send yet**). An explanation that names a linked student is refused, with the word to reword. If an event isn't really a Stage 5, press "Not Stage 5: return to teacher", say why, and press "Return to" the teacher. They get your note in their inbox and see it on the event. Its points stop counting at once and its detention is cancelled if it hasn't happened yet (the student is told). The event moves to "Returned to the teacher", where it can't be sent: if they change the category it leaves the page, and if they keep Stage 5 and edit the explanation it comes back to "Waiting for review". Keep the note factual, e.g. "This is Disruption in class, −2." SMT see "Stage 5s returned, by teacher" lower down the page: how many each teacher has had returned, to see who needs more training.
 
@@ -1233,6 +1267,8 @@ The rules below are the current settings; anyone with the Lookups page can chang
 | Weekly alert | −8 in a week | Emails cs@, copied to SMT and sro@; replies go to guardian.counselling@ |
 | Detention room and time | CG4, after lesson 7 | Shown on every detention notice |
 | Stage 5 guidance | The school's list of what is and isn't a Stage 5 | Shown when staff choose a Stage 5 category, before they tick to confirm. Each behaviour category can also have a description, shown when it is picked |
+
+**Alert emails come once a day.** Each alert still goes to the inbox at once, but the emails are gathered into one summary at 4.15 pm: student, year, category, points, date, why it alerted and the writing. An event withdrawn, returned or deleted before then is only counted, and alerts after 4.15 pm go in the next day's summary.
 
 **Detentions** (/detention) lists this week's Friday detention with the events behind each one. Staff can't add or delete detentions by hand; they mark each as Scheduled, Attended or Missed, and can print the list. Only SMT can mark a detention Cancelled; the option is shown only to them. The student (not the parent) gets an email and inbox notice when it is booked and a reminder at 7:30pm on Thursday.
 
@@ -1741,7 +1777,7 @@ After signing in, a student sees big tiles (in the order set at /admin/tile-orde
 
 ![The student portal](manual-images/111-portal.jpg)
 
-**Timetable** shows the week with teachers and rooms, the student's Other Half activity, and homework on the lesson it's due in; lessons that ended today or yesterday have a Give feedback button (chapter 5, Lesson feedback). **Assessment** shows the latest grade in each subject beside the target (green above, amber on, red below), downloadable term test scores and transcripts, and documents published by the school. **Behaviour** lists their events; a negative one can be appealed once, with a reason. Under Assessment, Appeal a mark lists marks from the last 5 days that can be appealed (chapter 5, Mark appeals).
+**Timetable** shows the week with teachers and rooms, the student's Other Half activity, and homework on the lesson it's due in; lessons that ended today or yesterday have a Give feedback button (chapter 5, Lesson feedback); a Maths lesson with a worksheet shows it, locked until the lesson starts (chapter 4, Lesson worksheets). **Assessment** shows the latest grade in each subject beside the target (green above, amber on, red below), downloadable term test scores and transcripts, and documents published by the school. **Behaviour** lists their events; a negative one can be appealed once, with a reason. Under Assessment, Appeal a mark lists marks from the last 5 days that can be appealed (chapter 5, Mark appeals).
 
 ![A student's timetable with homework and the Other Half](manual-images/112-portal-tt.jpg)
 
@@ -1757,7 +1793,7 @@ Parents sign in with email and password and go straight to **My Children**. With
 
 ![A child's tiles in the parent portal](manual-images/115-parent.jpg)
 
-**Attendance** shows today, this week and this year, and today lesson by lesson. **Fees** shows the term's invoice lines, total, paid and amount due with a PDF download, only once SMT have published the term. Assessment shows each mark once it is the number of hours old set on Lookups (chapter 14), so a mark a child mentions may not be there yet.
+**Attendance** shows today, this week and this year, and today lesson by lesson. **Fees** shows the term's invoice lines, total, paid and amount due with a PDF download, only once SMT have published the term. Assessment shows each mark once it is the number of hours old set on Lookups (chapter 14), so a mark a child mentions may not be there yet. Tuckshop opens the child's balance and purchases on the same page.
 
 ![Attendance in the parent portal](manual-images/119-parent-att.jpg)
 
@@ -1815,7 +1851,7 @@ The lists and settings the rest of Formwork uses: boarding houses, sports houses
 - **Bell Times** (/admin/bell-times): which sessions run each day and their times. Saving moves every lesson in that period; a session can't be removed while lessons use it. One date can also be booked to run on another weekday's times (chapter 3, The school day).
 - **Import Nova-T** (/admin/import-classes): upload Nova-T's .DAT files. Every change is previewed before it's applied; classes missing from the file are offered for deletion. A lesson's subject comes only from the subject code in the group name; Other Half (Oh) and Sports Academy (Sa) groups are skipped.
 - **Import Meetings** (/admin/import-staff-commitments): staff meetings and non-working periods, which block that person's slot.
-- **Class Allocation** (/admin/block-allocation): choose a year and block, then tick which class each student is in. Open to admins, Heads of Department and pastoral staff.
+- **Class Allocation** (/admin/block-allocation): choose a year and block, then tick which class each student is in. Open to admins, Heads of Department and pastoral staff. To see how students are doing while you place them, add a marks column: choose a result set and a subject (the block's own, another, or the average of all subjects). Up to four columns, percentages only; click a column heading to sort highest first.
 - **Student Numbers** (/admin/student-numbers): boys, girls and unknown, counted six ways. The page opens on six choices: Year Groups, Mentor Groups (with a subtotal for each year), Restaurants, Boarding Houses (click a house to open its rooms; a Years column shows the year groups in each room, for example "Y9 (3), Y10 (1)"), Sports Houses (with their year groups) and Classes (by subject). Once one is open, the buttons at the top switch to another.
 
 ![Bell Times](manual-images/128-bell-times.jpg)
@@ -1842,7 +1878,7 @@ Not built yet: placing students into next year's classes, progression, subject c
 
 ### Subjects and grading
 
-**Subject Settings** (/admin/subject-settings): display names, departments, key stages (which decide where a subject appears on transcripts), aliases for gradebook imports, and which subject's targets to borrow. Subject codes are kept in SQL, never edited here. Grade boundaries are in chapter 5.
+**Subject Settings** (/admin/subject-settings): display names, departments, key stages (which decide where a subject appears on transcripts), aliases for gradebook imports, and which subject's targets to borrow. Subject codes are kept in SQL, never edited here. Two ticks decide how Years 10–11 are graded and printed (the principal, 9 October 2026): WAEC only (Igbo, Government, Computer and GSM Repairs, Animal Husbandry, Fashion, Civics, Digital Technologies) gives the subject WAEC targets and WAEC boundaries copied from Year 12, and puts it in its own WAEC section on the Termly Grade Report; IGCSE only (Chinese, Spanish) puts it in an IGCSE-only section. A subject can't have both. Unticking WAEC only leaves the WAEC boundaries in place; set IGCSE ones on Grade Boundaries. Grade boundaries are in chapter 5.
 
 ![Subject Settings](manual-images/131-subject-settings.jpg)
 
