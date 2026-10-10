@@ -11,6 +11,7 @@ import {
   worksheetKey, opensAtClock, worksheetFileProblem,
 } from '../../lib/lessonWorksheets';
 import { btnSmall } from './HomeworkForm';
+import { setWorksheetMaxMark } from '../../lib/cardSorts';
 
 // Worksheets on the class register (/attendance), migrations 428-430: the
 // class's lessons from the register's date (or today) to two weeks ahead,
@@ -95,12 +96,36 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
     setBusy(worksheetKey(lesson.lesson_date, lesson.period_number, cls.class_id));
     for (const f of list) {
       const title = f.name.replace(/\.[^.]+$/, '');
+      const added = {};
       const error = wholeYear
-        ? await addYearWorksheet(cls.subject_id, cls.year_group, lesson.week_start, lesson.lesson_number, f, title)
-        : await addLessonWorksheet(cls.class_id, lesson.lesson_date, lesson.period_number, f, title);
+        ? await addYearWorksheet(cls.subject_id, cls.year_group, lesson.week_start, lesson.lesson_number, f, title, added)
+        : await addLessonWorksheet(cls.class_id, lesson.lesson_date, lesson.period_number, f, title, added);
       if (error) { setStatus(`${f.name} wasn't added: ${error.message}`); break; }
+      // An ordinary worksheet becomes a Classwork column in the mark sheet:
+      // ask straight away what it is marked out of (a card sort marks itself).
+      if (added.kind === 'file') await askOutOf({ worksheet_id: added.worksheetId, title, max_mark: null });
     }
     setBusy(null);
+    load(cls);
+  }
+
+  // Returns false only if the teacher typed something that wasn't saved.
+  async function askOutOf(w) {
+    const v = window.prompt(
+      `What is "${w.title}" marked out of? Students' marks go in the mark sheet under Classwork.\n\nLeave it empty if this worksheet won't be marked.`,
+      w.max_mark == null ? '' : String(Number(w.max_mark)),
+    );
+    if (v === null || (v.trim() === '' && w.max_mark == null)) return true;
+    const n = v.trim() === '' ? null : Number(v);
+    if (n !== null && !(n > 0)) { setStatus(`"${w.title}": the out-of mark must be a number above 0. Set it with "Set out of".`); return false; }
+    const error = await setWorksheetMaxMark(w.worksheet_id, n);
+    if (error) { setStatus(`"${w.title}": ${error.message}`); return false; }
+    return true;
+  }
+
+  async function changeOutOf(w) {
+    setStatus(null);
+    await askOutOf(w);
     load(cls);
   }
 
@@ -209,6 +234,12 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
                             {' · '}{w.class_id == null ? `all Year ${w.year_group}, lesson ${w.lesson_number}` : `${cls.class_code} only`}
                             {' · '}{lessonOpen ? 'open to students' : `students can open from ${opensAtClock(`${l.lesson_date}T${l.start_time}`)}`}
                           </span>
+                          {w.kind === 'file' && ((w.class_id == null ? canYear : canClass) ? (
+                            <button type="button" className={w.max_mark == null ? '' : 'secondary'} style={btnSmall} onClick={() => changeOutOf(w)}
+                              title="What it is marked out of, for the mark sheet">
+                              {w.max_mark == null ? 'Set out of' : `out of ${Number(w.max_mark)}`}
+                            </button>
+                          ) : w.max_mark != null && <span className="hw-attachment-meta">out of {Number(w.max_mark)}</span>)}
                           {(w.class_id == null ? canYear : canClass) && (
                             <button type="button" className="secondary" style={btnSmall} onClick={() => remove(w)}>Remove</button>
                           )}
