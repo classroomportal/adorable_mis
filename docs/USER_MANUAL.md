@@ -22,7 +22,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [1. Getting started](#1-getting-started) | Signing in, the dashboard, roles, using a phone | Everyone |
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
 | Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, the automatic missed-lesson negative, planned absences | Teachers, office, pastoral |
-| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the class mark book, student view, Homework Monitor, lesson worksheets, card sorts and classwork marks (Maths trial) | Teachers, HoDs, SMT |
+| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the class mark book, student view, Homework Monitor, lesson worksheets, card sorts and classwork marks (trial) | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
 | Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, reward store, the Worry Box and wellbeing check-ins, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
@@ -47,7 +47,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Spot students falling behind | [Signs to look for](#signs-to-look-for-and-where-to-see-them) · [Worked examples](#worked-examples) |
 | Log a positive or negative behaviour point | [Logging behaviour](#logging-behaviour-behaviour) |
 | Set or mark homework | [Setting homework](#setting-homework) · [Marking](#entering-marks-for-a-homework) |
-| Put a worksheet on a Maths lesson | [Lesson worksheets](#lesson-worksheets-maths-trial) |
+| Put a worksheet on a lesson | [Lesson worksheets](#lesson-worksheets-trial) |
 | Enter test or exam marks | [Entering results](#entering-results-resultsenter) |
 | Appeal a mark, or decide a student's appeal | [Mark appeals](#mark-appeals-grade-appeals) |
 | Give feedback on a lesson, or see what students said | [Lesson feedback](#lesson-feedback) |
@@ -972,13 +972,13 @@ When writing the end-of-term report, teachers see each student's average of the 
 
 Not built yet: students handing work in online, and notifications when homework is set or marks are released.
 
-### Lesson worksheets (Maths trial)
+### Lesson worksheets (trial)
 
-From 9 October 2026 Maths teachers can put a worksheet on a lesson. Students see it on their timetable but can open it only once their lesson has started, so nobody gets it in advance. The trial covers Mathematics, Further Maths and Additional Maths, and from 10 October 2026 Computing, Digital Literacy and ICT (Year 9's Digital Literacy is timetabled as ICT); other subjects will be added later. Teachers of those subjects use it the same way as Maths teachers below.
+Teachers of the trial subjects can put a worksheet on a lesson. Students see it on their timetable but can open it only once their lesson has started, so nobody gets it in advance. The trial covers Mathematics, Further Maths and Additional Maths (from 9 October 2026) and Computing, Digital Literacy and ICT (from 10 October 2026; Year 9's Digital Literacy is timetabled as ICT). Other subjects will be added later. The examples below use Maths.
 
-**Adding a worksheet (Maths teachers and Heads of Department)**
+**Adding a worksheet (teachers and Heads of Department)**
 
-1. Open the register for one of your Maths classes (chapter 3). Above the register, the **Lesson worksheets** panel lists the class's lessons this week and next, each numbered within its week, for example "Lesson 2 of 4 this week · Tue 13 Oct · Period 3".
+1. Open the register for one of your classes in a trial subject (chapter 3). Above the register, the **Lesson worksheets** panel lists the class's lessons this week and next, each numbered within its week, for example "Lesson 2 of 4 this week · Tue 13 Oct · Period 3".
 2. To give every class in the year the same worksheet, press **+ All Year 10 (lesson 2)** on that lesson and choose the file. Each Year 10 Maths class gets it at its own 2nd lesson that week.
 3. To give it to this class only, press **+ \<class> only**.
 4. You can choose several files at once. Each must be 3 MB or less, in the same file types as homework files. The file name becomes the title.
@@ -991,7 +991,7 @@ Each worksheet then shows its size, who has it ("all Year 10, lesson 2" or "10\_
 
 - Lessons are counted Monday to Friday in time order, school days only: if Monday is a holiday, Wednesday's lesson is lesson 1. A double lesson counts as two.
 - A class with fewer lessons that week doesn't get a worksheet meant for a later lesson; the panel says, for example, "Not given to 12S/Ma: fewer than 2 lessons that week".
-- Maths classes in a year are timetabled together, so a year worksheet opens for all of them at the same moment.
+- Maths classes in a year are timetabled together, so a year worksheet opens for all of them at the same moment. Where a subject's classes are at different times, each class's copy opens at its own lesson.
 - Students who join the class after the lesson don't get it. Parents never see worksheets.
 - The panel only appears for staff who can add worksheets to that class: its teachers, the Head of Department and admins.
 
