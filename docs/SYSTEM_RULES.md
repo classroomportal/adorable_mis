@@ -460,6 +460,7 @@ Sunday has Evening Prep only (19:00–21:00, migration 362), so students can cha
 **Other timetable rules**
 - A student's form must be a real mentor group, and their mentor group follows it automatically (102).
 - Staff commitments (meetings and part-time non-working periods, from NCLASS.DAT) block only that person's own timetable slot. They have no register.
+- A staff timetable shows this week or next week, with each day's date, that week's covers and any holiday (10 Oct 2026). Lessons aren't dated, so next week shows the timetable as it is today; a change appears only once the new Nova-T file is imported. A day still to come doesn't open a register **(page only)**.
 
 **Cover for absent teachers** (374, 5 Oct 2026)
 - Only SMT arrange or cancel cover (admin alone is not enough), from **Cover** on the Timetable card or **Arrange cover** on someone's timetable.
