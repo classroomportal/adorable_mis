@@ -22,7 +22,7 @@ New to Formwork? Read [How each person uses Formwork](#how-each-person-uses-form
 | Everyday tasks | [1. Getting started](#1-getting-started) | Signing in, the dashboard, roles, using a phone | Everyone |
 | Everyday tasks | [2. Students](#2-students) | Finding a student, the profile, editing records, adding students, parents and leavers | All staff; school office |
 | Everyday tasks | [3. Timetables and registers](#3-timetables-and-registers) | My Timetable, taking a register, Registers Not Done, Missed Lessons, the missed-lesson pop-up, the automatic missed-lesson negative, planned absences | Teachers, office, pastoral |
-| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor, lesson worksheets (Maths trial) | Teachers, HoDs, SMT |
+| Everyday tasks | [4. Homework](#4-homework) | Setting, marking, the mark sheet, student view, Homework Monitor, lesson worksheets, card sorts and classwork marks (Maths trial) | Teachers, HoDs, SMT |
 | Everyday tasks | [5. Assessment, results and targets](#5-assessment-results-and-targets) | Result sets, entering scores, Class Progress, boundaries, targets, Grade History, reading ages | Teachers, HoDs, assessment staff |
 | Everyday tasks | [6. Reports and documents](#6-reports-and-documents) | Report periods, subject and pastoral comments, checking, generating and uploading | Teachers, mentors, checkers, admins |
 | Care and conduct | [7. Behaviour, pastoral care and the clinic](#7-behaviour-pastoral-care-and-the-clinic) | Logging behaviour, review for parents, detentions, appeals, certificates, reward store, the Worry Box and wellbeing check-ins, boarding, clinic, staff records | All staff; pastoral; nurse; DSL; HR |
@@ -993,6 +993,30 @@ Each worksheet then shows its size, who has it ("all Year 10, lesson 2" or "10\_
 
 ![A student's timetable: one worksheet open, two still locked](manual-images/140-portal-worksheets.jpg)
 
+**What it is marked out of.** When you add an ordinary worksheet, Formwork asks what it is marked out of; leave it empty if it won't be marked. You can set or change it later with the **out of 24** (or **Set out of**) button beside the worksheet, or in the mark sheet. A card sort isn't asked: it marks itself.
+
+**If the timetable changes.** A worksheet given to the whole year follows the timetable by itself: it always goes on that week's lesson of that number. A worksheet added to one class's lesson stays locked if a timetable import moves that lesson; the panel lists it under **Lesson moved**, so press **Remove** and add it again on the right lesson.
+
+#### Card sorts on screen
+
+The department's Word card sorts (the Lesson 2 card sorts, in the card sort format) become an on-screen activity. Add one exactly like a worksheet, usually with **+ All Year 10 (lesson 2)**. Formwork reads the cards, pictures and answer key from the file; if a card sort doesn't fit the format it is refused with the reasons, so the answers never reach students. The worksheet list shows it with a card icon, and **Preview** opens the student screen for you to try (Check is for students only).
+
+In the lesson, students work in pairs on one laptop:
+
+1. The student signed in opens the card sort from the lesson on their timetable and chooses their partner from the class, or **Working on my own**, then presses **Start**.
+2. They drag each card under a header or into a set, or click a card and then click where it goes. **Help me start** places the cards from the sheet's Set 4 support box.
+3. When every card is placed they press **Check (once only)**. Formwork marks it and shows the count, for example "6 of 8 sets right". Both students get that mark, and neither can do it again.
+
+Students never see the answer key or the Word file; Formwork does the checking.
+
+![A card sort part-way through, with the support cards placed (invented students)](manual-images/141-card-sort.jpg)
+
+#### Classwork marks in the mark sheet
+
+Every worksheet and card sort on a class's lessons appears in the class's mark sheet (Homework → your class → **Mark sheet**) as a **Classwork** column, after the homework. Card sorts fill in by themselves; "(h)" means the pair used Help me start, and ↺ removes a pair's mark so they can do it again. For an ordinary worksheet, type each student's mark in its column once "out of" is set. Classwork marks never count towards the homework average or the report, and every change is kept in Grade History.
+
+![The mark sheet with Classwork columns: a card sort and two worksheets (invented students)](manual-images/142-classwork-columns.jpg)
+
 ## 5. Assessment, results and targets
 
 **Where the links are.** Every marks page is on the **Assessment** card, numbered in the order the work is done: **1 Adorable.net** (the weekly gradebook from the school's Moodle), **2 Type In Marks**, **3 Marks Missing**, **4 Student vs Avg**, **5 Marks Sheet**, **6 Top 10**, **7 Mark Appeals**, then Grade Boundaries, Subject Settings and Grade History. Baseline tests and targets are on the **Targets & Baselines** card: Import CAT4/NGRT, Reading Ages, Add Reading Test and Import Targets. The old Weekly Results page has no link: use Type In Marks. Until 8 October 2026 some of these were called Enter Results, Missing Grades, Results, Review Results, Result Set Sheet and Record Reading Tests.
@@ -1777,7 +1801,7 @@ After signing in, a student sees big tiles (in the order set at /admin/tile-orde
 
 ![The student portal](manual-images/111-portal.jpg)
 
-**Timetable** shows the week with teachers and rooms, the student's Other Half activity, and homework on the lesson it's due in; lessons that ended today or yesterday have a Give feedback button (chapter 5, Lesson feedback); a Maths lesson with a worksheet shows it, locked until the lesson starts (chapter 4, Lesson worksheets). **Assessment** shows the latest grade in each subject beside the target (green above, amber on, red below), downloadable term test scores and transcripts, and documents published by the school. **Behaviour** lists their events; a negative one can be appealed once, with a reason. Under Assessment, Appeal a mark lists marks from the last 5 days that can be appealed (chapter 5, Mark appeals).
+**Timetable** shows the week with teachers and rooms, the student's Other Half activity, and homework on the lesson it's due in; lessons that ended today or yesterday have a Give feedback button (chapter 5, Lesson feedback); a Maths lesson with a worksheet or card sort shows it, locked until the lesson starts, and a card sort opens on screen to do with a partner (chapter 4, Lesson worksheets). **Assessment** shows the latest grade in each subject beside the target (green above, amber on, red below), downloadable term test scores and transcripts, and documents published by the school. **Behaviour** lists their events; a negative one can be appealed once, with a reason. Under Assessment, Appeal a mark lists marks from the last 5 days that can be appealed (chapter 5, Mark appeals).
 
 ![A student's timetable with homework and the Other Half](manual-images/112-portal-tt.jpg)
 
