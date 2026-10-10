@@ -112,7 +112,7 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
   // Returns false only if the teacher typed something that wasn't saved.
   async function askOutOf(w) {
     const v = window.prompt(
-      `What is "${w.title}" marked out of? Students' marks go in the mark sheet under Classwork.\n\nLeave it empty if this worksheet won't be marked.`,
+      `What is "${w.title}" marked out of? Students' marks go in the mark book under Classwork.\n\nLeave it empty if this worksheet won't be marked.`,
       w.max_mark == null ? '' : String(Number(w.max_mark)),
     );
     if (v === null || (v.trim() === '' && w.max_mark == null)) return true;
@@ -165,7 +165,7 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
           ? <>Add a worksheet to a lesson of the week (lesson 1, 2, 3…) for every {yearLabel} class: each class gets it in its own lesson of that number. </>
           : null}
         Students see it on their timetable but can only open it once their lesson starts. Up to 3 MB a file.
-        A card sort in the card sort format becomes an on-screen card sort; marks for every worksheet go in the mark sheet under Classwork.
+        A card sort in the card sort format becomes an on-screen card sort; marks for every worksheet go in the mark book under Classwork.
       </p>
       {status && <p style={{ color: '#a3232c', margin: '0 0 0.5rem' }}>{status}</p>}
       {moved.length > 0 && (
@@ -236,7 +236,7 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
                           </span>
                           {w.kind === 'file' && ((w.class_id == null ? canYear : canClass) ? (
                             <button type="button" className={w.max_mark == null ? '' : 'secondary'} style={btnSmall} onClick={() => changeOutOf(w)}
-                              title="What it is marked out of, for the mark sheet">
+                              title="What it is marked out of, for the mark book">
                               {w.max_mark == null ? 'Set out of' : `out of ${Number(w.max_mark)}`}
                             </button>
                           ) : w.max_mark != null && <span className="hw-attachment-meta">out of {Number(w.max_mark)}</span>)}

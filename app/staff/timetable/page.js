@@ -214,6 +214,27 @@ function StaffTimetable() {
 
   const isOwnTimetable = profile?.staff_id && selectedStaffId === profile.staff_id;
 
+  // Mark books (the principal, 10 Oct 2026): a small link per class on your
+  // own timetable, straight to that class's mark book on /homework. Only
+  // classes homework is switched on for (homework_classes); the database
+  // still decides who can open them.
+  const [markBookClasses, setMarkBookClasses] = useState([]);
+  useEffect(() => {
+    const own = isOwnTimetable ? classes : [];
+    const ids = [...new Set(own.map((c) => c.class_id))];
+    if (!ids.length) { setMarkBookClasses([]); return; }
+    let live = true;
+    supabase.from('homework_classes').select('class_id').in('class_id', ids).then(({ data }) => {
+      if (!live) return;
+      const on = new Set((data || []).map((r) => r.class_id));
+      const seen = new Set();
+      setMarkBookClasses(own
+        .filter((c) => on.has(c.class_id) && !seen.has(c.class_id) && seen.add(c.class_id))
+        .sort((a, b) => a.class_code.localeCompare(b.class_code)));
+    });
+    return () => { live = false; };
+  }, [isOwnTimetable, classes]);
+
   useEffect(() => {
     async function loadMyMissing() {
       if (!isOwnTimetable) { setMyMissingCount(0); return; }
@@ -299,6 +320,18 @@ function StaffTimetable() {
       {isOwnTimetable && myMissingCount > 0 && (
         <div className="card" style={{ marginBottom: '1rem', borderColor: '#c0392b' }}>
           <strong>{myMissingCount} of your registers {myMissingCount === 1 ? 'is' : 'are'} overdue</strong> — tap the class below to take it.
+        </div>
+      )}
+
+      {isOwnTimetable && markBookClasses.length > 0 && (
+        <div className="mb-links">
+          <span className="mb-links-label">Mark books</span>
+          {markBookClasses.map((c) => (
+            <a key={c.class_id} className="mb-link" href={`/homework?class=${c.class_id}&view=markbook`}
+              title={`Every homework and classwork mark for ${c.class_code}`}>
+              {c.class_code}
+            </a>
+          ))}
         </div>
       )}
 
