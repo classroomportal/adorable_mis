@@ -9,6 +9,7 @@ import { useAuth } from '../../../lib/AuthContext';
 import { formatTimeRange } from '../../../lib/formatTime';
 import { schoolToday } from '../../../lib/schoolTime';
 import { loadOtherHalfSlots, loadCurrentOtherHalfTermId } from '../../../lib/otherHalf';
+import { loadHolidayDates } from '../../../lib/termWeeks';
 import GroupFreeTimes from '../../components/GroupFreeTimes';
 import CoverPanel from '../../components/CoverPanel';
 
@@ -30,6 +31,11 @@ function StaffTimetable() {
   const [canCover, setCanCover] = useState(false); // SMT: may arrange cover (migration 374)
   const [covers, setCovers] = useState([]); // live covers this person gives or receives, this week on
   const [coverReload, setCoverReload] = useState(0);
+  // Which school week the grid shows: 0 = this week, 1 = next week (the
+  // principal, 10 Oct 2026). Lessons come from the current timetable either
+  // way; the week decides the dates, covers and holidays shown.
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [holidays, setHolidays] = useState(new Set());
   // Opened from Cover on the dashboard's Timetable card (/staff/timetable?cover=1):
   // start with no teacher chosen and the cover panel open.
   const [coverMode, setCoverMode] = useState(null); // null until the URL is read
@@ -90,7 +96,7 @@ function StaffTimetable() {
   // own lessons someone else covers, from the start of this school week on.
   useEffect(() => {
     if (!selectedStaffId) { setCovers([]); return; }
-    const from = [dateForDay('Mon'), schoolToday()].sort()[0];
+    const from = [dateForDay('Mon', 0), schoolToday()].sort()[0];
     supabase
       .from('lesson_covers')
       .select('cover_id, cover_date, period_number, class_id, note, cover_staff_id, absent_staff_id, '
@@ -156,7 +162,7 @@ function StaffTimetable() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   }
-  function dateForDay(dayLabel) {
+  function dateForDay(dayLabel, offset = weekOffset) {
     const target = DAY_TO_WEEKDAY[dayLabel];
     // The school's today, not the device's: a laptop in another zone, or the
     // hour either side of midnight, would otherwise open the register on the
@@ -169,9 +175,22 @@ function StaffTimetable() {
     const todayWeekday = today.getDay() === 0 ? 7 : today.getDay();
     const diff = target - todayWeekday;
     const d = new Date(today);
-    d.setDate(today.getDate() + diff);
+    d.setDate(today.getDate() + diff + 7 * offset);
     return toLocalISO(d);
   }
+  const shortDate = (iso, opts = {}) => new Date(`${iso}T00:00:00`)
+    .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...opts });
+  const weekLabel = (offset) => `${shortDate(dateForDay('Mon', offset))} – ${shortDate(dateForDay('Fri', offset), { year: 'numeric' })}`;
+  const isFutureWeek = dateForDay('Mon') > schoolToday();
+
+  const shownMonday = dateForDay('Mon');
+  useEffect(() => {
+    let live = true;
+    loadHolidayDates(shownMonday, dateForDay('Fri')).then((h) => { if (live) setHolidays(h); });
+    return () => { live = false; };
+    // dateForDay only reads the school's today and the week shown
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownMonday]);
 
   // This week's covers on the grid. A lesson this person covers is added to
   // the cell (for that date only, with an apology); one of their own lessons
@@ -205,6 +224,8 @@ function StaffTimetable() {
 
   function goToRegister(entry, dayLabel, periodNumber) {
     const date = entry.date || dateForDay(dayLabel);
+    // Registers can't be taken for a day that hasn't come yet.
+    if (date > schoolToday()) return;
     if (entry.otherHalfActivityId) {
       router.push(`/other-half/register?activityId=${entry.otherHalfActivityId}&date=${date}`);
       return;
@@ -335,23 +356,44 @@ function StaffTimetable() {
         </div>
       )}
 
+      <div className="card" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <strong style={{ marginRight: 'auto' }}>
+          {weekOffset === 0 ? 'This week' : 'Next week'}: {weekLabel(weekOffset)}
+        </strong>
+        <button className={weekOffset === 0 ? undefined : 'secondary'} onClick={() => setWeekOffset(0)}>This week</button>
+        <button className={weekOffset === 1 ? undefined : 'secondary'} onClick={() => setWeekOffset(1)}>Next week →</button>
+        {isFutureWeek && (
+          <div style={{ flexBasis: '100%', fontSize: '0.9em', opacity: 0.8 }}>
+            Lessons are from the timetable as it stands today; if it changes before then, this will change too.
+            Registers open on the day.
+          </div>
+        )}
+      </div>
+
       {loading ? (
         <p>Loading...</p>
       ) : (
         <div className="table-scroll">
           <div className="timetable-grid">
             <div className="tt-head"></div>
-            {DAYS.map((d) => <div key={d} className="tt-head">{d}</div>)}
+            {DAYS.map((d) => (
+              <div key={d} className="tt-head">
+                {d} <span style={{ fontWeight: 400, opacity: 0.75 }}>{shortDate(dateForDay(d))}</span>
+                {holidays.has(dateForDay(d)) && <div style={{ fontWeight: 600, color: 'var(--brand-800)' }}>Holiday</div>}
+              </div>
+            ))}
             {periods.map((p) => (
               <Fragment key={p.period_number}>
                 <div className="tt-cell tt-period-label">{p.period_name}</div>
                 {DAYS.map((d) => {
                   const entries = cellMap[`${d}-${p.period_number}`];
+                  const holiday = holidays.has(dateForDay(d));
+                  const clickable = entries && !holiday && dateForDay(d) <= schoolToday();
                   return (
                     <div
                       key={`${d}-${p.period_number}`}
                       className={`tt-cell ${entries ? 'tt-filled' : ''}`}
-                      style={entries ? { cursor: 'pointer' } : undefined}
+                      style={{ ...(clickable ? { cursor: 'pointer' } : {}), ...(holiday ? { opacity: 0.4 } : {}) }}
                     >
                       {entries
                         ? entries.map((e, i) =>
@@ -365,12 +407,12 @@ function StaffTimetable() {
                             ) : (
                               <div
                                 key={i}
-                                onClick={() => goToRegister(e, d, p.period_number)}
+                                onClick={() => clickable && goToRegister(e, d, p.period_number)}
                                 style={{
                                   marginBottom: entries.length > 1 ? '0.3rem' : 0,
                                   ...(e.cover ? { background: 'var(--brand-100)', borderLeft: '3px solid var(--brand-700)', padding: '0.2rem 0.3rem' } : {}),
                                 }}
-                                title="Open register for this class"
+                                title={clickable ? 'Open register for this class' : undefined}
                               >
                                 {e.cover && <div style={{ fontWeight: 700, color: 'var(--brand-800)' }}>COVER for {e.coverFor}</div>}
                                 {e.classCode ? <><strong>{e.classCode}</strong><br /></> : ''}
