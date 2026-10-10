@@ -77,6 +77,13 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
 
   if (!cls) return null;
 
+  // One-class worksheets whose lesson is no longer on the timetable (a
+  // Nova-T import moved it, or the day became a holiday). The database keeps
+  // them locked to students (migration 431); the teacher removes and re-adds.
+  const lessonKeys = new Set(lessons.map((l) => worksheetKey(l.lesson_date, l.period_number, cls.class_id)));
+  const moved = worksheets.filter((w) => w.class_id != null
+    && !lessonKeys.has(worksheetKey(w.lesson_date, w.period_number, w.class_id)));
+
   const subjectName = cls.subjects?.display_name || cls.subjects?.subject_name || 'this subject';
   const yearLabel = `Year ${cls.year_group} ${subjectName}`;
 
@@ -135,6 +142,26 @@ export default function RegisterWorksheets({ classId, date, periodNumber }) {
         Students see it on their timetable but can only open it once their lesson starts. Up to 3 MB a file.
       </p>
       {status && <p style={{ color: '#a3232c', margin: '0 0 0.5rem' }}>{status}</p>}
+      {moved.length > 0 && (
+        <div style={{ border: '1px solid #b45309', background: 'var(--yellow-100)', borderRadius: 8, padding: '0.5rem 0.75rem', margin: '0 0 0.6rem' }}>
+          <strong>Lesson moved</strong>
+          <span style={{ color: 'var(--ink-soft)' }}> · these were added to a lesson that is no longer on the timetable, so students can&apos;t open them. Remove each one and add it again to the right lesson.</span>
+          <ul className="hw-attach-list" style={{ marginTop: '0.3rem' }}>
+            {moved.map((w) => (
+              <li key={w.worksheet_id}>
+                <span aria-hidden="true">📄</span>
+                <button type="button" className="hw-attachment" onClick={() => open(w)}>
+                  <span className="hw-attachment-title">{w.title}</span>
+                </button>
+                <span className="hw-attachment-meta">
+                  was {formatUKDate(w.lesson_date, { weekday: true })} · {periods[w.period_number] || `Period ${w.period_number}`}
+                </span>
+                {canClass && <button type="button" className="secondary" style={btnSmall} onClick={() => remove(w)}>Remove</button>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {lessons.length === 0 ? (
         <p style={{ color: 'var(--ink-soft)', marginBottom: 0 }}>No lessons for this class in the next two weeks.</p>
       ) : (
