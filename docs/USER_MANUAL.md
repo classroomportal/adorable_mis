@@ -681,6 +681,8 @@ Your week: lessons, mentor registration, Other Half activities and meetings. Cli
 
 Above your own timetable, **Mark books** has a small link for each of your classes; each opens that class's mark book, with every homework and classwork mark (chapter 4).
 
+The bar above the grid says which week you are looking at and its dates, and each day shows its date. Press **Next week →** to see the coming week, and **This week** to come back. Next week shows any cover you have been asked to do and marks school holidays. Its lessons are the timetable as it is today: if the timetable changes, next week updates once the new timetable has been imported. You can't open a register for a day that hasn't come yet. At the weekend, This week is the week just finished.
+
 ![A teacher's week](manual-images/10-timetable.jpg)
 
 #### Finding when a group is free
@@ -972,7 +974,7 @@ Not built yet: students handing work in online, and notifications when homework 
 
 ### Lesson worksheets (Maths trial)
 
-From 9 October 2026 Maths teachers can put a worksheet on a lesson. Students see it on their timetable but can open it only once their lesson has started, so nobody gets it in advance. The trial covers Mathematics, Further Maths and Additional Maths; other subjects will be added later.
+From 9 October 2026 Maths teachers can put a worksheet on a lesson. Students see it on their timetable but can open it only once their lesson has started, so nobody gets it in advance. The trial covers Mathematics, Further Maths and Additional Maths, and from 10 October 2026 Computing, Digital Literacy and ICT (Year 9's Digital Literacy is timetabled as ICT); other subjects will be added later. Teachers of those subjects use it the same way as Maths teachers below.
 
 **Adding a worksheet (Maths teachers and Heads of Department)**
 
